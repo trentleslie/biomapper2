@@ -92,6 +92,79 @@ sudo systemctl restart biomapper2-api
 sudo systemctl stop biomapper2-api
 ```
 
+## Development API
+
+A second API instance for testing feature branches before merging to production.
+
+| Property | Value |
+|----------|-------|
+| Port | `8002` |
+| Binding | `127.0.0.1` (localhost only) |
+| Workers | `1` |
+| Service | `biomapper2-api-dev` |
+| Logs | `journalctl -t biomapper2-api-dev` |
+
+### One-Time Server Setup
+
+1. **Clone and configure remotes:**
+   ```bash
+   cd ~
+   git clone https://github.com/Phenome-Health/biomapper2.git ~/biomapper2-dev
+   cd ~/biomapper2-dev
+   git remote add fork https://github.com/trentleslie/biomapper2.git
+   ```
+
+2. **Create environment file:**
+   ```bash
+   cat > .env << 'EOF'
+   KESTREL_API_KEY=your-dev-kestrel-api-key
+   BIOMAPPER2_API_KEYS=your-dev-api-key
+   EOF
+   ```
+   Use a separate `KESTREL_API_KEY` from production for blast-radius isolation.
+
+3. **Install and start the service:**
+   ```bash
+   sudo cp deploy/biomapper2-api-dev.service /etc/systemd/system/
+   sudo systemctl daemon-reload
+   sudo systemctl enable biomapper2-api-dev
+   sudo systemctl start biomapper2-api-dev
+   ```
+
+4. **Verify:**
+   ```bash
+   curl http://localhost:8002/api/v1/health
+   journalctl -t biomapper2-api-dev --no-pager -n 5
+   ```
+
+### Deploying a Branch
+
+Use the GitHub Actions workflow `Deploy Biomapper2 Dev API` (workflow_dispatch):
+- **branch**: The branch name to deploy (default: `main`)
+- **remote**: Which remote to fetch from — `origin` (Phenome-Health) or `fork` (trentleslie)
+
+Access from your laptop via SSH tunnel:
+```bash
+ssh -L 8002:localhost:8002 ubuntu@<LIGHTSAIL_HOST>
+# Then: curl http://localhost:8002/api/v1/health
+```
+
+### Dev Service Management
+
+```bash
+# Check status
+sudo systemctl status biomapper2-api-dev
+
+# View logs (dev only)
+journalctl -t biomapper2-api-dev -f
+
+# Restart
+sudo systemctl restart biomapper2-api-dev
+
+# Stop
+sudo systemctl stop biomapper2-api-dev
+```
+
 ## Local Development
 
 ```bash

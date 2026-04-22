@@ -1,0 +1,35 @@
+[Unit]
+Description=Biomapper2 REST API (Development)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/biomapper2-dev
+
+# Environment variables
+Environment="PATH=/home/ubuntu/.local/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/ubuntu/biomapper2-dev/.env
+
+# Use uv to run uvicorn (1 worker, localhost only)
+ExecStart=/home/ubuntu/.local/bin/uv run uvicorn biomapper2.api.main:app --host 127.0.0.1 --port 8002 --workers 1
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=biomapper2-api-dev
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/biomapper2-dev/results /home/ubuntu/biomapper2-dev/cache
+
+[Install]
+WantedBy=multi-user.target

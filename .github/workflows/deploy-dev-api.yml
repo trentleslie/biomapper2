@@ -1,0 +1,82 @@
+name: Deploy Biomapper2 Dev API
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to deploy'
+        required: true
+        default: 'main'
+        type: string
+      remote:
+        description: 'Remote to fetch from (origin = Phenome-Health, fork = trentleslie)'
+        required: true
+        default: 'origin'
+        type: choice
+        options:
+          - origin
+          - fork
+
+jobs:
+  deploy-dev:
+    runs-on: ubuntu-latest
+    environment: development
+
+    steps:
+      - name: Deploy to Lightsail (Dev)
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_BRANCH: ${{ github.event.inputs.branch }}
+          DEPLOY_REMOTE: ${{ github.event.inputs.remote }}
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ubuntu
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          envs: DEPLOY_BRANCH,DEPLOY_REMOTE
+          script: |
+            set -e
+
+            # Clone if first-ever deploy
+            if [ ! -d ~/biomapper2-dev ]; then
+              git clone https://github.com/Phenome-Health/biomapper2.git ~/biomapper2-dev
+            fi
+
+            cd ~/biomapper2-dev
+
+            # Ensure fork remote exists (idempotent)
+            git remote get-url fork >/dev/null 2>&1 || \
+              git remote add fork https://github.com/trentleslie/biomapper2.git
+
+            # Fetch and checkout the specified branch
+            git fetch "$DEPLOY_REMOTE"
+            git checkout -B "$DEPLOY_BRANCH" "$DEPLOY_REMOTE/$DEPLOY_BRANCH"
+
+            # Install dependencies (unconditional, full path for non-login SSH)
+            UV_BIN="${UV_BIN:-$HOME/.local/bin/uv}"
+            "$UV_BIN" sync
+
+            # Ensure writable directories exist
+            mkdir -p results cache
+
+            # Update systemd service from the deployed branch
+            # Note: service file changes from feature branches persist until the next deploy
+            sudo cp deploy/biomapper2-api-dev.service /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl enable biomapper2-api-dev
+            sudo systemctl restart biomapper2-api-dev
+
+            # Health check: poll every 2s for up to 30s
+            for i in $(seq 1 15); do
+              curl -sf http://localhost:8002/api/v1/health && break
+              echo "Waiting for dev API to start... ($i/15)"
+              sleep 2
+            done
+            curl -sf http://localhost:8002/api/v1/health || exit 1
+
+            echo "Dev deployment successful! Branch: $DEPLOY_BRANCH (from $DEPLOY_REMOTE)"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "Dev deployment failed! Check the logs."
+          exit 1
