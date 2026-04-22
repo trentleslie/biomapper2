@@ -16,9 +16,10 @@ venv/
 .coverage
 htmlcov/
 
-# Jupyter
+# Jupyter / Notebooks
 .ipynb_checkpoints/
-*.ipynb 
+*.ipynb
+notebooks/
 
 # IDE
 .vscode/
@@ -33,6 +34,7 @@ Thumbs.db
 # Data (common for biomedical projects)
 data/raw/
 data/processed/
+data/review/
 *.csv
 *.tsv
 *.parquet
