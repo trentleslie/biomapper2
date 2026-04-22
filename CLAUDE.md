@@ -83,9 +83,72 @@ To add a new annotator (e.g., for Metabolomics Workbench API):
 - `BIOLINK_VERSION_DEFAULT`: Biolink model version
 - `KESTREL_API_KEY`: Required environment variable (from `.env`)
 
+## Development Workflow
+
+- Create feature branches from `main`
+- Submit pull requests back to `main` (no direct commits to `main`)
+- All PRs require passing tests before merge
+- Once merged, auto-sync to arpanauts via GitHub Action
+
 ## Commit Convention
 
-Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`
+We use [Conventional Commits](https://www.conventionalcommits.org/):
+
+Type | Description | Example
+-- | -- | --
+feat: | New features | feat: add protein annotation support
+fix: | Bug fixes | fix: resolve DataFrame corruption in Step 3
+docs: | Documentation only | docs: update installation instructions
+test: | Test additions/changes | test: add unit tests for harmonization pipeline
+refactor: | Code restructuring (no behavior change) | refactor: extract validation logic to separate module
+chore: | Dependency updates, tooling | chore: update pandas to 2.2.0
+
+## Code Style
+
+- Use type hints
+- Add docstrings for public functions and classes
+
+Example:
+```python
+def harmonize_phenotype(raw_data: pd.DataFrame, schema: str) -> pd.DataFrame:
+    """
+    Harmonize phenotype data to target schema.
+
+    Args:
+        raw_data: Input DataFrame with raw phenotype measurements
+        schema: Target harmonization schema name
+
+    Returns:
+        Harmonized DataFrame with standardized columns
+    """
+    ...
+```
+
+## IDE Setup (Optional)
+
+For real-time checking in your IDE, install these extensions/plugins:
+- **Ruff** - For inline linting warnings
+- **Black** - For format-on-save (VS Code users: install extension from ms-python)
+- **Pyright** (optional) - For real-time type checking
+
+Exact installation steps vary by IDE.
+
+## Project Tracking
+
+- Use GitHub Issues for task tracking
+- Move cards across Kanban board:
+  - Backlog → Ready → In progress → In review → Done
+- Link PRs to issues: `Closes #42` in PR description
+- Label issues: `bug`, `enhancement`, `documentation`, `planning`
+
+## Dependency Management
+
+When adding dependencies, always commit both files:
+```bash
+uv add <package-name>
+git add pyproject.toml uv.lock
+git commit -m "chore: add <package-name> dependency"
+```
 
 ---
 
@@ -116,16 +179,30 @@ When implementing annotators:
 4. **Verify patterns** match existing annotators (raw field names, no ID cleaning)
 5. **Commit both files** when adding dependencies: `pyproject.toml` and `uv.lock`
 6. **Test requirements** for new features:
-   - 8 or fewer tests in a single test file
+   - **Target: 8 or fewer tests** per feature/component in a single test file
+   - Group tests in single class: `TestFeatureName`
    - Include at least one end-to-end test using `Mapper.map_entity_to_kg()`
    - Mark integration tests with `@pytest.mark.integration`
+   - Required test types: unit tests (mocked), edge case tests, integration test (real API if applicable), end-to-end test
 
 ---
 
 ## Claude Code Workflow
 
-When using Claude Code to prepare PRs:
+### PR Comments and External Communications
 
-1. **Before posting PR comments**: Always present the draft comment to the user for review first
-2. **Before pushing**: Show the user the changes and get confirmation
-3. **Use /pr-prep**: Run the PR preparation checklist before finalizing
+- Always review Claude's proposed PR comments BEFORE they are posted
+- Say "show me the comment first" or "let me review before posting"
+- Claude should present comment drafts for approval
+
+### Code Review Workflow
+
+1. Claude implements changes
+2. Claude runs `./scripts/check.sh`
+3. Claude shows you the diff for review
+4. Claude drafts PR comment for your review
+5. You approve → Claude posts and pushes
+
+### Before Finalizing
+
+- **Use /pr-prep**: Run the PR preparation checklist before finalizing
