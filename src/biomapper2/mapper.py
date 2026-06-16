@@ -6,6 +6,7 @@ through annotation, normalization, linking, and resolution steps.
 """
 
 import logging
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -13,13 +14,14 @@ import numpy as np
 import pandas as pd
 
 from .biolink_client import BiolinkClient
-from .config import PROJECT_ROOT
+from .config import PROJECT_ROOT, get_kestrel_api_url
 from .core.analysis import analyze_dataset_mapping
 from .core.annotation_engine import AnnotationEngine
 from .core.linker import Linker
 from .core.normalizer import Normalizer
 from .core.resolver import Resolver
 from .models import Entity
+from .provenance import build_run_provenance
 from .utils import AnnotationMode, setup_logging
 
 setup_logging()
@@ -261,6 +263,14 @@ class Mapper:
         logging.info(f"Dumping output TSV to {output_tsv_path}")
         df.to_csv(output_tsv_path, sep="\t", index=False)
 
-        stats_summary = analyze_dataset_mapping(output_tsv_path, self.linker, annotation_mode)
+        # Stamp KG build + service versions into the stats file. Hits Kestrel /health
+        # (timeout 5s); degrades to "unknown" and never raises — see build_run_provenance.
+        run_provenance = build_run_provenance(
+            kestrel_url=get_kestrel_api_url(),
+            run_timestamp=datetime.now(timezone.utc).isoformat(),
+        )
+        stats_summary = analyze_dataset_mapping(
+            output_tsv_path, self.linker, annotation_mode, run_provenance=run_provenance.model_dump()
+        )
 
         return str(output_tsv_path), stats_summary
