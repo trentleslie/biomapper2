@@ -1,6 +1,7 @@
 ---
 title: "Human gene/protein symbols resolve to wrong-species orthologs (Kestrel hybrid-search limit=1)"
 date: 2026-06-15
+last_updated: 2026-06-19
 category: integration-issues
 module: kestrel_hybrid
 problem_type: integration_issue
@@ -78,30 +79,36 @@ The raised limit is applied **only for gene/protein** so metabolite/other bulk p
 limit = HYBRID_SEARCH_LIMIT if prefer_human else 1
 ```
 
-**2. Two-tier candidate selection** (`_select_result` in `kestrel_hybrid.py`):
+**2. Two-tier candidate selection** (`_select_result` in `kestrel_hybrid.py`). It returns
+`(chosen_row, matched)` — `matched` is True **only** for an HGNC-bearing row that exact-symbol-matches the
+query; it is False for the legacy top-1, the ortholog fallback, and the paralog (HGNC-but-no-symbol-match)
+case. That `matched` flag is what gates the drug-conflated symbol-fallback bridge downstream (the bridge
+fires on `prefer_human and GENE_SYMBOL_FALLBACK_ENABLED and not matched`):
 
 ```python
 @staticmethod
-def _select_result(term_results, search_term, prefer_human):
+def _select_result(term_results, search_term, prefer_human) -> tuple[dict | None, bool]:
     if not term_results:
-        return None
+        return None, False
     if not prefer_human:
-        return term_results[0]                                       # legacy top-1
+        return term_results[0], False                                # legacy top-1 (a miss)
 
     human = [r for r in term_results if HUMAN_MARKER_PREFIXES & set(r.get("prefixes") or [])]
     if not human:
-        return term_results[0]                                       # honest fallback -- never fabricate
+        return term_results[0], False                                # honest fallback -- never fabricate
 
     exact = [r for r in human if KestrelHybridSearchAnnotator._symbol_matches(r, search_term)]
-    pool = exact if exact else human
-    return max(pool, key=lambda r: r.get("score", 0))
+    if exact:
+        return max(exact, key=lambda r: r.get("score", 0)), True     # the only genuine match
+    return max(human, key=lambda r: r.get("score", 0)), False        # paralog -- HGNC but no symbol match
 ```
 
 The HGNC filter must come **before** the symbol match: orthologs share the human row's `name` (same
 symbol, different species), so HGNC separates species first, then the symbol match (`_symbol_matches`:
 case-insensitive equality on `name`, or membership in `synonyms`) picks the right gene. The symbol-match
 step is critical because a human **paralog** (e.g. `TNFRSF1B` → `NCBIGene:7133`) *also* carries HGNC —
-matching the queried symbol avoids trading a wrong-species bug for a wrong-gene bug. Defensive reads
+matching the queried symbol avoids trading a wrong-species bug for a wrong-gene bug, and a paralog hit is
+reported as `matched=False` so it does not suppress the fallback. Defensive reads
 (`r.get("prefixes") or []`, `r.get("score", 0)`) tolerate malformed/null rows.
 
 **3. Gate behind a default-on `prefer_human` option**, threaded `MappingOptions` → routes → `Mapper` →
@@ -137,16 +144,20 @@ separates species where `prefix_filter` structurally cannot. No additional API c
   match — a graceful, observable miss.
 - **Make the fallback fraction observable** (reported in the gold-set validation run) so consumers can
   detect recall gaps instead of silently trusting `confidence_tier="high"`.
-- **`pytest.mark.xfail(strict=False)` for unfixable upstream data issues**: `GH1` cannot be resolved to
-  the human gene by any re-rank. Live investigation (2026-06-16) showed `NCBIGene:2688` *exists* in
-  Kestrel but is an **entity-conflation node**: its `name` is `"SOMATROPIN"` (the recombinant
-  growth-hormone *drug*), its `synonyms` are all pharmaceutical product names (`Norditropin`,
-  `Genotropin`, `Saizen`, …) with no `"GH1"`/`"growth hormone 1"` gene-symbol text, and its categories
-  span `[ChemicalEntity, SmallMolecule, Gene, Protein, Drug]`. So a `"GH1"` query cannot retrieve it in
-  *any* search mode (text/vector/hybrid all rank it `None` at limit 50) — the human GH1 *gene* identity
-  was absorbed into the somatropin drug node. This is a Kestrel **KG data-quality** issue (raise with the
-  Kestrel team), not a recall/ranking gap a client can fix. The xfail documents it and auto-passes when
-  the KG node is corrected; pair it with an unconditional graceful-fallback assertion.
+- **Drug-conflated genes need a non-search bridge, not an xfail** *(updated 2026-06-18 — supersedes the
+  earlier xfail guidance)*: `GH1` cannot be resolved by any *re-rank*, but it is **not** unfixable.
+  `NCBIGene:2688` *exists* in Kestrel as an **entity-conflation node**: its `name` is `"SOMATROPIN"` (the
+  recombinant growth-hormone *drug*), its `synonyms` are pharmaceutical product names (`Norditropin`,
+  `Genotropin`, `Saizen`, …), and its categories span `[ChemicalEntity, SmallMolecule, Gene, Protein,
+  Drug]`. So `"GH1"` cannot retrieve it in *any* search mode — the gene identity was absorbed into the drug
+  node. **Resolution (PR #71): a curated, non-search gene-symbol fallback bridge** assigns the NCBIGene
+  deterministically for the 6 known drug-conflations (GH1/CALCA/POMC/CRH/CTLA4/GBA1). The original
+  `pytest.mark.xfail(strict=False)` + graceful-fallback gold-set stance is **superseded**: because the
+  KG's `/canonicalize` collapses the assigned NCBIGene back into the drug clique (GH1 → `UNII:NQX9KB6PCL`),
+  `chosen_kg_id == NCBIGene:X` is unsatisfiable, so the gold set now asserts **clique membership**
+  (the chosen node's `equivalent_ids` contain the expected NCBIGene + HGNC) and verifies the bridge
+  mechanism offline. See
+  [`test-failures/live-gold-set-asserted-live-variable-outcomes-2026-06-18.md`](../test-failures/live-gold-set-asserted-live-variable-outcomes-2026-06-18.md).
 - **Test with mocked hybrid rows that include `prefixes`** (and `name`/`synonyms`) so `_select_result` /
   `_symbol_matches` are exercised offline. The live integration/gold-set test cannot run in a sandbox
   because building `Mapper()`/`BiolinkClient` hangs on bmt (Biolink Model Toolkit) init, which is
@@ -187,6 +198,10 @@ cautionary `/get-nodes` sample noted in the related `equivalent-ids` doc.)
 
 ## Related Issues
 
+- [`canonical-namespace-preference-2026-06-18.md`](./canonical-namespace-preference-2026-06-18.md) — the
+  metabolite/disease sibling that **generalizes** this mechanism: the same Kestrel ranking property, but
+  the discriminator is a per-category canonical-namespace set (`prefer_canonical`) rather than the HGNC
+  human marker. Both are default-on, mutually exclusive at the engine.
 - `docs/solutions/build-errors/equivalent-ids-prefix-mismatch-and-ci-type-error-2026-04-29.md` — same
   Kestrel `prefixes` subsystem (LM/RM prefix-string mismatch + CI pyright). **Caveat:** its assumption
   that "prefix filtering cleanly separates vocabularies per entity type" does **not** extend to species
