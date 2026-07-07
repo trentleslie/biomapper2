@@ -135,6 +135,7 @@ def gold_set_run(shared_mapper):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_api
 class TestHumanGeneGoldSet:
     @pytest.mark.parametrize("name", sorted(POSITIVE_GOLD))
     def test_positive_resolves_into_human_clique(self, gold_set_run, name):
