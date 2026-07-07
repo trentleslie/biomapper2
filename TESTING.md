@@ -1,5 +1,23 @@
 # Testing Guide
 
+## Standard Test Flow
+
+1. **Before you push**, run the fast tests: `./scripts/test-fast.sh` (~18s, no network). Or install
+   the pre-push hook once (`cp scripts/hooks/pre-push .git/hooks/pre-push`) and it runs automatically
+   — lint + type-check + fast tests — on every `git push`.
+2. **Opening/updating a PR** triggers two GitHub Actions jobs automatically:
+   - **`gate`** — lint, type-check, fast tests. Must pass. This is what blocks merge.
+   - **`live-kestrel`** — the full test suite against the real Kestrel API. Informational only;
+     it can fail without blocking your PR in the case Kestrel is unreachable.
+3. **Merging to `main`** doesn't ship a release by itself. A bot called **release-please** reads your
+   commit messages (`feat:`, `fix:`, etc.) and keeps a standing "Release PR" up to date with the next
+   version number and changelog. Nothing is released until *that* PR gets merged — merging it bumps
+   the version and publishes the GitHub Release. You don't need to do anything to trigger this; just
+   use [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `docs:`, `chore:`, etc.).
+
+That's the whole loop. Everything below is reference material for when you need more control — running
+a single test, understanding why a test is excluded from CI, benchmarking a KG build, etc.
+
 ## Quick reference
 
 ```bash
@@ -87,6 +105,16 @@ biomapper2 runs two jobs on every PR and push to `main` (`.github/workflows/ci.y
 A separate **`kg-regression.yml`** (manual `workflow_dispatch`) runs the correctness suite against a candidate Kestrel/KG URL, tagged and stamped with that build's provenance. Run it before pointing production at a new KG build, then compare reports by `kg_version`.
 
 The sibling repos guard the cross-repo build-metadata contract with their own CI: **KRAKEN** fails if `build_info.schema.json` is stale (drift guard), and **Kestrel** tests the `/health` build-info loader.
+
+### Releases (`release-please.yml`)
+
+Runs on every push to `main` (i.e. every merged PR) via [release-please](https://github.com/googleapis/release-please).
+It doesn't run tests — it parses Conventional Commits since the last release and keeps a single
+standing **"chore(main): release X.Y.Z"** PR up to date with the next version bump and a generated
+`CHANGELOG.md`. `feat:` commits bump minor, `fix:` bumps patch (see `release-please-config.json`,
+`release-type: python`). No release happens until that PR is merged: merging it tags the release,
+publishes it on GitHub, and updates `pyproject.toml` + `.release-please-manifest.json`. If your commit
+messages don't follow Conventional Commits, release-please simply won't pick them up for the changelog.
 
 ---
 

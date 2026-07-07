@@ -195,6 +195,8 @@ uv run pytest -vs      # Run with verbose output and logging/prints displayed
 
 **Note:** Tests run automatically on every commit via GitHub Actions (CI/CD).
 
+**New contributor?** See [TESTING.md](TESTING.md) for a concise walkthrough of the test scripts and what happens on push/merge (CI gating, release-please), plus the full reference for test tiers and markers.
+
 ## Development
 
 ### Quick Start

@@ -19,7 +19,7 @@ Run all code quality checks locally:
 ./scripts/check.sh
 ```
 
-**Note:** CI runs the same checks as `check.sh` automatically on every PR. All checks must pass before merging.
+**Note:** CI runs the same checks as `check.sh` automatically on every PR. All checks must pass before merging. See [TESTING.md](../TESTING.md) for the full test-tier/marker reference and what happens on push/merge (CI gating, release-please).
 
 ## Commit Messages
 We use [Conventional Commits](https://www.conventionalcommits.org/):
