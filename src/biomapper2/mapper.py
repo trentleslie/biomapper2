@@ -42,7 +42,7 @@ class Mapper:
         self.annotation_engine = AnnotationEngine(biolink_client=self.biolink_client)
         self.normalizer = Normalizer(biolink_client=self.biolink_client)
         self.linker = Linker()
-        self.resolver = Resolver()
+        self.resolver = Resolver(linker=self.linker, biolink_client=self.biolink_client)
 
     def map_entity_to_kg(
         self,
@@ -118,7 +118,7 @@ class Mapper:
         entity = entity.update_from(linked_result)
 
         # Do Step 4: resolve one-to-many KG matches
-        resolved_result = self.resolver.resolve(entity.to_series())
+        resolved_result = self.resolver.resolve(entity.to_series(), category=entity_type)
         assert isinstance(resolved_result, pd.Series)
         entity = entity.update_from(resolved_result)
 
@@ -243,7 +243,7 @@ class Mapper:
         logging.info(f"After step 3 (linking), df is: \n{df}")
 
         # Do Step 4: resolve one-to-many KG matches
-        resolved_df = self.resolver.resolve(df)
+        resolved_df = self.resolver.resolve(df, category=entity_type)
         df = df.join(resolved_df)
         logging.info(f"After step 4 (resolution), df is: \n{df}")
 
