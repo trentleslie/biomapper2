@@ -232,7 +232,7 @@ def run_matrix(
 
     with open(results_path, "w", encoding="utf-8") as fh:
         for case in cases:
-            candidates = fetch_candidates(case.name, case.category, top_n=top_n)
+            candidates = fetch_candidates(case.name, "metabolite", top_n=top_n)
             for seed in seeds:
                 rng = random.Random(seed)
                 shuffled = candidates[:]

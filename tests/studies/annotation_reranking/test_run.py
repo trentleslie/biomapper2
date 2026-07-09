@@ -266,3 +266,38 @@ class TestRunMatrix:
             manifest = json.load(fh)
 
         assert manifest["temperature"] == 0
+
+    def _csv_with_taxonomy_category(self, tmp_path) -> str:
+        """Write a 1-row CSV where category is a disagreement taxonomy label (NOT 'metabolite').
+
+        This is critical for the regression test: if the fixture category were 'metabolite'
+        the test could not distinguish whether run_matrix passed case.category or the
+        literal 'metabolite' to fetch_candidates.
+        """
+        csv_path = str(tmp_path / "test_taxonomy.csv")
+        with open(csv_path, "w") as fh:
+            fh.write("name,level,refmet_id,refmet_name,biomapper_id,biomapper_name,category\n")
+            fh.write(
+                "glucose,MS1,28,Glucose,CHEBI:17234,Glucose,"
+                "divergent (different compound)\n"
+            )
+        return csv_path
+
+    def test_fetch_candidates_always_called_with_metabolite_category(self, tmp_path):
+        """Regression: run_matrix must pass 'metabolite' to fetch_candidates, never case.category.
+
+        The CSV row has category='divergent (different compound)' — a disagreement taxonomy
+        label, not a biolink entity type. If run_matrix ever regresses to passing case.category
+        the mock assertion below will catch it.
+        """
+        csv_path = self._csv_with_taxonomy_category(tmp_path)
+        out_dir = str(tmp_path / "run_out_regression")
+
+        with patch(
+            "studies.annotation_reranking.run.fetch_candidates",
+            return_value=[],
+        ) as mock_fetch:
+            run_matrix(csv_path=csv_path, top_n=5, seeds=(0,), out_dir=out_dir)
+
+        # Every call must use the literal "metabolite", not the taxonomy category string.
+        mock_fetch.assert_called_once_with("glucose", "metabolite", top_n=5)
