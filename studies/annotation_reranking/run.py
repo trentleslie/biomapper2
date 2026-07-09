@@ -1,4 +1,4 @@
-"""Matrix orchestrator for the annotation-reranking study (Task 8).
+"""Matrix orchestrator for the annotation-reranking study (Tasks 8–9).
 
 Entry points
 ------------
@@ -8,6 +8,11 @@ build_manifest(csv_path, top_n, seeds, roster, hardware) -> dict
 score_case(case, candidates, reranker, model_label) -> RerankResult
     Pure function; handles all shadow paths (empty candidates, off-list
     None, exception from reranker, cost/latency seam for LLM rerankers).
+
+_register_llms(model_labels, blind=True) -> None
+    Register LlmReranker instances (blind + non-blind) for each label in
+    model_labels, wiring call_model into each reranker's call_fn so that
+    last_cost_usd / last_latency_s are populated after select().
 
 run_matrix(csv_path, top_n=20, seeds=(0,1,2), out_dir=None, hardware="unspecified") -> str
     Full orchestration: load dataset, fetch candidates, shuffle per seed,
@@ -30,6 +35,7 @@ import random
 from typing import TYPE_CHECKING
 
 from studies.annotation_reranking.dataset import dataset_sha256, load_eval_cases
+from studies.annotation_reranking.model_call import ROSTER, call_model
 from studies.annotation_reranking.models_data import RerankResult
 from studies.annotation_reranking.regimes import classify_regime
 from studies.annotation_reranking.retrieval import fetch_candidates
@@ -243,3 +249,105 @@ def run_matrix(
 
     print(f"[run] results saved to {out_dir}")
     return out_dir
+
+
+# ---------------------------------------------------------------------------
+# LLM registration (Task 9)
+# ---------------------------------------------------------------------------
+
+def _register_llms(model_labels: list[str], blind: bool = True) -> None:
+    """Register LlmReranker instances for each label in *model_labels*.
+
+    For each label two rerankers are added to the REGISTRY:
+      - ``llm:<label>/blind`` — RM: entries stripped from the prompt.
+      - ``llm:<label>``       — un-blinded (retains RM: anchor ids).
+
+    ``call_model`` is imported lazily (only called at select-time) so that
+    importing this module never touches network or API keys.
+
+    The call_fn closure captures *cfg* and *r* by reference using default
+    arguments to freeze each loop variable — a classic Python closure gotcha.
+    ``last_cost_usd`` and ``last_latency_s`` are initialised to 0.0 so that
+    ``score_case`` (which reads them immediately after register) always has a
+    valid float, even before the first select() call.
+    """
+    from studies.annotation_reranking.rerankers.base import register
+    from studies.annotation_reranking.rerankers.llm import LlmReranker
+
+    by_label = {c.label: c for c in ROSTER}
+    for label in model_labels:
+        cfg = by_label[label]   # raises KeyError for unknown labels — intentional
+        for blind_rm in (True, False):
+            r = LlmReranker(cfg.label, call_fn=None, blind_rm=blind_rm)
+            r.last_cost_usd = 0.0
+            r.last_latency_s = 0.0
+
+            def _call_fn(model: str, prompt: str, _cfg=cfg, _r=r) -> str:
+                text, cost, latency = call_model(_cfg, prompt)
+                _r.last_cost_usd = cost
+                _r.last_latency_s = latency
+                return text
+
+            r.call_fn = _call_fn
+            register(r)
+
+
+# ---------------------------------------------------------------------------
+# CLI entrypoint (Task 9)
+# ---------------------------------------------------------------------------
+
+_DEFAULT_CSV = (
+    "/home/trentleslie/Documents/Trent's Vault/"
+    "Active 🎯/Work/Projects/biomapper2 - refmet ChEBI analysis/"
+    "chebi_disagreements_cat.csv"
+)
+
+if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(
+        description="Run the annotation-reranking matrix.",
+    )
+    ap.add_argument(
+        "--csv",
+        default=_DEFAULT_CSV,
+        help="Path to ChEBI disagreement CSV (default: Global-Constraints vault path).",
+    )
+    ap.add_argument(
+        "--top-n",
+        type=int,
+        default=20,
+        help="Candidate window size for Kestrel retrieval (default: 20).",
+    )
+    ap.add_argument(
+        "--seeds",
+        default="0,1,2",
+        help="Comma-separated RNG seeds for candidate shuffles (default: 0,1,2).",
+    )
+    ap.add_argument(
+        "--models",
+        default="",
+        help=(
+            "Comma-separated model labels from ROSTER to include as LLM rerankers "
+            "(e.g. sonnet,qwen3-8b). Empty = deterministic rerankers only."
+        ),
+    )
+    ap.add_argument(
+        "--out",
+        default=None,
+        help="Output directory (default: studies/annotation_reranking/runs/<UTC>).",
+    )
+    ap.add_argument(
+        "--hardware",
+        default="unspecified",
+        help="Free-form hardware descriptor for the manifest (default: unspecified).",
+    )
+    a = ap.parse_args()
+
+    model_labels = [x for x in a.models.split(",") if x]
+    if model_labels:
+        _register_llms(model_labels)
+
+    seeds = tuple(int(s) for s in a.seeds.split(","))
+    path = run_matrix(a.csv, a.top_n, seeds, a.out, a.hardware)
+    print(path)

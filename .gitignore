@@ -54,3 +54,6 @@ cache/
 
 # Serena AI tool
 .serena/
+
+# Annotation-reranking run artifacts (timestamped, never committed)
+studies/annotation_reranking/runs/
