@@ -62,5 +62,6 @@ def test_resolve_series_carries_review_field():
     r = _resolver(False)
     entity = pd.Series({"kg_ids": KG_IDS, "kg_ids_provided": {}, "kg_ids_assigned": ASSIGNED})
     out = r.resolve(entity, category="biolink:SmallMolecule")
+    assert isinstance(out, pd.Series)  # single entity -> Series (narrows type for the asserts below)
     assert out["chosen_kg_id"] == "CHEBI:refmet"
     assert out["chosen_kg_id_review"] == "divergent_refmet"
