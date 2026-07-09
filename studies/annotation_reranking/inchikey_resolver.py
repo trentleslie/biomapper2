@@ -99,13 +99,11 @@ def _block_from_pubchem(name: str) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-@functools.lru_cache(maxsize=2048)
-def inchikey_block(node_id: str, name: str) -> str | None:
+def _inchikey_block_impl(node_id: str, name: str) -> str | None:
     """Resolve a node's InChIKey first block (2-D connectivity skeleton).
 
     Tries layers in order: KG → Metabolomics Workbench → PubChem.
     Returns the first non-None result, or None if all layers miss.
-    Result is cached by (node_id, name).
 
     Args:
         node_id: KG CURIE (e.g. "CHEBI:15365")
@@ -125,28 +123,9 @@ def inchikey_block(node_id: str, name: str) -> str | None:
     return _block_from_pubchem(name)
 
 
-# Expose the unwrapped function for tests that need to bypass the LRU cache
-inchikey_block.__wrapped__ = inchikey_block.__wrapped__ if hasattr(inchikey_block, "__wrapped__") else None  # type: ignore[attr-defined]
-
-
-def _make_unwrapped():
-    """Return a non-cached version of inchikey_block for test patching."""
-
-    def _unwrapped(node_id: str, name: str) -> str | None:
-        block = _block_from_kg(node_id)
-        if block is not None:
-            return block
-        block = _block_from_mw(name)
-        if block is not None:
-            return block
-        return _block_from_pubchem(name)
-
-    return _unwrapped
-
-
-# Attach a stable __wrapped__ attribute so tests can call inchikey_block.__wrapped__(...)
-# without hitting the LRU cache — lets them patch the private helpers cleanly.
-inchikey_block.__wrapped__ = _make_unwrapped()  # type: ignore[attr-defined]
+# Result is cached by (node_id, name). functools sets __wrapped__ to _inchikey_block_impl
+# automatically, so tests calling inchikey_block.__wrapped__(...) exercise the real body.
+inchikey_block = functools.lru_cache(maxsize=2048)(_inchikey_block_impl)
 
 
 def connectivity_match(id_a: str, name_a: str, id_b: str, name_b: str) -> bool | None:

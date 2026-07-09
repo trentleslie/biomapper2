@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from studies.annotation_reranking import inchikey_resolver
 from studies.annotation_reranking.inchikey_resolver import (
     _block_from_kg,
     _block_from_mw,
@@ -19,6 +20,12 @@ from studies.annotation_reranking.inchikey_resolver import (
 
 _BLOCK = "ABCDEFGHIJKLMN"
 _FULL_IK = "ABCDEFGHIJKLMN-OPQRSTUVWX-Y"
+
+
+@pytest.fixture(autouse=True)
+def _clear_inchikey_cache():
+    inchikey_resolver.inchikey_block.cache_clear()
+    yield
 
 
 class TestLayerOrdering:
