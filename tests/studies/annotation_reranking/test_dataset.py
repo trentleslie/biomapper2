@@ -1,9 +1,10 @@
 from studies.annotation_reranking.dataset import (
+    DEFAULT_CSV,
     load_eval_cases, independent_cases, dataset_sha256,
     TRUE_BIOMAPPER_ERRORS, REFMET_ERRORS,
 )
 
-CSV = "/home/trentleslie/Documents/Trent's Vault/Active 🎯/Work/Projects/biomapper2 - refmet ChEBI analysis/chebi_disagreements_cat.csv"
+CSV = DEFAULT_CSV  # vendored at studies/annotation_reranking/data/chebi_disagreements_cat.csv
 
 def test_loads_all_172_rows():
     cases = load_eval_cases(CSV)

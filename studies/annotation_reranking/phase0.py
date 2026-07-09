@@ -33,7 +33,7 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Imports from sibling modules (do NOT redefine)
 # ---------------------------------------------------------------------------
-from studies.annotation_reranking.dataset import dataset_sha256, load_eval_cases
+from studies.annotation_reranking.dataset import DEFAULT_CSV, dataset_sha256, load_eval_cases
 from studies.annotation_reranking.regimes import classify_regime, target_id
 from studies.annotation_reranking.rerankers import deterministic  # noqa: F401 — ensures REGISTRY is populated
 from studies.annotation_reranking.rerankers.base import REGISTRY
@@ -46,12 +46,8 @@ from studies.annotation_reranking.retrieval import fetch_candidates
 _HERE = Path(__file__).parent
 _DEFAULT_OUT_DIR = str(_HERE / "runs" / "phase0")
 
-# Default CSV path — the dataset with emoji + apostrophe in the directory name.
-_DEFAULT_CSV = (
-    "/home/trentleslie/Documents/Trent's Vault/"
-    "Active 🎯/Work/Projects/biomapper2 - refmet ChEBI analysis/"
-    "chebi_disagreements_cat.csv"
-)
+# Default CSV path — vendored at studies/annotation_reranking/data/chebi_disagreements_cat.csv
+_DEFAULT_CSV = DEFAULT_CSV
 
 
 # ---------------------------------------------------------------------------

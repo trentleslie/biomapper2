@@ -1,7 +1,12 @@
 import csv
 import hashlib
+import os
 
 from studies.annotation_reranking.models_data import EvalCase
+
+# Package-relative default — vendored alongside the study so CI and any
+# developer clone can run without the vault being mounted.
+DEFAULT_CSV = os.path.join(os.path.dirname(__file__), "data", "chebi_disagreements_cat.csv")
 
 # Exact names copied from analyze.py TRUE_BIOMAPPER_ERRORS dict (11 cases).
 # BioMapper picked the wrong compound in each of these; the correct answer

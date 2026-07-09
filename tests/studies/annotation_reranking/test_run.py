@@ -15,8 +15,10 @@ from unittest.mock import patch
 
 import pytest
 
+from studies.annotation_reranking.model_call import ModelCfg
 from studies.annotation_reranking.models_data import Candidate, EvalCase, RerankResult
 from studies.annotation_reranking.rerankers.deterministic import RmAnchorReranker
+from studies.annotation_reranking.rerankers.llm import LlmReranker
 from studies.annotation_reranking.run import build_manifest, score_case, run_matrix
 
 
@@ -69,6 +71,36 @@ class TestBuildManifest:
     def test_top_n_preserved(self):
         m = build_manifest("SOME.csv", 15, (0,), [], "box")
         assert m["top_n"] == 15
+
+    def test_llm_reranker_with_cfg_records_real_model_id(self):
+        """Finding 2 fix: build_manifest must record the real model_id from ModelCfg.
+
+        Before the fix, LlmReranker objects (which lack a top-level model_id attr)
+        fell through to str(obj) — producing object reprs like 'LlmReranker object
+        at 0x...' in the manifest.  After the fix, the .cfg attribute is used.
+        """
+        cfg = ModelCfg(
+            label="qwen3-8b",
+            provider="openrouter",
+            model_id="qwen/qwen3-8b",
+            quant_note="OpenRouter fp8, NOT local Q4",
+        )
+        r = LlmReranker(cfg.label, call_fn=None, blind_rm=False)
+        r.cfg = cfg  # attached by _register_llms in the fix
+
+        manifest = build_manifest("SOME.csv", 20, (0, 1, 2), [r], "test-box")
+        manifest_str = json.dumps(manifest)
+
+        assert "qwen/qwen3-8b" in manifest_str, "Real model_id missing from manifest"
+        assert "OpenRouter fp8, NOT local Q4" in manifest_str, "quant_note missing from manifest"
+        assert "LlmReranker" not in manifest_str, "Object repr leaked into manifest"
+
+    def test_deterministic_reranker_recorded_as_deterministic(self):
+        """Deterministic rerankers (no .cfg) should record provider='deterministic'."""
+        r = RmAnchorReranker()
+        manifest = build_manifest("SOME.csv", 20, (0,), [r], "test-box")
+        assert manifest["models"]["rm_anchor"]["provider"] == "deterministic"
+        assert manifest["models"]["rm_anchor"]["model_id"] is None
 
 
 # ---------------------------------------------------------------------------

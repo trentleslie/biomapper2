@@ -34,7 +34,7 @@ import os
 import random
 from typing import TYPE_CHECKING
 
-from studies.annotation_reranking.dataset import dataset_sha256, load_eval_cases
+from studies.annotation_reranking.dataset import DEFAULT_CSV, dataset_sha256, load_eval_cases
 from studies.annotation_reranking import labels as _labels_module
 from studies.annotation_reranking.model_call import ROSTER, call_model
 from studies.annotation_reranking.models_data import RerankResult
@@ -70,17 +70,33 @@ def build_manifest(
     seeds:
         RNG seeds used for candidate shuffles (position-bias control).
     roster:
-        List of reranker/model config objects.  ``model_id`` attribute is
-        used when present; str(obj) otherwise.  May be empty.
+        List of reranker objects from REGISTRY.  For LLM rerankers that have
+        a ``.cfg`` attribute (a ModelCfg), the real model_id, provider, and
+        quant_note are recorded.  Deterministic rerankers record
+        ``{"model_id": null, "provider": "deterministic"}``.
     hardware:
         Free-form hardware descriptor for the run host.
     """
     sha = dataset_sha256(csv_path) if os.path.exists(csv_path) else None
-    models = [getattr(obj, "model_id", str(obj)) for obj in roster]
-    quant_notes = {
-        getattr(obj, "label", ""): getattr(obj, "quant_note", "")
-        for obj in roster
-    }
+
+    models: dict = {}
+    quant_notes: dict = {}
+    for obj in roster:
+        name = getattr(obj, "name", str(obj))
+        cfg = getattr(obj, "cfg", None)
+        if cfg is not None:
+            # LLM reranker with attached ModelCfg — record real identity.
+            models[name] = {
+                "model_id": cfg.model_id,
+                "provider": cfg.provider,
+                "quant_note": cfg.quant_note,
+            }
+            if cfg.quant_note:
+                quant_notes[name] = cfg.quant_note
+        else:
+            # Deterministic reranker — no model_id or quant_note.
+            models[name] = {"model_id": None, "provider": "deterministic"}
+
     return {
         "dataset_sha256": sha,
         "top_n": top_n,
@@ -287,6 +303,7 @@ def _register_llms(model_labels: list[str]) -> None:
         cfg = by_label[label]   # raises KeyError for unknown labels — intentional
         for blind_rm in (True, False):
             r = LlmReranker(cfg.label, call_fn=None, blind_rm=blind_rm)
+            r.cfg = cfg          # attach ModelCfg so build_manifest can record real identity
             r.last_cost_usd = 0.0
             r.last_latency_s = 0.0
 
@@ -304,11 +321,7 @@ def _register_llms(model_labels: list[str]) -> None:
 # CLI entrypoint (Task 9)
 # ---------------------------------------------------------------------------
 
-_DEFAULT_CSV = (
-    "/home/trentleslie/Documents/Trent's Vault/"
-    "Active 🎯/Work/Projects/biomapper2 - refmet ChEBI analysis/"
-    "chebi_disagreements_cat.csv"
-)
+_DEFAULT_CSV = DEFAULT_CSV  # vendored at studies/annotation_reranking/data/chebi_disagreements_cat.csv
 
 if __name__ == "__main__":
     import argparse
