@@ -40,7 +40,8 @@ def test_top1_picks_highest_score():
 
 
 def test_top1_empty_returns_none():
-    assert Top1Reranker().select([])[0] is None
+    selected_id, review_flag = Top1Reranker().select([])
+    assert selected_id is None and review_flag is None
 
 
 def test_top1_returns_none_review_flag():
@@ -77,7 +78,8 @@ def test_rm_anchor_breaks_ties_deterministically():
 
 
 def test_rm_anchor_empty_returns_none():
-    assert RmAnchorReranker().select([])[0] is None
+    selected_id, review_flag = RmAnchorReranker().select([])
+    assert selected_id is None and review_flag is None
 
 
 def test_rm_anchor_returns_none_review_flag():
@@ -166,3 +168,14 @@ def test_swg_refmet_is_majority_returns_majority_no_connectivity_call():
     result = r.select(cands, case=case)
     assert result == ("CHEBI:28683", None)
     mock_fn.assert_not_called()
+
+
+def test_swg_refmet_id_with_whitespace_matches_candidate():
+    """Padded refmet_id (raw CSV field) still matches via .strip() before CURIE build."""
+    mock_fn = MagicMock(return_value=True)
+    r = SourceWeightGuardReranker(mock_fn)
+    cands = [_c("CHEBI:100", 4.9, False), _c("CHEBI:28683", 3.1, False)]
+    # refmet_id has leading/trailing whitespace — simulates raw CSV field
+    case = _case(" 28683 ")
+    result = r.select(cands, case=case)
+    assert result == ("CHEBI:28683", None)

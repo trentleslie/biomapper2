@@ -26,7 +26,9 @@ if TYPE_CHECKING:
 class Top1Reranker:
     """Select the candidate with the highest score.
 
-    Ignores ``case``.  Always returns ``(selected_id, None)``.
+    Ignores ``case``.  Always returns ``(selected_id, None)``.  A tie on
+    ``score`` resolves to whichever candidate appears first in ``candidates``
+    (input-order-dependent).
     """
 
     name = "top1"
@@ -70,6 +72,8 @@ class SourceWeightGuardReranker:
 
     Algorithm (Revision 2026-07-08):
       1. ``majority`` = highest-scoring candidate (proxy for resolver vote).
+         A tie on ``score`` resolves to whichever candidate appears first in
+         ``candidates`` (input-order-dependent).
       2. If ``case`` is None or ``case.refmet_id`` is empty → return majority,
          no flag.
       3. Build ``refmet_curie = f"CHEBI:{case.refmet_id}"`` and look it up in
@@ -106,7 +110,7 @@ class SourceWeightGuardReranker:
         if case is None or not case.refmet_id:
             return majority.id, None
 
-        refmet_curie = f"CHEBI:{case.refmet_id}"
+        refmet_curie = f"CHEBI:{case.refmet_id.strip()}"
         refmet = next((c for c in candidates if c.id == refmet_curie), None)
 
         if refmet is None or refmet.id == majority.id:
