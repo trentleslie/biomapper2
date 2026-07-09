@@ -107,7 +107,9 @@ def run_phase0(
             n_retrievable += 1
             selected_id, review_flag = swg.select(candidates, case)
 
-            # Count flag distribution (only among retrievable)
+            # Count flag distribution (only among retrievable).
+            # Any flag not in flag_counts (including None or future flags) collapses
+            # to "none" — intentional: unknown flags should not crash the gate run.
             flag_key = review_flag if review_flag in flag_counts else "none"
             flag_counts[flag_key] += 1
 

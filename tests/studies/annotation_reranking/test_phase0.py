@@ -1,7 +1,8 @@
 """Tests for phase0.py — Phase 0 decision gate.
 
-All network calls are mocked. We patch fetch_candidates and load_eval_cases
-so no live Kestrel / MW / PubChem traffic occurs in CI.
+All network calls are mocked. We patch fetch_candidates, load_eval_cases,
+dataset_sha256, AND the source_weight_guard in REGISTRY so no live
+Kestrel / MW / PubChem traffic occurs in CI.
 """
 import json
 import os
@@ -78,6 +79,26 @@ def _import_run_phase0():
     return run_phase0
 
 
+def _make_fake_swg(selected_id: str = "CHEBI:100", review_flag: str = "divergent_refmet") -> MagicMock:
+    """Return a MagicMock that stands in for the source_weight_guard reranker.
+
+    select() returns (selected_id, review_flag) so the caller never reaches
+    connectivity_match / get_equivalent_ids / MW / PubChem.
+    """
+    fake = MagicMock()
+    fake.select.return_value = (selected_id, review_flag)
+    return fake
+
+
+def _swg_patch(fake_swg: MagicMock):
+    """patch.dict context manager that replaces REGISTRY['source_weight_guard']."""
+    return patch.dict(
+        "studies.annotation_reranking.phase0.REGISTRY",
+        {"source_weight_guard": fake_swg},
+        clear=False,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -86,6 +107,7 @@ def _import_run_phase0():
 def test_run_phase0_summary_keys(tmp_path):
     """run_phase0 returns a dict with all required summary keys."""
     run_phase0 = _import_run_phase0()
+    fake_swg = _make_fake_swg()
 
     with (
         patch(
@@ -100,6 +122,7 @@ def test_run_phase0_summary_keys(tmp_path):
             "studies.annotation_reranking.phase0.dataset_sha256",
             return_value="deadbeef" * 8,
         ),
+        _swg_patch(fake_swg),
     ):
         summary = run_phase0(
             csv_path="/fake/path.csv",
@@ -125,6 +148,7 @@ def test_run_phase0_summary_keys(tmp_path):
 def test_run_phase0_counts(tmp_path):
     """Retrievable/not_retrieved counts match the synthetic case set."""
     run_phase0 = _import_run_phase0()
+    fake_swg = _make_fake_swg()
 
     with (
         patch(
@@ -139,6 +163,7 @@ def test_run_phase0_counts(tmp_path):
             "studies.annotation_reranking.phase0.dataset_sha256",
             return_value="deadbeef" * 8,
         ),
+        _swg_patch(fake_swg),
     ):
         summary = run_phase0(
             csv_path="/fake/path.csv",
@@ -155,6 +180,7 @@ def test_run_phase0_counts(tmp_path):
 def test_run_phase0_writes_json(tmp_path):
     """run_phase0 writes phase0_regimes.json to out_dir."""
     run_phase0 = _import_run_phase0()
+    fake_swg = _make_fake_swg()
 
     with (
         patch(
@@ -169,6 +195,7 @@ def test_run_phase0_writes_json(tmp_path):
             "studies.annotation_reranking.phase0.dataset_sha256",
             return_value="abc123",
         ),
+        _swg_patch(fake_swg),
     ):
         run_phase0(
             csv_path="/fake/path.csv",
@@ -190,6 +217,7 @@ def test_run_phase0_writes_json(tmp_path):
 def test_run_phase0_per_case_structure(tmp_path):
     """Each per_case entry has name, regime, selected_id, review_flag."""
     run_phase0 = _import_run_phase0()
+    fake_swg = _make_fake_swg()
 
     with (
         patch(
@@ -204,6 +232,7 @@ def test_run_phase0_per_case_structure(tmp_path):
             "studies.annotation_reranking.phase0.dataset_sha256",
             return_value="abc123",
         ),
+        _swg_patch(fake_swg),
     ):
         run_phase0(
             csv_path="/fake/path.csv",
@@ -225,6 +254,7 @@ def test_run_phase0_per_case_structure(tmp_path):
 def test_run_phase0_default_out_dir(tmp_path, monkeypatch):
     """When out_dir uses default path, the JSON is still written."""
     run_phase0 = _import_run_phase0()
+    fake_swg = _make_fake_swg()
 
     default_dir = tmp_path / "studies" / "annotation_reranking" / "runs" / "phase0"
 
@@ -245,6 +275,7 @@ def test_run_phase0_default_out_dir(tmp_path, monkeypatch):
             "studies.annotation_reranking.phase0._DEFAULT_OUT_DIR",
             str(default_dir),
         ),
+        _swg_patch(fake_swg),
     ):
         summary = run_phase0(csv_path="/fake/path.csv", top_n=20)
 
