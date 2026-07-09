@@ -8,11 +8,12 @@ from studies.annotation_reranking.models_data import Candidate
 
 
 def _c(cid, rm):
+    # Two RM entries when rm=True so blinding tests cover exhaustive removal.
     return Candidate(
         id=cid,
         score=1.0,
         name=cid,
-        equivalent_ids=(["RM:9", "HMDB:1"] if rm else ["HMDB:1"]),
+        equivalent_ids=(["RM:9", "RM:10", "HMDB:1"] if rm else ["HMDB:1"]),
     )
 
 
@@ -23,14 +24,16 @@ def _c(cid, rm):
 
 def test_blind_strips_rm_ids_from_prompt():
     cands = [_c("CHEBI:1", True), _c("CHEBI:2", False)]
-    assert "RM:9" in build_prompt(cands, blind_rm=False)
-    assert "RM:9" not in build_prompt(cands, blind_rm=True)
+    # Exhaustive check: no RM: prefix of any kind survives blinding.
+    assert "RM:" in build_prompt(cands, blind_rm=False)
+    assert "RM:" not in build_prompt(cands, blind_rm=True)
 
 
 def test_non_blind_includes_rm_ids():
     cands = [_c("CHEBI:1", True)]
     prompt = build_prompt(cands, blind_rm=False)
     assert "RM:9" in prompt
+    assert "RM:10" in prompt
     assert "HMDB:1" in prompt
 
 
@@ -75,6 +78,8 @@ def test_parse_rejects_empty_text():
 
 def test_llm_reranker_uses_injected_call_fn():
     cands = [_c("CHEBI:1", True), _c("CHEBI:2", False)]
+    # stub returns a 3-tuple for test bookkeeping only; call_fn contract is
+    # (model_name: str, prompt: str) -> str, so we pass [0] (the text) to LlmReranker.
     stub = lambda model, prompt: ("CHEBI:2", 0.0, 0.0)  # (text, cost, latency)
     r = LlmReranker("sonnet", call_fn=lambda m, p: stub(m, p)[0], blind_rm=True)
     assert r.name == "llm:sonnet/blind"

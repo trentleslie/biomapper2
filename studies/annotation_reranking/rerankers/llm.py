@@ -33,6 +33,13 @@ _INSTRUCTION = (
 
 
 def _serialize(c: "Candidate", blind_rm: bool) -> str:
+    # Blinding removes RM: anchor ids from equivalent_ids only.
+    # c.name is the KG/ChEBI node's own name from Kestrel hybrid-search —
+    # retained as a legitimate reranking signal (it is NOT a RefMet-specific
+    # field and stripping it would cripple the reranker).
+    # Note: residual name-similarity between a candidate name and the query is
+    # an inherent, un-blindable signal — documented as a study limitation, not
+    # a leak to strip.
     equiv = [e for e in c.equivalent_ids if not (blind_rm and e.startswith("RM:"))]
     return f"- {c.id} | name={c.name} | score={c.score} | equivalent_ids={equiv}"
 
@@ -41,7 +48,8 @@ def build_prompt(candidates: "list[Candidate]", blind_rm: bool) -> str:
     """Build the LLM prompt from a list of candidates.
 
     When blind_rm=True, strips RM: entries from equivalent_ids so the model
-    cannot key on the RefMet anchor.
+    cannot key on the RefMet anchor.  The candidate name field is always
+    included — see _serialize for the rationale.
     """
     lines = "\n".join(_serialize(c, blind_rm) for c in candidates)
     return f"{_INSTRUCTION}\n\nCandidates:\n{lines}\n\nAnswer with one CURIE:"
