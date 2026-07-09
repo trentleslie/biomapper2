@@ -12,8 +12,26 @@ def wilson_ci(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
     return (max(0.0, center - half), min(1.0, center + half))
 
 
-def accuracy(results: list[RerankResult]) -> tuple[float, tuple[float, float]]:
+def accuracy(
+    results: list[RerankResult],
+    retrievable_only: bool = False,
+) -> tuple[float, tuple[float, float]]:
+    """Return (point estimate, Wilson 95% CI) for accuracy.
+
+    Parameters
+    ----------
+    results:
+        All RerankResult objects to consider.
+    retrievable_only:
+        When True, restrict to results whose ``regime`` is ``"retrievable"``
+        (in addition to the usual ``is_correct is not None`` filter).
+        This properly conditions accuracy on retrievability — cases where the
+        correct answer was not in the candidate window cannot be reranked
+        correctly and should be excluded from the reranker's skill estimate.
+    """
     scored = [r for r in results if r.is_correct is not None]
+    if retrievable_only:
+        scored = [r for r in scored if r.regime == "retrievable"]
     n = len(scored)
     k = sum(1 for r in scored if r.is_correct)
     return (k / n if n else 0.0, wilson_ci(k, n))

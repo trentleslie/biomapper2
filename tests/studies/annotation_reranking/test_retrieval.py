@@ -28,6 +28,24 @@ def test_top_n_is_passed_through():
     assert captured["limit"] == 15
 
 
+def test_fetch_equivalent_ids_flattening():
+    """_fetch_equivalent_ids must flatten {curie: {prefix: [local_ids]}} to {curie: [CURIE, ...]}."""
+    from unittest.mock import patch
+    from biomapper2.core.linker import Linker
+
+    nested = {"CHEBI:15365": {"RM": ["0001"], "HMDB": ["HMDB0001879"]}}
+    with patch.object(Linker, "get_equivalent_ids", return_value=nested):
+        result = retrieval._fetch_equivalent_ids(["CHEBI:15365"])
+
+    assert set(result["CHEBI:15365"]) == {"RM:0001", "HMDB:HMDB0001879"}
+
+    # A Candidate built from those equivalent_ids must have has_refmet() True.
+    from studies.annotation_reranking.models_data import Candidate
+    c = Candidate(id="CHEBI:15365", score=1.0, name="aspirin",
+                  equivalent_ids=result["CHEBI:15365"])
+    assert c.has_refmet() is True
+
+
 import os, pytest
 
 @pytest.mark.external

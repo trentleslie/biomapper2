@@ -9,7 +9,7 @@ score_case(case, candidates, reranker, model_label) -> RerankResult
     Pure function; handles all shadow paths (empty candidates, off-list
     None, exception from reranker, cost/latency seam for LLM rerankers).
 
-_register_llms(model_labels, blind=True) -> None
+_register_llms(model_labels) -> None
     Register LlmReranker instances (blind + non-blind) for each label in
     model_labels, wiring call_model into each reranker's call_fn so that
     last_cost_usd / last_latency_s are populated after select().
@@ -255,7 +255,7 @@ def run_matrix(
 # LLM registration (Task 9)
 # ---------------------------------------------------------------------------
 
-def _register_llms(model_labels: list[str], blind: bool = True) -> None:
+def _register_llms(model_labels: list[str]) -> None:
     """Register LlmReranker instances for each label in *model_labels*.
 
     For each label two rerankers are added to the REGISTRY:
@@ -346,7 +346,7 @@ if __name__ == "__main__":
 
     model_labels = [x for x in a.models.split(",") if x]
     if model_labels:
-        _register_llms(model_labels)
+        _register_llms(model_labels)  # always registers both blind + non-blind variants
 
     seeds = tuple(int(s) for s in a.seeds.split(","))
     path = run_matrix(a.csv, a.top_n, seeds, a.out, a.hardware)

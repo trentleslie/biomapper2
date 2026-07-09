@@ -17,6 +17,7 @@ Design notes
 """
 from __future__ import annotations
 
+import logging
 import os
 import time
 from dataclasses import dataclass, field
@@ -92,7 +93,21 @@ def _call_openrouter(model_id: str, prompt: str, seed: int) -> dict:
     cost: float = 0.0
     usage = getattr(resp, "usage", None)
     if usage is not None:
-        cost = float(getattr(usage, "cost", None) or 0.0)
+        raw_cost = getattr(usage, "cost", None)
+        if raw_cost:
+            cost = float(raw_cost)
+        else:
+            logging.getLogger(__name__).warning(
+                "OpenRouter response for model %s has no usage cost; recording 0.0 "
+                "(this is NOT a free call — cost data is unavailable).",
+                model_id,
+            )
+    else:
+        logging.getLogger(__name__).warning(
+            "OpenRouter response for model %s has no usage object; recording cost=0.0 "
+            "(this is NOT a free call — cost data is unavailable).",
+            model_id,
+        )
     return {"text": text, "cost": cost}
 
 

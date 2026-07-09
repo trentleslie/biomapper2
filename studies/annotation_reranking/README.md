@@ -108,11 +108,18 @@ is written first.
    retired as a performance baseline.  `source_weight_guard` is the correct
    reference point.
 
-2. **Independent labels = InChIKey first-block connectivity
-   (KG → MW → PubChem); they CANNOT adjudicate stereoisomers or
-   protonation/charge-state variants** (same first block, different structure).
-   Those cases are assigned `expert_needed` and excluded from the scoreable
-   subset.  Accuracy figures are conditioned on this exclusion.
+2. **Independent labels — current reality vs. planned scope.**
+   Currently `dataset.py` derives independent labels from the ~13 hand-triaged
+   cases only (`TRUE_BIOMAPPER_ERRORS` / `REFMET_ERRORS`).  All other 159 cases
+   receive `label_source="refmet_agreement"` and are **unscored** (`is_correct=None`).
+   InChIKey first-block connectivity (KG → MW → PubChem) is the *intended*
+   non-circular label source that would scale past the 13, but the label-derivation
+   pass is **NOT YET IMPLEMENTED** — it is a planned follow-up.
+   `EvalCase.inchikey_block_correct` and `EvalCase.retrievable` are reserved fields
+   for that future pass; they are never populated by the current code.
+   Once that pass lands, stereo/protonation cases (same connectivity, different
+   structure) would be assigned `expert_needed` and excluded from the scoreable
+   subset.  Until then, accuracy figures cover only the 13 hand-triaged cases.
 
 3. **`majority = top-score` proxy.**  This study has no multi-annotator vote
    as in production's resolver.  `source_weight_guard` uses the highest-scoring
