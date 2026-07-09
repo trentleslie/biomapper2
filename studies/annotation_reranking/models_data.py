@@ -42,3 +42,4 @@ class RerankResult:
     cost_usd: float
     latency_s: float
     error: str | None = None      # off-list / parse / api failure marker
+    review_flag: str | None = None
