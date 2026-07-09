@@ -35,6 +35,7 @@ import random
 from typing import TYPE_CHECKING
 
 from studies.annotation_reranking.dataset import dataset_sha256, load_eval_cases
+from studies.annotation_reranking import labels as _labels_module
 from studies.annotation_reranking.model_call import ROSTER, call_model
 from studies.annotation_reranking.models_data import RerankResult
 from studies.annotation_reranking.regimes import classify_regime
@@ -187,6 +188,7 @@ def run_matrix(
     seeds: tuple[int, ...] | list[int] = (0, 1, 2),
     out_dir: str | None = None,
     hardware: str = "unspecified",
+    derive_labels: bool = False,
 ) -> str:
     """Run the full annotation-reranking matrix and write outputs to *out_dir*.
 
@@ -208,6 +210,10 @@ def run_matrix(
         ``studies/annotation_reranking/runs/<UTC-timestamp>``.
     hardware:
         Free-form descriptor for the run host (e.g. "A100-40G").
+    derive_labels:
+        When True, call ``labels.derive_labels(cases)`` right after
+        ``load_eval_cases`` to derive structural labels from InChIKey
+        connectivity.  Disabled by default (gate-time live run step).
 
     Returns
     -------
@@ -234,6 +240,8 @@ def run_matrix(
         json.dump(manifest, fh, indent=2)
 
     cases = load_eval_cases(csv_path)
+    if derive_labels:
+        _labels_module.derive_labels(cases)
     results_path = os.path.join(out_dir, "results.jsonl")
 
     with open(results_path, "w", encoding="utf-8") as fh:
@@ -342,6 +350,16 @@ if __name__ == "__main__":
         default="unspecified",
         help="Free-form hardware descriptor for the manifest (default: unspecified).",
     )
+    ap.add_argument(
+        "--derive-labels",
+        action="store_true",
+        default=False,
+        help=(
+            "Derive structural labels from InChIKey connectivity (MW + PubChem) "
+            "for disagreement cases before scoring.  Requires live network access. "
+            "Disabled by default."
+        ),
+    )
     a = ap.parse_args()
 
     model_labels = [x for x in a.models.split(",") if x]
@@ -349,5 +367,5 @@ if __name__ == "__main__":
         _register_llms(model_labels)  # always registers both blind + non-blind variants
 
     seeds = tuple(int(s) for s in a.seeds.split(","))
-    path = run_matrix(a.csv, a.top_n, seeds, a.out, a.hardware)
+    path = run_matrix(a.csv, a.top_n, seeds, a.out, a.hardware, a.derive_labels)
     print(path)

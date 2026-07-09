@@ -301,3 +301,54 @@ class TestRunMatrix:
 
         # Every call must use the literal "metabolite", not the taxonomy category string.
         mock_fetch.assert_called_once_with("glucose", "metabolite", top_n=5)
+
+
+# ---------------------------------------------------------------------------
+# run_matrix — derive_labels wiring (Task 10)
+# ---------------------------------------------------------------------------
+
+class TestRunMatrixDeriveLabels:
+    def _minimal_csv(self, tmp_path) -> str:
+        csv_path = str(tmp_path / "test_dl.csv")
+        with open(csv_path, "w") as fh:
+            fh.write("name,level,refmet_id,refmet_name,biomapper_id,biomapper_name,category\n")
+            fh.write("glucose,MS1,28,Glucose,CHEBI:17234,Glucose,metabolite\n")
+        return csv_path
+
+    def test_derive_labels_invoked_when_flag_true(self, tmp_path):
+        """run_matrix with derive_labels=True must call labels.derive_labels on the cases."""
+        csv_path = self._minimal_csv(tmp_path)
+        out_dir = str(tmp_path / "run_out_dl")
+
+        with (
+            patch(
+                "studies.annotation_reranking.run.fetch_candidates",
+                return_value=[],
+            ),
+            patch(
+                "studies.annotation_reranking.run._labels_module.derive_labels",
+                return_value=[],
+            ) as mock_derive,
+        ):
+            run_matrix(csv_path=csv_path, top_n=5, seeds=(0,), out_dir=out_dir, derive_labels=True)
+
+        mock_derive.assert_called_once()
+
+    def test_derive_labels_not_invoked_by_default(self, tmp_path):
+        """run_matrix with default derive_labels=False must NOT call labels.derive_labels."""
+        csv_path = self._minimal_csv(tmp_path)
+        out_dir = str(tmp_path / "run_out_no_dl")
+
+        with (
+            patch(
+                "studies.annotation_reranking.run.fetch_candidates",
+                return_value=[],
+            ),
+            patch(
+                "studies.annotation_reranking.run._labels_module.derive_labels",
+                return_value=[],
+            ) as mock_derive,
+        ):
+            run_matrix(csv_path=csv_path, top_n=5, seeds=(0,), out_dir=out_dir)
+
+        mock_derive.assert_not_called()
