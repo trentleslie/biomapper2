@@ -108,18 +108,22 @@ is written first.
    retired as a performance baseline.  `source_weight_guard` is the correct
    reference point.
 
-2. **Independent labels — current reality vs. planned scope.**
-   Currently `dataset.py` derives independent labels from the ~13 hand-triaged
-   cases only (`TRUE_BIOMAPPER_ERRORS` / `REFMET_ERRORS`).  All other 159 cases
-   receive `label_source="refmet_agreement"` and are **unscored** (`is_correct=None`).
-   InChIKey first-block connectivity (KG → MW → PubChem) is the *intended*
-   non-circular label source that would scale past the 13, but the label-derivation
-   pass is **NOT YET IMPLEMENTED** — it is a planned follow-up.
-   `EvalCase.inchikey_block_correct` and `EvalCase.retrievable` are reserved fields
-   for that future pass; they are never populated by the current code.
-   Once that pass lands, stereo/protonation cases (same connectivity, different
-   structure) would be assigned `expert_needed` and excluded from the scoreable
-   subset.  Until then, accuracy figures cover only the 13 hand-triaged cases.
+2. **Independent labels — two sources.**
+   The ~13 hand-triaged cases (`TRUE_BIOMAPPER_ERRORS` / `REFMET_ERRORS`) are
+   expert-adjudicated and always take precedence.  Beyond them, `labels.py`
+   derives independent labels from **InChIKey first-block (2-D connectivity)** —
+   a non-circular structural signal — via `derive_labels(cases)`, enabled at
+   run time with the `--derive-labels` flag (or `run_matrix(..., derive_labels=True)`).
+   For each disagreement it resolves the analyte's true connectivity by name
+   (Metabolomics Workbench → PubChem) and each competing node's connectivity
+   (KG → MW → PubChem), then: if the RefMet and BioMapper nodes share a block
+   (stereo/charge/protonation — same molecule) the case is `expert_needed` and
+   **excluded from the scoreable subset**; otherwise the node matching the
+   analyte's connectivity becomes the `inchikey_connectivity` label.  Ambiguous
+   or unresolvable cases stay `refmet_agreement` (unscored, `is_correct=None`).
+   Label derivation requires live MW/PubChem calls and is a gate-time step, not
+   part of CI; without `--derive-labels`, only the ~13 hand-triaged cases are scored.
+   `EvalCase.inchikey_block_correct` records the derived connectivity block.
 
 3. **`majority = top-score` proxy.**  This study has no multi-annotator vote
    as in production's resolver.  `source_weight_guard` uses the highest-scoring
