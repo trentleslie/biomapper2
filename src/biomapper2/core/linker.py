@@ -102,6 +102,42 @@ class Linker:
         )
 
     @staticmethod
+    def get_node_records(kg_node_ids: list[str]) -> dict[str, dict[str, Any]]:
+        """Fetch node records ``{curie: {"name": str|None, "equivalent_ids": {prefix: [local_id, ...]}}}``.
+
+        A superset of :meth:`get_equivalent_ids` used by the resolver's connectivity test, which needs
+        the node ``name`` for the Metabolomics Workbench / PubChem fallback. Non-critical enrichment:
+        returns ``{}`` on API failure rather than raising (mirrors :meth:`get_equivalent_ids`).
+        """
+        if not kg_node_ids:
+            return {}
+        try:
+            raw_results = kestrel_request(
+                method="POST",
+                endpoint="get-nodes",
+                batch_field="curies",
+                batch_items=kg_node_ids,
+                batch_size=KESTREL_BATCH_SIZE_CANONICALIZE,
+                json={"slim": False, "truncate_long_fields": False},
+            )
+        except Exception:
+            logging.warning("Failed to fetch node records from Kestrel /get-nodes; returning empty", exc_info=True)
+            return {}
+
+        result: dict[str, dict[str, Any]] = {}
+        for curie, node_obj in raw_results.items():
+            if not isinstance(node_obj, dict):
+                continue
+            grouped: dict[str, list[str]] = {}
+            for equiv_id in node_obj.get("equivalent_ids", []):
+                if ":" not in equiv_id:
+                    continue
+                prefix, local_id = equiv_id.split(":", 1)
+                grouped.setdefault(prefix, []).append(local_id)
+            result[curie] = {"name": node_obj.get("name"), "equivalent_ids": grouped}
+        return result
+
+    @staticmethod
     def get_equivalent_ids(
         kg_node_ids: list[str],
         prefixes: list[str] | None = None,
