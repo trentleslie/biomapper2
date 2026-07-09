@@ -260,7 +260,13 @@ class TestNameBlockLayerOrder:
 
 class TestDeriveLabels:
     def test_mutates_and_returns_cases(self):
-        """derive_labels over a 2-case list mutates each case and returns the list."""
+        """derive_labels over a 2-case list mutates each case in-place and returns the list.
+
+        derive_labels calls derive_label with no injected functions, so it uses the
+        module-level name_block (lru_cache-wrapped).  We patch _block_from_mw (the first
+        layer inside name_block) in the labels namespace and clear the cache before the
+        test so the patches are exercised by the real name_block call chain.
+        """
         case1 = _case(
             name="metabolite_a",
             refmet_id="100",
@@ -273,65 +279,46 @@ class TestDeriveLabels:
             biomapper_ids=["CHEBI:400"],
             label_source="refmet_agreement",
         )
+        cases = [case1, case2]
 
-        # case1: rb==ref → refmet pick
-        # case2: bio bb==ref → bio pick
+        # case1: rb==BLOCK_RM, ref(name)==BLOCK_RM → rb==ref, no bio match → refmet pick
+        # case2: rb==BLOCK_RM, ref(name)==BLOCK_REF, bio(CHEBI:400)==BLOCK_REF → bio pick
         def node_fn(nid: str, nm: str) -> str | None:
             if "CHEBI:100" in nid or "CHEBI:300" in nid:
-                return BLOCK_RM
+                return BLOCK_RM   # refmet nodes for both cases
             if "CHEBI:200" in nid:
-                return BLOCK_REF   # bio of case1 differs from ref
+                return BLOCK_BIO  # bio of case1 differs from ref
             if "CHEBI:400" in nid:
-                return BLOCK_REF   # bio of case2 matches ref
-            return BLOCK_BIO
-
-        def name_fn(name: str) -> str | None:
-            if name == "metabolite_a":
-                return BLOCK_RM   # rb==ref → refmet pick for case1
-            if name == "metabolite_b":
-                return BLOCK_REF  # bio of case2 matches ref → bio pick for case2
+                return BLOCK_REF  # bio of case2 matches ref
             return None
 
-        with patch(
-            "studies.annotation_reranking.labels.inchikey_block",
-            side_effect=node_fn,
+        def mw_name_fn(name: str) -> str | None:
+            """Simulate the MW layer of name_block: returns the block for known names."""
+            if name == "metabolite_a":
+                return BLOCK_RM   # ref==rb → refmet pick for case1
+            if name == "metabolite_b":
+                return BLOCK_REF  # ref==bio bb → bio pick for case2
+            return None
+
+        # Clear the lru_cache so our _block_from_mw patch is actually called.
+        name_block.cache_clear()
+
+        with (
+            patch("studies.annotation_reranking.labels.inchikey_block", side_effect=node_fn),
+            patch("studies.annotation_reranking.labels._block_from_mw", side_effect=mw_name_fn),
+            patch("studies.annotation_reranking.labels._block_from_pubchem", return_value=None),
         ):
-            result = derive_labels(
-                [case1, case2],
-            )
-            # Provide name_block_fn explicitly to bypass cache
-            # Re-run with explicit injection instead.
+            result = derive_labels(cases)
 
-        # Actually call directly with injected fns to avoid cache complications.
-        case1 = _case(
-            name="metabolite_a",
-            refmet_id="100",
-            biomapper_ids=["CHEBI:200"],
-            label_source="refmet_agreement",
-        )
-        case2 = _case(
-            name="metabolite_b",
-            refmet_id="300",
-            biomapper_ids=["CHEBI:400"],
-            label_source="refmet_agreement",
-        )
+        # (a) returns the same list object
+        assert result is cases
 
-        for case in [case1, case2]:
-            cid, src, ik = derive_label(
-                case,
-                name_block_fn=name_fn,
-                node_block_fn=node_fn,
-            )
-            case.correct_id = cid
-            case.label_source = src
-            case.inchikey_block_correct = ik
-
-        # case1: rb==BLOCK_RM, ref==BLOCK_RM → refmet pick
+        # (b) case1: rb==BLOCK_RM, ref==BLOCK_RM → refmet pick
         assert case1.correct_id == "CHEBI:100"
         assert case1.label_source == "inchikey_connectivity"
         assert case1.inchikey_block_correct == BLOCK_RM
 
-        # case2: rb==BLOCK_RM, bio==BLOCK_REF, ref==BLOCK_REF → bio pick
+        # (b) case2: rb==BLOCK_RM, bio==BLOCK_REF, ref==BLOCK_REF → bio pick
         assert case2.correct_id == "CHEBI:400"
         assert case2.label_source == "inchikey_connectivity"
         assert case2.inchikey_block_correct == BLOCK_REF

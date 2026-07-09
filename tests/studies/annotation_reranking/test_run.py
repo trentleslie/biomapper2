@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import tempfile
+from unittest import mock
 from unittest.mock import patch
 
 import pytest
@@ -316,9 +317,12 @@ class TestRunMatrixDeriveLabels:
         return csv_path
 
     def test_derive_labels_invoked_when_flag_true(self, tmp_path):
-        """run_matrix with derive_labels=True must call labels.derive_labels on the cases."""
+        """run_matrix with derive_labels=True must call labels.derive_labels on the loaded cases."""
         csv_path = self._minimal_csv(tmp_path)
         out_dir = str(tmp_path / "run_out_dl")
+
+        # A real non-empty sentinel list so we can verify the exact object passed.
+        sentinel_cases = [_case(None, "refmet_agreement")]
 
         with (
             patch(
@@ -326,13 +330,23 @@ class TestRunMatrixDeriveLabels:
                 return_value=[],
             ),
             patch(
+                "studies.annotation_reranking.run.load_eval_cases",
+                return_value=sentinel_cases,
+            ),
+            patch(
                 "studies.annotation_reranking.run._labels_module.derive_labels",
-                return_value=[],
+                return_value=sentinel_cases,
             ) as mock_derive,
         ):
             run_matrix(csv_path=csv_path, top_n=5, seeds=(0,), out_dir=out_dir, derive_labels=True)
 
-        mock_derive.assert_called_once()
+        # Verify called exactly once AND with the cases list (not csv_path or empty list).
+        mock_derive.assert_called_once_with(mock.ANY)
+        actual_arg = mock_derive.call_args[0][0]
+        assert actual_arg is sentinel_cases, (
+            f"derive_labels was called with {type(actual_arg)!r} instead of the cases list"
+        )
+        assert len(actual_arg) > 0, "derive_labels must not be called with an empty list"
 
     def test_derive_labels_not_invoked_by_default(self, tmp_path):
         """run_matrix with default derive_labels=False must NOT call labels.derive_labels."""
