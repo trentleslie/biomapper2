@@ -57,6 +57,9 @@ class Entity(BaseModel):
     chosen_kg_id: str | None = None
     chosen_kg_id_provided: str | None = None
     chosen_kg_id_assigned: str | None = None
+    # Human-review flag for source-weighted small-molecule ChEBI conflicts
+    # ('divergent_refmet' | 'conflict_no_structure'); None when no review is warranted.
+    chosen_kg_id_review: str | None = None
 
     # Enrichment step output — equivalent IDs for the chosen KG node, grouped by prefix
     kg_equivalent_ids: dict[str, list[str]] = Field(default_factory=dict)
