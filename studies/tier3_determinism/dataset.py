@@ -13,7 +13,13 @@ from pathlib import Path
 
 from studies.tier3_determinism.models import Query
 
-HELD_OUT_QUERY_SET: Path = Path(__file__).parent / "data" / "held_out_query_set_v1.jsonl"
+# v2 (25 queries: 21 metabolite-led + 2 gene + 2 protein) is the default for the headline
+# Fig-4 run. It keeps all 12 v1 queries and adds 13 hard-case adjudicated metabolites drawn
+# from the WS-A shared gold set (gold_set.jsonl @ 20260713T115754Z,
+# sha256 312030b6f0e345cad80c5bd4ba59800e1c32ad2abc5110e1a7f19312e6a0164b): the 11 rows tagged
+# eligible_for⊇{ablation} plus the first 2 tier1-only rows in gold-set file order. v1 is kept
+# on disk for provenance. Pass --dataset .../held_out_query_set_v1.jsonl to reproduce the v1 run.
+HELD_OUT_QUERY_SET: Path = Path(__file__).parent / "data" / "held_out_query_set_v2.jsonl"
 
 # WS-A gold records are only usable as Tier-3 queries if they were actually
 # adjudicated (non-null gold) and marked for a consumer that shares our accuracy bar.
