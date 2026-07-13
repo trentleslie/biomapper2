@@ -34,7 +34,9 @@ class ArmAPanel(BaseModel):
 
 class BioMapperPanel(BaseModel):
     n_queries: int
-    byte_identical: bool
+    # None when Arm B did not run (e.g. --no-arm-b): determinism is *unknown*, not
+    # vacuously True. Only assert byte-identical when calls were actually compared.
+    byte_identical: bool | None
     per_query_distinct: dict[str, int]
     accuracy: float
 
@@ -85,7 +87,7 @@ def build_fig4(arm_a: list[ArmACall], arm_b: list[ArmBCall]) -> Fig4Data:
 
     biomapper = BioMapperPanel(
         n_queries=len(per_query_distinct),
-        byte_identical=metrics.is_byte_identical(arm_b) if arm_b else True,
+        byte_identical=metrics.is_byte_identical(arm_b) if arm_b else None,
         per_query_distinct=per_query_distinct,
         accuracy=arm_b_accuracy,
     )

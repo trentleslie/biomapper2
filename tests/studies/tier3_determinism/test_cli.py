@@ -33,3 +33,25 @@ def test_overrides_apply() -> None:
 def test_unknown_model_label_rejected() -> None:
     with pytest.raises(KeyError):
         run.build_config(preset="smoke", models=["not-a-model"])
+
+
+def test_missing_provider_keys_reported(monkeypatch) -> None:
+    """Preflight should name every provider whose API key is absent, before any spend."""
+    for var in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+    cfg = run.build_config(preset="full")  # opus/sonnet/gpt/qwen -> all three providers
+    missing = run.missing_provider_keys(cfg)
+    assert set(missing) == {"OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY"}
+
+
+def test_present_provider_keys_not_reported(monkeypatch) -> None:
+    monkeypatch.setenv("OPENAI_API_KEY", "x")
+    cfg = run.build_config(preset="smoke")  # gpt only -> openai
+    assert run.missing_provider_keys(cfg) == []
+
+
+def test_preflight_raises_on_missing_keys(monkeypatch) -> None:
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    cfg = run.build_config(preset="smoke", models=["qwen"])
+    with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
+        run.preflight_keys(cfg)

@@ -13,12 +13,22 @@ All raw runs are saved by default to ``runs/<UTC-stamp>/`` (``--out`` only overr
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from studies.tier3_determinism import dataset, experiment
 from studies.tier3_determinism.models import ExperimentConfig, ModelSpec
+
+# API-key env var required per provider. A run over the full preset touches all of
+# these; a missing key would otherwise surface only as N per-call errors mid-sweep
+# (after real spend on the working arms), so we preflight and fail fast instead.
+_PROVIDER_KEY_ENV: dict[str, str] = {
+    "openai": "OPENAI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+    "anthropic": "ANTHROPIC_API_KEY",
+}
 
 # Model ids are pinned here and echoed into the manifest. Providers may silently swap
 # the model behind a name -- that drift is itself part of the non-determinism story,
@@ -82,6 +92,30 @@ def build_config(
     )
 
 
+def missing_provider_keys(config: ExperimentConfig) -> list[str]:
+    """Env-var names for API keys required by the config's providers but not set.
+
+    Deduplicated and ordered by first appearance across the model matrix.
+    """
+    missing: list[str] = []
+    for spec in config.models:
+        env = _PROVIDER_KEY_ENV.get(spec.provider)
+        if env and env not in os.environ and env not in missing:
+            missing.append(env)
+    return missing
+
+
+def preflight_keys(config: ExperimentConfig) -> None:
+    """Fail fast before any API spend if a selected provider is missing its key."""
+    missing = missing_provider_keys(config)
+    if missing:
+        raise RuntimeError(
+            "Missing API key(s) for the selected models: "
+            + ", ".join(missing)
+            + ". Set them (or drop those --models) before running."
+        )
+
+
 def _git_commit() -> str | None:
     try:
         return subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -111,6 +145,7 @@ def main(argv: list[str] | None = None) -> None:
         use_preset_limit=args.limit is None,  # only override the cap when --limit is given
         no_arm_b=args.no_arm_b,
     )
+    preflight_keys(cfg)  # fail fast before any API spend if a provider key is missing
     experiment.run_experiment(cfg, out_dir=args.out, git_commit=_git_commit())
 
 

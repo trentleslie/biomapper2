@@ -4,6 +4,8 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from studies.tier3_determinism import dataset, experiment, prompt
 from studies.tier3_determinism.call_model import ModelResponse
 from studies.tier3_determinism.models import ExperimentConfig, ModelSpec, Query
@@ -134,3 +136,30 @@ def test_fig4_json_has_both_arms(tmp_path: Path) -> None:
     assert len(fig["arm_a"]) == 2  # one panel per temperature
     assert fig["biomapper"]["byte_identical"] is True
     assert fig["biomapper"]["accuracy"] == 1.0
+
+
+def test_reused_out_dir_refuses_to_overwrite_prior_run(tmp_path: Path) -> None:
+    """An explicit --out that already holds a run must not be silently clobbered."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "headline"
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    first_manifest = (out / "manifest.json").read_text()
+    with pytest.raises(FileExistsError):
+        experiment.run_experiment(
+            _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="def"
+        )
+    # prior evidence untouched
+    assert (out / "manifest.json").read_text() == first_manifest
+
+
+def test_reused_out_dir_allows_empty_existing_dir(tmp_path: Path) -> None:
+    """A pre-created but empty dir is fine (e.g. mkdir before the run)."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "empty"
+    out.mkdir()
+    result = experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    assert (Path(result.out_dir) / "manifest.json").exists()

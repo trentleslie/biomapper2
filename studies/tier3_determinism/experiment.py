@@ -107,6 +107,13 @@ def run_experiment(
         stamp = now.strftime("%Y%m%dT%H%M%SZ")
         out_dir = (runs_root or DEFAULT_RUNS_ROOT) / stamp
     out_dir = Path(out_dir)
+    # Never clobber prior evidence: a reused --out that already holds a run is refused
+    # (artifact-hygiene SOP). An empty/absent dir is fine.
+    if out_dir.exists() and any(out_dir.iterdir()):
+        raise FileExistsError(
+            f"output dir already contains a run: {out_dir}. "
+            "Refusing to overwrite prior evidence; pick a fresh --out or clear it."
+        )
     out_dir.mkdir(parents=True, exist_ok=True)
 
     (out_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2))

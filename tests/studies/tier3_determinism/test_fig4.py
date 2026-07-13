@@ -70,3 +70,12 @@ def test_fig4_is_json_serializable() -> None:
     assert "arm_a" in dumped and "biomapper" in dumped
     # int histogram keys survive as JSON string keys
     assert dumped["arm_a"][0]["distinct_count_histogram"]
+
+
+def test_absent_arm_b_is_not_reported_as_byte_identical() -> None:
+    """Arm B skipped (--no-arm-b) must NOT claim determinism for an arm that never ran."""
+    arm_a = [_a("A", 0.0, 0, "X", True)]
+    data = fig4.build_fig4(arm_a, [])
+    # No BioMapper calls were compared -> determinism is unknown, not vacuously True.
+    assert data.biomapper.byte_identical is None
+    assert data.biomapper.n_queries == 0

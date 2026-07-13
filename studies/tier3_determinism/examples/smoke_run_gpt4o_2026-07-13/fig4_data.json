@@ -101,7 +101,7 @@
   ],
   "biomapper": {
     "n_queries": 0,
-    "byte_identical": true,
+    "byte_identical": null,
     "per_query_distinct": {},
     "accuracy": 0.0
   }
