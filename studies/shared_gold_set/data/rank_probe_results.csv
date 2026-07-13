@@ -1,0 +1,345 @@
+name,level,category,refmet_id,biomapper_id,refmet_node,bm_node,refmet_in_kg,arm,n_candidates,bm_rank,refmet_rank,rank1_score,refmet_score,score_gap,outcome,refmet_has_RM,bm_has_RM
+(15:3)-anacardic acid,CURATION,divergent (different compound),CHEBI:174627,CHEBI:25569,CHEBI:174627,CHEBI:25569,True,chebi_filter,50,1,,0.6786,,,refmet_absent,True,False
+"(2S,3R,4S,5S,6R)-2-[3-hydroxy-5-[(Z)-2-(4-hydroxyphenyl)ethenyl]phenoxy]-6-(hydroxymethyl)oxane-3,4,5-triol",MS2,divergent (different compound),CHEBI:76155,CHEBI:94610,CHEBI:76155,CHEBI:94610,True,chebi_filter,50,1,,2.4507,,,refmet_absent,True,False
+1 methylhistidine,MS2,multi-id (biomapper ambiguous set),CHEBI:70958,CHEBI:27596|CHEBI:50599,CHEBI:70958,RM:0162041,True,chebi_filter,50,4,1,4.8348,4.8348,0.0,refmet_rank1,False,True
+"1,2-propanediol",MS1,divergent (different compound),CHEBI:16997,CHEBI:26288,CHEBI:16997,CHEBI:26288,True,chebi_filter,50,29,31,1.359,0.8635,0.4954,refmet_ranked_low,True,False
+1-(1-enyl-palmitoyl)-GPC (P-16:0),MS2,parent/child or substring (generic vs specific),CHEBI:140773,CHEBI:73841,CHEBI:140773,RM:0133228,True,chebi_filter,50,,,1.4362,,,refmet_absent,False,True
+1-(1Z-octadecenyl)-sn-glycero-3-phosphocholine,MS2,divergent (different compound),CHEBI:137889,CHEBI:88779,CHEBI:137889,RM:0133230,True,chebi_filter,50,,,0.8946,,,refmet_absent,False,True
+1-methylguanidine,MS2,parent/child or substring (generic vs specific),CHEBI:16628,CHEBI:189433,CHEBI:16628,CHEBI:189433,True,chebi_filter,50,1,,1.4961,,,refmet_absent,True,False
+1-methylxanthine,CURATION,divergent (different compound),CHEBI:68444,CHEBI:68443,CHEBI:68444,CHEBI:68443,True,chebi_filter,50,1,2,3.2574,2.4833,0.774,refmet_ranked_low,True,False
+12-HHTrE,CURATION,parent/child or substring (generic vs specific),CHEBI:63977,CHEBI:72783,CHEBI:63977,CHEBI:72783,True,chebi_filter,50,1,28,2.4114,0.5701,1.8413,refmet_ranked_low,True,False
+2'-deoxyguanosine 5'-monophosphate (dGMP),MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:16192,CHEBI:57673,CHEBI:16192,CHEBI:57673,True,chebi_filter,50,1,2,1.5796,1.4522,0.1274,refmet_ranked_low,True,False
+"2,3-butanediol",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:16982,CHEBI:62064,CHEBI:16982,CHEBI:62064,True,chebi_filter,50,1,2,2.4684,2.4571,0.0112,refmet_ranked_low,True,False
+"2,3-diphosphoglycerate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:17720,CHEBI:28907,CHEBI:17720,CHEBI:28907,True,chebi_filter,50,1,,2.4739,,,refmet_absent,True,False
+"2,4-diaminobutyrate",MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:64307,CHEBI:16028,CHEBI:64307,CHEBI:16028,True,chebi_filter,50,1,12,1.526,0.6927,0.8333,refmet_ranked_low,False,False
+2-Methylmaleate,MS2,divergent (different compound),CHEBI:17626,CHEBI:87810,CHEBI:17626,CHEBI:87810,True,chebi_filter,50,1,,0.8283,,,refmet_absent,True,False
+2-aminoadipate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:37024,CHEBI:84981,CHEBI:37024,CHEBI:84981,True,chebi_filter,50,1,,3.0988,,,refmet_absent,True,False
+2-aminooctanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:75145,CHEBI:142420,LM:FA01100056,CHEBI:142420,True,chebi_filter,50,1,,4.9137,,,refmet_absent,True,False
+2-aminophenol sulfate,CURATION,divergent (different compound),CHEBI:133194,CHEBI:133186,CHEBI:133194,CHEBI:133186,True,chebi_filter,50,2,14,2.4042,0.8395,1.5647,refmet_ranked_low,False,True
+2-hydroxybehenate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:76980,CHEBI:76722,LM:FA01050077,CHEBI:76722,True,chebi_filter,50,1,,4.8945,,,refmet_absent,True,False
+2-hydroxydecanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133172,CHEBI:133174,CHEBI:133172,CHEBI:133174,True,chebi_filter,50,1,2,4.9051,2.4628,2.4424,refmet_ranked_low,True,False
+2-hydroxyhippurate (salicylurate),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:9008,CHEBI:132923,CHEBI:9008,CHEBI:132923,True,chebi_filter,50,1,6,1.4289,0.7035,0.7254,refmet_ranked_low,True,False
+2-hydroxyoctanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:86543,CHEBI:133514,CHEBI:86543,CHEBI:133514,True,chebi_filter,50,1,,4.8954,,,refmet_absent,True,False
+2-hydroxypalmitate,CURATION,divergent (different compound),CHEBI:65101,CHEBI:142989,CHEBI:65101,CHEBI:142989,True,chebi_filter,50,1,,2.4006,,,refmet_absent,True,False
+2-isopropylmalate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:28635,CHEBI:35128,CHEBI:28635,CHEBI:35128,True,chebi_filter,50,,,3.1715,,,refmet_absent,False,True
+"3,4,5-trimethoxycinnamate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:566519,CHEBI:228320,CHEBI:566519,UNII:C9096D920O,True,chebi_filter,50,,3,4.9206,1.5145,3.4061,refmet_ranked_low,False,True
+"3,4-dihydroxybenzoate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:36062,CHEBI:36241,CHEBI:36062,CHEBI:36241,True,chebi_filter,50,1,2,4.8839,2.4609,2.423,refmet_ranked_low,True,False
+"3,4-dihydroxymandelate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27637,CHEBI:53326,CHEBI:27637,CHEBI:53326,True,chebi_filter,50,1,5,4.9193,0.8888,4.0306,refmet_ranked_low,True,False
+3-(4-hydroxyphenyl)lactate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16003,CHEBI:36659,CHEBI:17385,CHEBI:36659,True,chebi_filter,50,1,,4.8981,,,refmet_absent,True,False
+3-aminoisobutyrate,CURATION,divergent (different compound),CHEBI:142590,CHEBI:49096,CHEBI:27389,CHEBI:49096,True,chebi_filter,50,1,,4.9072,,,refmet_absent,True,False
+3-hydroxyanthranilate,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:15793,CHEBI:36559,CHEBI:15793,CHEBI:36559,True,chebi_filter,50,1,2,4.9051,2.4188,2.4863,refmet_ranked_low,True,False
+3-hydroxydecanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:132983,CHEBI:132979,CHEBI:132983,CHEBI:132979,True,chebi_filter,50,1,,4.9048,,,refmet_absent,True,False
+3-hydroxyisobutyrate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18064,CHEBI:11805,CHEBI:37373,CHEBI:11805,True,chebi_filter,50,1,7,4.8747,0.8529,4.0219,refmet_ranked_low,True,False
+3-hydroxylaurate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:36206,CHEBI:76616,CHEBI:36206,CHEBI:76616,True,chebi_filter,50,1,,4.9012,,,refmet_absent,True,False
+3-hydroxymandelate,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:86553,CHEBI:32804,CHEBI:86553,CHEBI:32804,True,chebi_filter,50,3,,1.3757,,,refmet_absent,True,False
+3-hydroxyoctanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:37098,CHEBI:133511,CHEBI:37098,CHEBI:133511,True,chebi_filter,50,1,8,4.8939,0.856,4.0379,refmet_ranked_low,True,False
+3-methyladipate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:68503,CHEBI:86387,CHEBI:68503,CHEBI:86387,True,chebi_filter,50,1,,3.1268,,,refmet_absent,True,False
+3-methylhistidine,CURATION,multi-id (biomapper ambiguous set),CHEBI:70959,CHEBI:27596|CHEBI:50599,CHEBI:70959,RM:0162041,True,chebi_filter,50,3,1,4.8798,4.8798,0.0,refmet_rank1,False,True
+3-phenyllactic acid,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:43065,CHEBI:25998,CHEBI:43065,CHEBI:25998,True,chebi_filter,50,1,15,2.4742,0.7615,1.7128,refmet_ranked_low,True,False
+3-phenylpropionate (hydrocinnamate),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:28631,CHEBI:51057,CHEBI:28631,CHEBI:51057,True,chebi_filter,50,1,46,1.5261,0.6608,0.8652,refmet_ranked_low,True,False
+4-acetamidophenol,MS2,divergent (different compound),CHEBI:46195,CHEBI:143107,CHEBI:46195,CHEBI:143107,True,chebi_filter,50,1,,0.8649,,,refmet_absent,True,False
+4-guanidinobutanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:15728,CHEBI:86392,CHEBI:15728,CHEBI:86392,True,chebi_filter,50,1,2,4.9064,0.8936,4.0127,refmet_ranked_low,True,False
+4-hydroxyhippurate,CURATION,divergent (different compound),CHEBI:71018,CHEBI:133607,CHEBI:71018,CHEBI:133607,True,chebi_filter,50,1,,0.8281,,,refmet_absent,True,False
+4-hydroxynonenal,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:142593,CHEBI:58968,CHEBI:142593,CHEBI:58968,True,chebi_filter,50,3,1,4.8434,4.8434,0.0,refmet_rank1,False,True
+4-hydroxypyridine,MS2,divergent (different compound),CHEBI:133125,CHEBI:87614,UNII:3P2MV07G53,CHEBI:87614,True,chebi_filter,50,1,2,3.3593,2.4523,0.907,refmet_ranked_low,True,False
+4-methyl-2-oxopentanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:48430,CHEBI:17865,CHEBI:48430,CHEBI:17865,True,chebi_filter,50,1,8,4.9147,0.874,4.0406,refmet_ranked_low,True,False
+4-methylbenzenesulfonate,MS2,divergent (different compound),CHEBI:27849,CHEBI:11987,CHEBI:27849,CHEBI:11987,True,chebi_filter,50,12,,1.4471,,,refmet_absent,True,False
+4-methylcatechol sulfate,CURATION,divergent (different compound),CHEBI:176442,CHEBI:232803,CHEBI:176442,CHEBI:232803,True,chebi_filter,50,1,27,4.8823,0.7516,4.1307,refmet_ranked_low,True,False
+4-nitrophenol,MS2,parent/child or substring (generic vs specific),CHEBI:16836,CHEBI:57917,CHEBI:16836,CHEBI:57917,True,chebi_filter,50,1,2,3.097,2.4709,0.6261,refmet_ranked_low,True,False
+5-aminolevulinate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:17549,CHEBI:12109,CHEBI:17549,CHEBI:12109,True,chebi_filter,50,1,13,4.889,0.8428,4.0462,refmet_ranked_low,True,False
+5-dodecenoate (12:1n7),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:83044,CHEBI:83046,CHEBI:83044,CHEBI:83046,True,chebi_filter,50,1,24,1.517,0.635,0.882,refmet_ranked_low,False,False
+5-hydroxylysine,CURATION,parent/child or substring (generic vs specific),CHEBI:60175,CHEBI:18040,CHEBI:60175,CHEBI:18040,True,chebi_filter,50,3,5,3.3611,0.8857,2.4754,refmet_ranked_low,False,True
+5_HpEPE__4_55,MS2,divergent (different compound),CHEBI:138392,CHEBI:90822,CHEBI:138392,CHEBI:90822,True,chebi_filter,50,1,,0.6691,,,refmet_absent,False,False
+"5alpha-androstan-3beta,17beta-diol disulfate",CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133115,CHEBI:133116,RM:0156093,CHEBI:133116,True,chebi_filter,50,2,5,3.3048,1.6395,1.6653,refmet_ranked_low,True,False
+6-hydroxyindole sulfate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133568,CHEBI:133569,RM:0161395,CHEBI:133569,True,chebi_filter,50,2,1,3.2238,3.2238,0.0,refmet_rank1,True,False
+6-shogaol,MS2,divergent (different compound),CHEBI:174643,CHEBI:10138,CHEBI:174643,CHEBI:10138,True,chebi_filter,50,1,,3.2065,,,refmet_absent,False,False
+7-methylguanine,CURATION,divergent (different compound),CHEBI:28664,CHEBI:2274,UNII:661J4K04NB,CHEBI:2274,True,chebi_filter,50,1,2,4.9094,2.4393,2.47,refmet_ranked_low,True,False
+7alpha-hydroxy-3-oxo-4-cholestenoate (7-Hoca),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:83036,CHEBI:133803,CHEBI:83036,CHEBI:133803,True,chebi_filter,50,1,2,3.2263,0.8136,2.4127,refmet_ranked_low,False,False
+9(10)-EpOME,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:34494,CHEBI:84023,LM:FA02000037,CHEBI:84023,True,chebi_filter,50,1,3,3.1692,2.4143,0.7549,refmet_ranked_low,True,False
+9-hydroxystearate,CURATION,divergent (different compound),CHEBI:136638,CHEBI:229769,CHEBI:136638,CHEBI:229769,True,chebi_filter,50,2,,1.2606,,,refmet_absent,True,False
+Beta-Leucine,MS2,multi-id (biomapper ambiguous set),CHEBI:72772,CHEBI:15604|CHEBI:86261,CHEBI:72772,RM:0021466,True,chebi_filter,50,2,3,3.3076,2.4552,0.8524,refmet_ranked_low,False,True
+Chaulmoogric acid,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27939,CHEBI:61389,CHEBI:27939,LM:FA01140017,True,chebi_filter,50,2,5,2.4924,0.8818,1.6106,refmet_ranked_low,False,True
+Diethyl 2-methyl-3-oxosuccinate,MS2,divergent (different compound),CHEBI:172442,CHEBI:16879,CHEBI:172442,CHEBI:16879,True,chebi_filter,50,1,,2.4823,,,refmet_absent,False,True
+Germicidin C,MS2,parent/child or substring (generic vs specific),CHEBI:218904,CHEBI:216747,CHEBI:218904,CHEBI:216747,True,chebi_filter,50,1,2,3.0451,2.417,0.6281,refmet_ranked_low,False,False
+Glutaconic Acid,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:24309,CHEBI:15670,CHEBI:24309,CHEBI:15670,True,chebi_filter,50,2,1,3.2196,3.2196,0.0,refmet_rank1,False,True
+Glutamine,MS2,multi-id (biomapper ambiguous set),CHEBI:28300,CHEBI:18050|CHEBI:58359,CHEBI:28300,CHEBI:18050,True,chebi_filter,50,1,16,2.4869,0.8327,1.6542,refmet_ranked_low,False,True
+Glycocholic acid,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:17687,CHEBI:29746,CHEBI:17687,CHEBI:29746,True,chebi_filter,50,1,2,3.3187,2.4976,0.8211,refmet_ranked_low,True,False
+Isethionate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:1157,CHEBI:61904,CHEBI:1157,CHEBI:61904,True,chebi_filter,50,1,49,4.8515,0.8969,3.9546,refmet_ranked_low,True,False
+L-Carvone,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:38265,CHEBI:15400,CHEBI:15399,CHEBI:15400,True,chebi_filter,50,3,,0.8459,,,refmet_absent,True,True
+LPC 18:1,MS2,divergent (different compound),CHEBI:28610,CHEBI:72589,CHEBI:28610,LM:GP01050030,True,chebi_filter,50,2,,3.0329,,,refmet_absent,True,False
+N-acetylasparagine,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:138368,CHEBI:139582,CHEBI:138368,CHEBI:139582,True,chebi_filter,50,3,2,4.8901,3.2012,1.6889,refmet_ranked_low,False,True
+N-acetylhistidine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:86910,CHEBI:16437,CHEBI:86910,CHEBI:16437,True,chebi_filter,50,1,2,2.4925,2.4732,0.0193,refmet_ranked_low,False,True
+N-acetylneuraminate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17012,CHEBI:45744,CHEBI:17012,CHEBI:45744,True,chebi_filter,50,,30,4.9065,0.8762,4.0303,refmet_ranked_low,False,True
+N-acetylphenylalanine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:21626,CHEBI:16259,CHEBI:21626,CHEBI:16259,True,chebi_filter,50,2,3,3.0396,2.4714,0.5682,refmet_ranked_low,False,True
+N-acetyltryptophan,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:70976,CHEBI:74640,CHEBI:16734,CHEBI:74640,True,chebi_filter,50,3,9,4.906,0.892,4.0139,refmet_ranked_low,True,True
+N6-methyllysine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:64349,CHEBI:17604,CHEBI:64349,CHEBI:17604,True,chebi_filter,50,,10,1.5227,0.7851,0.7376,refmet_ranked_low,False,True
+O-sulfo-tyrosine,CURATION,parent/child or substring (generic vs specific),CHEBI:46215,CHEBI:232819,CHEBI:46215,CHEBI:232819,True,chebi_filter,50,1,,0.8772,,,refmet_absent,True,False
+PROPYL GALLIC ACID,MS2,parent/child or substring (generic vs specific),CHEBI:10607,CHEBI:30778,CHEBI:10607,CHEBI:30778,True,chebi_filter,50,9,,1.3922,,,refmet_absent,False,True
+Paclobutrazol,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:139345,CHEBI:139344,CHEBI:139345,CHEBI:139344,True,chebi_filter,50,1,,2.4868,,,refmet_absent,False,False
+Prunasin,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:25150,CHEBI:17396,CHEBI:25150,CHEBI:17396,True,chebi_filter,50,1,2,2.491,2.468,0.0231,refmet_ranked_low,False,True
+S-1-pyrroline-5-carboxylate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:1372,CHEBI:17388,CHEBI:1372,CHEBI:17388,True,chebi_filter,50,1,,4.8396,,,refmet_absent,False,False
+S-methylcysteine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:229268,CHEBI:45658,CHEBI:229268,CHEBI:45658,True,chebi_filter,50,2,19,4.8823,0.7975,4.0847,refmet_ranked_low,False,True
+S-methylmethionine,CURATION,divergent (different compound),CHEBI:67050,CHEBI:232419,CHEBI:67050,CHEBI:232419,True,chebi_filter,50,1,2,4.8873,2.4418,2.4455,refmet_ranked_low,True,False
+Tropine,MS2,parent/child or substring (generic vs specific),CHEBI:15742,CHEBI:15884,CHEBI:15742,CHEBI:15884,True,chebi_filter,50,1,,3.2571,,,refmet_absent,True,False
+Y 26763,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:18186,CHEBI:17895,CHEBI:28479,CHEBI:17895,True,chebi_filter,50,,,1.4236,,,refmet_absent,True,True
+acetoacetate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:15344,CHEBI:13705,CHEBI:15344,CHEBI:13705,True,chebi_filter,50,1,3,4.8791,2.4589,2.4202,refmet_ranked_low,True,False
+aconitate [cis or trans],CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:32805,CHEBI:16383,CHEBI:22211,CHEBI:16383,True,chebi_filter,50,1,10,1.543,0.7354,0.8076,refmet_ranked_low,True,False
+anthranilate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:30754,CHEBI:16567,CHEBI:30754,CHEBI:16567,True,chebi_filter,50,1,3,4.8877,2.4638,2.4239,refmet_ranked_low,True,False
+arabinose,CURATION,divergent (different compound),CHEBI:46983,CHEBI:17535,CHEBI:46983,CHEBI:17535,True,chebi_filter,50,1,11,2.4086,0.8551,1.5535,refmet_ranked_low,True,False
+arachidonate (20:4n6),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:15843,CHEBI:32395,CHEBI:15843,CHEBI:32395,True,chebi_filter,50,1,,1.4753,,,refmet_absent,True,False
+argininate*,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:90000,CHEBI:32695,CHEBI:90000,CHEBI:32695,True,chebi_filter,50,1,,3.2584,,,refmet_absent,True,False
+arginine,CURATION,multi-id (biomapper ambiguous set),CHEBI:29016,CHEBI:16467|CHEBI:31235,CHEBI:29016,CHEBI:16467,True,chebi_filter,50,1,13,2.4869,0.8749,1.6121,refmet_ranked_low,False,True
+asparagine,CURATION,multi-id (biomapper ambiguous set),CHEBI:22653,CHEBI:15724|CHEBI:17196|CHEBI:58048,CHEBI:22653,CHEBI:15724,True,chebi_filter,50,2,3,3.3628,2.4628,0.9,refmet_ranked_low,False,True
+aspartate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:22660,CHEBI:17053,CHEBI:22660,CHEBI:17053,True,chebi_filter,50,17,19,3.3031,0.8653,2.4378,refmet_ranked_low,False,True
+bicine,MS2,divergent (different compound),CHEBI:39066,CHEBI:39065,CHEBI:39066,CHEBI:39065,True,chebi_filter,50,1,,4.8843,,,refmet_absent,False,False
+cholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16359,CHEBI:29747,CHEBI:16359,CHEBI:29747,True,chebi_filter,50,1,,3.2655,,,refmet_absent,True,False
+citrate,MS2,parent/child or substring (generic vs specific),CHEBI:30769,CHEBI:50744,CHEBI:30769,CHEBI:50744,True,chebi_filter,50,11,,1.3778,,,refmet_absent,True,False
+citrulline,CURATION,multi-id (biomapper ambiguous set),CHEBI:18211,CHEBI:16349|CHEBI:57743,CHEBI:18211,CHEBI:16349,True,chebi_filter,50,1,2,2.4881,2.4714,0.0167,refmet_ranked_low,False,True
+cyclo(pro-val),CURATION,divergent (different compound),CHEBI:69439,CHEBI:201644,CHEBI:69439,CHEBI:201644,True,chebi_filter,50,6,2,1.5508,1.423,0.1278,refmet_ranked_low,True,False
+cystathionine,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:17755,CHEBI:17482,CHEBI:17755,CHEBI:17482,True,chebi_filter,50,22,2,3.3322,2.4642,0.8679,refmet_ranked_low,True,True
+deoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:28834,CHEBI:23614,CHEBI:28834,CHEBI:23614,True,chebi_filter,50,1,3,4.8858,2.4054,2.4804,refmet_ranked_low,True,False
+deoxycholic acid 12-sulfate*,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:233494,CHEBI:232726,CHEBI:233494,CHEBI:232726,False,chebi_filter,50,1,,1.5311,,,refmet_absent,False,False
+dihomo-linoleate (20:2n6),CURATION,divergent (different compound),CHEBI:73731,CHEBI:88670,LM:FA01031043,CHEBI:88670,True,chebi_filter,50,1,,4.8866,,,refmet_absent,True,False
+dihydrobiopterin,MS1,divergent (different compound),CHEBI:43120,CHEBI:43029,CHEBI:43120,CHEBI:43029,True,chebi_filter,50,1,16,3.0775,0.8401,2.2374,refmet_ranked_low,True,True
+dihydroferulate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:86612,CHEBI:133751,CHEBI:86612,CHEBI:133751,True,chebi_filter,50,1,12,4.9074,0.6847,4.2227,refmet_ranked_low,True,False
+dihydroxyphenylalanine (DOPA),MS1,multi-id (biomapper ambiguous set),CHEBI:49168,CHEBI:15765|CHEBI:192509|CHEBI:57504,CHEBI:49168,CHEBI:15765,True,chebi_filter,50,,18,1.4112,0.7054,0.7058,refmet_ranked_low,False,True
+erucate (22:1n9),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:28792,CHEBI:32393,CHEBI:28792,CHEBI:32393,True,chebi_filter,50,1,16,1.4394,0.6519,0.7874,refmet_ranked_low,True,False
+eugenol sulfate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133570,CHEBI:133571,RM:0028322,CHEBI:133571,True,chebi_filter,50,1,2,3.163,2.4812,0.6817,refmet_ranked_low,True,False
+ferulate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:17620,CHEBI:29749,CHEBI:17620,CHEBI:29749,True,chebi_filter,50,1,2,3.1486,2.487,0.6615,refmet_ranked_low,True,False
+gamma-aminobutyrate (GABA),MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:16865,CHEBI:30566,CHEBI:16865,CHEBI:30566,True,chebi_filter,50,1,,1.6028,,,refmet_absent,True,False
+gamma-glutamylalanine,CURATION,divergent (different compound),CHEBI:50621,CHEBI:50619,CHEBI:50621,CHEBI:50619,True,chebi_filter,50,3,2,4.8971,2.4759,2.4212,refmet_ranked_low,False,True
+gluconate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:33198,CHEBI:24265,CHEBI:33198,CHEBI:24265,True,chebi_filter,50,1,4,3.343,2.4088,0.9342,refmet_ranked_low,True,False
+glutamate,CURATION,multi-id (biomapper ambiguous set),CHEBI:18237,CHEBI:16015|CHEBI:232425|CHEBI:64243|CHEBI:91250,CHEBI:18237,CHEBI:16015,True,chebi_filter,50,20,21,3.3231,0.8851,2.4381,refmet_ranked_low,False,True
+glutamine,CURATION,multi-id (biomapper ambiguous set),CHEBI:28300,CHEBI:18050|CHEBI:58359,CHEBI:28300,CHEBI:18050,True,chebi_filter,50,1,16,2.4869,0.8819,1.605,refmet_ranked_low,False,True
+glycerate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:33508,CHEBI:33871,CHEBI:33508,CHEBI:33871,True,chebi_filter,50,1,,4.8703,,,refmet_absent,False,False
+glycerophosphoethanolamine,CURATION,parent/child or substring (generic vs specific),CHEBI:16929,CHEBI:36314,CHEBI:143890,CHEBI:36314,True,chebi_filter,50,1,,3.2203,,,refmet_absent,True,False
+glycerophosphoinositol*,CURATION,divergent (different compound),CHEBI:166490,CHEBI:35771,RM:0157135,CHEBI:35771,True,chebi_filter,50,2,,1.573,,,refmet_absent,True,False
+glycochenodeoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:36274,CHEBI:36252,CHEBI:36274,CHEBI:36252,True,chebi_filter,50,1,2,4.9069,2.4356,2.4713,refmet_ranked_low,True,False
+glycocholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17687,CHEBI:29746,CHEBI:17687,CHEBI:29746,True,chebi_filter,50,1,2,3.2296,2.4636,0.766,refmet_ranked_low,True,False
+glycodeoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:27471,CHEBI:82982,CHEBI:27471,CHEBI:82982,True,chebi_filter,50,1,2,4.9106,2.4351,2.4756,refmet_ranked_low,True,False
+guanidinoacetate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16344,CHEBI:131444,CHEBI:16344,CHEBI:131444,True,chebi_filter,50,1,3,4.9095,2.4651,2.4444,refmet_ranked_low,True,False
+"gulono-1,4-lactone",MS2,divergent (different compound),CHEBI:177057,CHEBI:17587,CHEBI:177057,CHEBI:17587,True,chebi_filter,50,1,5,1.4193,0.7127,0.7066,refmet_ranked_low,True,True
+heptanoate (7:0),CURATION,parent/child or substring (generic vs specific),CHEBI:45571,CHEBI:179775,CHEBI:45571,CHEBI:179775,True,chebi_filter,50,1,,1.4386,,,refmet_absent,True,False
+hexadecadienoate (16:2n6),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:86147,CHEBI:78096,LM:FA01030807,CHEBI:78096,True,chebi_filter,50,1,,1.4925,,,refmet_absent,True,False
+histidine,CURATION,multi-id (biomapper ambiguous set),CHEBI:27570,CHEBI:15971|CHEBI:57595,CHEBI:27947,CHEBI:15971,True,chebi_filter,50,1,2,2.4883,2.4006,0.0877,refmet_ranked_low,True,True
+homoarginine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:27747,CHEBI:24606,CHEBI:27747,CHEBI:24606,True,chebi_filter,50,1,3,4.8502,2.4714,2.3788,refmet_ranked_low,True,False
+homocarnosine,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:28050,CHEBI:85981,CHEBI:28050,CHEBI:85981,True,chebi_filter,50,2,3,4.8666,2.4678,2.3988,refmet_ranked_low,False,True
+homoserine,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:30653,CHEBI:15699,CHEBI:30653,CHEBI:15699,True,chebi_filter,50,3,2,3.351,2.4888,0.8622,refmet_ranked_low,False,True
+iminodiacetate (IDA),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:24786,CHEBI:24785,CHEBI:24786,CHEBI:24785,True,chebi_filter,50,1,12,1.3846,0.6984,0.6862,refmet_ranked_low,True,False
+indole-3-carboxylate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:24809,CHEBI:62448,CHEBI:24809,CHEBI:62448,True,chebi_filter,50,1,2,4.8907,2.4612,2.4295,refmet_ranked_low,True,False
+indolebutyrate,MS1,parent/child or substring (generic vs specific),CHEBI:33070,CHEBI:35581,CHEBI:33070,CHEBI:35581,True,chebi_filter,50,7,,1.3569,,,refmet_absent,True,False
+kynurenate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18344,CHEBI:58454,CHEBI:18344,CHEBI:58454,True,chebi_filter,50,1,4,4.8949,0.8551,4.0398,refmet_ranked_low,True,False
+lanthionine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:25013,CHEBI:21347,CHEBI:25013,RM:0041410,True,chebi_filter,50,12,3,4.8822,3.3019,1.5802,refmet_ranked_low,False,True
+laurylcarnitine (C12),CURATION,divergent (different compound),CHEBI:77086,CHEBI:192727,CHEBI:77086,CHEBI:192727,True,chebi_filter,50,1,,0.7489,,,refmet_absent,True,False
+linoleate (18:2n6),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17351,CHEBI:30245,CHEBI:17351,CHEBI:30245,True,chebi_filter,50,1,,1.4793,,,refmet_absent,True,False
+linolenic acid,MS2,multi-id (biomapper ambiguous set),CHEBI:25633,CHEBI:165492|CHEBI:27432,CHEBI:25633,CHEBI:27432,True,chebi_filter,50,2,,3.2002,,,refmet_absent,False,True
+lysine,CURATION,multi-id (biomapper ambiguous set),CHEBI:25094,CHEBI:133538|CHEBI:18019|CHEBI:194466|CHEBI:53633|CHEBI:61488,CHEBI:25094,CHEBI:53633,True,chebi_filter,50,1,11,2.4824,0.8726,1.6098,refmet_ranked_low,False,True
+lyxonate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:134538,CHEBI:145756,CHEBI:134538,CHEBI:145756,True,chebi_filter,50,1,5,4.8918,0.7183,4.1736,refmet_ranked_low,True,False
+malate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:6650,CHEBI:30797,CHEBI:6650,CHEBI:30797,True,chebi_filter,50,11,,3.3545,,,refmet_absent,False,True
+mandelate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:35825,CHEBI:25147,CHEBI:35825,CHEBI:25147,True,chebi_filter,50,1,40,4.8641,0.6363,4.2278,refmet_ranked_low,False,False
+margarate (17:0),CURATION,divergent (different compound),CHEBI:32365,CHEBI:32366,CHEBI:32365,CHEBI:32366,True,chebi_filter,50,1,,1.5027,,,refmet_absent,True,False
+menthol,MS1,multi-id (biomapper ambiguous set),CHEBI:15409,CHEBI:25187|CHEBI:76306,CHEBI:15409,CHEBI:25187,True,chebi_filter,50,1,3,2.4998,2.4857,0.014,refmet_ranked_low,True,False
+myristoylcarnitine (C14),CURATION,divergent (different compound),CHEBI:84634,CHEBI:178069,CHEBI:84634,CHEBI:178069,True,chebi_filter,50,2,,1.2295,,,refmet_absent,True,False
+naringenin,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:50202,CHEBI:17846,CHEBI:50202,CHEBI:17846,True,chebi_filter,50,1,5,2.4885,0.8703,1.6182,refmet_ranked_low,False,True
+nonadecenoate (19:1),CURATION,parent/child or substring (generic vs specific),CHEBI:83051,CHEBI:84965,LM:FA01030362,RM:0161729,True,chebi_filter,50,1,16,1.3667,0.6796,0.6871,refmet_ranked_low,True,True
+octadecanedioate (C18),MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:133086,CHEBI:133087,CHEBI:133086,CHEBI:133087,True,chebi_filter,50,1,39,1.4595,0.6831,0.7764,refmet_ranked_low,True,False
+ornithine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18257,CHEBI:15729,CHEBI:18257,CHEBI:15729,True,chebi_filter,50,1,2,2.4891,2.4627,0.0264,refmet_ranked_low,False,True
+phenylacetylglutamine,CURATION,parent/child or substring (generic vs specific),CHEBI:17884,CHEBI:25982,CHEBI:17884,CHEBI:25982,True,chebi_filter,50,1,3,4.8882,2.4832,2.405,refmet_ranked_low,True,False
+phenylalanine,CURATION,multi-id (biomapper ambiguous set),CHEBI:28044,CHEBI:17295|CHEBI:58095,CHEBI:16998,CHEBI:17295,True,chebi_filter,50,1,2,2.4878,2.4663,0.0216,refmet_ranked_low,True,True
+phenylpropanolamine,MS1,divergent (different compound),CHEBI:8104,CHEBI:36,CHEBI:8104,CHEBI:36,True,chebi_filter,50,3,4,2.491,2.4592,0.0318,refmet_ranked_low,False,True
+phenylpyruvate,CURATION,parent/child or substring (generic vs specific),CHEBI:30851,CHEBI:26008,CHEBI:30851,CHEBI:26008,True,chebi_filter,50,1,2,3.2639,2.489,0.7749,refmet_ranked_low,True,False
+phosphate,CURATION,multi-id (biomapper ambiguous set),CHEBI:26078,CHEBI:18367|CHEBI:26020,CHEBI:26078,CHEBI:18367,True,chebi_filter,50,1,,2.4825,,,refmet_absent,True,False
+phytanate,CURATION,parent/child or substring (generic vs specific),CHEBI:16285,CHEBI:172542,CHEBI:16285,CHEBI:172542,True,chebi_filter,50,,7,4.8932,0.8432,4.05,refmet_ranked_low,False,True
+pipecolate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17964,CHEBI:36110,CHEBI:17964,CHEBI:36110,True,chebi_filter,50,1,36,4.8907,0.6136,4.2771,refmet_ranked_low,False,False
+purine,MS1,parent/child or substring (generic vs specific),CHEBI:17258,CHEBI:35584,UNII:W60KTZ3IZY,CHEBI:35584,True,chebi_filter,50,1,2,3.3229,2.4881,0.8348,refmet_ranked_low,True,False
+pyridoxate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17405,CHEBI:132948,CHEBI:17405,CHEBI:132948,True,chebi_filter,50,1,,2.4199,,,refmet_absent,True,False
+resveratrol,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27881,CHEBI:45713,CHEBI:27881,CHEBI:45713,True,chebi_filter,50,1,3,2.4871,2.4051,0.082,refmet_ranked_low,False,True
+ribonate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:21077,CHEBI:33527,CHEBI:21077,CHEBI:33527,True,chebi_filter,50,1,19,4.8641,0.6891,4.175,refmet_ranked_low,True,False
+sepiapterin,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:16095,CHEBI:194527,CHEBI:16095,CHEBI:194527,True,chebi_filter,50,1,2,3.1276,1.5182,1.6094,refmet_ranked_low,False,True
+serine,CURATION,multi-id (biomapper ambiguous set),CHEBI:17822,CHEBI:16523|CHEBI:17115|CHEBI:33384,LM:FA01100045,CHEBI:16523,True,chebi_filter,50,1,,2.4849,,,refmet_absent,False,True
+sorbate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:35962,CHEBI:36550,CHEBI:35962,CHEBI:36550,True,chebi_filter,50,1,,4.8693,,,refmet_absent,False,False
+sphinganine-1-phosphate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16893,CHEBI:57939,CHEBI:16893,CHEBI:57939,True,chebi_filter,50,1,2,3.1585,2.4892,0.6694,refmet_ranked_low,True,False
+syringaresinol,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:49211,CHEBI:47,CHEBI:49211,CHEBI:47,True,chebi_filter,50,1,3,2.4997,2.4622,0.0375,refmet_ranked_low,False,False
+tagatose,MS1,parent/child or substring (generic vs specific),CHEBI:47693,CHEBI:33954,CHEBI:47693,CHEBI:33954,True,chebi_filter,50,1,2,4.8682,3.0992,1.769,refmet_ranked_low,True,False
+tartronate (hydroxymalonate),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16513,CHEBI:17649,CHEBI:16513,CHEBI:17649,True,chebi_filter,50,1,5,3.1329,0.7628,2.3701,refmet_ranked_low,True,False
+taurochenodeoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16525,CHEBI:9407,CHEBI:16525,CHEBI:9407,True,chebi_filter,50,1,2,4.9014,2.434,2.4674,refmet_ranked_low,True,False
+thioproline,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:64564,CHEBI:45171,CHEBI:133584,CHEBI:45171,True,chebi_filter,50,1,2,2.491,2.4573,0.0338,refmet_ranked_low,False,True
+threonate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:15908,CHEBI:15243,CHEBI:49059,CHEBI:15243,True,chebi_filter,50,1,,4.8625,,,refmet_absent,True,False
+trans-urocanate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:27248,CHEBI:30817,CHEBI:27248,CHEBI:30817,True,chebi_filter,50,8,2,4.9145,1.5672,3.3473,refmet_ranked_low,False,True
+trehalose,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27082,CHEBI:16551,CHEBI:27082,CHEBI:16551,True,chebi_filter,50,1,2,2.4954,2.4662,0.0292,refmet_ranked_low,False,True
+tryptophan,CURATION,multi-id (biomapper ambiguous set),CHEBI:27897,CHEBI:16828|CHEBI:57719|CHEBI:57912,CHEBI:27897,CHEBI:16828,True,chebi_filter,50,1,2,2.4959,2.486,0.0099,refmet_ranked_low,True,True
+tyrosine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18186,CHEBI:17895,CHEBI:28479,CHEBI:17895,True,chebi_filter,50,1,2,2.4857,2.4536,0.0321,refmet_ranked_low,True,True
+undecanoate (11:0),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:32368,CHEBI:32369,CHEBI:32368,CHEBI:32369,True,chebi_filter,50,1,5,1.409,0.6577,0.7513,refmet_ranked_low,True,False
+valine,CURATION,multi-id (biomapper ambiguous set),CHEBI:27266,CHEBI:16414|CHEBI:57762,CHEBI:27266,CHEBI:16414,True,chebi_filter,50,2,3,3.2726,2.4643,0.8082,refmet_ranked_low,True,True
+(15:3)-anacardic acid,CURATION,divergent (different compound),CHEBI:174627,CHEBI:25569,CHEBI:174627,CHEBI:25569,True,unfiltered,50,1,,0.6786,,,refmet_absent,True,False
+"(2S,3R,4S,5S,6R)-2-[3-hydroxy-5-[(Z)-2-(4-hydroxyphenyl)ethenyl]phenoxy]-6-(hydroxymethyl)oxane-3,4,5-triol",MS2,divergent (different compound),CHEBI:76155,CHEBI:94610,CHEBI:76155,CHEBI:94610,True,unfiltered,50,1,,2.4507,,,refmet_absent,True,False
+1 methylhistidine,MS2,multi-id (biomapper ambiguous set),CHEBI:70958,CHEBI:27596|CHEBI:50599,CHEBI:70958,RM:0162041,True,unfiltered,50,4,1,4.8348,4.8348,0.0,refmet_rank1,False,True
+"1,2-propanediol",MS1,divergent (different compound),CHEBI:16997,CHEBI:26288,CHEBI:16997,CHEBI:26288,True,unfiltered,50,29,31,1.359,0.8635,0.4954,refmet_ranked_low,True,False
+1-(1-enyl-palmitoyl)-GPC (P-16:0),MS2,parent/child or substring (generic vs specific),CHEBI:140773,CHEBI:73841,CHEBI:140773,RM:0133228,True,unfiltered,50,,,1.4362,,,refmet_absent,False,True
+1-(1Z-octadecenyl)-sn-glycero-3-phosphocholine,MS2,divergent (different compound),CHEBI:137889,CHEBI:88779,CHEBI:137889,RM:0133230,True,unfiltered,50,,,0.8946,,,refmet_absent,False,True
+1-methylguanidine,MS2,parent/child or substring (generic vs specific),CHEBI:16628,CHEBI:189433,CHEBI:16628,CHEBI:189433,True,unfiltered,50,1,,1.4961,,,refmet_absent,True,False
+1-methylxanthine,CURATION,divergent (different compound),CHEBI:68444,CHEBI:68443,CHEBI:68444,CHEBI:68443,True,unfiltered,50,1,2,3.2574,2.4833,0.774,refmet_ranked_low,True,False
+12-HHTrE,CURATION,parent/child or substring (generic vs specific),CHEBI:63977,CHEBI:72783,CHEBI:63977,CHEBI:72783,True,unfiltered,50,1,28,2.4114,0.5701,1.8413,refmet_ranked_low,True,False
+2'-deoxyguanosine 5'-monophosphate (dGMP),MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:16192,CHEBI:57673,CHEBI:16192,CHEBI:57673,True,unfiltered,50,1,2,1.5796,1.4522,0.1274,refmet_ranked_low,True,False
+"2,3-butanediol",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:16982,CHEBI:62064,CHEBI:16982,CHEBI:62064,True,unfiltered,50,1,2,2.4684,2.4571,0.0112,refmet_ranked_low,True,False
+"2,3-diphosphoglycerate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:17720,CHEBI:28907,CHEBI:17720,CHEBI:28907,True,unfiltered,50,1,,2.4739,,,refmet_absent,True,False
+"2,4-diaminobutyrate",MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:64307,CHEBI:16028,CHEBI:64307,CHEBI:16028,True,unfiltered,50,1,12,1.526,0.6927,0.8333,refmet_ranked_low,False,False
+2-Methylmaleate,MS2,divergent (different compound),CHEBI:17626,CHEBI:87810,CHEBI:17626,CHEBI:87810,True,unfiltered,50,1,,0.8283,,,refmet_absent,True,False
+2-aminoadipate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:37024,CHEBI:84981,CHEBI:37024,CHEBI:84981,True,unfiltered,50,1,,3.0988,,,refmet_absent,True,False
+2-aminooctanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:75145,CHEBI:142420,LM:FA01100056,CHEBI:142420,True,unfiltered,50,1,,4.9137,,,refmet_absent,True,False
+2-aminophenol sulfate,CURATION,divergent (different compound),CHEBI:133194,CHEBI:133186,CHEBI:133194,CHEBI:133186,True,unfiltered,50,2,14,2.4042,0.8395,1.5647,refmet_ranked_low,False,True
+2-hydroxybehenate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:76980,CHEBI:76722,LM:FA01050077,CHEBI:76722,True,unfiltered,50,1,,4.8945,,,refmet_absent,True,False
+2-hydroxydecanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133172,CHEBI:133174,CHEBI:133172,CHEBI:133174,True,unfiltered,50,1,2,4.9051,2.4628,2.4424,refmet_ranked_low,True,False
+2-hydroxyhippurate (salicylurate),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:9008,CHEBI:132923,CHEBI:9008,CHEBI:132923,True,unfiltered,50,1,6,1.4289,0.7035,0.7254,refmet_ranked_low,True,False
+2-hydroxyoctanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:86543,CHEBI:133514,CHEBI:86543,CHEBI:133514,True,unfiltered,50,1,,4.8954,,,refmet_absent,True,False
+2-hydroxypalmitate,CURATION,divergent (different compound),CHEBI:65101,CHEBI:142989,CHEBI:65101,CHEBI:142989,True,unfiltered,50,1,,2.4006,,,refmet_absent,True,False
+2-isopropylmalate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:28635,CHEBI:35128,CHEBI:28635,CHEBI:35128,True,unfiltered,50,,,3.1715,,,refmet_absent,False,True
+"3,4,5-trimethoxycinnamate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:566519,CHEBI:228320,CHEBI:566519,UNII:C9096D920O,True,unfiltered,50,,3,4.9206,1.5145,3.4061,refmet_ranked_low,False,True
+"3,4-dihydroxybenzoate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:36062,CHEBI:36241,CHEBI:36062,CHEBI:36241,True,unfiltered,50,1,2,4.8839,2.4609,2.423,refmet_ranked_low,True,False
+"3,4-dihydroxymandelate",MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27637,CHEBI:53326,CHEBI:27637,CHEBI:53326,True,unfiltered,50,1,5,4.9193,0.8888,4.0306,refmet_ranked_low,True,False
+3-(4-hydroxyphenyl)lactate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16003,CHEBI:36659,CHEBI:17385,CHEBI:36659,True,unfiltered,50,1,,4.8981,,,refmet_absent,True,False
+3-aminoisobutyrate,CURATION,divergent (different compound),CHEBI:142590,CHEBI:49096,CHEBI:27389,CHEBI:49096,True,unfiltered,50,1,,4.9072,,,refmet_absent,True,False
+3-hydroxyanthranilate,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:15793,CHEBI:36559,CHEBI:15793,CHEBI:36559,True,unfiltered,50,1,2,4.9051,2.4188,2.4863,refmet_ranked_low,True,False
+3-hydroxydecanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:132983,CHEBI:132979,CHEBI:132983,CHEBI:132979,True,unfiltered,50,1,,4.9048,,,refmet_absent,True,False
+3-hydroxyisobutyrate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18064,CHEBI:11805,CHEBI:37373,CHEBI:11805,True,unfiltered,50,1,7,4.8747,0.8529,4.0219,refmet_ranked_low,True,False
+3-hydroxylaurate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:36206,CHEBI:76616,CHEBI:36206,CHEBI:76616,True,unfiltered,50,1,,4.9012,,,refmet_absent,True,False
+3-hydroxymandelate,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:86553,CHEBI:32804,CHEBI:86553,CHEBI:32804,True,unfiltered,50,3,,1.3757,,,refmet_absent,True,False
+3-hydroxyoctanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:37098,CHEBI:133511,CHEBI:37098,CHEBI:133511,True,unfiltered,50,1,8,4.8939,0.856,4.0379,refmet_ranked_low,True,False
+3-methyladipate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:68503,CHEBI:86387,CHEBI:68503,CHEBI:86387,True,unfiltered,50,1,,3.1268,,,refmet_absent,True,False
+3-methylhistidine,CURATION,multi-id (biomapper ambiguous set),CHEBI:70959,CHEBI:27596|CHEBI:50599,CHEBI:70959,RM:0162041,True,unfiltered,50,3,1,4.8798,4.8798,0.0,refmet_rank1,False,True
+3-phenyllactic acid,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:43065,CHEBI:25998,CHEBI:43065,CHEBI:25998,True,unfiltered,50,1,15,2.4742,0.7615,1.7128,refmet_ranked_low,True,False
+3-phenylpropionate (hydrocinnamate),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:28631,CHEBI:51057,CHEBI:28631,CHEBI:51057,True,unfiltered,50,1,46,1.5261,0.6608,0.8652,refmet_ranked_low,True,False
+4-acetamidophenol,MS2,divergent (different compound),CHEBI:46195,CHEBI:143107,CHEBI:46195,CHEBI:143107,True,unfiltered,50,1,,0.8649,,,refmet_absent,True,False
+4-guanidinobutanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:15728,CHEBI:86392,CHEBI:15728,CHEBI:86392,True,unfiltered,50,1,2,4.9064,0.8936,4.0127,refmet_ranked_low,True,False
+4-hydroxyhippurate,CURATION,divergent (different compound),CHEBI:71018,CHEBI:133607,CHEBI:71018,CHEBI:133607,True,unfiltered,50,1,,0.8281,,,refmet_absent,True,False
+4-hydroxynonenal,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:142593,CHEBI:58968,CHEBI:142593,CHEBI:58968,True,unfiltered,50,3,1,4.8434,4.8434,0.0,refmet_rank1,False,True
+4-hydroxypyridine,MS2,divergent (different compound),CHEBI:133125,CHEBI:87614,UNII:3P2MV07G53,CHEBI:87614,True,unfiltered,50,1,2,3.3593,2.4523,0.907,refmet_ranked_low,True,False
+4-methyl-2-oxopentanoate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:48430,CHEBI:17865,CHEBI:48430,CHEBI:17865,True,unfiltered,50,1,8,4.9147,0.874,4.0406,refmet_ranked_low,True,False
+4-methylbenzenesulfonate,MS2,divergent (different compound),CHEBI:27849,CHEBI:11987,CHEBI:27849,CHEBI:11987,True,unfiltered,50,12,,1.4471,,,refmet_absent,True,False
+4-methylcatechol sulfate,CURATION,divergent (different compound),CHEBI:176442,CHEBI:232803,CHEBI:176442,CHEBI:232803,True,unfiltered,50,1,27,4.8823,0.7516,4.1307,refmet_ranked_low,True,False
+4-nitrophenol,MS2,parent/child or substring (generic vs specific),CHEBI:16836,CHEBI:57917,CHEBI:16836,CHEBI:57917,True,unfiltered,50,1,2,3.097,2.4709,0.6261,refmet_ranked_low,True,False
+5-aminolevulinate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:17549,CHEBI:12109,CHEBI:17549,CHEBI:12109,True,unfiltered,50,1,13,4.889,0.8428,4.0462,refmet_ranked_low,True,False
+5-dodecenoate (12:1n7),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:83044,CHEBI:83046,CHEBI:83044,CHEBI:83046,True,unfiltered,50,1,24,1.517,0.635,0.882,refmet_ranked_low,False,False
+5-hydroxylysine,CURATION,parent/child or substring (generic vs specific),CHEBI:60175,CHEBI:18040,CHEBI:60175,CHEBI:18040,True,unfiltered,50,3,5,3.3611,0.8857,2.4754,refmet_ranked_low,False,True
+5_HpEPE__4_55,MS2,divergent (different compound),CHEBI:138392,CHEBI:90822,CHEBI:138392,CHEBI:90822,True,unfiltered,50,1,,0.6691,,,refmet_absent,False,False
+"5alpha-androstan-3beta,17beta-diol disulfate",CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133115,CHEBI:133116,RM:0156093,CHEBI:133116,True,unfiltered,50,2,5,3.3048,1.6395,1.6653,refmet_ranked_low,True,False
+6-hydroxyindole sulfate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133568,CHEBI:133569,RM:0161395,CHEBI:133569,True,unfiltered,50,2,1,3.2238,3.2238,0.0,refmet_rank1,True,False
+6-shogaol,MS2,divergent (different compound),CHEBI:174643,CHEBI:10138,CHEBI:174643,CHEBI:10138,True,unfiltered,50,1,,3.2065,,,refmet_absent,False,False
+7-methylguanine,CURATION,divergent (different compound),CHEBI:28664,CHEBI:2274,UNII:661J4K04NB,CHEBI:2274,True,unfiltered,50,1,2,4.9094,2.4393,2.47,refmet_ranked_low,True,False
+7alpha-hydroxy-3-oxo-4-cholestenoate (7-Hoca),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:83036,CHEBI:133803,CHEBI:83036,CHEBI:133803,True,unfiltered,50,1,2,3.2263,0.8136,2.4127,refmet_ranked_low,False,False
+9(10)-EpOME,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:34494,CHEBI:84023,LM:FA02000037,CHEBI:84023,True,unfiltered,50,1,3,3.1692,2.4143,0.7549,refmet_ranked_low,True,False
+9-hydroxystearate,CURATION,divergent (different compound),CHEBI:136638,CHEBI:229769,CHEBI:136638,CHEBI:229769,True,unfiltered,50,2,,1.2606,,,refmet_absent,True,False
+Beta-Leucine,MS2,multi-id (biomapper ambiguous set),CHEBI:72772,CHEBI:15604|CHEBI:86261,CHEBI:72772,RM:0021466,True,unfiltered,50,2,3,3.3076,2.4552,0.8524,refmet_ranked_low,False,True
+Chaulmoogric acid,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27939,CHEBI:61389,CHEBI:27939,LM:FA01140017,True,unfiltered,50,2,5,2.4924,0.8818,1.6106,refmet_ranked_low,False,True
+Diethyl 2-methyl-3-oxosuccinate,MS2,divergent (different compound),CHEBI:172442,CHEBI:16879,CHEBI:172442,CHEBI:16879,True,unfiltered,50,1,,2.4823,,,refmet_absent,False,True
+Germicidin C,MS2,parent/child or substring (generic vs specific),CHEBI:218904,CHEBI:216747,CHEBI:218904,CHEBI:216747,True,unfiltered,50,1,2,3.0451,2.417,0.6281,refmet_ranked_low,False,False
+Glutaconic Acid,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:24309,CHEBI:15670,CHEBI:24309,CHEBI:15670,True,unfiltered,50,2,1,3.2196,3.2196,0.0,refmet_rank1,False,True
+Glutamine,MS2,multi-id (biomapper ambiguous set),CHEBI:28300,CHEBI:18050|CHEBI:58359,CHEBI:28300,CHEBI:18050,True,unfiltered,50,1,16,2.4869,0.8327,1.6542,refmet_ranked_low,False,True
+Glycocholic acid,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:17687,CHEBI:29746,CHEBI:17687,CHEBI:29746,True,unfiltered,50,1,2,3.3187,2.4976,0.8211,refmet_ranked_low,True,False
+Isethionate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:1157,CHEBI:61904,CHEBI:1157,CHEBI:61904,True,unfiltered,50,1,49,4.8515,0.8969,3.9546,refmet_ranked_low,True,False
+L-Carvone,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:38265,CHEBI:15400,CHEBI:15399,CHEBI:15400,True,unfiltered,50,3,,0.8459,,,refmet_absent,True,True
+LPC 18:1,MS2,divergent (different compound),CHEBI:28610,CHEBI:72589,CHEBI:28610,LM:GP01050030,True,unfiltered,50,2,,3.0329,,,refmet_absent,True,False
+N-acetylasparagine,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:138368,CHEBI:139582,CHEBI:138368,CHEBI:139582,True,unfiltered,50,3,2,4.8901,3.2012,1.6889,refmet_ranked_low,False,True
+N-acetylhistidine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:86910,CHEBI:16437,CHEBI:86910,CHEBI:16437,True,unfiltered,50,1,2,2.4925,2.4732,0.0193,refmet_ranked_low,False,True
+N-acetylneuraminate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17012,CHEBI:45744,CHEBI:17012,CHEBI:45744,True,unfiltered,50,,30,4.9065,0.8762,4.0303,refmet_ranked_low,False,True
+N-acetylphenylalanine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:21626,CHEBI:16259,CHEBI:21626,CHEBI:16259,True,unfiltered,50,2,3,3.0396,2.4714,0.5682,refmet_ranked_low,False,True
+N-acetyltryptophan,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:70976,CHEBI:74640,CHEBI:16734,CHEBI:74640,True,unfiltered,50,3,9,4.906,0.892,4.0139,refmet_ranked_low,True,True
+N6-methyllysine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:64349,CHEBI:17604,CHEBI:64349,CHEBI:17604,True,unfiltered,50,,10,1.5227,0.7851,0.7376,refmet_ranked_low,False,True
+O-sulfo-tyrosine,CURATION,parent/child or substring (generic vs specific),CHEBI:46215,CHEBI:232819,CHEBI:46215,CHEBI:232819,True,unfiltered,50,1,,0.8772,,,refmet_absent,True,False
+PROPYL GALLIC ACID,MS2,parent/child or substring (generic vs specific),CHEBI:10607,CHEBI:30778,CHEBI:10607,CHEBI:30778,True,unfiltered,50,9,,1.3922,,,refmet_absent,False,True
+Paclobutrazol,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:139345,CHEBI:139344,CHEBI:139345,CHEBI:139344,True,unfiltered,50,1,,2.4868,,,refmet_absent,False,False
+Prunasin,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:25150,CHEBI:17396,CHEBI:25150,CHEBI:17396,True,unfiltered,50,1,2,2.491,2.468,0.0231,refmet_ranked_low,False,True
+S-1-pyrroline-5-carboxylate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:1372,CHEBI:17388,CHEBI:1372,CHEBI:17388,True,unfiltered,50,1,,4.8396,,,refmet_absent,False,False
+S-methylcysteine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:229268,CHEBI:45658,CHEBI:229268,CHEBI:45658,True,unfiltered,50,2,19,4.8823,0.7975,4.0847,refmet_ranked_low,False,True
+S-methylmethionine,CURATION,divergent (different compound),CHEBI:67050,CHEBI:232419,CHEBI:67050,CHEBI:232419,True,unfiltered,50,1,2,4.8873,2.4418,2.4455,refmet_ranked_low,True,False
+Tropine,MS2,parent/child or substring (generic vs specific),CHEBI:15742,CHEBI:15884,CHEBI:15742,CHEBI:15884,True,unfiltered,50,1,,3.2571,,,refmet_absent,True,False
+Y 26763,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:18186,CHEBI:17895,CHEBI:28479,CHEBI:17895,True,unfiltered,50,,,1.4236,,,refmet_absent,True,True
+acetoacetate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:15344,CHEBI:13705,CHEBI:15344,CHEBI:13705,True,unfiltered,50,1,3,4.8791,2.4589,2.4202,refmet_ranked_low,True,False
+aconitate [cis or trans],CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:32805,CHEBI:16383,CHEBI:22211,CHEBI:16383,True,unfiltered,50,1,10,1.543,0.7354,0.8076,refmet_ranked_low,True,False
+anthranilate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:30754,CHEBI:16567,CHEBI:30754,CHEBI:16567,True,unfiltered,50,1,3,4.8877,2.4638,2.4239,refmet_ranked_low,True,False
+arabinose,CURATION,divergent (different compound),CHEBI:46983,CHEBI:17535,CHEBI:46983,CHEBI:17535,True,unfiltered,50,1,11,2.4086,0.8551,1.5535,refmet_ranked_low,True,False
+arachidonate (20:4n6),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:15843,CHEBI:32395,CHEBI:15843,CHEBI:32395,True,unfiltered,50,1,,1.4753,,,refmet_absent,True,False
+argininate*,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:90000,CHEBI:32695,CHEBI:90000,CHEBI:32695,True,unfiltered,50,1,,3.2584,,,refmet_absent,True,False
+arginine,CURATION,multi-id (biomapper ambiguous set),CHEBI:29016,CHEBI:16467|CHEBI:31235,CHEBI:29016,CHEBI:16467,True,unfiltered,50,1,13,2.4869,0.8749,1.6121,refmet_ranked_low,False,True
+asparagine,CURATION,multi-id (biomapper ambiguous set),CHEBI:22653,CHEBI:15724|CHEBI:17196|CHEBI:58048,CHEBI:22653,CHEBI:15724,True,unfiltered,50,2,3,3.3628,2.4628,0.9,refmet_ranked_low,False,True
+aspartate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:22660,CHEBI:17053,CHEBI:22660,CHEBI:17053,True,unfiltered,50,17,19,3.3031,0.8653,2.4378,refmet_ranked_low,False,True
+bicine,MS2,divergent (different compound),CHEBI:39066,CHEBI:39065,CHEBI:39066,CHEBI:39065,True,unfiltered,50,1,,4.8843,,,refmet_absent,False,False
+cholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16359,CHEBI:29747,CHEBI:16359,CHEBI:29747,True,unfiltered,50,1,,3.2655,,,refmet_absent,True,False
+citrate,MS2,parent/child or substring (generic vs specific),CHEBI:30769,CHEBI:50744,CHEBI:30769,CHEBI:50744,True,unfiltered,50,11,,1.3778,,,refmet_absent,True,False
+citrulline,CURATION,multi-id (biomapper ambiguous set),CHEBI:18211,CHEBI:16349|CHEBI:57743,CHEBI:18211,CHEBI:16349,True,unfiltered,50,1,2,2.4881,2.4714,0.0167,refmet_ranked_low,False,True
+cyclo(pro-val),CURATION,divergent (different compound),CHEBI:69439,CHEBI:201644,CHEBI:69439,CHEBI:201644,True,unfiltered,50,6,2,1.5508,1.423,0.1278,refmet_ranked_low,True,False
+cystathionine,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:17755,CHEBI:17482,CHEBI:17755,CHEBI:17482,True,unfiltered,50,22,2,3.3322,2.4642,0.8679,refmet_ranked_low,True,True
+deoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:28834,CHEBI:23614,CHEBI:28834,CHEBI:23614,True,unfiltered,50,1,3,4.8858,2.4054,2.4804,refmet_ranked_low,True,False
+deoxycholic acid 12-sulfate*,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:233494,CHEBI:232726,CHEBI:233494,CHEBI:232726,False,unfiltered,50,1,,1.5311,,,refmet_absent,False,False
+dihomo-linoleate (20:2n6),CURATION,divergent (different compound),CHEBI:73731,CHEBI:88670,LM:FA01031043,CHEBI:88670,True,unfiltered,50,1,,4.8866,,,refmet_absent,True,False
+dihydrobiopterin,MS1,divergent (different compound),CHEBI:43120,CHEBI:43029,CHEBI:43120,CHEBI:43029,True,unfiltered,50,1,16,3.0775,0.8401,2.2374,refmet_ranked_low,True,True
+dihydroferulate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:86612,CHEBI:133751,CHEBI:86612,CHEBI:133751,True,unfiltered,50,1,12,4.9074,0.6847,4.2227,refmet_ranked_low,True,False
+dihydroxyphenylalanine (DOPA),MS1,multi-id (biomapper ambiguous set),CHEBI:49168,CHEBI:15765|CHEBI:192509|CHEBI:57504,CHEBI:49168,CHEBI:15765,True,unfiltered,50,,18,1.4112,0.7054,0.7058,refmet_ranked_low,False,True
+erucate (22:1n9),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:28792,CHEBI:32393,CHEBI:28792,CHEBI:32393,True,unfiltered,50,1,16,1.4394,0.6519,0.7874,refmet_ranked_low,True,False
+eugenol sulfate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:133570,CHEBI:133571,RM:0028322,CHEBI:133571,True,unfiltered,50,1,2,3.163,2.4812,0.6817,refmet_ranked_low,True,False
+ferulate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:17620,CHEBI:29749,CHEBI:17620,CHEBI:29749,True,unfiltered,50,1,2,3.1486,2.487,0.6615,refmet_ranked_low,True,False
+gamma-aminobutyrate (GABA),MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:16865,CHEBI:30566,CHEBI:16865,CHEBI:30566,True,unfiltered,50,1,,1.6028,,,refmet_absent,True,False
+gamma-glutamylalanine,CURATION,divergent (different compound),CHEBI:50621,CHEBI:50619,CHEBI:50621,CHEBI:50619,True,unfiltered,50,3,2,4.8971,2.4759,2.4212,refmet_ranked_low,False,True
+gluconate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:33198,CHEBI:24265,CHEBI:33198,CHEBI:24265,True,unfiltered,50,1,4,3.343,2.4088,0.9342,refmet_ranked_low,True,False
+glutamate,CURATION,multi-id (biomapper ambiguous set),CHEBI:18237,CHEBI:16015|CHEBI:232425|CHEBI:64243|CHEBI:91250,CHEBI:18237,CHEBI:16015,True,unfiltered,50,20,21,3.3231,0.8851,2.4381,refmet_ranked_low,False,True
+glutamine,CURATION,multi-id (biomapper ambiguous set),CHEBI:28300,CHEBI:18050|CHEBI:58359,CHEBI:28300,CHEBI:18050,True,unfiltered,50,1,16,2.4869,0.8819,1.605,refmet_ranked_low,False,True
+glycerate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:33508,CHEBI:33871,CHEBI:33508,CHEBI:33871,True,unfiltered,50,1,,4.8703,,,refmet_absent,False,False
+glycerophosphoethanolamine,CURATION,parent/child or substring (generic vs specific),CHEBI:16929,CHEBI:36314,CHEBI:143890,CHEBI:36314,True,unfiltered,50,1,,3.2203,,,refmet_absent,True,False
+glycerophosphoinositol*,CURATION,divergent (different compound),CHEBI:166490,CHEBI:35771,RM:0157135,CHEBI:35771,True,unfiltered,50,2,,1.573,,,refmet_absent,True,False
+glycochenodeoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:36274,CHEBI:36252,CHEBI:36274,CHEBI:36252,True,unfiltered,50,1,2,4.9069,2.4356,2.4713,refmet_ranked_low,True,False
+glycocholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17687,CHEBI:29746,CHEBI:17687,CHEBI:29746,True,unfiltered,50,1,2,3.2296,2.4636,0.766,refmet_ranked_low,True,False
+glycodeoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:27471,CHEBI:82982,CHEBI:27471,CHEBI:82982,True,unfiltered,50,1,2,4.9106,2.4351,2.4756,refmet_ranked_low,True,False
+guanidinoacetate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16344,CHEBI:131444,CHEBI:16344,CHEBI:131444,True,unfiltered,50,1,3,4.9095,2.4651,2.4444,refmet_ranked_low,True,False
+"gulono-1,4-lactone",MS2,divergent (different compound),CHEBI:177057,CHEBI:17587,CHEBI:177057,CHEBI:17587,True,unfiltered,50,1,5,1.4193,0.7127,0.7066,refmet_ranked_low,True,True
+heptanoate (7:0),CURATION,parent/child or substring (generic vs specific),CHEBI:45571,CHEBI:179775,CHEBI:45571,CHEBI:179775,True,unfiltered,50,1,,1.4386,,,refmet_absent,True,False
+hexadecadienoate (16:2n6),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:86147,CHEBI:78096,LM:FA01030807,CHEBI:78096,True,unfiltered,50,1,,1.4925,,,refmet_absent,True,False
+histidine,CURATION,multi-id (biomapper ambiguous set),CHEBI:27570,CHEBI:15971|CHEBI:57595,CHEBI:27947,CHEBI:15971,True,unfiltered,50,1,2,2.4883,2.4006,0.0877,refmet_ranked_low,True,True
+homoarginine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:27747,CHEBI:24606,CHEBI:27747,CHEBI:24606,True,unfiltered,50,1,3,4.8502,2.4714,2.3788,refmet_ranked_low,True,False
+homocarnosine,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:28050,CHEBI:85981,CHEBI:28050,CHEBI:85981,True,unfiltered,50,2,3,4.8666,2.4678,2.3988,refmet_ranked_low,False,True
+homoserine,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:30653,CHEBI:15699,CHEBI:30653,CHEBI:15699,True,unfiltered,50,3,2,3.351,2.4888,0.8622,refmet_ranked_low,False,True
+iminodiacetate (IDA),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:24786,CHEBI:24785,CHEBI:24786,CHEBI:24785,True,unfiltered,50,1,12,1.3846,0.6984,0.6862,refmet_ranked_low,True,False
+indole-3-carboxylate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:24809,CHEBI:62448,CHEBI:24809,CHEBI:62448,True,unfiltered,50,1,2,4.8907,2.4612,2.4295,refmet_ranked_low,True,False
+indolebutyrate,MS1,parent/child or substring (generic vs specific),CHEBI:33070,CHEBI:35581,CHEBI:33070,CHEBI:35581,True,unfiltered,50,7,,1.3569,,,refmet_absent,True,False
+kynurenate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18344,CHEBI:58454,CHEBI:18344,CHEBI:58454,True,unfiltered,50,1,4,4.8949,0.8551,4.0398,refmet_ranked_low,True,False
+lanthionine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:25013,CHEBI:21347,CHEBI:25013,RM:0041410,True,unfiltered,50,12,3,4.8822,3.3019,1.5802,refmet_ranked_low,False,True
+laurylcarnitine (C12),CURATION,divergent (different compound),CHEBI:77086,CHEBI:192727,CHEBI:77086,CHEBI:192727,True,unfiltered,50,1,,0.7489,,,refmet_absent,True,False
+linoleate (18:2n6),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17351,CHEBI:30245,CHEBI:17351,CHEBI:30245,True,unfiltered,50,1,,1.4793,,,refmet_absent,True,False
+linolenic acid,MS2,multi-id (biomapper ambiguous set),CHEBI:25633,CHEBI:165492|CHEBI:27432,CHEBI:25633,CHEBI:27432,True,unfiltered,50,2,,3.2002,,,refmet_absent,False,True
+lysine,CURATION,multi-id (biomapper ambiguous set),CHEBI:25094,CHEBI:133538|CHEBI:18019|CHEBI:194466|CHEBI:53633|CHEBI:61488,CHEBI:25094,CHEBI:53633,True,unfiltered,50,1,11,2.4824,0.8726,1.6098,refmet_ranked_low,False,True
+lyxonate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:134538,CHEBI:145756,CHEBI:134538,CHEBI:145756,True,unfiltered,50,1,5,4.8918,0.7183,4.1736,refmet_ranked_low,True,False
+malate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:6650,CHEBI:30797,CHEBI:6650,CHEBI:30797,True,unfiltered,50,11,,3.3545,,,refmet_absent,False,True
+mandelate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:35825,CHEBI:25147,CHEBI:35825,CHEBI:25147,True,unfiltered,50,1,40,4.8641,0.6363,4.2278,refmet_ranked_low,False,False
+margarate (17:0),CURATION,divergent (different compound),CHEBI:32365,CHEBI:32366,CHEBI:32365,CHEBI:32366,True,unfiltered,50,1,,1.5027,,,refmet_absent,True,False
+menthol,MS1,multi-id (biomapper ambiguous set),CHEBI:15409,CHEBI:25187|CHEBI:76306,CHEBI:15409,CHEBI:25187,True,unfiltered,50,1,3,2.4998,2.4857,0.014,refmet_ranked_low,True,False
+myristoylcarnitine (C14),CURATION,divergent (different compound),CHEBI:84634,CHEBI:178069,CHEBI:84634,CHEBI:178069,True,unfiltered,50,2,,1.2295,,,refmet_absent,True,False
+naringenin,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:50202,CHEBI:17846,CHEBI:50202,CHEBI:17846,True,unfiltered,50,1,5,2.4885,0.8703,1.6182,refmet_ranked_low,False,True
+nonadecenoate (19:1),CURATION,parent/child or substring (generic vs specific),CHEBI:83051,CHEBI:84965,LM:FA01030362,RM:0161729,True,unfiltered,50,1,16,1.3667,0.6796,0.6871,refmet_ranked_low,True,True
+octadecanedioate (C18),MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:133086,CHEBI:133087,CHEBI:133086,CHEBI:133087,True,unfiltered,50,1,39,1.4595,0.6831,0.7764,refmet_ranked_low,True,False
+ornithine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18257,CHEBI:15729,CHEBI:18257,CHEBI:15729,True,unfiltered,50,1,2,2.4891,2.4627,0.0264,refmet_ranked_low,False,True
+phenylacetylglutamine,CURATION,parent/child or substring (generic vs specific),CHEBI:17884,CHEBI:25982,CHEBI:17884,CHEBI:25982,True,unfiltered,50,1,3,4.8882,2.4832,2.405,refmet_ranked_low,True,False
+phenylalanine,CURATION,multi-id (biomapper ambiguous set),CHEBI:28044,CHEBI:17295|CHEBI:58095,CHEBI:16998,CHEBI:17295,True,unfiltered,50,1,2,2.4878,2.4663,0.0216,refmet_ranked_low,True,True
+phenylpropanolamine,MS1,divergent (different compound),CHEBI:8104,CHEBI:36,CHEBI:8104,CHEBI:36,True,unfiltered,50,3,4,2.491,2.4592,0.0318,refmet_ranked_low,False,True
+phenylpyruvate,CURATION,parent/child or substring (generic vs specific),CHEBI:30851,CHEBI:26008,CHEBI:30851,CHEBI:26008,True,unfiltered,50,1,2,3.2639,2.489,0.7749,refmet_ranked_low,True,False
+phosphate,CURATION,multi-id (biomapper ambiguous set),CHEBI:26078,CHEBI:18367|CHEBI:26020,CHEBI:26078,CHEBI:18367,True,unfiltered,50,1,,2.4825,,,refmet_absent,True,False
+phytanate,CURATION,parent/child or substring (generic vs specific),CHEBI:16285,CHEBI:172542,CHEBI:16285,CHEBI:172542,True,unfiltered,50,,7,4.8932,0.8432,4.05,refmet_ranked_low,False,True
+pipecolate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17964,CHEBI:36110,CHEBI:17964,CHEBI:36110,True,unfiltered,50,1,36,4.8907,0.6136,4.2771,refmet_ranked_low,False,False
+purine,MS1,parent/child or substring (generic vs specific),CHEBI:17258,CHEBI:35584,UNII:W60KTZ3IZY,CHEBI:35584,True,unfiltered,50,1,2,3.3229,2.4881,0.8348,refmet_ranked_low,True,False
+pyridoxate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:17405,CHEBI:132948,CHEBI:17405,CHEBI:132948,True,unfiltered,50,1,,2.4199,,,refmet_absent,True,False
+resveratrol,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27881,CHEBI:45713,CHEBI:27881,CHEBI:45713,True,unfiltered,50,1,3,2.4871,2.4051,0.082,refmet_ranked_low,False,True
+ribonate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:21077,CHEBI:33527,CHEBI:21077,CHEBI:33527,True,unfiltered,50,1,19,4.8641,0.6891,4.175,refmet_ranked_low,True,False
+sepiapterin,MS1,same-molecule variant (stereo/charge/acid-anion),CHEBI:16095,CHEBI:194527,CHEBI:16095,CHEBI:194527,True,unfiltered,50,1,2,3.1276,1.5182,1.6094,refmet_ranked_low,False,True
+serine,CURATION,multi-id (biomapper ambiguous set),CHEBI:17822,CHEBI:16523|CHEBI:17115|CHEBI:33384,LM:FA01100045,CHEBI:16523,True,unfiltered,50,1,,2.4849,,,refmet_absent,False,True
+sorbate,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:35962,CHEBI:36550,CHEBI:35962,CHEBI:36550,True,unfiltered,50,1,,4.8693,,,refmet_absent,False,False
+sphinganine-1-phosphate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16893,CHEBI:57939,CHEBI:16893,CHEBI:57939,True,unfiltered,50,1,2,3.1585,2.4892,0.6694,refmet_ranked_low,True,False
+syringaresinol,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:49211,CHEBI:47,CHEBI:49211,CHEBI:47,True,unfiltered,50,1,3,2.4997,2.4622,0.0375,refmet_ranked_low,False,False
+tagatose,MS1,parent/child or substring (generic vs specific),CHEBI:47693,CHEBI:33954,CHEBI:47693,CHEBI:33954,True,unfiltered,50,1,2,4.8682,3.0992,1.769,refmet_ranked_low,True,False
+tartronate (hydroxymalonate),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16513,CHEBI:17649,CHEBI:16513,CHEBI:17649,True,unfiltered,50,1,5,3.1329,0.7628,2.3701,refmet_ranked_low,True,False
+taurochenodeoxycholate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:16525,CHEBI:9407,CHEBI:16525,CHEBI:9407,True,unfiltered,50,1,2,4.9014,2.434,2.4674,refmet_ranked_low,True,False
+thioproline,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:64564,CHEBI:45171,CHEBI:133584,CHEBI:45171,True,unfiltered,50,1,2,2.491,2.4573,0.0338,refmet_ranked_low,False,True
+threonate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:15908,CHEBI:15243,CHEBI:49059,CHEBI:15243,True,unfiltered,50,1,,4.8625,,,refmet_absent,True,False
+trans-urocanate,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:27248,CHEBI:30817,CHEBI:27248,CHEBI:30817,True,unfiltered,50,8,2,4.9145,1.5672,3.3473,refmet_ranked_low,False,True
+trehalose,MS2,same-molecule variant (stereo/charge/acid-anion),CHEBI:27082,CHEBI:16551,CHEBI:27082,CHEBI:16551,True,unfiltered,50,1,2,2.4954,2.4662,0.0292,refmet_ranked_low,False,True
+tryptophan,CURATION,multi-id (biomapper ambiguous set),CHEBI:27897,CHEBI:16828|CHEBI:57719|CHEBI:57912,CHEBI:27897,CHEBI:16828,True,unfiltered,50,1,2,2.4959,2.486,0.0099,refmet_ranked_low,True,True
+tyrosine,CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:18186,CHEBI:17895,CHEBI:28479,CHEBI:17895,True,unfiltered,50,1,2,2.4857,2.4536,0.0321,refmet_ranked_low,True,True
+undecanoate (11:0),CURATION,same-molecule variant (stereo/charge/acid-anion),CHEBI:32368,CHEBI:32369,CHEBI:32368,CHEBI:32369,True,unfiltered,50,1,5,1.409,0.6577,0.7513,refmet_ranked_low,True,False
+valine,CURATION,multi-id (biomapper ambiguous set),CHEBI:27266,CHEBI:16414|CHEBI:57762,CHEBI:27266,CHEBI:16414,True,unfiltered,50,2,3,3.2726,2.4643,0.8082,refmet_ranked_low,True,True

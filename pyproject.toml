@@ -62,6 +62,10 @@ select = [
 [tool.ruff.lint.isort]
 known-first-party = ["biomapper2"]
 
+[tool.pyright]
+# Standalone study modules live outside the installed package; make them resolvable.
+extraPaths = ["studies/shared_gold_set"]
+
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
