@@ -1,0 +1,210 @@
+[
+  {
+    "query_name": "(15:3)-anacardic acid",
+    "candidate_A": {
+      "node": "CHEBI:174627",
+      "name": "2-Hydroxy-6-(8,11,14-pentadecatrienyl)benzoic acid"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:25569",
+        "name": "nocardic acid"
+      }
+    ],
+    "auto_gold": "CHEBI:174627",
+    "hand_gold": "CHEBI:174627",
+    "hand_rationale": "2-OH-6-pentadecatrienyl-benzoate = anacardic C15:3; B nocardic acid is unrelated",
+    "agree": true
+  },
+  {
+    "query_name": "1-methylguanidine",
+    "candidate_A": {
+      "node": "CHEBI:16628",
+      "name": "methylguanidine"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:189433",
+        "name": "1-Methylguanidine hydrochloride"
+      }
+    ],
+    "auto_gold": "CHEBI:16628",
+    "hand_gold": "CHEBI:16628",
+    "hand_rationale": "free-base methylguanidine; B is the HCl salt",
+    "agree": true
+  },
+  {
+    "query_name": "2-Methylmaleate",
+    "candidate_A": {
+      "node": "CHEBI:17626",
+      "name": "citraconic acid"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:87810",
+        "name": "3-methylmalate(2-)"
+      }
+    ],
+    "auto_gold": "CHEBI:17626",
+    "hand_gold": "CHEBI:17626",
+    "hand_rationale": "citraconate = 2-methylmaleate; B 3-methylmalate differs",
+    "agree": true
+  },
+  {
+    "query_name": "2-hydroxypalmitate",
+    "candidate_A": {
+      "node": "CHEBI:65101",
+      "name": "2-hydroxyhexadecanoic acid"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:142989",
+        "name": "2-hydroxypalmitoleate"
+      }
+    ],
+    "auto_gold": "CHEBI:65101",
+    "hand_gold": "CHEBI:65101",
+    "hand_rationale": "palmitate = C16:0; B palmitoleate is C16:1",
+    "agree": true
+  },
+  {
+    "query_name": "3-hydroxymandelate",
+    "candidate_A": {
+      "node": "CHEBI:86553",
+      "name": "3-hydroxymandelic acid"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:32804",
+        "name": "4-hydroxymandelate"
+      }
+    ],
+    "auto_gold": "CHEBI:86553",
+    "hand_gold": "CHEBI:86553",
+    "hand_rationale": "meta-OH; B is the 4-OH para isomer",
+    "agree": true
+  },
+  {
+    "query_name": "3-methylhistidine",
+    "candidate_A": {
+      "node": "CHEBI:70959",
+      "name": "3-methylhistidine"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:27596",
+        "name": "N(pros)-methyl-L-histidine"
+      },
+      {
+        "node": "CHEBI:50599",
+        "name": "N(tele)-methyl-L-histidine"
+      }
+    ],
+    "auto_gold": "CHEBI:70959",
+    "hand_gold": "CHEBI:70959",
+    "hand_rationale": "exact name; B are N(pros)/N(tele) ring isomers",
+    "agree": true
+  },
+  {
+    "query_name": "4-acetamidophenol",
+    "candidate_A": {
+      "node": "CHEBI:46195",
+      "name": "paracetamol"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:143107",
+        "name": "2-acetamidophenol"
+      }
+    ],
+    "auto_gold": "CHEBI:46195",
+    "hand_gold": "CHEBI:46195",
+    "hand_rationale": "= paracetamol; B 2-acetamidophenol is the ortho isomer",
+    "agree": true
+  },
+  {
+    "query_name": "4-hydroxyhippurate",
+    "candidate_A": {
+      "node": "CHEBI:71018",
+      "name": "p-hydroxyhippuric acid"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:133607",
+        "name": "m-hydroxyhippurate"
+      }
+    ],
+    "auto_gold": "CHEBI:71018",
+    "hand_gold": "CHEBI:71018",
+    "hand_rationale": "para-OH; B is meta",
+    "agree": true
+  },
+  {
+    "query_name": "4-methylbenzenesulfonate",
+    "candidate_A": {
+      "node": "CHEBI:27849",
+      "name": "toluene-4-sulfonic acid"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:11987",
+        "name": "4-formylbenzenesulfonate"
+      }
+    ],
+    "auto_gold": "CHEBI:27849",
+    "hand_gold": "CHEBI:27849",
+    "hand_rationale": "= p-toluenesulfonate; B 4-formyl differs",
+    "agree": true
+  },
+  {
+    "query_name": "4-methylcatechol sulfate",
+    "candidate_A": {
+      "node": "CHEBI:176442",
+      "name": "4-Methylcatechol 1-O-sulfate"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:232803",
+        "name": "4-methylcatechol sulfate"
+      }
+    ],
+    "auto_gold": "CHEBI:232803",
+    "hand_gold": "CHEBI:232803",
+    "hand_rationale": "generic name match; A is the 1-O-position-specific node",
+    "agree": true
+  },
+  {
+    "query_name": "6-shogaol",
+    "candidate_A": {
+      "node": "CHEBI:174643",
+      "name": "[8]-Shogaol"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:10138",
+        "name": "[6]-Shogaol"
+      }
+    ],
+    "auto_gold": "CHEBI:10138",
+    "hand_gold": "CHEBI:10138",
+    "hand_rationale": "[6]-shogaol; A is the [8] homolog",
+    "agree": true
+  },
+  {
+    "query_name": "9-hydroxystearate",
+    "candidate_A": {
+      "node": "CHEBI:136638",
+      "name": "9-hydroxyoctadecanoic acid"
+    },
+    "candidate_B": [
+      {
+        "node": "CHEBI:229769",
+        "name": "8-hydroxystearate(1-)"
+      }
+    ],
+    "auto_gold": "CHEBI:136638",
+    "hand_gold": "CHEBI:136638",
+    "hand_rationale": "9-OH-octadecanoate; B is the 8-OH isomer",
+    "agree": true
+  }
+]
