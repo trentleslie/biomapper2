@@ -32,11 +32,19 @@ def run_arm_a(
     n_repeats: int,
     call_fn: CallFn | None = None,
 ) -> list[ArmACall]:
-    """Run the LLM-only arm: model x decoding x query x repeat. Every call is kept."""
+    """Run the LLM-only arm: model x decoding x query x repeat. Every call is kept.
+
+    Models that don't accept a caller-set temperature (``supports_temperature=False``,
+    e.g. Opus 4.8) can't express a temperature sweep -- every temperature bucket would
+    be the byte-identical native request. For those we collapse to a single decoding so
+    the model runs N times at its one native setting rather than emitting duplicate,
+    mislabeled panels.
+    """
     call = call_fn or call_model.call_model
     out: list[ArmACall] = []
     for spec in models:
-        for decode in decodings:
+        spec_decodings = decodings if spec.supports_temperature else decodings[:1]
+        for decode in spec_decodings:
             for query in queries:
                 messages = prompt.build_messages(query)
                 for repeat in range(n_repeats):
