@@ -91,3 +91,60 @@ def test_rm_blinded_view_strips_refmet_identity():
     assert sorted(view["candidates"]) == ["CHEBI:27596", "CHEBI:70958"]  # order-independent, arm identity gone
     assert "1-Methylhistidine" not in str(view)  # RefMet canonical name withheld
     assert "A" not in view and "B" not in view  # no arm labels reveal which node is RefMet's
+
+
+# --- Runner-level regressions (Greptile PR #12 review) -------------------------------------------
+
+import json  # noqa: E402
+
+import build_gold_set as bgs  # noqa: E402
+import pytest  # noqa: E402
+
+
+def test_retrievable_uses_bm_rank_when_gold_is_bm_node():
+    # Gold is the BioMapper-arm node -> use bm_rank, not refmet_rank.
+    probe = {"refmet_node": "CHEBI:100", "refmet_rank": 5, "bm_node": "CHEBI:200", "bm_rank": 1}
+    assert bgs._retrievable("CHEBI:200", probe) is True
+
+
+def test_retrievable_uses_refmet_rank_when_gold_is_refmet_node():
+    probe = {"refmet_node": "CHEBI:100", "refmet_rank": 3, "bm_node": "CHEBI:200", "bm_rank": 1}
+    assert bgs._retrievable("CHEBI:100", probe) is True
+
+
+def test_retrievable_false_when_gold_matches_neither_probed_node():
+    # Multi-ID row: adjudicated gold is a candidate the probe never ranked (probe bm_node is an
+    # RM: identifier). Must NOT silently borrow refmet_rank and claim retrievable.
+    probe = {"refmet_node": "CHEBI:100", "refmet_rank": 2, "bm_node": "RM:0162041", "bm_rank": 4}
+    assert bgs._retrievable("CHEBI:50599", probe) is False
+
+
+def test_retrievable_false_when_gold_rank_exceeds_window():
+    probe = {"refmet_node": "CHEBI:100", "refmet_rank": 999, "bm_node": "CHEBI:200", "bm_rank": None}
+    assert bgs._retrievable("CHEBI:100", probe) is False
+
+
+def test_retrievable_false_without_probe_or_gold():
+    assert bgs._retrievable("CHEBI:1", None) is False
+    assert bgs._retrievable(None, {"refmet_node": "CHEBI:1", "refmet_rank": 1}) is False
+
+
+def test_build_records_rejects_negative_limit():
+    # Must raise before any resolver construction / network I/O.
+    with pytest.raises(ValueError, match="limit must be >= 0"):
+        bgs.build_records(limit=-1)
+
+
+def test_write_outputs_empty_run_emits_valid_header_only_csv(tmp_path):
+    # --limit 0 is now a legitimate empty run; outputs must be valid, not partial/crashed.
+    bgs.write_outputs([], tmp_path, limit=0)
+
+    csv_text = (tmp_path / "gold_set.csv").read_text()
+    header = csv_text.splitlines()[0].split(",")
+    assert header == bgs._CSV_FIELDNAMES  # stable header, no IndexError on flat[0]
+    assert len(csv_text.splitlines()) == 1  # header only, zero data rows
+
+    assert (tmp_path / "gold_set.jsonl").read_text() == ""
+    prov = json.loads((tmp_path / "provenance.json").read_text())
+    assert prov["limit"] == 0 and prov["n_pairs"] == 0  # provenance describes the actual dataset
+    assert (tmp_path / "report.md").exists()  # report renders without ZeroDivisionError

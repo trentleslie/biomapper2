@@ -99,23 +99,44 @@ def _load_retrievability() -> dict[str, dict]:
     return out
 
 
-def _retrievable(gold_curie: str | None, refmet_curie: str, probe: dict | None) -> bool:
-    """Is the (gold, or reference RefMet) node retrievable within the candidate window?"""
-    if not probe:
+def _retrievable(gold_curie: str | None, probe: dict | None) -> bool:
+    """Is the auto-labeled *gold* node retrievable within the candidate window?
+
+    The probe stores at most two ranked identifiers per name — the RefMet-arm node
+    (``refmet_node``/``refmet_rank``) and the BioMapper-arm node (``bm_node``/``bm_rank``).
+    Either can be a non-ChEBI id (``RM:``/``LM:``). We only assert retrievability when the
+    gold CURIE *is* one of those two probed nodes, using that node's own rank. When the gold
+    is a multi-ID candidate that neither probed node covers, the probe cannot speak to its
+    rank, so we return ``False`` (conservative) rather than silently borrowing the RefMet
+    rank — an unretrievable gold must not leak into the ablation/tbench tracks.
+    """
+    if not probe or not gold_curie:
         return False
-    # Use the gold node's rank when known; else fall back to the reference RefMet node.
-    rank = probe.get("refmet_rank")
-    if gold_curie and probe.get("bm_node") and _chebi(str(probe["bm_node"])) == gold_curie:
+
+    def _node_ci(key: str) -> str | None:
+        node = probe.get(key)
+        return _chebi(str(node)) if node else None
+
+    if _node_ci("bm_node") == gold_curie:
         rank = probe.get("bm_rank")
+    elif _node_ci("refmet_node") == gold_curie:
+        rank = probe.get("refmet_rank")
+    else:
+        return False  # gold node not covered by this probe's ranked identifiers
     return rank is not None and rank <= RETRIEVABLE_RANK_MAX
 
 
 def build_records(limit: int | None = None) -> list[dict]:
+    if limit is not None and limit < 0:
+        raise ValueError(f"--limit must be >= 0, got {limit}")
+
     resolver = StructureResolver(Linker())
     retrievability = _load_retrievability()
 
     rows = list(csv.DictReader(DISAGREEMENTS_CSV.open()))
-    if limit:
+    if limit is not None:
+        # `is not None` (not truthiness): --limit 0 must yield an empty slice, not the full run,
+        # so the recorded provenance limit always describes the generated dataset.
         rows = rows[:limit]
 
     # Pre-fetch every candidate node record in one batched KG call (Linker batches internally).
@@ -144,7 +165,7 @@ def build_records(limit: int | None = None) -> list[dict]:
 
         adj = adjudicate(query_block, candidates)
         probe = retrievability.get(query_name)
-        retr = _retrievable(adj.gold_curie, refmet_curie, probe)
+        retr = _retrievable(adj.gold_curie, probe)
         all_curies_row = [refmet_curie] + bm_curies
 
         out.append(
@@ -184,6 +205,27 @@ def build_records(limit: int | None = None) -> list[dict]:
     return out
 
 
+# Stable CSV schema — used for the header so an empty run still emits a valid header-only file
+# (deriving fieldnames from flat[0] would IndexError on zero records, after the JSONL was written).
+_CSV_FIELDNAMES = [
+    "query_name",
+    "match_level",
+    "category",
+    "candidate_A_node",
+    "candidate_A_name",
+    "candidate_A_block",
+    "candidate_B_nodes",
+    "candidate_B_names",
+    "candidate_B_blocks",
+    "query_block",
+    "gold_curie",
+    "adjudication_method",
+    "difficulty_flag",
+    "retrievable@200",
+    "eligible_for",
+]
+
+
 def _flatten_for_csv(rec: dict) -> dict:
     b = rec["candidate_B"]
     return {
@@ -214,7 +256,7 @@ def write_outputs(records: list[dict], out_dir: Path, limit: int | None) -> None
 
     flat = [_flatten_for_csv(r) for r in records]
     with (out_dir / "gold_set.csv").open("w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=list(flat[0].keys()))
+        w = csv.DictWriter(f, fieldnames=_CSV_FIELDNAMES)
         w.writeheader()
         w.writerows(flat)
 
@@ -271,6 +313,11 @@ def _flag_kind(flag: str) -> str:
     return "resolution-limited" if flag in RESOLUTION_LIMITED_FLAGS else "genuine-ambiguous"
 
 
+def _pct(part: int, whole: int) -> str:
+    """Percentage string that is safe for an empty (whole == 0) run."""
+    return f"{(part / whole):.0%}" if whole else "0%"
+
+
 def _write_report(records: list[dict], handcheck: list[dict], provenance: dict, out_dir: Path) -> None:
     from collections import Counter
 
@@ -306,15 +353,15 @@ def _write_report(records: list[dict], handcheck: list[dict], provenance: dict, 
         "",
         "## Headline",
         f"- **Pairs:** {n}",
-        f"- **Auto-labeled (inchikey_auto):** {n_auto} ({n_auto / n:.0%})",
-        f"- **Expert residual:** {n_expert} ({n_expert / n:.0%}), which decomposes into:",
+        f"- **Auto-labeled (inchikey_auto):** {n_auto} ({_pct(n_auto, n)})",
+        f"- **Expert residual:** {n_expert} ({_pct(n_expert, n)}), which decomposes into:",
         f"  - **{n_ambiguous} genuinely connectivity-ambiguous** — same 2-D skeleton, differ only by "
         "stereo/charge/positional/salt. This is the real ≥100-pair long-pole the plan warned about; "
         "first-block InChIKey *cannot* adjudicate it, so it is the true human-expert set.",
         f"  - **{n_res_limited} resolution-limited** — expert only because the query name did not resolve to a "
         "structure via MW/PubChem `/name` (mostly lipid shorthand / complex IUPAC). These are *recoverable* "
         "with a stronger query-structure source (provided InChIKey/SMILES), not genuine chemistry ambiguity.",
-        f"- **Retrievable@{RETRIEVABLE_RANK_MAX}:** {n_retr} ({n_retr / n:.0%}) "
+        f"- **Retrievable@{RETRIEVABLE_RANK_MAX}:** {n_retr} ({_pct(n_retr, n)}) "
         f"({provenance['retrievable_window_note']}).",
         "",
         f"The flagged *same-molecule variant* set is captured cleanly by the ambiguous bucket: "

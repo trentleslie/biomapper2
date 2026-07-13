@@ -12,7 +12,7 @@
 - **Expert residual:** 150 (87%), which decomposes into:
   - **113 genuinely connectivity-ambiguous** — same 2-D skeleton, differ only by stereo/charge/positional/salt. This is the real ≥100-pair long-pole the plan warned about; first-block InChIKey *cannot* adjudicate it, so it is the true human-expert set.
   - **37 resolution-limited** — expert only because the query name did not resolve to a structure via MW/PubChem `/name` (mostly lipid shorthand / complex IUPAC). These are *recoverable* with a stronger query-structure source (provided InChIKey/SMILES), not genuine chemistry ambiguity.
-- **Retrievable@200:** 116 (67%) (retrievable@200 from the chebi_filter probe arm; probe window n_candidates~50 is a conservative lower bound for @200).
+- **Retrievable@200:** 11 (6%) (retrievable@200 from the chebi_filter probe arm; probe window n_candidates~50 is a conservative lower bound for @200).
 
 The flagged *same-molecule variant* set is captured cleanly by the ambiguous bucket: **76/101** of those rows land in connectivity-ambiguous — confirming the plan's thesis that the stereo/charge/positional set is exactly what needs the human.
 
@@ -36,8 +36,8 @@ The flagged *same-molecule variant* set is captured cleanly by the ambiguous buc
 | track | n |
 |---|---|
 | tier1 | 22 |
-| ablation | 12 |
-| tbench | 12 |
+| ablation | 11 |
+| tbench | 11 |
 
 ## Independence demonstration (inter-method agreement)
 Auto label = InChIKey first-block connectivity. Hand label = structure-from-nomenclature reasoning on a deterministic sample of 12 auto-labeled rows — a *different* signal. Agreement: **12/12** (100%). Full sample in `handcheck_sample.json`.
