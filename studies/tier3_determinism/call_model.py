@@ -75,15 +75,21 @@ def _call_anthropic(client: Any, spec: ModelSpec, messages: list[dict[str, str]]
     system = " ".join(m["content"] for m in messages if m["role"] == "system")
     chat = [m for m in messages if m["role"] != "system"]
     # Anthropic has no `seed` param -- part of the story: greedy != reproducible.
+    # Claude 4+ rejects temperature+top_p together, and Opus 4.8/4.7 reject BOTH
+    # sampling params outright (400). So never send top_p, and send temperature only
+    # when the model accepts it. A model with supports_temperature=False therefore
+    # runs at its native (adaptive) setting -- the "temperature sweep" is not
+    # expressible there; see ModelSpec docstring and the run-config note.
+    kwargs: dict[str, Any] = {
+        "model": spec.model_id,
+        "system": system,
+        "messages": chat,
+        "max_tokens": d.max_tokens,
+    }
+    if spec.supports_temperature:
+        kwargs["temperature"] = d.temperature
     start = time.perf_counter()
-    resp = client.messages.create(
-        model=spec.model_id,
-        system=system,
-        messages=chat,
-        temperature=d.temperature,
-        top_p=d.top_p,
-        max_tokens=d.max_tokens,
-    )
+    resp = client.messages.create(**kwargs)
     latency = time.perf_counter() - start
     usage = getattr(resp, "usage", None)
     text = resp.content[0].text if resp.content else ""

@@ -77,7 +77,9 @@ def run_experiment(
     ]
 
     arm_a = arms.run_arm_a(queries, config.models, decodings, config.n_repeats, call_fn=call_fn)
-    arm_b = arms.run_arm_b(queries, config.n_repeats, resolve_fn=resolve_fn) if config.run_arm_b else []
+    # Asymmetric N: Arm B is deterministic given pinned refs, so a few repeats suffice to *demonstrate*
+    # byte-identical variance=0 without letting the ~2-3 min/call Kestrel pipeline dominate wall-clock.
+    arm_b = arms.run_arm_b(queries, config.arm_b_repeats, resolve_fn=resolve_fn) if config.run_arm_b else []
 
     figure = fig4.build_fig4(arm_a, arm_b)
 
@@ -89,6 +91,7 @@ def run_experiment(
         dataset_sha256=dataset.content_sha256(config.dataset_path),
         n_queries=len(queries),
         n_repeats=config.n_repeats,
+        n_repeats_arm_b=config.arm_b_repeats if config.run_arm_b else None,
         temperatures=config.temperatures,
         top_p=config.top_p,
         max_tokens=config.max_tokens,
