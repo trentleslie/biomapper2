@@ -1,0 +1,29 @@
+{
+  "generated_utc": "2026-07-13T12:34:36.632609+00:00",
+  "git_commit": "2d2dd5231487aa259c0d04328c9041eb0df4f206",
+  "dataset_source": "/home/trentleslie/worktrees/biomapper2-tier3-determinism/studies/tier3_determinism/data/held_out_query_set_v1.jsonl",
+  "dataset_sha256": "c6bf4f3c1dbf268c680bcb340982122de776782ad86d303fd1bd1ad100317508",
+  "n_queries": 2,
+  "n_repeats": 3,
+  "temperatures": [
+    0.0,
+    0.7
+  ],
+  "top_p": 1.0,
+  "max_tokens": 256,
+  "seed_policy": "fixed seed passed to providers that support it; API LLMs may ignore it",
+  "models": [
+    {
+      "provider": "openai",
+      "model_id": "gpt-4o-2024-08-06",
+      "label": "gpt-4o"
+    }
+  ],
+  "prompt_sha256": "19e06eb5c52636090b22a753e12f1300cf0d7331ebdb67048d1b92328943944c",
+  "prompt_verbatim": "# PROMPT VERSION: arm_a_v1\n\n## SYSTEM\nYou are an expert biocurator specializing in mapping biological entity names to standard ontology identifiers. Given an entity name and a target namespace, return the single best-matching identifier in that namespace.\n\nRules:\n1. Respond with ONLY a JSON object of the form {\"id\": \"<CURIE>\"} and nothing else.\n2. The CURIE MUST be in the requested target namespace.\n3. Choose the canonical/primary entry when several plausible entries exist (e.g. the neutral parent compound rather than a salt or specific ionic form).\n4. If you are not confident the identifier is correct, respond with {\"id\": \"unknown\"}. Do not guess. An honest \"unknown\" is better than a wrong id.\n\n## FEW-SHOT EXEMPLARS\n- user: \"Entity name: water\\nTarget namespace: CHEBI (a ChEBI identifier of the form 'CHEBI:<number>')\\nRespond with the JSON object only.\"\n  assistant: {\"id\": \"CHEBI:15377\"}\n- user: \"Entity name: L-tyrosine\\nTarget namespace: CHEBI (a ChEBI identifier of the form 'CHEBI:<number>')\\nRespond with the JSON object only.\"\n  assistant: {\"id\": \"CHEBI:17895\"}\n- user: \"Entity name: EGFR\\nTarget namespace: HGNC (an HGNC gene identifier of the form 'HGNC:<number>')\\nRespond with the JSON object only.\"\n  assistant: {\"id\": \"HGNC:3236\"}\n- user: \"Entity name: Serum albumin (human)\\nTarget namespace: UniProtKB (a UniProtKB accession of the form 'UniProtKB:<accession>')\\nRespond with the JSON object only.\"\n  assistant: {\"id\": \"UniProtKB:P02768\"}\n- user: \"Entity name: zorblaxine\\nTarget namespace: CHEBI (a ChEBI identifier of the form 'CHEBI:<number>')\\nRespond with the JSON object only.\"\n  assistant: {\"id\": \"unknown\"}\n\n## USER TEMPLATE\nEntity name: <ENTITY_NAME>\nTarget namespace: <TARGET_NAMESPACE> (an identifier in the <TARGET_NAMESPACE> namespace)\nRespond with the JSON object only.",
+  "kestrel_api_url": null,
+  "biolink_version": null,
+  "reference_db_versions": {},
+  "endpoint_note": "Arm A only.",
+  "hardware_note": ""
+}

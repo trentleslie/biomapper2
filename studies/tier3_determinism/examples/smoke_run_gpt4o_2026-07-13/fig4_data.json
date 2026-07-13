@@ -1,0 +1,108 @@
+{
+  "arm_a": [
+    {
+      "model_label": "gpt-4o",
+      "model_id": "gpt-4o-2024-08-06",
+      "provider": "openai",
+      "temperature": 0.0,
+      "n_queries": 2,
+      "distinct_count_histogram": {
+        "1": 2
+      },
+      "per_query": [
+        {
+          "query_id": "met-caffeine",
+          "n_runs": 3,
+          "n_distinct": 1,
+          "answer_counts": {
+            "CHEBI:27732": 3
+          },
+          "majority_answer": "CHEBI:27732",
+          "majority_fraction": 1.0
+        },
+        {
+          "query_id": "met-cholesterol",
+          "n_runs": 3,
+          "n_distinct": 1,
+          "answer_counts": {
+            "CHEBI:16113": 3
+          },
+          "majority_answer": "CHEBI:16113",
+          "majority_fraction": 1.0
+        }
+      ],
+      "dispersion": {
+        "n_runs": 3,
+        "mean": 1.0,
+        "sd": 0.0,
+        "min": 1.0,
+        "max": 1.0,
+        "ci_lower": 1.0,
+        "ci_upper": 1.0
+      },
+      "contrast": {
+        "arm_a_worst": 1.0,
+        "arm_a_best": 1.0,
+        "arm_a_spread": 0.0,
+        "biomapper_accuracy": 0.0,
+        "gap_worst_vs_biomapper": -1.0,
+        "gap_best_vs_biomapper": -1.0
+      }
+    },
+    {
+      "model_label": "gpt-4o",
+      "model_id": "gpt-4o-2024-08-06",
+      "provider": "openai",
+      "temperature": 0.7,
+      "n_queries": 2,
+      "distinct_count_histogram": {
+        "1": 2
+      },
+      "per_query": [
+        {
+          "query_id": "met-caffeine",
+          "n_runs": 3,
+          "n_distinct": 1,
+          "answer_counts": {
+            "CHEBI:27732": 3
+          },
+          "majority_answer": "CHEBI:27732",
+          "majority_fraction": 1.0
+        },
+        {
+          "query_id": "met-cholesterol",
+          "n_runs": 3,
+          "n_distinct": 1,
+          "answer_counts": {
+            "CHEBI:16113": 3
+          },
+          "majority_answer": "CHEBI:16113",
+          "majority_fraction": 1.0
+        }
+      ],
+      "dispersion": {
+        "n_runs": 3,
+        "mean": 1.0,
+        "sd": 0.0,
+        "min": 1.0,
+        "max": 1.0,
+        "ci_lower": 1.0,
+        "ci_upper": 1.0
+      },
+      "contrast": {
+        "arm_a_worst": 1.0,
+        "arm_a_best": 1.0,
+        "arm_a_spread": 0.0,
+        "biomapper_accuracy": 0.0,
+        "gap_worst_vs_biomapper": -1.0,
+        "gap_best_vs_biomapper": -1.0
+      }
+    }
+  ],
+  "biomapper": {
+    "n_queries": 0,
+    "byte_identical": true,
+    "per_query_distinct": {},
+    "accuracy": 0.0
+  }
+}

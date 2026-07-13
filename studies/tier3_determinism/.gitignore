@@ -1,0 +1,3 @@
+# Transient run outputs (artifact-hygiene SOP saves here by default).
+# A representative smoke run is committed under examples/ instead.
+runs/
