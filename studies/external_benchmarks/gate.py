@@ -244,6 +244,12 @@ def build_live_smoke_fn(
 # path and asserts a per-namespace coverage FLOOR that sits below real batch capability but well
 # above a broken path (~0%) — so it still STOPs loudly if the batch path genuinely can't resolve
 # gene symbols to cross-refs, without false-negativing on the path the arm actually uses.
+#
+# The smoke runs ONE batch call per target vocab and keeps each call's results ISOLATED (a
+# ``VocabProbe`` per vocab): each required namespace's coverage floor is checked against the call
+# that TARGETS it (never merged across calls), and a failure in a NON-gated call (e.g. NCBIGene) is
+# not allowed to abort the gate — only a gated call's failure, or a genuine Kestrel-unreachable
+# condition (no call succeeded), stops the run. (Greptile PR #18.)
 # ---------------------------------------------------------------------------
 
 # Default probe symbols (stable, well-annotated human genes with clear Ensembl + UniProt xrefs).
@@ -265,18 +271,37 @@ DEFAULT_MIN_NAMESPACE_COVERAGE: float = 0.6
 
 
 @dataclass(frozen=True)
+class VocabProbe:
+    """Result of ONE batch ``map_dataset_to_kg`` call for a single target vocab.
+
+    ``ok`` is False iff that specific call raised (call-level isolation — one vocab's failure is
+    not the others'). ``per_symbol`` maps each probe symbol to the set of CURIE namespace prefixes
+    observed in *this call's* output (``chosen_kg_id`` + every ``kg_equivalent_ids``).
+
+    Coverage for a required namespace is only ever counted from the probe of the call that TARGETS
+    that namespace — never merged across calls — so a broken Ensembl-target call cannot be masked by
+    Ensembl equivalents that happen to surface in the UniProt or NCBIGene call.
+    """
+
+    ok: bool
+    per_symbol: dict[str, set[str]]
+
+
+@dataclass(frozen=True)
 class GeneProteinObservation:
     """What a live gene/protein smoke reports back.
 
-    ``per_symbol`` maps each probed symbol to the set of CURIE namespace prefixes BioMapper produced
-    for it *via the batch ``map_dataset_to_kg`` path* (e.g. ``{"ENSEMBL", "NCBIGENE", "UNIPROTKB"}``)
-    — the same path the arm runs on, so the gate reflects real batch capability, not the
-    impoverished single-entity path.
+    ``per_vocab`` maps each queried vocab (e.g. ``"ENSEMBL"``) to its ``VocabProbe`` — the namespaces
+    that vocab's *own* batch ``map_dataset_to_kg`` call produced per symbol, plus whether the call
+    succeeded. Keeping the results per-call (not merged) is what lets the gate hold each namespace's
+    coverage floor against the call that guards it. ``kestrel_ok`` is False only when Kestrel is
+    genuinely unreachable — i.e. NO vocab call succeeded; a single non-gated call throwing does not
+    clear it.
     """
 
     key_ok: bool
     kestrel_ok: bool
-    per_symbol: dict[str, set[str]]
+    per_vocab: dict[str, VocabProbe]
 
 
 @dataclass(frozen=True)
@@ -299,44 +324,77 @@ def run_gene_protein_gate(
     """Assert the BATCH path resolves probe symbols to each required cross-ref namespace at a
     reasonable rate. Fail loud, name the namespace + the observed rate.
 
-    The observation comes from the same batch ``map_dataset_to_kg`` path the arm runs on, so a
-    coverage floor (not per-symbol all-or-nothing) is the right assertion: a couple of the 5 probes
-    missing a namespace is normal batch behaviour (~77-91% per-namespace live), but a batch path that
-    resolves NO symbols to a required namespace (~0%) is a real infra failure and MUST STOP — else
-    the arm would silently score near 0% for an infra reason.
+    Two properties the gate must hold (Greptile PR #18):
+
+    1. **Coverage is per-target-call, never merged.** Each required namespace's floor is checked
+       against the probe of the call that TARGETS it (Ensembl floor from the ``ENSEMBL`` call,
+       UniProt floor from the ``UniProtKB`` call). Equivalents that leak into a *different* vocab's
+       call can never satisfy a namespace whose own target call is broken.
+    2. **A non-gated call's failure never aborts the gate.** Only a failure that prevents evaluating
+       a GATED namespace (its target call threw), or a genuine Kestrel-unreachable condition (no call
+       succeeded at all), stops the run. A transient throw in the NCBIGene call — which is not gated —
+       is ignored when the gated Ensembl + UniProt calls passed with sufficient coverage.
+
+    A coverage floor (not per-symbol all-or-nothing) is the right assertion: a couple of the 5 probes
+    missing a namespace is normal batch behaviour (~77-91% per-namespace live), but a target call that
+    resolves NO symbols to its namespace (~0%) is a real infra failure and MUST STOP — else the arm
+    would silently score near 0% for an infra reason.
     """
     obs = smoke_fn()
     if not obs.key_ok:
         return GeneProteinGateResult("stop", "KESTREL_API_KEY missing/invalid", obs)
-    if not obs.kestrel_ok:
-        return GeneProteinGateResult("stop", "Kestrel API unreachable", obs)
-    if not obs.per_symbol:
+    if not obs.per_vocab:
         return GeneProteinGateResult("stop", "gene/protein smoke produced no results (empty)", obs)
+    if not obs.kestrel_ok:
+        return GeneProteinGateResult("stop", "Kestrel API unreachable (no batch call succeeded)", obs)
 
-    n = len(obs.per_symbol)
-    required = {ns.upper() for ns in required_namespaces}
-    coverage: dict[str, float] = {}
-    for ns in required:
-        hits = sum(1 for namespaces in obs.per_symbol.values() if ns in {x.upper() for x in namespaces})
-        coverage[ns] = hits / n if n else 0.0
+    # Associate each required namespace with the vocab call that TARGETS it (case-insensitive on the
+    # vocab label). Coverage is only ever read from that call's own probe — finding #1.
+    probe_by_ns = {vocab.upper(): (vocab, probe) for vocab, probe in obs.per_vocab.items()}
 
-    low = {ns: rate for ns, rate in coverage.items() if rate < min_namespace_coverage}
+    stats: dict[str, tuple[int, int]] = {}  # namespace -> (hits, n)
+    for raw_ns in required_namespaces:
+        ns = raw_ns.upper()
+        entry = probe_by_ns.get(ns)
+        if entry is None:
+            return GeneProteinGateResult(
+                "stop",
+                f"no batch call targeted required namespace {ns!r} — cannot evaluate its coverage; "
+                f"probed vocabs were {sorted(obs.per_vocab)}",
+                obs,
+            )
+        vocab, probe = entry
+        # finding #2: a GATED namespace's target call failing IS fatal (we cannot judge the arm the
+        # gate guards). A non-gated call (e.g. NCBIGene) failing never reaches here, so it is ignored.
+        if not probe.ok:
+            return GeneProteinGateResult(
+                "stop",
+                f"batch call for gated vocab {vocab!r} failed — cannot evaluate {ns} coverage on the "
+                f"batch path this gate guards",
+                obs,
+            )
+        n = len(probe.per_symbol)
+        hits = sum(1 for names in probe.per_symbol.values() if ns in {x.upper() for x in names})
+        stats[ns] = (hits, n)
+
+    low = {ns: (h, n) for ns, (h, n) in stats.items() if n == 0 or (h / n) < min_namespace_coverage}
     if low:
         detail = ", ".join(
-            f"{ns} {rate:.0%} ({int(round(rate * n))}/{n})" for ns, rate in sorted(low.items())
+            f"{ns} {(h / n if n else 0.0):.0%} ({h}/{n})" for ns, (h, n) in sorted(low.items())
         )
         return GeneProteinGateResult(
             "stop",
             f"batch path resolved probe symbols to required namespace(s) below the "
-            f"{min_namespace_coverage:.0%} floor: {detail} — cross-category symbol->cross-ref "
-            f"resolution not demonstrated on the batch path the arm runs on",
+            f"{min_namespace_coverage:.0%} floor (each counted only from its own target call): "
+            f"{detail} — cross-category symbol->cross-ref resolution not demonstrated on the batch "
+            f"path the arm runs on",
             obs,
         )
-    summary = ", ".join(f"{ns} {rate:.0%}" for ns, rate in sorted(coverage.items()))
+    summary = ", ".join(f"{ns} {(h / n if n else 0.0):.0%}" for ns, (h, n) in sorted(stats.items()))
     return GeneProteinGateResult(
         "proceed",
-        f"batch path resolved {n} probe symbols to {sorted(required)} at/above the "
-        f"{min_namespace_coverage:.0%} floor: {summary}",
+        f"batch path resolved probe symbols to {sorted(stats)} at/above the "
+        f"{min_namespace_coverage:.0%} floor (per target call): {summary}",
         obs,
     )
 
@@ -384,12 +442,16 @@ def build_live_gene_protein_smoke_fn(
         except Exception:
             key_ok = False
 
-        kestrel_ok = True
-        per_symbol: dict[str, set[str]] = {sym: set() for sym in symbols}
         input_df = pd.DataFrame({name_column: list(symbols)})
+        per_vocab: dict[str, VocabProbe] = {}
 
         with tempfile.TemporaryDirectory() as tmp:
             for vocab in vocabs:
+                # One batch call PER vocab, kept isolated: its namespaces and its ok-flag stay with
+                # this vocab so the gate can hold each namespace's floor against its own target call
+                # and never abort on a non-gated call's failure.
+                per_symbol: dict[str, set[str]] = {sym: set() for sym in symbols}
+                ok = True
                 try:
                     output_tsv, _stats = mapper.map_dataset_to_kg(
                         dataset=input_df,
@@ -411,7 +473,11 @@ def build_live_gene_protein_smoke_fn(
                             if ns:
                                 per_symbol[sym].add(ns)
                 except Exception:
-                    kestrel_ok = False
-        return GeneProteinObservation(key_ok=key_ok, kestrel_ok=kestrel_ok, per_symbol=per_symbol)
+                    ok = False
+                per_vocab[vocab] = VocabProbe(ok=ok, per_symbol=per_symbol)
+
+        # Kestrel is "unreachable" only if NOTHING succeeded; one non-gated call throwing is not that.
+        kestrel_ok = any(probe.ok for probe in per_vocab.values())
+        return GeneProteinObservation(key_ok=key_ok, kestrel_ok=kestrel_ok, per_vocab=per_vocab)
 
     return _smoke
