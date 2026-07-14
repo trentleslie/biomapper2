@@ -24,11 +24,21 @@ import pandas as pd
 
 from biomapper2.config import BIOLINK_VERSION_DEFAULT, KESTREL_API_URL
 
-from .config import RunnableConfig
+from .config import ProvidedIdDatasetConfig, RunnableConfig
+from .scorers.provided_id_scorer import assert_target_held_out
 
 
 class TrivialMappingError(RuntimeError):
     """Raised when assigned mappings are zero — signals the gold-as-provided trap."""
+
+
+class NoProvidedMappingError(RuntimeError):
+    """Raised in provided-ID mode when the provided source produced zero KG mappings.
+
+    Provided-ID mode expects ``mapped_to_kg_provided > 0`` (the assign path is off entirely, so the
+    name-input ``assigned``-based guard does not apply). Zero provided mappings means the source id
+    never linked — a broken run, not a scorable zero.
+    """
 
 
 def assigned_stats_nonnull(stats: dict[str, Any]) -> bool:
@@ -38,6 +48,16 @@ def assigned_stats_nonnull(stats: dict[str, Any]) -> bool:
     assigned mappings means the gold column leaked into the provided-id path.
     """
     return int(stats.get("mapped_to_kg_assigned", 0) or 0) > 0
+
+
+def mapped_provided_nonnull(stats: dict[str, Any]) -> bool:
+    """True iff a provided-ID run produced at least one KG mapping via the *provided* path.
+
+    The name-input analog (``assigned_stats_nonnull``) is inverted here: provided-ID mode runs with
+    ``annotation_mode='none'``, so ``mapped_to_kg_assigned`` is expected to be 0 and the provided
+    path is the only one that can produce a mapping.
+    """
+    return int(stats.get("mapped_to_kg_provided", 0) or 0) > 0
 
 
 def _git_commit(repo_root: Path) -> str:
@@ -167,3 +187,98 @@ def run_all(
         except Exception as exc:  # per-vocab isolation (e.g. Kestrel error)
             results[vocab] = VocabRun(vocab=vocab, ok=False, output_tsv=None, stats=None, manifest=None, error=str(exc))
     return results
+
+
+# --------------------------------------------------------------------------------------------------
+# Provided-ID (identifier-input) run mode. The source id is handed to the mapper as a PROVIDED id
+# with ``annotation_mode='none'`` (pure equivalence expansion); the target is held out for the
+# scorer. Distinct from the name-input path in three ways: provided_id_columns=[source] (not []),
+# annotation_mode='none' (not 'all'), and the anti-trivial guard is mapped_to_kg_provided>0 (not
+# assigned>0). A single run per dataset — the equivalence expansion is not vocab-steered.
+# --------------------------------------------------------------------------------------------------
+
+
+def build_manifest_provided(
+    *,
+    config: ProvidedIdDatasetConfig,
+    dataset_sha: str,
+    biolink_version: str,
+    output_tsv: str,
+    repo_root: Path,
+) -> dict[str, Any]:
+    return {
+        "dataset": config.key,
+        "entity_type": config.entity_type,
+        "input_type": config.input_type,
+        "mode": "provided_id",
+        "annotation_mode": config.annotation_mode,
+        # The load-bearing anti-trivial record: source PROVIDED, target HELD OUT (never provided).
+        "provided_id_columns": [config.source_id_column],
+        "source_namespace": config.source_namespace,
+        "held_out_target_columns": {ns: col for ns, col in config.gold_target_columns},
+        "biomapper2_commit": _git_commit(repo_root),
+        "kestrel_api_url": KESTREL_API_URL,
+        "biolink_version": biolink_version,
+        "dataset_source_sha256": dataset_sha,
+        "output_tsv": output_tsv,
+        "timestamp_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+    }
+
+
+@dataclass
+class ProvidedRun:
+    ok: bool
+    output_tsv: str | None
+    stats: dict[str, Any] | None
+    manifest: dict[str, Any] | None
+    error: str | None = None
+
+
+def run_provided_id(
+    mapper: Any,
+    input_df: pd.DataFrame,
+    config: ProvidedIdDatasetConfig,
+    out_dir: Path,
+    *,
+    dataset_sha: str,
+    repo_root: Path,
+    enforce_mapped: bool = True,
+) -> ProvidedRun:
+    """Run one provided-ID dataset. Source id in ``provided_id_columns``; target held out.
+
+    ``assert_target_held_out`` runs FIRST (fail-loud anti-trivial-100% guard): a config whose scored
+    target is a provided column — or shares the source namespace — raises before the mapper is even
+    called, so a trivial 100% can never be produced. Then the provided-path mapping guard
+    (``mapped_to_kg_provided > 0``) confirms the source actually linked.
+    """
+    assert_target_held_out(config)  # anti-trivial-100% invariant: target must be held out
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    output_tsv, stats = mapper.map_dataset_to_kg(
+        dataset=input_df,
+        entity_type=config.entity_type,
+        name_column=config.name_column,
+        provided_id_columns=[config.source_id_column],
+        vocab=None,  # equivalence expansion is not vocab-steered; no target restriction
+        annotation_mode=config.annotation_mode,  # 'none' — pure provided-ID equivalence expansion
+        output_dir=out_dir,
+        output_prefix=f"{config.key}_provided",
+    )
+    if enforce_mapped and not mapped_provided_nonnull(stats):
+        raise NoProvidedMappingError(
+            f"{config.key}: provided-ID run produced zero KG mappings via the provided path "
+            f"(mapped_to_kg_provided={stats.get('mapped_to_kg_provided')}). The source id never "
+            f"linked — refusing to score a broken run."
+        )
+    biolink_version = (
+        getattr(getattr(mapper, "biolink_client", None), "biolink_version", None) or BIOLINK_VERSION_DEFAULT
+    )
+    manifest = build_manifest_provided(
+        config=config,
+        dataset_sha=dataset_sha,
+        biolink_version=biolink_version,
+        output_tsv=str(output_tsv),
+        repo_root=repo_root,
+    )
+    (out_dir / f"{config.key}_provided_manifest.json").write_text(json.dumps(manifest, indent=2))
+    return ProvidedRun(ok=True, output_tsv=str(output_tsv), stats=stats, manifest=manifest)

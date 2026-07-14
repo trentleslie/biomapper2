@@ -256,6 +256,137 @@ NCBI_GENE2ENSEMBL = CurieDatasetConfig(
 )
 
 
+@dataclass(frozen=True)
+class ProvidedIdDatasetConfig:
+    """A provided-ID (identifier-input) benchmark registry entry.
+
+    Unlike the name-input configs (``DatasetConfig`` / ``CurieDatasetConfig``), the SOURCE
+    identifier is handed to BioMapper as a *provided id* (``provided_id_columns=[source_id_column]``)
+    with ``annotation_mode='none'`` — no name-resolution, pure provided-ID equivalence expansion.
+    The measurement is whether BioMapper's KG equivalence set for the source reaches the held-out
+    TARGET cross-reference. This is the regime comparable to the incumbent ID-mapping tools; the
+    bare-ID name-input path (``7525`` -> ``USZIPCODE:75254``, 0%) is the wrong path for ID inputs.
+
+    ANTI-TRIVIAL-100% INVARIANT (enforced in ``__post_init__``, fail-loud): the scored TARGET must
+    never be a provided column, and the source namespace must be DISJOINT from every target
+    namespace. A target-in-provided (or same-namespace round-trip) config raises ``ValueError`` at
+    construction rather than silently scoring a trivial 100%.
+    """
+
+    key: str
+    arm: str  # "gene" | "protein" | "metabolite"
+    entity_type: str  # Biolink entity type
+    source_id_column: str  # the ONLY provided_id column — a normalizer-recognizable column name
+    source_namespace: str  # canonical namespace of the source id (e.g. "NCBIGene", "CHEBI")
+    name_column: str  # inert placeholder query column (unused under annotation_mode='none')
+    # (namespace, held-out-column) — the HELD-OUT gold TARGET cross-refs (scorer-only, never provided)
+    gold_target_columns: tuple[tuple[str, str], ...]
+    target_vocabs: tuple[str, ...]  # target namespace(s) the KG equivalence set is expected to reach
+    source_label: str
+    source_url: str
+    license: str
+    input_type: str = "provided_id"
+    annotation_mode: str = "none"  # pure provided-ID equivalence expansion (no name annotation)
+    # Reuse hook: when the provided-ID set is derived from a name-input backbone bundle, these name
+    # the source CurieDatasetConfig (for the streaming/subsample machinery) and which of its columns
+    # supplies the source id. None for the Hajjar-derived metabolite anchor.
+    backbone_source_key: str | None = None
+    backbone_source_column: str | None = None
+
+    def __post_init__(self) -> None:
+        provided = {self.source_id_column}
+        gold_cols = {col for _, col in self.gold_target_columns}
+        overlap = provided & gold_cols
+        if overlap:
+            raise ValueError(
+                f"{self.key}: anti-trivial-100% violation — held-out TARGET column(s) {sorted(overlap)} "
+                f"are also in provided_id_columns ({sorted(provided)}). The gold target must NEVER be "
+                f"provided; only the source is. Refusing to construct a config that would score 100%."
+            )
+        gold_ns = {ns.upper() for ns, _ in self.gold_target_columns}
+        if self.source_namespace.upper() in gold_ns:
+            raise ValueError(
+                f"{self.key}: anti-trivial-100% violation — source namespace {self.source_namespace!r} "
+                f"is also a TARGET namespace ({sorted(gold_ns)}). A same-namespace round-trip lets the "
+                f"provided source id self-match the gold. Choose disjoint source/target namespaces."
+            )
+
+
+# Gene/protein provided-ID anchors. Source id -> held-out cross-ref, both reusing the backbone
+# streaming/subsample machinery. Entrez -> Ensembl and UniProt -> RefSeq/Ensembl are the two
+# ID->ID regimes directly comparable to the incumbent ID-mapping tools.
+PROVIDED_NCBI_GENE2ENSEMBL = ProvidedIdDatasetConfig(
+    key="ncbi-gene2ensembl-provided-id",
+    arm="gene",
+    entity_type="gene",
+    source_id_column="entrez",  # normalizer alias of ncbigene; value = bare Entrez GeneID
+    source_namespace="NCBIGene",
+    name_column="query_placeholder",
+    gold_target_columns=(("ENSEMBL", "gold_ensembl"),),
+    target_vocabs=("ENSEMBL",),
+    source_label=NCBI_GENE2ENSEMBL.source_label,
+    source_url=NCBI_GENE2ENSEMBL.source_url,
+    license=NCBI_GENE2ENSEMBL.license,
+    backbone_source_key=NCBI_GENE2ENSEMBL.key,
+    backbone_source_column=NCBI_GENE2ENSEMBL.name_column,  # "gene_id"
+)
+
+PROVIDED_UNIPROT_IDMAPPING = ProvidedIdDatasetConfig(
+    key="uniprot-idmapping-provided-id",
+    arm="protein",
+    entity_type="protein",
+    source_id_column="uniprotkb",  # normalizer vocab name; value = bare UniProtKB accession
+    source_namespace="UniProtKB",
+    name_column="query_placeholder",
+    gold_target_columns=(("RefSeq", "gold_refseq"), ("ENSEMBL", "gold_ensembl")),
+    target_vocabs=("RefSeq", "ENSEMBL"),
+    source_label=UNIPROT_IDMAPPING.source_label,
+    source_url=UNIPROT_IDMAPPING.source_url,
+    license=UNIPROT_IDMAPPING.license,
+    backbone_source_key=UNIPROT_IDMAPPING.key,
+    backbone_source_column=UNIPROT_IDMAPPING.name_column,  # "uniprotkb_ac"
+)
+
+# Metabolite provided-ID anchor — a Hajjar Table-2 PARITY cell on IDENTIFIER inputs. Source =
+# Hajjar's curated ChEBI id; target = the held-out gold InChIKey (structure). Chosen over a
+# ChEBI->ChEBI round-trip precisely because round-trip is trivial (source ns == target ns, rejected
+# by the invariant above): ChEBI -> InChIKey crosses namespaces and reproduces a defensible
+# "conversion to InChIKey from a provided compound identifier" cell that the name-input Hajjar run
+# could not anchor. See ``HAJJAR_PROVIDED_ID_PARITY_CELL`` for the exact published cell reference.
+PROVIDED_HAJJAR = ProvidedIdDatasetConfig(
+    key="hajjar-100-provided-id",
+    arm="metabolite",
+    entity_type="metabolite",
+    source_id_column="chebi",  # normalizer vocab name; value = Hajjar's curated ChEBI id
+    source_namespace="CHEBI",
+    name_column="query_placeholder",
+    gold_target_columns=(("INCHIKEY", HAJJAR.gold_inchikey_column),),
+    target_vocabs=("INCHIKEY",),
+    source_label="Hajjar et al. 2026 (provided-ID: ChEBI -> InChIKey)",
+    source_url=HAJJAR.source_url,
+    license=HAJJAR.license,
+    backbone_source_key=None,
+    backbone_source_column=HAJJAR.gold_chebi_column,  # "gold_chebi" supplies the source id
+)
+
+
+# The specific Hajjar Table-2 cell the metabolite provided-ID anchor reproduces. Following the
+# CompetitorResult discipline (Metabolon-96.5% scar): ``value=None`` until transcribed from the
+# paper at run time — no number is fabricated in source control. ``doi`` + ``table_ref`` are
+# load-bearing so the parity cell is citeable.
+HAJJAR_PROVIDED_ID_PARITY_CELL = CompetitorResult(
+    tool="Hajjar Table 2 (ID-input regime)",
+    metric="conversion_accuracy_to_inchikey",
+    input_type="provided_id",
+    value=None,  # transcribe the published cell at run time; do NOT bake an unverified number here
+    doi=HAJJAR_DOI,
+    table_ref=(
+        "Hajjar et al. 2026, Table 2 — conversion accuracy to InChIKey from a provided compound "
+        "identifier (ID-input regime; ChEBI source)"
+    ),
+)
+
+
 # The metabolite registry (structure-oracle arm). Hajjar remains the merged reference; NECS is
 # the deferred follow-on added here.
 REGISTRY: dict[str, DatasetConfig] = {HAJJAR.key: HAJJAR, NECS.key: NECS}
@@ -267,4 +398,21 @@ CURIE_REGISTRY: dict[str, CurieDatasetConfig] = {
     HGNC.key: HGNC,
     UNIPROT_IDMAPPING.key: UNIPROT_IDMAPPING,
     NCBI_GENE2ENSEMBL.key: NCBI_GENE2ENSEMBL,
+}
+
+# The provided-ID (identifier-input) registry — BioMapper's core cross-namespace-mapping regime,
+# comparable to the incumbent ID-mapping tools. Every entry provides ONLY the source id and holds
+# the target cross-ref out for the scorer (invariant enforced in ``ProvidedIdDatasetConfig``).
+PROVIDED_ID_REGISTRY: dict[str, ProvidedIdDatasetConfig] = {
+    PROVIDED_NCBI_GENE2ENSEMBL.key: PROVIDED_NCBI_GENE2ENSEMBL,
+    PROVIDED_UNIPROT_IDMAPPING.key: PROVIDED_UNIPROT_IDMAPPING,
+    PROVIDED_HAJJAR.key: PROVIDED_HAJJAR,
+}
+
+# Maps each provided-ID dataset to the source CurieDatasetConfig whose streaming/subsample machinery
+# it reuses (None for the Hajjar-derived metabolite anchor, which reuses the Hajjar adapter instead).
+PROVIDED_ID_BACKBONE: dict[str, CurieDatasetConfig | None] = {
+    PROVIDED_NCBI_GENE2ENSEMBL.key: NCBI_GENE2ENSEMBL,
+    PROVIDED_UNIPROT_IDMAPPING.key: UNIPROT_IDMAPPING,
+    PROVIDED_HAJJAR.key: None,
 }
