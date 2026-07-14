@@ -328,9 +328,147 @@ def orchestrate_backbone(
     return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser(description="Run the Hajjar external-benchmark slice (live).")
-    parser.add_argument("--supplement", required=True, help="path/URL to the Hajjar supplement")
+def orchestrate_provided(
+    *,
+    config,
+    source,
+    backbone_config=None,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run one provided-ID (identifier-input) dataset live — BioMapper's core cross-namespace regime.
+
+    The SOURCE id is handed to BioMapper as a provided id (``annotation_mode='none'``, pure
+    equivalence expansion); the TARGET cross-ref is held out and consumed only by the scorer.
+    ``config`` is a ``ProvidedIdDatasetConfig``; ``backbone_config`` is the source CurieDatasetConfig
+    for gene/protein sets (None for the Hajjar metabolite anchor). ``source`` is a URL/bytes/line-
+    iterator, dispatched by the adapter. No competitor figure. Heavy deps imported lazily.
+    """
+    import pandas as pd
+
+    from biomapper2.mapper import Mapper
+
+    from .adapters import provided_id as provided_adapter
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_provided_id
+    from .scorers.provided_id_scorer import score_provided_id
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(config, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        # Reuse the arm's existing Phase-0 liveness gate. Provided-ID mode makes NO external
+        # annotation calls (annotation_mode='none'), so this is a coarse liveness check, not a cost
+        # gate — but keep it fail-closed so a dead Kestrel stops the run before scoring.
+        if config.arm in ("gene", "protein"):
+            from .gate import build_live_gene_protein_smoke_fn, run_gene_protein_gate
+
+            gate_result = run_gene_protein_gate(build_live_gene_protein_smoke_fn(mapper))
+        else:
+            from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+            gate_result = run_gate(
+                build_live_smoke_fn(mapper), n_rows=100, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+            )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Provided-ID Phase-0 gate stopped the run: {gate_result.reason}")
+
+    bundle = provided_adapter.load_provided(source, config, backbone_config)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+    provided_adapter.persist_subsample(bundle, out_dir)
+
+    run = run_provided_id(
+        mapper, bundle.input_df, config, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
+    )
+    if not run.ok or not run.output_tsv:
+        raise RuntimeError(f"{config.key} provided-ID run produced no result (mapper failed: {run.error!r}).")
+
+    mapped_df = pd.read_csv(run.output_tsv, sep="\t")
+    result = score_provided_id(mapped_df, config)
+    # Fail-closed on an unscorable run — the SAME rule the name-input flow enforces (run.py:156).
+    # top1_accuracy is None only when the scored denominator is zero (no row carried a held-out
+    # target), i.e. an `n/a` benchmark. Persisting that as a success would file a run that measured
+    # nothing; refuse BEFORE writing any results/report so an unscorable run never looks green.
+    if result["comparable_core"]["top1_accuracy"] is None:
+        raise RuntimeError(
+            f"{config.key}: no scorable held-out targets (top1_accuracy is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable provided-ID run as success."
+        )
+    (out_dir / f"{config.key}_provided_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{config.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[],
+        curie_entries=[{"key": config.key, "arm": f"{config.arm} (provided-ID)", "result": result}],
+        integrity={"reconciliation_passed": None, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "dataset": config.key}
+
+
+def _resolve_source_arg(arg: str) -> bytes | str:
+    """A local path is read to bytes; anything else is treated as a URL (streamed by the adapter).
+
+    Correct for the Hajjar loader (accepts bytes / URL). NOT correct for the backbone loader, which
+    consumes a URL string OR a line iterator — never raw bytes (iterating bytes yields ints, not
+    records). Provided-ID CLI resolution therefore uses ``_resolve_provided_source`` instead.
+    """
+    p = Path(arg)
+    return p.read_bytes() if p.exists() else arg
+
+
+def _local_line_iter(path: Path):
+    """Yield decoded, newline-stripped lines from a local (optionally gzipped) file.
+
+    Mirrors ``backbones.stream_source_lines`` output so the backbone loader parses a local file
+    identically to a streamed URL. The file handle is held only for the life of the generator; the
+    reservoir sampler drains it fully, so it closes deterministically.
+    """
+    import gzip
+
+    path = Path(path)
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            yield line.rstrip("\n")
+
+
+def _resolve_provided_source(arg: str, backbone_config) -> Any:
+    """Resolve a provided-ID ``--source`` to what its loader expects (URL / bytes / line iterator).
+
+    - URL (non-existent path): returned as-is — the Hajjar loader fetches it, the backbone loader
+      streams it.
+    - Local file, backbone dataset: a line iterator (gzip-aware). Passing bytes here is the bug
+      Greptile flagged — ``backbones.load_backbone`` iterates a non-str source directly, so bytes
+      would yield integers instead of records and parsing fails.
+    - Local file, Hajjar anchor (no backbone): bytes — the Hajjar loader accepts them.
+    """
+    p = Path(arg)
+    if not p.exists():
+        return arg  # URL
+    if backbone_config is not None:
+        return _local_line_iter(p)  # backbone loader wants a line iterator, not bytes
+    return p.read_bytes()  # Hajjar loader accepts bytes
+
+
+def build_parser() -> argparse.ArgumentParser:
+    """CLI: legacy top-level Hajjar flags (back-compat) + a ``provided-id`` subcommand.
+
+    ``python -m ...run --supplement X`` keeps working (name-input Hajjar). The new
+    ``python -m ...run provided-id --dataset K --source S`` drives the identifier-input datasets so
+    the gated run needs no hand-written driver (NECS/backbones previously had no CLI entrypoint).
+    """
+    from .config import PROVIDED_ID_REGISTRY
+
+    parser = argparse.ArgumentParser(description="Run external-benchmark slices (live).")
+    parser.add_argument("--supplement", default=None, help="path/URL to the Hajjar supplement (legacy name-input run)")
     parser.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     parser.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     parser.add_argument(
@@ -342,14 +480,44 @@ def main() -> None:
             "marker is only plotted beside a verified number."
         ),
     )
+    sub = parser.add_subparsers(dest="command")
+    pv = sub.add_parser("provided-id", help="run a provided-ID (identifier-input) dataset")
+    pv.add_argument("--dataset", required=True, choices=sorted(PROVIDED_ID_REGISTRY), help="provided-ID dataset key")
+    pv.add_argument("--source", required=True, help="path/URL/line-source for the dataset")
+    pv.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    pv.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+    return parser
+
+
+def _run_provided_cli(args, parser: argparse.ArgumentParser) -> dict[str, Any]:
+    from .config import PROVIDED_ID_BACKBONE, PROVIDED_ID_REGISTRY
+
+    config = PROVIDED_ID_REGISTRY[args.dataset]
+    backbone_config = PROVIDED_ID_BACKBONE.get(args.dataset)
+    src = _resolve_provided_source(args.source, backbone_config)
+    out = Path(args.out) if args.out else None
+    return orchestrate_provided(
+        config=config,
+        source=src,
+        backbone_config=backbone_config,
+        out_dir=out,
+        run_gate_first=not args.no_gate,
+    )
+
+
+def main() -> None:
+    parser = build_parser()
     args = parser.parse_args()
 
-    src: bytes | str
-    p = Path(args.supplement)
-    if p.exists():
-        src = p.read_bytes()
-    else:
-        src = args.supplement  # treated as URL
+    if args.command == "provided-id":
+        result = _run_provided_cli(args, parser)
+        print(f"Saved provided-ID run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    # Legacy name-input Hajjar path.
+    if not args.supplement:
+        parser.error("--supplement is required for the Hajjar name-input run (or use the 'provided-id' subcommand)")
+    src = _resolve_source_arg(args.supplement)
 
     parity: tuple[float, float, float] | None = None
     if args.parity_cell:

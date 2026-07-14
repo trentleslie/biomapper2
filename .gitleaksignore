@@ -1,0 +1,4 @@
+# False positives: dataclass `key=` dataset identifiers in the external-benchmarks registry
+# (high-entropy hyphenated dataset keys, not secrets — mirror existing `key="hajjar-100"` pattern).
+studies/external_benchmarks/config.py:generic-api-key:319
+studies/external_benchmarks/config.py:generic-api-key:357
