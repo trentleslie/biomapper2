@@ -9,9 +9,11 @@ params, reference DB versions, and the dataset content SHA.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from studies.tier3_determinism import arms, dataset, fig4, prompt
 from studies.tier3_determinism.arms import CallFn, ResolveFn
@@ -58,6 +60,28 @@ def _write_jsonl(path: Path, rows: list) -> None:
     path.write_text("".join(r.model_dump_json() + "\n" for r in rows))
 
 
+class _IncrementalWriter:
+    """Thread-safe append-one-JSON-line-per-record sink.
+
+    Artifact-hygiene SOP: raw results stream to disk as they are produced, so a crash
+    (or the guard tripping, a killed process, an OOM) preserves the partial evidence
+    already gathered instead of discarding an entire multi-hour run.
+    """
+
+    def __init__(self, path: Path) -> None:
+        self._fh = path.open("w", buffering=1)  # line-buffered
+        self._lock = threading.Lock()
+
+    def __call__(self, record: Any) -> None:
+        line = record.model_dump_json() + "\n"
+        with self._lock:
+            self._fh.write(line)
+            self._fh.flush()
+
+    def close(self) -> None:
+        self._fh.close()
+
+
 def run_experiment(
     config: ExperimentConfig,
     out_dir: Path | None = None,
@@ -76,13 +100,24 @@ def run_experiment(
         for t in config.temperatures
     ]
 
-    arm_a = arms.run_arm_a(queries, config.models, decodings, config.n_repeats, call_fn=call_fn)
-    # Asymmetric N: Arm B is deterministic given pinned refs, so a few repeats suffice to *demonstrate*
-    # byte-identical variance=0 without letting the ~2-3 min/call Kestrel pipeline dominate wall-clock.
-    arm_b = arms.run_arm_b(queries, config.arm_b_repeats, resolve_fn=resolve_fn) if config.run_arm_b else []
+    # Resolve the save path. Save-by-default: timestamped dir under runs_root.
+    if out_dir is None:
+        stamp = now.strftime("%Y%m%dT%H%M%SZ")
+        out_dir = (runs_root or DEFAULT_RUNS_ROOT) / stamp
+    out_dir = Path(out_dir)
+    # Never clobber a COMPLETED run: refuse only when a finished artifact (fig4_data.json)
+    # is already present. A dir that holds just a stray log, or a partial/in-progress run,
+    # is fine to (re)write -- the previous design tripped on its own redirected run.log and
+    # discarded ~10h of work, so the guard now keys on completion, not emptiness.
+    if (out_dir / "fig4_data.json").exists():
+        raise FileExistsError(
+            f"output dir already contains a completed run (fig4_data.json): {out_dir}. "
+            "Refusing to overwrite prior evidence; pick a fresh --out or clear it."
+        )
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    figure = fig4.build_fig4(arm_a, arm_b)
-
+    # Write the manifest FIRST (reproducibility pins are known upfront), then stream raw
+    # results to disk as they are produced -- a crash preserves partial evidence.
     kestrel_url, biolink, refs = _reference_versions()
     manifest = RunManifest(
         generated_utc=now.isoformat(),
@@ -104,24 +139,30 @@ def run_experiment(
         reference_db_versions=refs if config.run_arm_b else {},
         endpoint_note="Arm A via provider APIs; Arm B via Kestrel KG." if config.run_arm_b else "Arm A only.",
     )
-
-    # Resolve the save path. Save-by-default: timestamped dir under runs_root.
-    if out_dir is None:
-        stamp = now.strftime("%Y%m%dT%H%M%SZ")
-        out_dir = (runs_root or DEFAULT_RUNS_ROOT) / stamp
-    out_dir = Path(out_dir)
-    # Never clobber prior evidence: a reused --out that already holds a run is refused
-    # (artifact-hygiene SOP). An empty/absent dir is fine.
-    if out_dir.exists() and any(out_dir.iterdir()):
-        raise FileExistsError(
-            f"output dir already contains a run: {out_dir}. "
-            "Refusing to overwrite prior evidence; pick a fresh --out or clear it."
-        )
-    out_dir.mkdir(parents=True, exist_ok=True)
-
     (out_dir / "manifest.json").write_text(manifest.model_dump_json(indent=2))
-    _write_jsonl(out_dir / "arm_a_raw.jsonl", arm_a)
-    _write_jsonl(out_dir / "arm_b_raw.jsonl", arm_b)
+
+    write_a = _IncrementalWriter(out_dir / "arm_a_raw.jsonl")
+    write_b = _IncrementalWriter(out_dir / "arm_b_raw.jsonl")
+    try:
+        # Arm A calls are independent -> run concurrently to keep a large N sweep from
+        # taking ~10h sequentially. Each result streams to disk on completion.
+        arm_a = arms.run_arm_a(
+            queries, config.models, decodings, config.n_repeats,
+            call_fn=call_fn, on_result=write_a, max_workers=config.arm_a_workers,
+        )
+        # Asymmetric N: Arm B is deterministic given pinned refs, so a few repeats suffice
+        # to *demonstrate* byte-identical variance=0. Kept sequential (one Kestrel pipeline)
+        # but streamed to disk per call.
+        arm_b = (
+            arms.run_arm_b(queries, config.arm_b_repeats, resolve_fn=resolve_fn, on_result=write_b)
+            if config.run_arm_b
+            else []
+        )
+    finally:
+        write_a.close()
+        write_b.close()
+
+    figure = fig4.build_fig4(arm_a, arm_b)
     (out_dir / "fig4_data.json").write_text(figure.model_dump_json(indent=2))
 
     print(f"[tier3] saved {len(arm_a)} Arm-A + {len(arm_b)} Arm-B raw calls to: {out_dir}")

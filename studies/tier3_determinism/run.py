@@ -81,6 +81,7 @@ def build_config(
     n_repeats: int | None = None,
     n_repeats_arm_b: int | None = None,
     max_tokens: int | None = None,
+    arm_a_workers: int | None = None,
     limit: int | None = None,
     use_preset_limit: bool = True,
     no_arm_b: bool = False,
@@ -104,6 +105,7 @@ def build_config(
         n_repeats=n_repeats if n_repeats is not None else base.n_repeats,
         n_repeats_arm_b=n_repeats_arm_b if n_repeats_arm_b is not None else base.n_repeats_arm_b,
         max_tokens=max_tokens if max_tokens is not None else 256,
+        arm_a_workers=arm_a_workers if arm_a_workers is not None else 8,
         seed=seed,
         run_arm_b=not no_arm_b,
         limit=resolved_limit,
@@ -155,6 +157,7 @@ def main(argv: list[str] | None = None) -> None:
         help="Arm-B (BioMapper) repeats; defaults to the preset's value, else --n-repeats (asymmetric-N)",
     )
     parser.add_argument("--max-tokens", type=int, default=None, help="per-call output cap (default 256; 64 is plenty for JSON answers)")
+    parser.add_argument("--arm-a-workers", type=int, default=None, help="concurrent Arm-A LLM calls (default 8; 1=sequential)")
     parser.add_argument("--limit", type=int, default=None, help="cap query set size (smoke)")
     parser.add_argument("--no-arm-b", action="store_true", help="skip BioMapper arm (Arm A only)")
     parser.add_argument("--out", type=Path, default=None, help="override output dir (default: runs/<UTC-stamp>)")
@@ -168,6 +171,7 @@ def main(argv: list[str] | None = None) -> None:
         n_repeats=args.n_repeats,
         n_repeats_arm_b=args.n_repeats_arm_b,
         max_tokens=args.max_tokens,
+        arm_a_workers=args.arm_a_workers,
         limit=args.limit,
         use_preset_limit=args.limit is None,  # only override the cap when --limit is given
         no_arm_b=args.no_arm_b,

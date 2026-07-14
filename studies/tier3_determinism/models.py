@@ -116,6 +116,7 @@ class ExperimentConfig(BaseModel):
     seed_policy: str = "fixed seed passed to providers that support it; API LLMs may ignore it"
     run_arm_b: bool = True
     limit: int | None = None  # cap the query set (cheap smoke runs); None = full set
+    arm_a_workers: int = 8  # concurrent Arm-A LLM calls (independent); 1 = sequential
 
     @property
     def arm_b_repeats(self) -> int:
