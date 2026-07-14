@@ -5,13 +5,13 @@ and the candidate nodes' first blocks, it decides the gold node or defers to an
 expert. No live APIs here — the live resolution is exercised by the runner.
 """
 
-import sys
-from pathlib import Path
+import json
+from typing import cast
 
-# The study lives outside the installed package; make it importable.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "studies" / "shared_gold_set"))
+import pytest
 
-from labeler import (  # noqa: E402
+from studies.shared_gold_set import build_gold_set as bgs
+from studies.shared_gold_set.labeler import (
     EXPERT,
     INCHIKEY_AUTO,
     Candidate,
@@ -95,11 +95,6 @@ def test_rm_blinded_view_strips_refmet_identity():
 
 # --- Runner-level regressions (Greptile PR #12 review) -------------------------------------------
 
-import json  # noqa: E402
-
-import build_gold_set as bgs  # noqa: E402
-import pytest  # noqa: E402
-
 
 def test_retrievable_uses_bm_rank_when_gold_is_bm_node():
     # Gold is the BioMapper-arm node -> use bm_rank, not refmet_rank.
@@ -148,3 +143,94 @@ def test_write_outputs_empty_run_emits_valid_header_only_csv(tmp_path):
     prov = json.loads((tmp_path / "provenance.json").read_text())
     assert prov["limit"] == 0 and prov["n_pairs"] == 0  # provenance describes the actual dataset
     assert (tmp_path / "report.md").exists()  # report renders without ZeroDivisionError
+
+
+# --- Package importability (Greptile PR #16: bare `import labeler` broke package import) ----------
+
+
+def test_runner_imports_as_a_package_without_syspath_hacks():
+    # Importing the runner via its dotted package path must succeed on its own — no sys.path
+    # mutation. A bare top-level `import labeler` would raise ModuleNotFoundError here.
+    import importlib
+
+    mod = importlib.import_module("studies.shared_gold_set.build_gold_set")
+    # Its labeler dependency resolved (as a package member, not a bare top-level module).
+    assert mod.INCHIKEY_AUTO == "inchikey_auto"
+    assert mod.EXPERT == "expert"
+
+
+# --- Resolution-outage fail-loud guard (Greptile PR #16: outage silently -> fake gold set) --------
+
+
+class _FakeLinker:
+    """No-op stand-in so build_records does no KG network I/O in tests."""
+
+    def __init__(self, *a, **k):
+        pass
+
+    @staticmethod
+    def get_node_records(curies):
+        return {}
+
+
+def _fake_resolver_factory(block_for):
+    """Build a StructureResolver stand-in whose inchikey_block returns block_for(node_name)."""
+
+    class _FakeResolver:
+        def __init__(self, *a, **k):
+            pass
+
+        def inchikey_block(self, node_id, node_name, records=None):
+            return block_for(node_name)
+
+    return _FakeResolver
+
+
+def test_resolution_canary_raises_on_service_outage():
+    # Every lookup returns None (services down) -> canary must abort with an actionable message.
+    resolver = _fake_resolver_factory(lambda name: None)()
+    with pytest.raises(RuntimeError, match="canary FAILED"):
+        bgs._resolution_canary(cast(bgs.StructureResolver, resolver))
+
+
+def test_resolution_canary_passes_when_known_metabolite_resolves():
+    # Caffeine resolves to its known first block -> canary is silent (no raise).
+    resolver = _fake_resolver_factory(
+        lambda name: bgs.CANARY_INCHIKEY_BLOCK if name == bgs.CANARY_NAME else None
+    )()
+    bgs._resolution_canary(cast(bgs.StructureResolver, resolver))  # must not raise
+
+
+def test_build_records_aborts_and_writes_nothing_on_resolution_outage(monkeypatch, tmp_path):
+    # Simulated outage: the canary fails, so build_records raises BEFORE producing records and
+    # main() never reaches write_outputs -> no gold set is persisted.
+    monkeypatch.setattr(bgs, "Linker", _FakeLinker)
+    monkeypatch.setattr(bgs, "StructureResolver", _fake_resolver_factory(lambda name: None))
+
+    with pytest.raises(RuntimeError, match="ABORTING before writing"):
+        bgs.build_records(limit=3)
+
+    # Nothing was written (build_records aborted; write_outputs was never called).
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_healthy_run_with_genuinely_unresolvable_pairs_still_succeeds(monkeypatch, tmp_path):
+    # Canary passes (caffeine resolves) but the real pairs are genuinely unresolvable. This is a
+    # legitimate expert-residual outcome, NOT an outage: build_records must succeed (not abort) and
+    # write_outputs must emit a valid gold set. Distinguishes 'service down' from 'hard pair'.
+    monkeypatch.setattr(bgs, "Linker", _FakeLinker)
+    monkeypatch.setattr(
+        bgs,
+        "StructureResolver",
+        _fake_resolver_factory(lambda name: bgs.CANARY_INCHIKEY_BLOCK if name == bgs.CANARY_NAME else None),
+    )
+
+    records = bgs.build_records(limit=3)
+    assert len(records) == 3
+    # Every pair is a genuine expert residual, not a crash.
+    assert all(r["adjudication_method"] == EXPERT for r in records)
+    assert all(r["difficulty_flag"] == "query_unresolvable" for r in records)
+
+    bgs.write_outputs(records, tmp_path, limit=3)
+    assert len((tmp_path / "gold_set.jsonl").read_text().splitlines()) == 3
+    assert (tmp_path / "report.md").exists()

@@ -11,8 +11,8 @@ Expensive-run hygiene: results are written to a timestamped directory by default
 behind a flag), with input SHAs / git commit / KG URL pinned alongside so the run is
 reproducible. ``--out`` only *overrides* the location.
 
-    uv run python studies/shared_gold_set/build_gold_set.py
-    uv run python studies/shared_gold_set/build_gold_set.py --limit 5   # smoke test
+    uv run python -m studies.shared_gold_set.build_gold_set
+    uv run python -m studies.shared_gold_set.build_gold_set --limit 5   # smoke test
 """
 
 from __future__ import annotations
@@ -25,11 +25,17 @@ import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 
-from labeler import EXPERT, INCHIKEY_AUTO, Candidate, adjudicate, eligibility, rm_blinded_view
-
 from biomapper2.config import KESTREL_API_URL
 from biomapper2.core.linker import Linker
 from biomapper2.core.structure_resolver import StructureResolver
+from studies.shared_gold_set.labeler import (
+    EXPERT,
+    INCHIKEY_AUTO,
+    Candidate,
+    adjudicate,
+    eligibility,
+    rm_blinded_view,
+)
 
 STUDY_DIR = Path(__file__).resolve().parent
 DATA_DIR = STUDY_DIR / "data"
@@ -38,6 +44,35 @@ RANK_PROBE_CSV = DATA_DIR / "rank_probe_results.csv"
 RETRIEVABLE_RANK_MAX = 200  # retrievable@200; the probe window (n_candidates~50) is a conservative lower bound
 
 QUERY_NODE_ID = "__query_name__"  # sentinel: forces StructureResolver down the name path, skipping the KG layer
+
+# Fail-loud resolution health check. A name-resolution outage (Metabolomics Workbench / PubChem
+# unreachable) makes StructureResolver.inchikey_block swallow the error and return None for *every*
+# query, so adjudicate flags each pair `query_unresolvable` and the run still writes a "successful"
+# gold set — silently turning an outage into a fake expert-residual queue. Before doing any work we
+# resolve a known-resolvable metabolite down the same name path; if it does not come back with its
+# known InChIKey first block, resolution is broken and we ABORT before persisting anything.
+CANARY_NAME = "caffeine"
+CANARY_INCHIKEY_BLOCK = "RYYVLZVUVIJVGH"  # caffeine, InChIKey RYYVLZVUVIJVGH-UHFFFAOYSA-N
+
+
+def _resolution_canary(resolver: StructureResolver) -> None:
+    """Abort the run (raise) if the name-resolution services are evidently down.
+
+    Resolves ``CANARY_NAME`` via the name path (KG layer skipped, matching how query names are
+    resolved) and checks the returned InChIKey first block. A ``None``/mismatch here means the
+    live resolution is broken, not that any particular pair is genuinely hard — so we fail loud
+    instead of degrading the whole dataset to `query_unresolvable`.
+    """
+    block = resolver.inchikey_block(QUERY_NODE_ID, CANARY_NAME, records={})
+    if block != CANARY_INCHIKEY_BLOCK:
+        raise RuntimeError(
+            f"Resolution canary FAILED: known-resolvable '{CANARY_NAME}' resolved to InChIKey block "
+            f"{block!r}, expected {CANARY_INCHIKEY_BLOCK!r}. The Metabolomics Workbench / PubChem "
+            f"name-resolution services are unreachable or returning wrong data, so every pair would be "
+            f"mislabeled 'query_unresolvable' and the gold set would be a fake expert-residual queue. "
+            f"ABORTING before writing any outputs — re-run once name resolution is healthy "
+            f"(check network / MW_INCHIKEY_URL / PUBCHEM_INCHIKEY_URL)."
+        )
 
 # Independent hand-check labels (step 4: independence demonstration). Each auto-labeled sample
 # row was re-adjudicated by structure-from-nomenclature reasoning — a *different* signal than the
@@ -131,6 +166,9 @@ def build_records(limit: int | None = None) -> list[dict]:
         raise ValueError(f"--limit must be >= 0, got {limit}")
 
     resolver = StructureResolver(Linker())
+    # Fail loud on a resolution-service outage BEFORE any expensive KG work or output persistence:
+    # an outage would otherwise silently mislabel every pair `query_unresolvable`.
+    _resolution_canary(resolver)
     retrievability = _load_retrievability()
 
     rows = list(csv.DictReader(DISAGREEMENTS_CSV.open()))

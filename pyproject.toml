@@ -67,6 +67,9 @@ known-first-party = ["biomapper2"]
 extraPaths = ["studies/shared_gold_set"]
 
 [tool.pytest.ini_options]
+# Repo root on the path so standalone studies import as real packages
+# (studies.shared_gold_set.*), no per-test sys.path hacks.
+pythonpath = ["."]
 markers = [
     "integration: marks tests as integration tests (deselect with '-m \"not integration\"')",
     "external: tests that depend on third-party APIs we don't control",
