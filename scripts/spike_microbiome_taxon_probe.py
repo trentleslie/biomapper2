@@ -55,15 +55,16 @@ def probe(sess: requests.Session, row: dict) -> dict:
     out = {**row, "curie": curie}
 
     # A. name -> KG anchor (OrganismTaxon)
-    ts = post(sess, "text-search", {"search_text": [name], "limit": 5, "category": "biolink:OrganismTaxon"})
+    ts = post(sess, "text-search", {"search_text": [name], "limit": 5, "category_filter": "biolink:OrganismTaxon"})
     hits = ts.get(name, []) if isinstance(ts, dict) else []
     top = hits[0] if hits else {}
-    out["A_name_resolves"] = bool(hits)
+    # Anchoring means the top hit is an NCBITaxon node, not merely any returned ID.
+    out["A_name_resolves"] = str(top.get("id", "")).startswith("NCBITaxon:")
     out["A_top_id"] = top.get("id")
     out["A_top_name"] = top.get("name")
 
     # B. NCBITaxon id -> node + cross-namespace equivalents
-    gn = post(sess, "get-nodes", {"curies": [curie], "canonicalize": True})
+    gn = post(sess, "get-nodes", {"curies": [curie], "slim": False, "truncate_long_fields": False})
     node = first_node(gn.get(curie)) or first_node(next(iter(gn.values()), None)) if gn else None
     out["B_node_exists"] = bool(node)
     eqs = (node or {}).get("equivalent_ids") or []
@@ -73,7 +74,7 @@ def probe(sess: requests.Session, row: dict) -> dict:
 
     # C. GTDB/SILVA renamed string -> any KG node
     label = other.replace("s__", "").strip()
-    tsc = post(sess, "text-search", {"search_text": [label], "limit": 5, "category": "biolink:OrganismTaxon"})
+    tsc = post(sess, "text-search", {"search_text": [label], "limit": 5, "category_filter": "biolink:OrganismTaxon"})
     chits = tsc.get(label, []) if isinstance(tsc, dict) else []
     ctop = chits[0] if chits else {}
     out["C_other_name_resolves"] = bool(chits)
