@@ -74,7 +74,11 @@ class ArmACall(BaseModel):
     model_label: str
     model_id: str
     provider: Provider
-    temperature: float
+    # None (native sentinel) for models that reject a caller-set temperature
+    # (``supports_temperature=False``, e.g. Opus 4.8): the call omits the parameter,
+    # so labelling these 0.0 would misreport the headline condition. None == "ran at
+    # the model's native, no-sampling-control setting", which is NOT temperature 0.
+    temperature: float | None
     top_p: float
     max_tokens: int
     seed: int | None

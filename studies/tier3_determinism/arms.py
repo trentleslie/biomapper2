@@ -33,12 +33,18 @@ def _one_arm_a_call(call: CallFn, spec: ModelSpec, query: Query, decode: Decodin
     resp = call(spec, messages, decode)
     parsed = prompt.parse_answer(resp.text) if resp.error is None else None
     is_correct = None if query.gold_curie is None else _curie_eq(parsed, query.gold_curie)
+    # Report the TRUE decoding condition: models that reject a caller-set temperature
+    # (supports_temperature=False, e.g. Opus 4.8) run at their native no-control setting
+    # -- the call layer omits temperature entirely. Recording decode.temperature (0.0)
+    # would mislabel that native condition as "temperature 0" and break the Fig-4
+    # grouping / Framing-A narrative that Opus has no determinism knob. Use None instead.
+    reported_temperature = decode.temperature if spec.supports_temperature else None
     return ArmACall(
         query_id=query.query_id,
         model_label=spec.label,
         model_id=spec.model_id,
         provider=spec.provider,
-        temperature=decode.temperature,
+        temperature=reported_temperature,
         top_p=decode.top_p,
         max_tokens=decode.max_tokens,
         seed=decode.seed,
