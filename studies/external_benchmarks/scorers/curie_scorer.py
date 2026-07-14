@@ -45,8 +45,14 @@ def normalize_curie(curie: Any) -> str | None:
     return s.upper()
 
 
-def _split_curies(value: Any) -> set[str]:
-    """Split a ``|``-delimited gold CURIE cell into a normalized set."""
+def split_gold_curies(value: Any) -> set[str]:
+    """Split a ``|``-delimited gold CURIE cell into a normalized set.
+
+    The single canonical gold-cell splitter reused across every arm (gene/protein CURIE
+    equality, provided-ID reachability, and metabolite name-hit ID concordance) so a gold
+    cell like ``"CHEBI:17234|CHEBI:4167"`` is parsed identically everywhere. ``_split_curies``
+    is retained as a back-compat alias for existing imports.
+    """
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return set()
     out: set[str] = set()
@@ -55,6 +61,11 @@ def _split_curies(value: Any) -> set[str]:
         if n is not None:
             out.add(n)
     return out
+
+
+# Back-compat alias — the splitter was originally module-private; callers (provided_id_scorer,
+# this module) may still import the underscore name.
+_split_curies = split_gold_curies
 
 
 def _parse_equiv(value: Any) -> dict[str, Any]:
