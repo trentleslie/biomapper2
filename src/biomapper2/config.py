@@ -44,6 +44,12 @@ KESTREL_BATCHING_ENABLED = True  # Set to False to disable batching (for perform
 KESTREL_BATCH_SIZE_SEARCH = 1000  # For text-search, vector-search, hybrid-search
 KESTREL_BATCH_SIZE_CANONICALIZE = 2000  # For canonicalize endpoint
 
+# Structure (InChIKey) fallback services for the resolver's connectivity test. Used only on the
+# small-molecule ChEBI conflict path when a node carries no KG InChIKey (see StructureResolver).
+MW_INCHIKEY_URL = "https://www.metabolomicsworkbench.org/rest/refmet/name"  # /{name}/inchi_key
+PUBCHEM_INCHIKEY_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name"  # /{name}/property/InChIKey/JSON
+STRUCTURE_LOOKUP_TIMEOUT_S = 3  # per external structure call; mirrors the RefMet /match timeout
+
 # Human-preference re-ranking for gene/protein resolution (see docs/plans HGNC plan).
 # When prefer_human is active, hybrid-search retrieves this many candidates (instead of 1) so the
 # human node — which often ranks below the wrong-species ortholog — is actually returned. Live spike

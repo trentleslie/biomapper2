@@ -1,0 +1,25 @@
+{"query_id": "met-caffeine", "query_name": "caffeine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:27732", "source": "held_out_v1"}
+{"query_id": "met-cholesterol", "query_name": "cholesterol", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:16113", "source": "held_out_v1"}
+{"query_id": "met-d-glucose", "query_name": "D-glucose", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:17634", "source": "held_out_v1"}
+{"query_id": "met-l-alanine", "query_name": "L-alanine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:16977", "source": "held_out_v1"}
+{"query_id": "met-urea", "query_name": "urea", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:16199", "source": "held_out_v1"}
+{"query_id": "met-creatinine", "query_name": "creatinine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:16737", "source": "held_out_v1"}
+{"query_id": "met-pyruvate", "query_name": "pyruvate", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:15361", "source": "held_out_v1"}
+{"query_id": "met-glycine", "query_name": "glycine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:15428", "source": "held_out_v1"}
+{"query_id": "gene-tp53", "query_name": "TP53", "entity_type": "gene", "target_namespace": "HGNC", "gold_curie": "HGNC:11998", "source": "held_out_v1"}
+{"query_id": "gene-brca1", "query_name": "BRCA1", "entity_type": "gene", "target_namespace": "HGNC", "gold_curie": "HGNC:1100", "source": "held_out_v1"}
+{"query_id": "prot-hbb", "query_name": "Hemoglobin subunit beta (human)", "entity_type": "protein", "target_namespace": "UniProtKB", "gold_curie": "UniProtKB:P68871", "source": "held_out_v1"}
+{"query_id": "prot-ins", "query_name": "Insulin (human)", "entity_type": "protein", "target_namespace": "UniProtKB", "gold_curie": "UniProtKB:P01308", "source": "held_out_v1"}
+{"query_id": "met-wsa-3-methylhistidine", "query_name": "3-methylhistidine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:70959", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-4-methylcatechol-sulfate", "query_name": "4-methylcatechol sulfate", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:232803", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-6-shogaol", "query_name": "6-shogaol", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:10138", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-diethyl-2-methyl-3-oxosuccinate", "query_name": "Diethyl 2-methyl-3-oxosuccinate", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:16879", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-germicidin-c", "query_name": "Germicidin C", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:218904", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-isethionate", "query_name": "Isethionate", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:61904", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-n-acetylasparagine", "query_name": "N-acetylasparagine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:139582", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-citrate", "query_name": "citrate", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:50744", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-dihydrobiopterin", "query_name": "dihydrobiopterin", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:43029", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-glutamate", "query_name": "glutamate", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:18237", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-lysine", "query_name": "lysine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:25094", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-15-3-anacardic-acid", "query_name": "(15:3)-anacardic acid", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:174627", "source": "ws_a_gold@20260713T115754Z"}
+{"query_id": "met-wsa-1-methylguanidine", "query_name": "1-methylguanidine", "entity_type": "metabolite", "target_namespace": "CHEBI", "gold_curie": "CHEBI:16628", "source": "ws_a_gold@20260713T115754Z"}
