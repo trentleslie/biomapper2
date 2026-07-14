@@ -14,6 +14,7 @@ segregation bucket so a reviewer can see how many corrects leaned on the fallbac
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, Protocol
 
 import pandas as pd
@@ -29,10 +30,42 @@ class StructureOracle(Protocol):
     ``kg_block`` returns the InChIKey first-block from the KG record alone (None if the KG
     carries no structure). ``resolved_block`` additionally consults the name fallback
     (MW -> PubChem). The gap between the two is the fallback-segregation signal.
+
+    ``neutral_block`` (optional; probed via ``hasattr``) returns the *charge/protonation-
+    normalized* InChIKey first-block of the prediction — the connectivity after neutralizing
+    the structure. It powers the charge-normalized accuracy variant (Hajjar's dominant miss was
+    protonation state).
     """
 
     def kg_block(self, node_id: str) -> str | None: ...
     def resolved_block(self, node_id: str) -> str | None: ...
+
+
+def neutralize_first_block(smiles: Any) -> str | None:
+    """Charge/protonation-normalized InChIKey first-block from a SMILES, or None.
+
+    Neutralizes the molecule (RDKit ``Uncharger``) before hashing so charged/protonated forms
+    (e.g. a carboxylate vs its acid, a zwitterion vs the neutral species, a source table using a
+    fixed-H convention) collapse to one connectivity skeleton. Standard InChI already routes
+    most protonation into the second block, so this only moves the residual cases where the
+    recorded first block itself differs by charge state — but those were the dominant Hajjar
+    miss, so the variant is reported alongside the strict number.
+    """
+    if smiles is None or (isinstance(smiles, float) and pd.isna(smiles)):
+        return None
+    s = str(smiles).strip()
+    if not s or s.lower() == "nan":
+        return None
+    from rdkit import Chem, RDLogger
+    from rdkit.Chem.MolStandardize import rdMolStandardize
+
+    RDLogger.DisableLog("rdApp.*")  # type: ignore[attr-defined]
+    mol = Chem.MolFromSmiles(s)
+    if mol is None:
+        return None
+    mol = rdMolStandardize.Uncharger().uncharge(mol)
+    key = Chem.MolToInchiKey(mol)
+    return first_block(key)
 
 
 def first_block(inchikey: Any) -> str | None:
@@ -59,13 +92,29 @@ def score_structure_oracle(
     config: DatasetConfig,
     oracle: StructureOracle,
     vocab: str | None = None,
+    *,
+    gold_smiles_normalizer: Callable[[Any], str | None] | None = None,
 ) -> dict[str, Any]:
-    """Compute Top-1 accuracy (structure-oracle) + coverage + the fallback bucket."""
+    """Compute Top-1 accuracy (structure-oracle) + coverage + the fallback bucket.
+
+    When a charge-normalization capability is available — a ``gold_smiles_normalizer`` for the
+    gold side AND an ``oracle.neutral_block`` for the prediction side — a SECOND accuracy is
+    reported under ``comparable_core_charge_normalized``: the same Top-1 accuracy but with both
+    blocks neutralized for charge/protonation state. Both numbers are reported; neither replaces
+    the other (protonation was the dominant Hajjar miss). When the capability is absent the
+    charge-normalized core is ``None`` with a recorded reason.
+    """
+    smiles_col = config.gold_smiles_column
+    cn_available = gold_smiles_normalizer is not None and hasattr(oracle, "neutral_block")
+
     total = len(mapped_df)
     n_predicted = 0
     scored = 0  # accuracy denominator: rows with gold structure
     correct = 0
     fallback_rows: list[str] = []
+    # Charge-normalized tallies (only meaningful when cn_available).
+    cn_scored = 0
+    cn_correct = 0
     per_row: list[dict[str, Any]] = []
 
     for _, row in mapped_df.iterrows():
@@ -77,6 +126,7 @@ def score_structure_oracle(
 
         predicted_block: str | None = None
         needed_fallback = False
+        chosen_id: str | None = None
         if has_pred:
             chosen_id = str(chosen).strip()
             kg_b = oracle.kg_block(chosen_id)
@@ -92,19 +142,44 @@ def score_structure_oracle(
             if is_correct:
                 correct += 1
 
+        cn_correct_row: bool | None = None
+        if cn_available:
+            assert gold_smiles_normalizer is not None
+            gold_smiles = row.get(smiles_col) if smiles_col else None
+            gold_cn = gold_smiles_normalizer(gold_smiles)
+            # Neutralize the gold connectivity; fall back to the strict gold block when the
+            # source ships no SMILES to neutralize (can't neutralize a hash).
+            gold_cn_block = gold_cn if gold_cn is not None else gold_block
+            pred_cn_block = oracle.neutral_block(chosen_id) if (has_pred and chosen_id is not None) else None  # type: ignore[attr-defined]
+            if gold_cn_block is not None:
+                cn_scored += 1
+                cn_correct_row = bool(pred_cn_block is not None and pred_cn_block == gold_cn_block)
+                if cn_correct_row:
+                    cn_correct += 1
+
         per_row.append(
             {
                 "name": row.get(config.name_column),
-                "chosen_kg_id": None if not has_pred else str(chosen).strip(),
+                "chosen_kg_id": None if not has_pred else chosen_id,
                 "gold_block": gold_block,
                 "predicted_block": predicted_block,
                 "scored": is_scored,
                 "correct": is_correct,
                 "needed_fallback": needed_fallback,
+                "charge_normalized_correct": cn_correct_row,
             }
         )
 
     accuracy = (correct / scored) if scored else None
+    if cn_available:
+        cn_core: dict[str, Any] | None = {
+            "metric": "top1_accuracy_charge_normalized",
+            "top1_accuracy": (cn_correct / cn_scored) if cn_scored else None,
+            "correct": cn_correct,
+            "scored_denominator": cn_scored,
+        }
+    else:
+        cn_core = None
     return {
         "vocab": vocab,
         "input_type": config.input_type,
@@ -114,6 +189,7 @@ def score_structure_oracle(
             "correct": correct,
             "scored_denominator": scored,
         },
+        "comparable_core_charge_normalized": cn_core,
         "coverage": {
             "n_predicted": n_predicted,
             "total": total,

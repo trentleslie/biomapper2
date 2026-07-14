@@ -182,6 +182,146 @@ def orchestrate(
     return {"out_dir": str(out_dir), "report": str(report_path), "runs": list(runs.keys())}
 
 
+def orchestrate_necs(
+    *,
+    source: bytes | str,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the NECS metabolite slice live (structure oracle, strict + charge-normalized).
+
+    One accuracy number per dataset (single CHEBI vocab), no competitor figure. Heavy deps are
+    imported lazily so this module imports offline.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters.necs_metabolon import fetch_supplement, load_necs, parse_xlsx
+    from .config import NECS
+    from .oracle import KGStructureOracle
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_all
+    from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
+    from .verify import reconcile
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(NECS, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper), n_rows=1495, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the NECS run: {gate_result.reason}")
+
+    if isinstance(source, str):
+        source = fetch_supplement(source)
+    bundle = load_necs(source, NECS)
+    _ = parse_xlsx  # source frame retained for validation parity in a future pass
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+
+    primary = NECS.target_vocabs[0]
+    runs = run_all(
+        mapper, bundle.input_df, NECS, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
+    )
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"NECS primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+    result = score_structure_oracle(
+        mapped_df, NECS, oracle, vocab=primary, gold_smiles_normalizer=neutralize_first_block
+    )
+    rec = reconcile({"structure": result}, mapped_df, NECS, oracle)
+    if not rec.passed:
+        raise RuntimeError(f"NECS reconciliation failed: {rec.mismatches}")
+    (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{NECS.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[{"key": NECS.key, "result": result}],
+        curie_entries=[],
+        integrity={"reconciliation_passed": rec.passed, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+
+
+def orchestrate_backbone(
+    *,
+    config,
+    source,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run one gene/protein backbone slice live (CURIE equality). No competitor figure.
+
+    ``config`` is a ``CurieDatasetConfig``; ``source`` is a URL string (streamed) or a line
+    iterator (tests). Heavy deps imported lazily.
+    """
+    import pandas as pd
+
+    from biomapper2.mapper import Mapper
+
+    from .adapters.backbones import load_backbone
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_all
+    from .scorers.curie_scorer import score_curie
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(config, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import build_live_gene_protein_smoke_fn, run_gene_protein_gate
+
+        gate_result = run_gene_protein_gate(build_live_gene_protein_smoke_fn(mapper))
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Gene/protein Phase-0 gate stopped the run: {gate_result.reason}")
+
+    bundle = load_backbone(source, config)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+
+    primary = config.target_vocabs[0]
+    runs = run_all(
+        mapper, bundle.input_df, config, out_dir, dataset_sha=bundle.card["subsample_sha256"], repo_root=repo_root
+    )
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"{config.key} primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+    result = score_curie(mapped_df, config, vocab=primary)
+    (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{config.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[],
+        curie_entries=[{"key": config.key, "arm": config.arm, "result": result}],
+        integrity={"reconciliation_passed": None, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run the Hajjar external-benchmark slice (live).")
     parser.add_argument("--supplement", required=True, help="path/URL to the Hajjar supplement")
@@ -216,9 +356,7 @@ def main() -> None:
         parity = (parts[0], parts[1], parts[2])
 
     out = Path(args.out) if args.out else None
-    result = orchestrate(
-        source=src, out_dir=out, run_gate_first=not args.no_gate, published_parity_cell=parity
-    )
+    result = orchestrate(source=src, out_dir=out, run_gate_first=not args.no_gate, published_parity_cell=parity)
     print(f"Saved run to {result['out_dir']}; report at {result['report']}")
 
 
