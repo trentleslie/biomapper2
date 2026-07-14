@@ -153,7 +153,15 @@ def orchestrate(
             "the BioMapper marker beside published competitor numbers without it. "
             "Supply --parity-cell on the CLI."
         )
-    primary_top1 = per_vocab_struct[primary]["comparable_core"]["top1_accuracy"] or 0.0
+    # Fail-closed: top1_accuracy is None when the primary run scored zero comparable rows.
+    # Coercing that missing measurement to 0.0 would plant a concrete "BioMapper 0%" bar
+    # beside published competitors — fabricating a result from an absent one. Refuse instead.
+    primary_top1 = per_vocab_struct[primary]["comparable_core"]["top1_accuracy"]
+    if primary_top1 is None:
+        raise RuntimeError(
+            f"Primary vocab {primary!r} has no scored rows (top1_accuracy is None) — refusing "
+            "to plot an unscorable result as 0% beside published competitor numbers."
+        )
     s2 = render_s2(primary_top1, HAJJAR_COMPETITORS, out_dir / "S2_competitor_panel.png")
 
     # 7. Internal report (NO wiki publish).
