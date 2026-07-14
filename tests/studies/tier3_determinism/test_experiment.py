@@ -163,3 +163,129 @@ def test_reused_out_dir_allows_empty_existing_dir(tmp_path: Path) -> None:
         _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
     )
     assert (Path(result.out_dir) / "manifest.json").exists()
+
+
+def _boom_call(spec, messages, decoding, client=None):
+    raise AssertionError("Arm A must NOT be re-run when resuming from complete raw evidence")
+
+
+def test_resume_does_not_truncate_complete_arm_a_when_fig4_missing(tmp_path: Path) -> None:
+    """Arm A + Arm B completed but fig4_data.json is missing (crash before figure write).
+    A retry must RESUME from the complete raw files -- not re-run Arm A, not truncate its
+    expensive evidence -- and produce the figure from the persisted calls."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    arm_a_before = (out / "arm_a_raw.jsonl").read_text()
+    manifest_before = (out / "manifest.json").read_text()
+    # simulate a crash after the arms but before fig4_data.json was written
+    (out / "fig4_data.json").unlink()
+
+    result = experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_boom_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="def"
+    )
+    # Arm-A raw evidence untouched (not truncated / re-run), manifest preserved (original pins).
+    assert (out / "arm_a_raw.jsonl").read_text() == arm_a_before
+    assert (out / "manifest.json").read_text() == manifest_before
+    assert (out / "fig4_data.json").exists()
+    assert len(result.arm_a) == 8  # 1 model x 2 temps x 2 queries x 2 repeats, resumed
+
+
+def test_resume_arm_a_reruns_only_missing_arm_b(tmp_path: Path) -> None:
+    """Arm A complete, Arm B crashed (no arm_b_raw). Retry resumes Arm A (never re-run)
+    and runs only the missing Arm B."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    arm_a_before = (out / "arm_a_raw.jsonl").read_text()
+    (out / "fig4_data.json").unlink()
+    (out / "arm_b_raw.jsonl").unlink()  # Arm B never got written
+
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_boom_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="def"
+    )
+    assert (out / "arm_a_raw.jsonl").read_text() == arm_a_before  # Arm A resumed, untouched
+    assert len((out / "arm_b_raw.jsonl").read_text().splitlines()) == 4  # Arm B re-run: 2 q x 2 repeats
+    fig = json.loads((out / "fig4_data.json").read_text())
+    assert fig["biomapper"]["byte_identical"] is True
+
+
+def test_partial_arm_a_is_not_silently_truncated(tmp_path: Path) -> None:
+    """A partial/crashed arm_a_raw.jsonl (no fig4_data) must NOT be reopened in
+    truncating 'w' mode -- the run fails loud and leaves the evidence intact."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    (out / "fig4_data.json").unlink()
+    full = (out / "arm_a_raw.jsonl").read_text().splitlines()
+    partial = "\n".join(full[:3]) + "\n"  # drop the tail: an incomplete arm
+    (out / "arm_a_raw.jsonl").write_text(partial)
+
+    with pytest.raises(FileExistsError):
+        experiment.run_experiment(
+            _config(ds), out_dir=out, call_fn=_boom_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="def"
+        )
+    # partial evidence left exactly as-is (not truncated to empty)
+    assert (out / "arm_a_raw.jsonl").read_text() == partial
+
+
+def test_relabel_native_temp_maps_opus_zero_to_none(tmp_path: Path) -> None:
+    """The post-hoc helper maps a temperature-unsupported model's mislabeled temp=0.0
+    group to native/None in a COMPLETED run, without re-running it."""
+    from studies.tier3_determinism import relabel_native_temp
+
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    # Opus-class config, but simulate a run produced by the OLD arms.py: force temp 0.0
+    # onto the raw calls + fig4 panel as if native had been mislabeled.
+    opus = ModelSpec(
+        provider="anthropic", model_id="claude-opus-x", label="opus-4.8", supports_temperature=False
+    )
+    cfg = ExperimentConfig(
+        dataset_path=ds,
+        models=[opus],
+        temperatures=[0.0],
+        n_repeats=2,
+        run_arm_b=False,
+    )
+    experiment.run_experiment(cfg, out_dir=out, call_fn=_fake_call, now=_NOW, git_commit="abc")
+    # new code already labels None; rewrite to 0.0 to reproduce an OLD-code artifact.
+    raw = out / "arm_a_raw.jsonl"
+    rows = [json.loads(x) for x in raw.read_text().splitlines() if x.strip()]
+    for r in rows:
+        r["temperature"] = 0.0
+    raw.write_text("".join(json.dumps(r) + "\n" for r in rows))
+    fig4_path = out / "fig4_data.json"
+    fig = json.loads(fig4_path.read_text())
+    for p in fig["arm_a"]:
+        p["temperature"] = 0.0
+    fig4_path.write_text(json.dumps(fig, indent=2))
+
+    summary = relabel_native_temp.relabel_run(out)
+
+    assert summary["labels"] == ["opus-4.8"]
+    assert summary["relabeled_panels"] == 1
+    fig_after = json.loads(fig4_path.read_text())
+    assert all(p["temperature"] is None for p in fig_after["arm_a"])
+    rows_after = [json.loads(x) for x in raw.read_text().splitlines() if x.strip()]
+    assert all(r["temperature"] is None for r in rows_after)
+    # originals backed up, not destroyed
+    assert (out / "fig4_data.json.pre-relabel.bak").exists()
+    assert (out / "arm_a_raw.jsonl.pre-relabel.bak").exists()
+
+
+def test_relabel_refuses_in_progress_run(tmp_path: Path) -> None:
+    """The helper refuses a run without fig4_data.json (in-progress / absent)."""
+    from studies.tier3_determinism import relabel_native_temp
+
+    out = tmp_path / "inprogress"
+    out.mkdir()
+    (out / "arm_a_raw.jsonl").write_text("")
+    with pytest.raises(FileNotFoundError):
+        relabel_native_temp.relabel_run(out)
