@@ -1,0 +1,31 @@
+family,subset,ncbi_name,ncbitaxon_id,other_system,other_name,note
+gtdb,concordant,Escherichia coli,562,GTDB,s__Escherichia coli,stable species name across NCBI and GTDB
+gtdb,concordant,Staphylococcus aureus,1280,GTDB,s__Staphylococcus aureus,stable
+gtdb,concordant,Bacteroides fragilis,817,GTDB,s__Bacteroides fragilis,stable (genus Bacteroides retained by GTDB)
+gtdb,concordant,Enterococcus faecalis,1351,GTDB,s__Enterococcus faecalis,stable
+gtdb,concordant,Pseudomonas aeruginosa,287,GTDB,s__Pseudomonas aeruginosa,stable
+gtdb,concordant,Klebsiella pneumoniae,573,GTDB,s__Klebsiella pneumoniae,stable
+gtdb,concordant,Helicobacter pylori,210,GTDB,s__Helicobacter pylori,stable
+gtdb,concordant,Listeria monocytogenes,1639,GTDB,s__Listeria monocytogenes,stable
+gtdb,concordant,Clostridioides difficile,1496,GTDB,s__Clostridioides difficile,NCBI+GTDB both moved off Clostridium; now concordant
+gtdb,concordant,Bifidobacterium longum,216816,GTDB,s__Bifidobacterium longum,stable
+gtdb,reclassified,Bacteroides vulgatus,821,GTDB,s__Phocaeicola vulgatus,GTDB moved Bacteroides vulgatus to genus Phocaeicola
+gtdb,reclassified,Bacteroides dorei,357276,GTDB,s__Phocaeicola dorei,GTDB genus reassignment Bacteroides->Phocaeicola
+gtdb,reclassified,Eubacterium rectale,39491,GTDB,s__Agathobacter rectalis,GTDB reclassified to Agathobacter rectalis
+gtdb,reclassified,Ruminococcus gnavus,33038,GTDB,s__Mediterraneibacter gnavus,GTDB genus Mediterraneibacter (aka [Ruminococcus] gnavus)
+gtdb,reclassified,Faecalibacterium prausnitzii,853,GTDB,s__Faecalibacterium prausnitzii_A,GTDB split F. prausnitzii into multiple species (_A/_C/_D/_G)
+gtdb,reclassified,Lactobacillus reuteri,1598,GTDB,s__Limosilactobacillus reuteri,Lactobacillus genus split (Limosilactobacillus)
+gtdb,reclassified,Lactobacillus rhamnosus,47715,GTDB,s__Lacticaseibacillus rhamnosus,Lactobacillus genus split (Lacticaseibacillus)
+gtdb,reclassified,Lactobacillus plantarum,1590,GTDB,s__Lactiplantibacillus plantarum,Lactobacillus genus split (Lactiplantibacillus)
+gtdb,reclassified,Clostridium scindens,29347,GTDB,s__Lachnoclostridium scindens,GTDB genus reassignment off Clostridium sensu stricto
+gtdb,reclassified,Blautia hydrogenotrophica,53443,GTDB,s__Ruminococcus_A hydrogenotrophicus,GTDB genus split within Ruminococcaceae/Lachnospiraceae
+silva_gg,genus,Bacteroides,816,SILVA,Bacteroides,concordant genus (SILVA 138 / GG2)
+silva_gg,genus,Prevotella,838,SILVA,Prevotella,concordant genus
+silva_gg,genus,Faecalibacterium,216851,SILVA,Faecalibacterium,concordant genus
+silva_gg,genus,Bifidobacterium,1678,SILVA,Bifidobacterium,concordant genus
+silva_gg,genus,Akkermansia,239934,SILVA,Akkermansia,concordant genus
+silva_gg,genus,Roseburia,841,SILVA,Roseburia,concordant genus
+silva_gg,genus,Blautia,572511,SILVA,Blautia,concordant genus
+silva_gg,genus,Escherichia,561,SILVA,Escherichia-Shigella,SILVA merges Escherichia and Shigella into one genus label
+silva_gg,genus,Ruminococcus,1263,GG2,Ruminococcus,GG2/SILVA genus split differently from NCBI (Ruminococcus_A/_B etc in GTDB backbone)
+silva_gg,genus,Lachnospira,28050,GG2,Lachnospira,GG2 backbone genus label vs NCBI
