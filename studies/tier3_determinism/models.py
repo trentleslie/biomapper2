@@ -142,6 +142,7 @@ class RunManifest(BaseModel):
     temperatures: list[float]
     top_p: float
     max_tokens: int
+    seed: int | None = None  # numeric decoding seed (pinned for reproducibility + resume-config check)
     seed_policy: str
     models: list[ModelSpec]
     prompt_sha256: str

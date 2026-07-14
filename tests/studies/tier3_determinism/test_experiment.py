@@ -235,6 +235,51 @@ def test_partial_arm_a_is_not_silently_truncated(tmp_path: Path) -> None:
     assert (out / "arm_a_raw.jsonl").read_text() == partial
 
 
+def test_resume_refuses_config_mismatch_even_when_row_count_matches(tmp_path: Path) -> None:
+    """A retry whose config differs (here: different temperatures) but whose expected raw
+    row count is identical must NOT resume -- resuming would splice mismatched data into
+    one figure. It fails loud and leaves the raw evidence intact."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    arm_a_before = (out / "arm_a_raw.jsonl").read_text()
+    (out / "fig4_data.json").unlink()  # crash before fig4
+
+    # Same shape (1 model x 2 temps x 2 queries x 2 repeats = 8 rows) but DIFFERENT temps.
+    cfg_b = ExperimentConfig(
+        dataset_path=ds,
+        models=[ModelSpec(provider="openai", model_id="gpt-x", label="gpt")],
+        temperatures=[0.1, 0.9],  # differs from the preserved run's [0.0, 0.7]
+        n_repeats=2,
+    )
+    with pytest.raises(FileExistsError, match="config differs"):
+        experiment.run_experiment(
+            cfg_b, out_dir=out, call_fn=_boom_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="def"
+        )
+    assert (out / "arm_a_raw.jsonl").read_text() == arm_a_before  # untouched
+
+
+def test_resume_refuses_config_mismatch_on_seed(tmp_path: Path) -> None:
+    """The seed is part of the run's identity: a seed change with the same row count must
+    also refuse to resume (the manifest now pins the numeric seed)."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    cfg_a = ExperimentConfig(
+        dataset_path=ds,
+        models=[ModelSpec(provider="openai", model_id="gpt-x", label="gpt")],
+        temperatures=[0.0, 0.7],
+        n_repeats=2,
+        seed=111,
+    )
+    experiment.run_experiment(cfg_a, out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW)
+    (out / "fig4_data.json").unlink()
+    cfg_b = cfg_a.model_copy(update={"seed": 222})
+    with pytest.raises(FileExistsError, match="config differs"):
+        experiment.run_experiment(cfg_b, out_dir=out, call_fn=_boom_call, resolve_fn=_fake_resolve, now=_NOW)
+
+
 def test_relabel_native_temp_maps_opus_zero_to_none(tmp_path: Path) -> None:
     """The post-hoc helper maps a temperature-unsupported model's mislabeled temp=0.0
     group to native/None in a COMPLETED run, without re-running it."""
@@ -289,3 +334,48 @@ def test_relabel_refuses_in_progress_run(tmp_path: Path) -> None:
     (out / "arm_a_raw.jsonl").write_text("")
     with pytest.raises(FileNotFoundError):
         relabel_native_temp.relabel_run(out)
+
+
+def test_second_relabel_preserves_original_backup(tmp_path: Path) -> None:
+    """A second relabel (for a different label) must NOT overwrite the .pre-relabel.bak
+    created by the first -- the pristine ORIGINAL completed artifact must stay recoverable
+    no matter how many relabels run."""
+    from studies.tier3_determinism import relabel_native_temp
+
+    out = tmp_path / "run"
+    out.mkdir()
+    # A completed run (fig4 present) with two models BOTH mislabeled at temp 0.0. The
+    # helper reads only model_label/temperature, so minimal records suffice.
+    orig_fig4 = {
+        "arm_a": [
+            {"model_label": "opus-4.8", "temperature": 0.0},
+            {"model_label": "qwen3-8b", "temperature": 0.0},
+        ]
+    }
+    (out / "fig4_data.json").write_text(json.dumps(orig_fig4))
+    (out / "arm_a_raw.jsonl").write_text(
+        json.dumps({"model_label": "opus-4.8", "temperature": 0.0})
+        + "\n"
+        + json.dumps({"model_label": "qwen3-8b", "temperature": 0.0})
+        + "\n"
+    )
+
+    # First relabel opus, then (later) relabel qwen with an explicit --labels override.
+    relabel_native_temp.relabel_run(out, labels=["opus-4.8"])
+    relabel_native_temp.relabel_run(out, labels=["qwen3-8b"])
+
+    # The backup still holds the PRISTINE original (both at 0.0), not the opus-relabeled copy.
+    bak = json.loads((out / "fig4_data.json.pre-relabel.bak").read_text())
+    assert {p["model_label"]: p["temperature"] for p in bak["arm_a"]} == {
+        "opus-4.8": 0.0,
+        "qwen3-8b": 0.0,
+    }
+    raw_bak = [json.loads(x) for x in (out / "arm_a_raw.jsonl.pre-relabel.bak").read_text().splitlines() if x.strip()]
+    assert all(r["temperature"] == 0.0 for r in raw_bak)
+
+    # The live artifact reflects BOTH relabels.
+    cur = json.loads((out / "fig4_data.json").read_text())
+    assert {p["model_label"]: p["temperature"] for p in cur["arm_a"]} == {
+        "opus-4.8": None,
+        "qwen3-8b": None,
+    }

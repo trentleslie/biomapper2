@@ -9,6 +9,7 @@ params, reference DB versions, and the dataset content SHA.
 
 from __future__ import annotations
 
+import json
 import threading
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -97,6 +98,51 @@ def _expected_arm_a_calls(config: ExperimentConfig, decodings: list, n_queries: 
     return n_decodings * n_queries * config.n_repeats
 
 
+def _repro_fingerprint(config: ExperimentConfig, n_queries: int) -> dict[str, Any]:
+    """The reproducibility-relevant identity of a run: everything that must match for two
+    runs' raw data to belong to *one coherent experiment*. Keys mirror the manifest fields
+    so a resume can compare the current config against the PRESERVED manifest.json."""
+    return {
+        "dataset_sha256": dataset.content_sha256(config.dataset_path),
+        "prompt_sha256": prompt.prompt_fingerprint(),
+        "models": [spec.model_dump(mode="json") for spec in config.models],
+        "temperatures": list(config.temperatures),
+        "top_p": config.top_p,
+        "max_tokens": config.max_tokens,
+        "n_repeats": config.n_repeats,
+        "n_repeats_arm_b": config.arm_b_repeats if config.run_arm_b else None,
+        "seed": config.seed,
+        "n_queries": n_queries,  # catches a --limit / query-set-size change (dataset_sha256 pins content)
+    }
+
+
+def _verify_config_matches_manifest(out_dir: Path, config: ExperimentConfig, n_queries: int) -> None:
+    """Guard against splicing mismatched data on resume.
+
+    A same-``--out`` retry that changes models / temperatures / queries / seed / decoding
+    params but happens to keep the same raw-row count would otherwise splice OLD Arm-A
+    records onto NEW Arm-B results and publish a figure whose data is not one coherent
+    experiment. Row count is necessary but NOT sufficient -- verify the run *config*
+    against the preserved manifest and refuse to resume on any mismatch.
+    """
+    manifest_path = out_dir / "manifest.json"
+    if not manifest_path.exists():
+        raise FileExistsError(
+            f"{out_dir} holds raw evidence but no manifest.json to verify the run config "
+            "against -- refusing to resume onto unverifiable prior data. Use a fresh --out."
+        )
+    preserved = json.loads(manifest_path.read_text())
+    current = _repro_fingerprint(config, n_queries)
+    preserved_subset = {k: preserved.get(k) for k in current}
+    if current != preserved_subset:
+        diffs = sorted(k for k in current if current[k] != preserved_subset[k])
+        raise FileExistsError(
+            f"resume refused: the current run config differs from the completed/partial run "
+            f"already in {out_dir} (manifest.json) on {diffs}. Resuming would combine data "
+            f"from two different experiments into one figure. Use a fresh --out (or clear this dir)."
+        )
+
+
 class _IncrementalWriter:
     """Thread-safe append-one-JSON-line-per-record sink.
 
@@ -158,6 +204,14 @@ def run_experiment(
     # fail loud rather than reopen it in truncating "w" mode.
     arm_a_path = out_dir / "arm_a_raw.jsonl"
     arm_b_path = out_dir / "arm_b_raw.jsonl"
+    # If there is any existing raw evidence to resume from, the current config MUST match
+    # the preserved manifest -- a matching row count is not enough to prove the data is
+    # one coherent experiment. Verify before touching any arm.
+    has_existing_raw = (arm_a_path.exists() and arm_a_path.stat().st_size > 0) or (
+        arm_b_path.exists() and arm_b_path.stat().st_size > 0
+    )
+    if has_existing_raw:
+        _verify_config_matches_manifest(out_dir, config, len(queries))
     expected_arm_a = _expected_arm_a_calls(config, decodings, len(queries))
     resumed_arm_a = _resume_or_guard(arm_a_path, ArmACall, expected_arm_a, "Arm-A")
     resumed_arm_b: list[ArmBCall] | None = None
@@ -181,6 +235,7 @@ def run_experiment(
         temperatures=config.temperatures,
         top_p=config.top_p,
         max_tokens=config.max_tokens,
+        seed=config.seed,
         seed_policy=config.seed_policy,
         models=config.models,
         prompt_sha256=prompt.prompt_fingerprint(),

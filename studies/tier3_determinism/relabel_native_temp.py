@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 from pathlib import Path
 
 
@@ -32,8 +33,18 @@ def _native_labels_from_manifest(run_dir: Path) -> list[str]:
 
 
 def _backup(path: Path) -> Path:
+    """Snapshot the PRISTINE original exactly once, and never destroy it.
+
+    A ``.pre-relabel.bak`` is created only if it does not already exist -- so the FIRST
+    relabel captures the untouched original, and any later relabel (e.g. a second call for
+    a different label) leaves that original backup intact instead of renaming an
+    already-modified artifact onto it. We copy (not rename), so ``path`` stays in place
+    and the backup persists across any number of relabels. Invariant: the original is
+    always recoverable from ``.pre-relabel.bak``.
+    """
     bak = path.parent / (path.name + ".pre-relabel.bak")
-    path.rename(bak)
+    if not bak.exists():
+        shutil.copy2(path, bak)
     return bak
 
 
