@@ -42,10 +42,10 @@ def orchestrate(
     from biomapper2.core.structure_resolver import StructureResolver
     from biomapper2.mapper import Mapper
 
-    from .adapters.hajjar import load_hajjar, parse_raw
+    from .adapters.hajjar import fetch_supplement, load_hajjar, parse_raw
     from .figures.competitor_panel import render_s2
     from .figures.vocab_bar import render_s1
-    from .gate import build_live_smoke_fn, run_gate
+    from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
     from .oracle import KGStructureOracle
     from .report.assemble import assemble_report
     from .runner import run_all
@@ -62,16 +62,26 @@ def orchestrate(
 
     # 1. Unit 0 gate — must pass before touching real data.
     if run_gate_first:
-        gate_result = run_gate(build_live_smoke_fn(mapper), n_rows=100)
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper),
+            n_rows=100,
+            per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD,
+        )
         (out_dir / "gate_result.json").write_text(
             json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
         )
         if not gate_result.passed:
             raise RuntimeError(f"Phase-0 gate stopped the run: {gate_result.reason}")
 
-    # 2. Acquire.
+    # 2. Acquire. Normalize a URL to bytes up front so the source table is ALWAYS available
+    # for validation. Previously a URL source left ``source_df=None``, which silently made the
+    # validation guard skip every external-anchor check while still emitting figures/report
+    # from unvalidated results. Fetching once here also keeps the SHA pin deterministic
+    # (load_hajjar and parse_raw see the identical bytes).
+    if isinstance(source, str):
+        source = fetch_supplement(source)
     bundle = load_hajjar(source, config)
-    source_df = parse_raw(source) if isinstance(source, bytes) else None
+    source_df = parse_raw(source)
     (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
 
     # 3. Run per vocab.
@@ -102,27 +112,47 @@ def orchestrate(
 
     # 5. Validate primary vocab (external-anchor checks + protocol-parity gate).
     primary = config.target_vocabs[0]
-    primary_tsv = runs[primary].output_tsv if primary in runs else None
-    if primary in per_vocab_struct and source_df is not None and primary_tsv is not None:
-        primary_df = pd.read_csv(primary_tsv, sep="\t")
-        vrep = validate_all(
-            input_df=bundle.input_df,
-            source_df=source_df,
-            mapped_df=primary_df,
-            results={"structure": per_vocab_struct[primary]},
-            config=config,
-            oracle=oracle,
-            competitors=HAJJAR_COMPETITORS,
-            protocol_parity=published_parity_cell,
+    # Fail-closed: a failed primary run must halt HERE with the recorded mapper error, not
+    # surface downstream as an opaque KeyError at the figure stage (which would mask the
+    # real cause). run_all records the failure; the scoring loop skips it, so ``primary``
+    # is simply absent from ``per_vocab_struct``.
+    if primary not in per_vocab_struct:
+        primary_err = runs[primary].error if primary in runs else "no run recorded"
+        raise RuntimeError(
+            f"Primary vocab {primary!r} produced no scored result "
+            f"(mapper run failed: {primary_err!r}) — refusing to generate figures/report."
         )
-        if not vrep.passed:
-            raise RuntimeError(f"Validation failed — refusing figures/report: {vrep.failures}")
-        validation_ok = vrep.passed
-    else:
-        validation_ok = False
+    primary_tsv = runs[primary].output_tsv
+    assert primary_tsv is not None  # guaranteed: presence in per_vocab_struct implies ok output
+    primary_df = pd.read_csv(primary_tsv, sep="\t")
+    vrep = validate_all(
+        input_df=bundle.input_df,
+        source_df=source_df,
+        mapped_df=primary_df,
+        results={"structure": per_vocab_struct[primary]},
+        config=config,
+        oracle=oracle,
+        competitors=HAJJAR_COMPETITORS,
+        protocol_parity=published_parity_cell,
+    )
+    if not vrep.passed:
+        raise RuntimeError(f"Validation failed — refusing figures/report: {vrep.failures}")
+    validation_ok = vrep.passed
 
     # 6. Figures (only after verify + validate pass).
     s1 = render_s1(per_vocab_struct, out_dir / "S1_vocab_bar.png", input_type=config.input_type)
+    # The competitor panel plots the BioMapper marker beside published Hajjar numbers. Per the
+    # protocol-parity gate that comparison is only legitimate once a published cell has been
+    # reproduced within tolerance — so the parity cell is REQUIRED to emit S2. Without it the
+    # parity gate is skipped inside validate_all, so refuse the figure (fail-closed) rather
+    # than silently plotting an unreproduced comparison.
+    if published_parity_cell is None:
+        raise RuntimeError(
+            "Competitor figure requires a reproduced protocol-parity cell "
+            "(published_parity_cell = (reproduced, published, tolerance)); refusing to plot "
+            "the BioMapper marker beside published competitor numbers without it. "
+            "Supply --parity-cell on the CLI."
+        )
     primary_top1 = per_vocab_struct[primary]["comparable_core"]["top1_accuracy"] or 0.0
     s2 = render_s2(primary_top1, HAJJAR_COMPETITORS, out_dir / "S2_competitor_panel.png")
 
@@ -149,6 +179,15 @@ def main() -> None:
     parser.add_argument("--supplement", required=True, help="path/URL to the Hajjar supplement")
     parser.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     parser.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+    parser.add_argument(
+        "--parity-cell",
+        default=None,
+        help=(
+            "protocol-parity cell as 'reproduced,published,tolerance' (three floats). REQUIRED "
+            "to emit the competitor figure: reproduces a published Hajjar cell so the BioMapper "
+            "marker is only plotted beside a verified number."
+        ),
+    )
     args = parser.parse_args()
 
     src: bytes | str
@@ -157,8 +196,21 @@ def main() -> None:
         src = p.read_bytes()
     else:
         src = args.supplement  # treated as URL
+
+    parity: tuple[float, float, float] | None = None
+    if args.parity_cell:
+        try:
+            parts = [float(x) for x in args.parity_cell.split(",")]
+        except ValueError:
+            parser.error("--parity-cell must be three floats 'reproduced,published,tolerance'")
+        if len(parts) != 3:
+            parser.error("--parity-cell must be three floats 'reproduced,published,tolerance'")
+        parity = (parts[0], parts[1], parts[2])
+
     out = Path(args.out) if args.out else None
-    result = orchestrate(source=src, out_dir=out, run_gate_first=not args.no_gate)
+    result = orchestrate(
+        source=src, out_dir=out, run_gate_first=not args.no_gate, published_parity_cell=parity
+    )
     print(f"Saved run to {result['out_dir']}; report at {result['report']}")
 
 

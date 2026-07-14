@@ -21,6 +21,12 @@ from dataclasses import dataclass
 DEFAULT_MAX_WALL_CLOCK_S: float = 8 * 60 * 60  # 8 hours
 # Hard USD backstop for external-call cost.
 DEFAULT_CAP_USD: float = 25.0
+# Assumed USD cost per external fallback call (one MW or PubChem lookup). The public
+# structure APIs are nominally free, but a strictly-zero price makes DEFAULT_CAP_USD inert:
+# the USD backstop could never fire no matter how many external fallbacks a run incurs. A
+# conservative non-zero default keeps the cap live (retries / rate-limit backoff / any
+# metered proxy are real costs); tune per deployment.
+DEFAULT_PER_EXTERNAL_CALL_USD: float = 0.001
 
 
 @dataclass(frozen=True)
@@ -101,7 +107,7 @@ def run_gate(
     n_rows: int,
     max_wall_clock_s: float = DEFAULT_MAX_WALL_CLOCK_S,
     cap_usd: float = DEFAULT_CAP_USD,
-    per_external_call_usd: float = 0.0,
+    per_external_call_usd: float = DEFAULT_PER_EXTERNAL_CALL_USD,
 ) -> GateResult:
     """Run the smoke observation and decide proceed/stop. Fail loud, never fabricate.
 
