@@ -74,7 +74,11 @@ class ArmACall(BaseModel):
     model_label: str
     model_id: str
     provider: Provider
-    temperature: float
+    # None (native sentinel) for models that reject a caller-set temperature
+    # (``supports_temperature=False``, e.g. Opus 4.8): the call omits the parameter,
+    # so labelling these 0.0 would misreport the headline condition. None == "ran at
+    # the model's native, no-sampling-control setting", which is NOT temperature 0.
+    temperature: float | None
     top_p: float
     max_tokens: int
     seed: int | None
@@ -116,6 +120,7 @@ class ExperimentConfig(BaseModel):
     seed_policy: str = "fixed seed passed to providers that support it; API LLMs may ignore it"
     run_arm_b: bool = True
     limit: int | None = None  # cap the query set (cheap smoke runs); None = full set
+    arm_a_workers: int = 8  # concurrent Arm-A LLM calls (independent); 1 = sequential
 
     @property
     def arm_b_repeats(self) -> int:
@@ -137,6 +142,7 @@ class RunManifest(BaseModel):
     temperatures: list[float]
     top_p: float
     max_tokens: int
+    seed: int | None = None  # numeric decoding seed (pinned for reproducibility + resume-config check)
     seed_policy: str
     models: list[ModelSpec]
     prompt_sha256: str

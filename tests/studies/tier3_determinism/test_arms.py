@@ -50,6 +50,34 @@ def test_run_arm_a_records_transport_error() -> None:
     assert calls[0].error == "boom" and calls[0].parsed_curie is None
 
 
+def test_temperature_unsupported_model_gets_native_none_label_not_zero() -> None:
+    """Opus-class models (supports_temperature=False) omit temperature in the provider
+    call, so their results must carry the native/None sentinel -- NOT 0.0, which would
+    misreport the headline condition and collapse into the temp-0 bucket."""
+    opus = ModelSpec(provider="anthropic", model_id="claude-opus-x", label="opus-4.8", supports_temperature=False)
+
+    def fake_call(spec, messages, decoding, client=None):
+        return ModelResponse(text='{"id": "CHEBI:27732"}', prompt_tokens=1, completion_tokens=1, latency_s=0.0)
+
+    # Two temps supplied, but the sweep is not expressible: collapses to ONE native decoding.
+    calls = arms.run_arm_a([_QUERIES[0]], [opus], _TEMPS, n_repeats=3, call_fn=fake_call)
+
+    assert len(calls) == 3  # 1 query x 1 native decoding x 3 repeats (no temp sweep)
+    assert all(c.temperature is None for c in calls)  # native, not 0.0
+    assert {c.repeat_index for c in calls} == {0, 1, 2}
+
+
+def test_temperature_supported_model_keeps_numeric_label() -> None:
+    """A temperature-supporting model still records the real numeric temperature."""
+
+    def fake_call(spec, messages, decoding, client=None):
+        return ModelResponse(text='{"id": "CHEBI:27732"}', prompt_tokens=1, completion_tokens=1, latency_s=0.0)
+
+    calls = arms.run_arm_a([_QUERIES[0]], [_SPEC], _TEMPS, n_repeats=1, call_fn=fake_call)
+    assert {c.temperature for c in calls} == {0.0, 0.7}
+    assert None not in {c.temperature for c in calls}
+
+
 def test_run_arm_b_is_byte_identical_when_resolver_deterministic() -> None:
     def fake_resolve(query: Query) -> str | None:
         return "CHEBI:27732" if query.query_id == "q1" else "CHEBI:99"

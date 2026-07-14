@@ -24,7 +24,9 @@ class ArmAPanel(BaseModel):
     model_label: str
     model_id: str
     provider: str
-    temperature: float
+    # None (native sentinel) for temperature-unsupported models (e.g. Opus 4.8): the
+    # panel groups the model's native no-sampling-control condition, NOT temperature 0.
+    temperature: float | None
     n_queries: int
     distinct_count_histogram: dict[int, int]  # n_distinct -> number of queries
     per_query: list[DistinctAnswerStat]
@@ -59,13 +61,21 @@ def _biomapper_accuracy(arm_b: list[ArmBCall]) -> tuple[float, dict[str, int]]:
 def build_fig4(arm_a: list[ArmACall], arm_b: list[ArmBCall]) -> Fig4Data:
     arm_b_accuracy, per_query_distinct = _biomapper_accuracy(arm_b)
 
-    # group Arm-A calls into (model, temperature) panels
-    groups: dict[tuple[str, float], list[ArmACall]] = {}
+    # group Arm-A calls into (model, temperature) panels. temperature is None for
+    # temperature-unsupported models (native condition) -- a distinct panel from any
+    # numeric temperature, never collapsed into a "0.0" bucket.
+    groups: dict[tuple[str, float | None], list[ArmACall]] = {}
     for call in arm_a:
         groups.setdefault((call.model_label, call.temperature), []).append(call)
 
+    # sort None-temperature (native) panels first, then ascending numeric temperature;
+    # a plain sorted() would raise on comparing None vs float across a shared label.
+    def _sort_key(item: tuple[tuple[str, float | None], list[ArmACall]]) -> tuple[str, float]:
+        (label, temp), _ = item
+        return (label, float("-inf") if temp is None else temp)
+
     panels: list[ArmAPanel] = []
-    for (label, temp), calls in sorted(groups.items()):
+    for (label, temp), calls in sorted(groups.items(), key=_sort_key):
         dist = metrics.distinct_answer_distribution(calls)
         histogram = dict(Counter(stat.n_distinct for stat in dist.values()))
         accuracies = metrics.accuracy_per_run(calls)

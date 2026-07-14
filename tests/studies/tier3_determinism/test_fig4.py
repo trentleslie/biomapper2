@@ -4,12 +4,20 @@ from studies.tier3_determinism import fig4
 from studies.tier3_determinism.models import ArmACall, ArmBCall
 
 
-def _a(query_id: str, temp: float, repeat: int, parsed: str | None, correct: bool | None) -> ArmACall:
+def _a(
+    query_id: str,
+    temp: float | None,
+    repeat: int,
+    parsed: str | None,
+    correct: bool | None,
+    model_label: str = "opus",
+    provider: str = "anthropic",
+) -> ArmACall:
     return ArmACall(
         query_id=query_id,
-        model_label="opus",
+        model_label=model_label,
         model_id="claude-x",
-        provider="anthropic",
+        provider=provider,
         temperature=temp,
         top_p=1.0,
         max_tokens=64,
@@ -70,6 +78,33 @@ def test_fig4_is_json_serializable() -> None:
     assert "arm_a" in dumped and "biomapper" in dumped
     # int histogram keys survive as JSON string keys
     assert dumped["arm_a"][0]["distinct_count_histogram"]
+
+
+def test_native_temperature_panel_labeled_none_not_zero() -> None:
+    """A temperature-unsupported model's calls (temperature=None) form a native panel
+    whose temperature is None -- never coerced into a 0.0 bucket."""
+    arm_a = [
+        _a("A", None, 0, "X", True),
+        _a("A", None, 1, "X", True),
+        _a("B", None, 0, "Z", True),
+    ]
+    data = fig4.build_fig4(arm_a, [])
+    assert len(data.arm_a) == 1
+    assert data.arm_a[0].temperature is None  # native, not 0.0
+
+
+def test_mixed_native_and_numeric_temps_sort_without_error() -> None:
+    """Grouping/sorting must handle a None (native) panel alongside numeric-temp panels
+    for another model -- a plain sorted() over (label, temp) would raise on None vs float."""
+    arm_a = [
+        _a("A", None, 0, "X", True, model_label="opus-4.8"),  # native
+        _a("A", 0.0, 0, "X", True, model_label="gpt-4o", provider="openai"),
+        _a("A", 0.7, 0, "Y", False, model_label="gpt-4o", provider="openai"),
+    ]
+    data = fig4.build_fig4(arm_a, [])  # must not raise
+    temps = {(p.model_label, p.temperature) for p in data.arm_a}
+    assert ("opus-4.8", None) in temps
+    assert ("gpt-4o", 0.0) in temps and ("gpt-4o", 0.7) in temps
 
 
 def test_absent_arm_b_is_not_reported_as_byte_identical() -> None:
