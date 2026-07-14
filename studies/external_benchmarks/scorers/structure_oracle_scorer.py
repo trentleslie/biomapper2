@@ -143,19 +143,23 @@ def score_structure_oracle(
                 correct += 1
 
         cn_correct_row: bool | None = None
-        if cn_available:
+        # Gate the charge-normalized tally on the SAME population as strict (``gold_block is not
+        # None``), so both accuracies share one denominator and stay comparable. A row with a
+        # parseable gold SMILES but no gold InChIKey must NOT inflate the normalized denominator
+        # (coverage-only rule): it is not in the strict scored set, so it is not in the cn set.
+        if cn_available and gold_block is not None:
             assert gold_smiles_normalizer is not None
             gold_smiles = row.get(smiles_col) if smiles_col else None
             gold_cn = gold_smiles_normalizer(gold_smiles)
             # Neutralize the gold connectivity; fall back to the strict gold block when the
-            # source ships no SMILES to neutralize (can't neutralize a hash).
+            # source ships no SMILES to neutralize (can't neutralize a hash). Because gold_block
+            # is not None here, gold_cn_block is always defined.
             gold_cn_block = gold_cn if gold_cn is not None else gold_block
             pred_cn_block = oracle.neutral_block(chosen_id) if (has_pred and chosen_id is not None) else None  # type: ignore[attr-defined]
-            if gold_cn_block is not None:
-                cn_scored += 1
-                cn_correct_row = bool(pred_cn_block is not None and pred_cn_block == gold_cn_block)
-                if cn_correct_row:
-                    cn_correct += 1
+            cn_scored += 1
+            cn_correct_row = bool(pred_cn_block is not None and pred_cn_block == gold_cn_block)
+            if cn_correct_row:
+                cn_correct += 1
 
         per_row.append(
             {

@@ -25,6 +25,7 @@ import hashlib
 import random
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 import pandas as pd
@@ -198,6 +199,7 @@ def build_card(
     n_scanned: int,
     source_sha: str,
     config: CurieDatasetConfig,
+    source_version: str | None = None,
 ) -> dict[str, Any]:
     """Build the dataset_card: N, subsample n/seed, per-column coverage, gold identity, SHA."""
     n = len(input_df)
@@ -221,11 +223,50 @@ def build_card(
         "coverage": coverage,
         "source_label": config.source_label,
         "source_url": config.source_url,
-        # SHA pins the deterministic SUBSAMPLE (exactly what was scored) — the multi-GB source
-        # cannot be hashed inline, so reproducibility is (source version + seed + n) -> subsample.
+        # The source URL points at a mutable `current_release` (UniProt) / non-versioned mirror
+        # (NCBI), so URL+seed+n alone cannot reconstruct the subsample after an upstream release.
+        # Reproducibility is guaranteed instead by PERSISTING the exact scored subsample
+        # (``persist_subsample`` writes it beside this card) — ``subsample_sha256`` pins those
+        # exact bytes. ``source_version`` records the resolved upstream release date/version when
+        # the streamer could obtain it (None when unavailable), for provenance.
         "subsample_sha256": source_sha,
+        "subsample_filename": subsample_filename(config.key),
+        "source_version": source_version,
         "license": config.license,
     }
+
+
+def subsample_filename(key: str) -> str:
+    """Filename for the persisted subsample beside the dataset card."""
+    return f"{key}_subsample.csv"
+
+
+def subsample_csv_bytes(input_df: pd.DataFrame) -> bytes:
+    """Canonical CSV encoding of the subsample (the exact bytes ``subsample_sha256`` pins)."""
+    return input_df.to_csv(index=False).encode("utf-8")
+
+
+def persist_subsample(bundle: "BackboneBundle", out_dir: Path | str) -> Path:
+    """Write the exact scored subsample beside the dataset card so the run is reconstructable
+    regardless of upstream `current_release` drift. Returns the written path.
+
+    The persisted bytes are byte-identical to what ``subsample_sha256`` hashes, so a reload
+    (``load_persisted_subsample``) reproduces the scored input and re-hashes to the same SHA.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / subsample_filename(bundle.card["dataset"])
+    path.write_bytes(subsample_csv_bytes(bundle.input_df))
+    return path
+
+
+def load_persisted_subsample(path: Path | str) -> pd.DataFrame:
+    """Reload a persisted subsample as strings (no NaN coercion), reproducing the scored input.
+
+    Re-encoding the result with ``subsample_csv_bytes`` yields the original bytes, so the
+    reloaded frame re-hashes to the recorded ``subsample_sha256``.
+    """
+    return pd.read_csv(path, dtype=str, keep_default_na=False)
 
 
 def subsample_from_lines(lines: Iterable[str], config: CurieDatasetConfig) -> tuple[pd.DataFrame, int]:
@@ -254,10 +295,33 @@ class BackboneBundle:
     card: dict[str, Any]
 
 
-def load_backbone(source: Iterable[str] | str, config: CurieDatasetConfig) -> BackboneBundle:
+def resolve_source_version(url: str, *, timeout: float = 30.0) -> str | None:
+    """Best-effort upstream release date/version from an HTTP HEAD ``Last-Modified`` (network).
+
+    Isolated seam (like ``stream_source_lines``); never fatal — returns None on any failure so a
+    provenance nicety can't break a run. The robust reproducibility guarantee is the persisted
+    subsample, not this string.
+    """
+    try:
+        import requests
+
+        resp = requests.head(url, timeout=timeout, allow_redirects=True)
+        return resp.headers.get("Last-Modified") or None
+    except Exception:
+        return None
+
+
+def load_backbone(
+    source: Iterable[str] | str,
+    config: CurieDatasetConfig,
+    *,
+    source_version: str | None = None,
+) -> BackboneBundle:
     """Load a backbone from a line iterator (tests) or a URL string (streamed, network)."""
     lines: Iterable[str] = stream_source_lines(source) if isinstance(source, str) else source
     input_df, n_scanned = subsample_from_lines(lines, config)
-    sha = sha256_bytes(input_df.to_csv(index=False).encode("utf-8"))
-    card = build_card(input_df, n_scanned=n_scanned, source_sha=sha, config=config)
+    sha = sha256_bytes(subsample_csv_bytes(input_df))
+    card = build_card(
+        input_df, n_scanned=n_scanned, source_sha=sha, config=config, source_version=source_version
+    )
     return BackboneBundle(input_df=input_df, card=card)

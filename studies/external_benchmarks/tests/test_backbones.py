@@ -9,7 +9,11 @@ from studies.external_benchmarks.adapters.backbones import (
     gene2ensembl_records,
     hgnc_records,
     load_backbone,
+    load_persisted_subsample,
+    persist_subsample,
     reservoir_sample,
+    sha256_bytes,
+    subsample_csv_bytes,
     subsample_from_lines,
     uniprot_records,
 )
@@ -127,3 +131,36 @@ def test_gene2ensembl_card_records_gold_identity():
 def test_stream_source_lines_is_the_network_seam():
     # The only network entry is stream_source_lines; the parse/subsample path never calls it.
     assert hasattr(backbones, "stream_source_lines")
+
+
+# ---------------- Reproducibility: persist + reload the scored subsample ----------------
+
+
+def test_persisted_subsample_is_reload_reproducible(tmp_path):
+    # Greptile PR#17: the sources are mutable current_release mirrors, so URL+seed+n cannot
+    # reconstruct the scored subset after an upstream release. The persisted subsample must
+    # therefore round-trip byte-for-byte and re-hash to the recorded subsample_sha256.
+    bundle = load_backbone(iter(HGNC_LINES), replace(HGNC, subsample_n=10, subsample_seed=42))
+    path = persist_subsample(bundle, tmp_path)
+    assert path.exists()
+    assert path.name == bundle.card["subsample_filename"] == "hgnc-complete-set_subsample.csv"
+
+    reloaded = load_persisted_subsample(path)
+    # exact scored input reconstructed (same columns, same values)
+    assert list(reloaded.columns) == list(bundle.input_df.columns)
+    assert reloaded.reset_index(drop=True).equals(bundle.input_df.reset_index(drop=True))
+    # and it re-hashes to the SHA recorded on the card (the pin holds without the live source)
+    assert sha256_bytes(subsample_csv_bytes(reloaded)) == bundle.card["subsample_sha256"]
+
+
+def test_card_records_source_version_and_filename():
+    bundle = load_backbone(
+        iter(UNIPROT_LINES),
+        replace(UNIPROT_IDMAPPING, subsample_n=10),
+        source_version="Wed, 01 Jan 2025 00:00:00 GMT",
+    )
+    assert bundle.card["source_version"] == "Wed, 01 Jan 2025 00:00:00 GMT"
+    assert bundle.card["subsample_filename"] == "uniprot-idmapping_subsample.csv"
+    # default is None when the streamer couldn't resolve a release date (provenance, not a pin)
+    bundle2 = load_backbone(iter(UNIPROT_LINES), replace(UNIPROT_IDMAPPING, subsample_n=10))
+    assert bundle2.card["source_version"] is None

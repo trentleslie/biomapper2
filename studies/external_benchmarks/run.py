@@ -276,7 +276,7 @@ def orchestrate_backbone(
 
     from biomapper2.mapper import Mapper
 
-    from .adapters.backbones import load_backbone
+    from .adapters.backbones import load_backbone, persist_subsample, resolve_source_version
     from .report.campaign import assemble_campaign_report
     from .runner import run_all
     from .scorers.curie_scorer import score_curie
@@ -296,8 +296,14 @@ def orchestrate_backbone(
         if not gate_result.passed:
             raise RuntimeError(f"Gene/protein Phase-0 gate stopped the run: {gate_result.reason}")
 
-    bundle = load_backbone(source, config)
+    # The backbone sources are mutable current_release mirrors, so URL+seed+n cannot reconstruct
+    # the scored subset after an upstream release. Resolve the upstream release version (best
+    # effort) and PERSIST the exact subsample beside the card — that persisted artifact, not the
+    # URL, is what makes the run reproducible.
+    source_version = resolve_source_version(source) if isinstance(source, str) else None
+    bundle = load_backbone(source, config, source_version=source_version)
     (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+    persist_subsample(bundle, out_dir)
 
     primary = config.target_vocabs[0]
     runs = run_all(

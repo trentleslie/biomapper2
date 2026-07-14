@@ -102,3 +102,38 @@ def test_charge_normalized_falls_back_to_strict_gold_without_smiles():
     cn = result["comparable_core_charge_normalized"]
     assert cn is not None
     assert cn["correct"] == 1  # neutral pred matched the strict gold block fallback
+
+
+def test_smiles_without_inchikey_does_not_inflate_normalized_denominator():
+    # Regression (Greptile PR#17): a row with a PARSEABLE gold SMILES but NO gold InChIKey is
+    # excluded from strict scoring (coverage-only). It must ALSO be excluded from the
+    # charge-normalized scoring so both accuracies share one denominator. Previously the CN
+    # tally counted it (via the gold_cn fallback), inflating the normalized denominator.
+    df = pd.DataFrame(
+        {
+            HAJJAR.name_column: ["scored-row", "smiles-only-row"],
+            # Row 2 has no gold InChIKey -> not in the strict scored population.
+            HAJJAR.gold_inchikey_column: ["AAAAAAAAAAAAAA-GASJEMHNSA-N", ""],
+            HAJJAR.gold_smiles_column: ["CC(=O)O", "CCO"],  # both parseable SMILES
+            "chosen_kg_id": ["CHEBI:1", "CHEBI:2"],
+        }
+    )
+    oracle = _FakeCNOracle(
+        strict={"CHEBI:1": "AAAAAAAAAAAAAA", "CHEBI:2": "BBBBBBBBBBBBBB"},
+        neutral={"CHEBI:1": "NNNNNNNNNNNNNN", "CHEBI:2": "MMMMMMMMMMMMMM"},
+    )
+    # A normalizer that returns a block for BOTH rows' SMILES (so the old code would have scored
+    # the InChIKey-less row); the gate must still drop it.
+    result = score_structure_oracle(
+        df, HAJJAR, oracle, vocab="CHEBI", gold_smiles_normalizer=lambda smi: "NNNNNNNNNNNNNN"
+    )
+    strict = result["comparable_core"]
+    cn = result["comparable_core_charge_normalized"]
+    # strict scores exactly the one row with a gold InChIKey.
+    assert strict["scored_denominator"] == 1
+    # charge-normalized shares the SAME denominator — the SMILES-only row is not counted.
+    assert cn is not None
+    assert cn["scored_denominator"] == strict["scored_denominator"] == 1
+    # the SMILES-only row carries no charge-normalized verdict.
+    assert result["per_row"][1]["scored"] is False
+    assert result["per_row"][1]["charge_normalized_correct"] is None
