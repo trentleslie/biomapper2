@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import dataclasses
 
-from studies.external_benchmarks.gate import SmokeObservation, run_gate
+from studies.external_benchmarks.gate import (
+    DEFAULT_CAP_USD,
+    DEFAULT_PER_EXTERNAL_CALL_USD,
+    SmokeObservation,
+    run_gate,
+)
 
 
 def _obs(**overrides) -> SmokeObservation:
@@ -63,6 +68,30 @@ def test_over_cost_cap_halts_with_number():
     assert "cost" in result.reason.lower()
     assert result.estimate is not None
     assert result.estimate.est_cost_usd > 1.0
+
+
+def test_default_per_call_price_is_nonzero_so_cap_can_fire():
+    # Greptile P1 (gate.py:104): a strictly-zero default per-call price makes the USD cap
+    # inert — no run could ever be stopped on cost. The default MUST be non-zero.
+    assert DEFAULT_PER_EXTERNAL_CALL_USD > 0.0
+
+
+def test_default_price_lets_expensive_run_trip_usd_cap():
+    # With the default (non-zero) per-call price wired in, a large enough run trips the
+    # $25 cap without the caller having to pass a price explicitly. This is the exact
+    # production path orchestrate uses (it passes DEFAULT_PER_EXTERNAL_CALL_USD).
+    result = run_gate(lambda: _obs(miss_rate=1.0), n_rows=10_000)  # uses the module default
+    assert not result.passed
+    assert "cost" in result.reason.lower()
+    assert result.estimate is not None
+    assert result.estimate.est_cost_usd > DEFAULT_CAP_USD
+
+    # Regression guard for the fix: a strictly-zero price would have made the cap inert,
+    # so the identical run would sail through at $0 — the bug Greptile flagged.
+    zero = run_gate(lambda: _obs(miss_rate=1.0), n_rows=10_000, per_external_call_usd=0.0)
+    assert zero.estimate is not None
+    assert zero.estimate.est_cost_usd == 0.0
+    assert zero.passed
 
 
 def test_estimate_folds_in_fallback_latency():
