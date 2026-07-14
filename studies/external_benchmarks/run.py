@@ -391,6 +391,16 @@ def orchestrate_provided(
 
     mapped_df = pd.read_csv(run.output_tsv, sep="\t")
     result = score_provided_id(mapped_df, config)
+    # Fail-closed on an unscorable run — the SAME rule the name-input flow enforces (run.py:156).
+    # top1_accuracy is None only when the scored denominator is zero (no row carried a held-out
+    # target), i.e. an `n/a` benchmark. Persisting that as a success would file a run that measured
+    # nothing; refuse BEFORE writing any results/report so an unscorable run never looks green.
+    if result["comparable_core"]["top1_accuracy"] is None:
+        raise RuntimeError(
+            f"{config.key}: no scorable held-out targets (top1_accuracy is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable provided-ID run as success."
+        )
     (out_dir / f"{config.key}_provided_results.json").write_text(json.dumps(result, indent=2))
 
     report_path = out_dir / f"{config.key}_report.md"
@@ -404,9 +414,48 @@ def orchestrate_provided(
 
 
 def _resolve_source_arg(arg: str) -> bytes | str:
-    """A local path is read to bytes; anything else is treated as a URL (streamed by the adapter)."""
+    """A local path is read to bytes; anything else is treated as a URL (streamed by the adapter).
+
+    Correct for the Hajjar loader (accepts bytes / URL). NOT correct for the backbone loader, which
+    consumes a URL string OR a line iterator — never raw bytes (iterating bytes yields ints, not
+    records). Provided-ID CLI resolution therefore uses ``_resolve_provided_source`` instead.
+    """
     p = Path(arg)
     return p.read_bytes() if p.exists() else arg
+
+
+def _local_line_iter(path: Path):
+    """Yield decoded, newline-stripped lines from a local (optionally gzipped) file.
+
+    Mirrors ``backbones.stream_source_lines`` output so the backbone loader parses a local file
+    identically to a streamed URL. The file handle is held only for the life of the generator; the
+    reservoir sampler drains it fully, so it closes deterministically.
+    """
+    import gzip
+
+    path = Path(path)
+    opener = gzip.open if path.suffix == ".gz" else open
+    with opener(path, "rt", encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            yield line.rstrip("\n")
+
+
+def _resolve_provided_source(arg: str, backbone_config) -> Any:
+    """Resolve a provided-ID ``--source`` to what its loader expects (URL / bytes / line iterator).
+
+    - URL (non-existent path): returned as-is — the Hajjar loader fetches it, the backbone loader
+      streams it.
+    - Local file, backbone dataset: a line iterator (gzip-aware). Passing bytes here is the bug
+      Greptile flagged — ``backbones.load_backbone`` iterates a non-str source directly, so bytes
+      would yield integers instead of records and parsing fails.
+    - Local file, Hajjar anchor (no backbone): bytes — the Hajjar loader accepts them.
+    """
+    p = Path(arg)
+    if not p.exists():
+        return arg  # URL
+    if backbone_config is not None:
+        return _local_line_iter(p)  # backbone loader wants a line iterator, not bytes
+    return p.read_bytes()  # Hajjar loader accepts bytes
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -445,7 +494,7 @@ def _run_provided_cli(args, parser: argparse.ArgumentParser) -> dict[str, Any]:
 
     config = PROVIDED_ID_REGISTRY[args.dataset]
     backbone_config = PROVIDED_ID_BACKBONE.get(args.dataset)
-    src = _resolve_source_arg(args.source)
+    src = _resolve_provided_source(args.source, backbone_config)
     out = Path(args.out) if args.out else None
     return orchestrate_provided(
         config=config,
