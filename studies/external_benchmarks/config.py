@@ -3,12 +3,14 @@
 Hajjar-100 (metabolite, name input) was the merged vertical slice. This module adds the
 deferred follow-on: the NECS Metabolon metabolite set (structure-oracle) and the three
 gene/protein cross-reference backbones (HGNC, UniProt idmapping, NCBI gene2ensembl),
-scored by CURIE equality. MetaBench is still deferred (license unconfirmed).
+scored by CURIE equality. MetaBench (Lu et al. 2025, arXiv:2510.14944) is now wired in —
+its 1,000-pair cross-database Grounding set is the ONE external dataset with a valid
+LLM head-to-head (25 published baselines on the same set).
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Protocol, runtime_checkable
 
 
@@ -416,3 +418,100 @@ PROVIDED_ID_BACKBONE: dict[str, CurieDatasetConfig | None] = {
     PROVIDED_UNIPROT_IDMAPPING.key: UNIPROT_IDMAPPING,
     PROVIDED_HAJJAR.key: None,
 }
+
+
+# ==================================================================================================
+# MetaBench (Lu et al. 2025, arXiv:2510.14944) — the Grounding (cross-database ID mapping) task.
+# ==================================================================================================
+# The one external dataset with a VALID LLM head-to-head: the paper scores 25 open/closed LLMs on
+# the SAME 1,000 grounding pairs (exact-match accuracy). The pairs are bidirectional cross-database
+# mappings sampled from MetabolitesIDmapping, delivered as natural-language QA:
+#   - ID -> ID   (400): HMDB->KEGG, KEGG->HMDB          -> provided-ID mode (source id provided)
+#   - name -> ID (600): name->KEGG, name->HMDB, name->ChEBI -> name-input mode (annotation)
+# In BOTH regimes the gold is the held-out TARGET database id and correctness is CURIE equality
+# between BioMapper's equivalence-set predictions and the gold — so one uniform scorer, ONE number.
+#
+# ACQUISITION (2026-07-14): dataset released publicly on HuggingFace as ``LuYuxing/MetaBench``
+# (Apache-2.0, non-gated); the Grounding file is ``Grounding - metabolite_mapping_dataset.csv``
+# (exactly 1,000 rows). Apache-2.0 permits vendoring, but — mirroring Hajjar/NECS — we fetch from
+# the source URL at run time and pin the SHA on the card rather than vendoring the raw bytes.
+METABENCH_DOI = "10.48550/arXiv.2510.14944"
+METABENCH_SOURCE_URL = (
+    "https://huggingface.co/datasets/LuYuxing/MetaBench/resolve/main/"
+    "Grounding%20-%20metabolite_mapping_dataset.csv"
+)
+METABENCH_LICENSE = "Apache-2.0 (HuggingFace dataset LuYuxing/MetaBench; grounding = MetabolitesIDmapping-derived)"
+# SHA256 of the 1,000-row Grounding CSV as fetched at acquisition (2026-07-14). Recorded for
+# reproducibility; the dataset card pins whatever bytes are actually fetched at run time.
+METABENCH_EXPECTED_SHA256 = "5f1955d1053aee39ad7d6fd1a9c833d9221abdcfa8d258deb52f61036df12cd2"
+
+# The 25-LLM baseline distribution published in the MetaBench paper for the Grounding task. This is
+# the ONLY external set where BioMapper can be placed alongside a valid same-set LLM head-to-head.
+# Per the Metabolon-96.5% scar and ``validate.citation_spot_check``: every value is left ``None``
+# (needs-verification) — the DOI + table_ref are load-bearing so a human transcribes the exact
+# figures from the paper's table at report time rather than trusting a from-memory number. The
+# paper's headline (UNVERIFIED, read from the arXiv HTML during acquisition, MUST be re-checked
+# against the source table before any is asserted): no-retrieval Grounding accuracy stays near zero
+# and does not exceed ~0.87% even for the strongest model; a web-search-augmented run reaches at
+# most ~40.93%. Do NOT bake those numbers as fact here.
+METABENCH_BASELINE_TABLE_REF = "Lu et al. 2025 (arXiv:2510.14944), Grounding-task results table — TRANSCRIBE per model"
+METABENCH_BASELINES: tuple[CompetitorResult, ...] = tuple(
+    CompetitorResult(
+        tool=tool,
+        metric=metric,
+        input_type="grounding",
+        value=None,  # needs-verification: transcribe from the paper's table, do not assert from memory
+        doi=METABENCH_DOI,
+        table_ref=METABENCH_BASELINE_TABLE_REF,
+    )
+    for tool, metric in (
+        ("Best LLM (no retrieval)", "grounding_exact_match"),
+        ("Median LLM (no retrieval)", "grounding_exact_match"),
+        ("Worst LLM (no retrieval)", "grounding_exact_match"),
+        ("Best LLM (web-search retrieval)", "grounding_exact_match_with_retrieval"),
+    )
+)
+
+
+@dataclass(frozen=True)
+class MetaBenchDatasetConfig:
+    """MetaBench Grounding registry entry — a mixed-regime cross-database ID-mapping benchmark.
+
+    The parsed grounding set is a single normalized long frame with a fixed column contract
+    (below). It decomposes into per-subgroup runs by ``(pair_type, source_namespace,
+    target_namespace)``: ID->ID subgroups run in provided-ID mode, name->ID subgroups in
+    name-input mode. Every subgroup's mapper output carries the two held-out scoring columns
+    (``gold_target_column`` + ``target_namespace_column``) verbatim; the outputs are concatenated
+    and scored ONCE (``score_metabench``) into a single accuracy — no per-vocab axis (the Hajjar
+    calibration: ``chosen_kg_id`` is annotation-driven, not vocab-steered).
+
+    ANTI-TRIVIAL-100%: the gold TARGET (``gold_target_column``) and its namespace are NEVER handed
+    to the mapper as input, and every ID->ID subgroup has source namespace disjoint from target
+    namespace (HMDB!=KEGG). ``metabench_scorer.assert_metabench_held_out`` re-checks both, fail-loud,
+    before scoring. There is NO charge-normalized variant: the target is a database identifier, not
+    a structure, so structure/protonation normalization does not apply.
+    """
+
+    key: str = "metabench-grounding"
+    arm: str = "metabolite"
+    entity_type: str = "metabolite"
+    input_type: str = "mixed"  # id2id (provided-id) + name2id (name-input)
+    source_doi: str = METABENCH_DOI
+    source_url: str = METABENCH_SOURCE_URL
+    license: str = METABENCH_LICENSE
+    expected_source_sha256: str = METABENCH_EXPECTED_SHA256
+    # Normalized long-form column contract (adapter emits these; scorer consumes the last three).
+    question_column: str = "question"
+    name_column: str = "metabolite_name"  # populated for name->ID rows; "" for ID->ID rows
+    source_id_column: str = "source_id"  # populated for ID->ID rows; "" for name->ID rows
+    source_namespace_column: str = "source_namespace"  # "HMDB"/"KEGG" for ID rows; "" for name rows
+    gold_target_column: str = "gold_target"  # HELD OUT — bare target id (C-number / HMDB id / ChEBI number)
+    target_namespace_column: str = "target_namespace"  # HELD OUT — "KEGG"/"HMDB"/"CHEBI" per row
+    pair_type_column: str = "pair_type"  # "id2id" | "name2id"
+    baseline_competitors: tuple[CompetitorResult, ...] = field(default_factory=lambda: METABENCH_BASELINES)
+
+
+METABENCH = MetaBenchDatasetConfig()
+
+# The MetaBench registry (single entry; the one external set with a valid LLM head-to-head).
+METABENCH_REGISTRY: dict[str, MetaBenchDatasetConfig] = {METABENCH.key: METABENCH}
