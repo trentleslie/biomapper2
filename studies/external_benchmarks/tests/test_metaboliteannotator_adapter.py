@@ -7,14 +7,30 @@ import pytest
 
 from studies.external_benchmarks.adapters import metaboliteannotator as maf
 from studies.external_benchmarks.adapters.metaboliteannotator import (
+    SOURCE_ACCESSION_COL,
     AccessionNotResolvedError,
+    NoMafError,
     build_card,
     build_input_df,
     fetch_maf_set,
     load_metaboliteannotator,
+    select_maf_filename,
     sha256_bytes,
 )
-from studies.external_benchmarks.config import METABOLITEANNOTATOR_POS
+from studies.external_benchmarks.config import METABOLITEANNOTATOR_NEG, METABOLITEANNOTATOR_POS
+
+# A realistic MetaboLights ISA-Tab study file listing: investigation/sample/assay descriptors, raw
+# data, and TWO MAF tables (one per ion mode). The adapter must select the m_*.tsv MAF, never the
+# study bundle or a descriptor.
+STUDY_FILES = [
+    "i_Investigation.txt",
+    "s_MTBLS111.txt",
+    "a_MTBLS111_POS_mass_spectrometry.txt",
+    "a_MTBLS111_NEG_mass_spectrometry.txt",
+    "m_MTBLS111_POS_mass_spectrometry_v2_maf.tsv",
+    "m_MTBLS111_NEG_mass_spectrometry_v2_maf.tsv",
+    "FILES/raw_pos.raw",
+]
 
 
 @pytest.fixture
@@ -92,3 +108,71 @@ def test_fetch_is_isolated(monkeypatch, raw_maf_df):
     # two stubbed sets concatenated -> 8 raw rows, blank names dropped per set (2 blanks) -> ...
     assert bundle.card["n_names"] == 8  # 4 queryable names per set * 2 sets
     assert set(bundle.card["per_accession"]) == {"MTBLS111", "MTBLS222"}
+
+
+# --- MAF resolution (Greptile PR#22): fetch the m_*.tsv MAF, never the study bundle ---------------
+
+
+def test_select_maf_filename_disambiguates_by_mode():
+    # Two MAFs (pos + neg) -> ion mode picks exactly one; descriptors/raw files are never MAFs.
+    assert select_maf_filename(STUDY_FILES, "positive") == "m_MTBLS111_POS_mass_spectrometry_v2_maf.tsv"
+    assert select_maf_filename(STUDY_FILES, "negative") == "m_MTBLS111_NEG_mass_spectrometry_v2_maf.tsv"
+
+
+def test_select_maf_filename_single_maf_used_regardless_of_mode():
+    files = ["i_Investigation.txt", "s_x.txt", "a_x.txt", "m_MTBLS999_maf.tsv"]
+    assert select_maf_filename(files, "positive") == "m_MTBLS999_maf.tsv"
+
+
+def test_select_maf_filename_no_maf_fails_loud():
+    # A study with no m_*.tsv (only the bundle / descriptors) must fail loud, never parse a non-MAF.
+    with pytest.raises(NoMafError, match="no m_.*MAF"):
+        select_maf_filename(["i_Investigation.txt", "s_x.txt", "a_x.txt", "MTBLS999.zip"], "positive")
+
+
+def test_select_maf_filename_ambiguous_fails_loud():
+    # Two MAFs neither of which carries the mode token -> refuse to guess.
+    with pytest.raises(NoMafError, match="does not select exactly one"):
+        select_maf_filename(["m_run1_maf.tsv", "m_run2_maf.tsv"], "positive")
+
+
+def test_fetch_maf_set_selects_maf_not_study_bundle(monkeypatch, raw_maf_df):
+    # End-to-end selection: list files (mocked), pick the m_*.tsv, download+parse THAT file. The
+    # downloader refuses anything that is not the selected MAF, proving the bundle is never fetched.
+    monkeypatch.setattr(maf, "list_study_files", lambda acc, config, **kw: STUDY_FILES)
+
+    def fake_download(accession, filename, config, **kw):
+        assert maf._is_maf_filename(filename), f"adapter fetched a non-MAF file: {filename!r}"
+        assert "POS" in filename  # positive-mode config must select the POS MAF
+        return raw_maf_df.to_csv(sep="\t", index=False).encode("utf-8")
+
+    monkeypatch.setattr(maf, "_download_study_file", fake_download)
+    df = fetch_maf_set("MTBLS111", METABOLITEANNOTATOR_POS)
+    # records parsed from the MAF table (not the study payload), tagged with the accession
+    assert METABOLITEANNOTATOR_POS.name_column in df.columns
+    assert "glucose" in set(df[METABOLITEANNOTATOR_POS.name_column])
+    assert set(df[SOURCE_ACCESSION_COL]) == {"MTBLS111"}
+
+
+def test_fetch_maf_set_negative_mode_selects_neg_maf(monkeypatch, raw_maf_df):
+    monkeypatch.setattr(maf, "list_study_files", lambda acc, config, **kw: STUDY_FILES)
+
+    def fake_download(accession, filename, config, **kw):
+        assert "NEG" in filename
+        return raw_maf_df.to_csv(sep="\t", index=False).encode("utf-8")
+
+    monkeypatch.setattr(maf, "_download_study_file", fake_download)
+    df = fetch_maf_set("MTBLS111", METABOLITEANNOTATOR_NEG)
+    assert set(df[SOURCE_ACCESSION_COL]) == {"MTBLS111"}
+
+
+def test_fetch_maf_set_no_maf_in_study_fails_loud(monkeypatch):
+    # A resolved accession whose study ships no MAF must fail loud before any download/parse.
+    monkeypatch.setattr(maf, "list_study_files", lambda acc, config, **kw: ["i_Investigation.txt", "MTBLS999.zip"])
+
+    def boom(*a, **k):  # the downloader must never be reached
+        raise AssertionError("download attempted despite no MAF")
+
+    monkeypatch.setattr(maf, "_download_study_file", boom)
+    with pytest.raises(NoMafError):
+        fetch_maf_set("MTBLS999", METABOLITEANNOTATOR_POS)

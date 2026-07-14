@@ -504,7 +504,9 @@ METABOLITEANNOTATOR_POS = NameHitDatasetConfig(
     gold_smiles_column="gold_smiles",
     target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
     accessions=METABOLITEANNOTATOR_ACCESSIONS,
-    source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}/download",
+    # Base study endpoint; the adapter derives the file-listing ({base}/files) and per-file download
+    # ({base}/download/{file}) URLs so it fetches the m_*.tsv MAF table, NOT the whole study bundle.
+    source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}",
     license="MetaboLights data are available under CC0 (per-study terms apply).",
 )
 
@@ -518,7 +520,7 @@ METABOLITEANNOTATOR_NEG = NameHitDatasetConfig(
     gold_smiles_column="gold_smiles",
     target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
     accessions=METABOLITEANNOTATOR_ACCESSIONS,
-    source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}/download",
+    source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}",
     license="MetaboLights data are available under CC0 (per-study terms apply).",
 )
 

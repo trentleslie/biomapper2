@@ -53,6 +53,15 @@ class AccessionNotResolvedError(RuntimeError):
     """Raised when a live fetch is attempted against an unresolved needs-fetching placeholder."""
 
 
+class NoMafError(RuntimeError):
+    """Raised when a study exposes no unambiguous ``m_*.tsv`` MAF table to score.
+
+    Fail-loud rather than silently parsing the wrong file: zero MAFs (nothing to score) or an
+    ambiguous set of MAFs that ``config.mode`` cannot disambiguate both raise here, so a resolved
+    run can never score the study bundle / the wrong assay's table.
+    """
+
+
 def sha256_bytes(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
@@ -64,13 +73,99 @@ def parse_maf(raw: bytes) -> pd.DataFrame:
     return pd.read_csv(io.StringIO(text), sep=sep, dtype=str).fillna("")
 
 
-def fetch_maf_set(accession: str, config: NameHitDatasetConfig, *, timeout: float = 60.0) -> pd.DataFrame:
-    """Fetch + parse the MAF(s) for one MetaboLights accession, tagged with ``source_accession``.
+def _is_maf_filename(name: str) -> bool:
+    """A MetaboLights Metabolite Assignment File is the ISA-Tab ``m_*.tsv`` table."""
+    base = name.rsplit("/", 1)[-1].strip().lower()
+    return base.startswith("m_") and base.endswith(".tsv")
 
-    FAILS LOUD on a needs-fetching placeholder so an unresolved accession never reaches the scorer.
-    Network is isolated here so the transform is unit-testable without it. The exact MAF selection
-    (which m_*.tsv, filtered to ``config.mode``) is resolved against the study's ISA descriptor at
-    acquisition; left as a live-only concern (this arm's accessions are still needs-fetching).
+
+# Ion-mode tokens as they appear in MAF/assay filenames (ISA-Tab convention), used ONLY to
+# disambiguate when a study ships more than one MAF.
+_MODE_TOKENS: dict[str, tuple[str, ...]] = {
+    "positive": ("pos", "positive"),
+    "negative": ("neg", "negative"),
+}
+
+
+def select_maf_filename(filenames: list[str], mode: str) -> str:
+    """Pick the single ``m_*.tsv`` MAF to score; fail loud on none or unresolved ambiguity.
+
+    Selection rule (documented + deterministic):
+      1. Keep only ``m_*.tsv`` files — the study bundle, ISA ``a_*``/``s_*``/``i_*`` descriptors and
+         raw data files are never the MAF.
+      2. Exactly one MAF -> use it.
+      3. More than one MAF -> disambiguate by ion ``mode`` (a filename token ``pos``/``positive`` or
+         ``neg``/``negative``). Exactly one mode-matching MAF -> use it; otherwise FAIL LOUD (an
+         ambiguous multi-assay study must not be silently reduced to an arbitrary table).
+      4. Zero MAFs -> FAIL LOUD.
+    """
+    mafs = [f for f in filenames if _is_maf_filename(f)]
+    if not mafs:
+        raise NoMafError(
+            f"no m_*.tsv MAF table found among study files {sorted(filenames)!r}; refusing to parse a "
+            f"non-MAF file (e.g. the study bundle or an assay descriptor)."
+        )
+    if len(mafs) == 1:
+        return mafs[0]
+    tokens = _MODE_TOKENS.get(mode.lower(), ())
+    mode_matches = [f for f in mafs if any(t in f.rsplit("/", 1)[-1].lower() for t in tokens)]
+    if len(mode_matches) == 1:
+        return mode_matches[0]
+    raise NoMafError(
+        f"study exposes {len(mafs)} MAF tables {sorted(mafs)!r} and ion mode {mode!r} does not select "
+        f"exactly one ({len(mode_matches)} matched); refusing to guess. Pin the assay-matching MAF."
+    )
+
+
+def list_study_files(accession: str, config: NameHitDatasetConfig, *, timeout: float = 60.0) -> list[str]:
+    """List the filenames in a MetaboLights study (network). Isolated so tests never hit it."""
+    import requests
+
+    base = config.source_url_template.format(accession=accession)
+    resp = requests.get(f"{base}/files", timeout=timeout)
+    resp.raise_for_status()
+    return _extract_filenames(resp.json())
+
+
+def _extract_filenames(payload: Any) -> list[str]:
+    """Collect every ``file`` field from a MetaboLights ``/files`` JSON payload (shape-tolerant)."""
+    names: list[str] = []
+
+    def walk(obj: Any) -> None:
+        if isinstance(obj, dict):
+            f = obj.get("file")
+            if isinstance(f, str) and f:
+                names.append(f)
+            for v in obj.values():
+                walk(v)
+        elif isinstance(obj, list):
+            for v in obj:
+                walk(v)
+
+    walk(payload)
+    return names
+
+
+def _download_study_file(
+    accession: str, filename: str, config: NameHitDatasetConfig, *, timeout: float = 60.0
+) -> bytes:
+    """Download one named file from a MetaboLights study (network). Isolated so tests never hit it."""
+    import requests
+
+    base = config.source_url_template.format(accession=accession)
+    resp = requests.get(f"{base}/download/{filename}", timeout=timeout)
+    resp.raise_for_status()
+    return resp.content
+
+
+def fetch_maf_set(accession: str, config: NameHitDatasetConfig, *, timeout: float = 60.0) -> pd.DataFrame:
+    """Fetch + parse the study's MAF table for one accession, tagged with ``source_accession``.
+
+    Resolves the actual ``m_*.tsv`` Metabolite Assignment File: (1) list the study's files, (2)
+    ``select_maf_filename`` picks the mode-matching MAF (fail loud on none/ambiguity), (3) download
+    and ``parse_maf`` THAT file — never the study bundle. FAILS LOUD on a needs-fetching placeholder
+    before any network call. Network is isolated in ``list_study_files`` / ``_download_study_file`` so
+    the transform is unit-testable without it.
     """
     if accession.startswith(NEEDS_FETCHING_SENTINEL):
         raise AccessionNotResolvedError(
@@ -78,12 +173,10 @@ def fetch_maf_set(accession: str, config: NameHitDatasetConfig, *, timeout: floa
             f"for MetaboliteAnnotator (PMID {config.source_pmid}, DOI {config.source_doi}) were not "
             f"obtainable (ACS full text/SI blocked). Fill config.accessions with the real ids first."
         )
-    import requests
-
-    url = config.source_url_template.format(accession=accession)
-    resp = requests.get(url, timeout=timeout)
-    resp.raise_for_status()
-    df = parse_maf(resp.content)
+    filenames = list_study_files(accession, config, timeout=timeout)
+    maf_name = select_maf_filename(filenames, config.mode)  # fail-loud on no/ambiguous MAF
+    raw = _download_study_file(accession, maf_name, config, timeout=timeout)
+    df = parse_maf(raw)
     df[SOURCE_ACCESSION_COL] = accession
     return df
 
