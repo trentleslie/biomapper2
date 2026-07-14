@@ -31,3 +31,19 @@ class KGStructureOracle:
         recs = self._records(node_id)
         name = (recs.get(node_id) or {}).get("name")
         return self.resolver.inchikey_block(node_id, name, recs)
+
+    def neutral_block(self, node_id: str) -> str | None:
+        """Charge/protonation-normalized first-block of the prediction.
+
+        Neutralizes the KG record's SMILES (RDKit ``Uncharger``) before hashing; when the record
+        carries no SMILES to neutralize, falls back to the strict resolved block (can't neutralize
+        a hash). Powers the charge-normalized accuracy variant.
+        """
+        from .scorers.structure_oracle_scorer import neutralize_first_block
+
+        rec = self._records(node_id).get(node_id) or {}
+        smiles = rec.get("smiles") or (rec.get("equivalent_ids") or {}).get("SMILES")
+        if isinstance(smiles, (list, tuple)) and smiles:
+            smiles = smiles[0]
+        block = neutralize_first_block(smiles) if smiles else None
+        return block if block is not None else self.resolved_block(node_id)

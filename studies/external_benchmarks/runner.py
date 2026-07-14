@@ -24,7 +24,7 @@ import pandas as pd
 
 from biomapper2.config import BIOLINK_VERSION_DEFAULT, KESTREL_API_URL
 
-from .config import DatasetConfig
+from .config import RunnableConfig
 
 
 class TrivialMappingError(RuntimeError):
@@ -56,7 +56,7 @@ def _git_commit(repo_root: Path) -> str:
 def build_manifest(
     *,
     vocab: str,
-    config: DatasetConfig,
+    config: RunnableConfig,
     dataset_sha: str,
     biolink_version: str,
     output_tsv: str,
@@ -91,7 +91,7 @@ class VocabRun:
 def run_vocab(
     mapper: Any,
     input_df: pd.DataFrame,
-    config: DatasetConfig,
+    config: RunnableConfig,
     vocab: str,
     out_dir: Path,
     *,
@@ -136,7 +136,7 @@ def run_vocab(
 def run_all(
     mapper: Any,
     input_df: pd.DataFrame,
-    config: DatasetConfig,
+    config: RunnableConfig,
     out_dir: Path,
     *,
     dataset_sha: str,

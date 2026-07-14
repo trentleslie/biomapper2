@@ -140,7 +140,7 @@ def run_gate(
     if est.est_cost_usd > cap_usd:
         return GateResult(
             "stop",
-            f"estimated cost ${est.est_cost_usd:.2f} exceeds cap ${cap_usd:.2f} — " f"halt for authorization",
+            f"estimated cost ${est.est_cost_usd:.2f} exceeds cap ${cap_usd:.2f} — halt for authorization",
             est,
             obs,
         )
@@ -220,5 +220,138 @@ def build_live_smoke_fn(
             miss_rate=miss_rate,
             vocab_count=len(vocabs),
         )
+
+    return _smoke
+
+
+# ---------------------------------------------------------------------------
+# Gene/protein Phase-0 smoke (cross-category feasibility).
+#
+# The feasibility review flagged symbol -> UniProt resolution as UNVERIFIED (a gene symbol
+# resolving to a *protein* namespace crosses Biolink categories). So the gene/protein arm gets
+# its own gate: resolve a few HGNC symbols live and assert each yields BOTH a non-empty Ensembl
+# AND a non-empty UniProt CURIE. Fail loud with the offending symbol; never proceed on a symbol
+# that produced neither cross-ref (that would silently score the arm at 0% for an infra reason).
+# ---------------------------------------------------------------------------
+
+# Default probe symbols (stable, well-annotated human genes with clear Ensembl + UniProt xrefs).
+DEFAULT_GENE_SYMBOLS: tuple[str, ...] = ("TP53", "BRCA1", "EGFR", "INS", "TNF")
+
+# Namespaces the smoke requires each symbol to reach (prefix match, case-insensitive).
+REQUIRED_GENE_NAMESPACES: tuple[str, ...] = ("ENSEMBL", "UNIPROTKB")
+
+
+@dataclass(frozen=True)
+class GeneProteinObservation:
+    """What a live gene/protein smoke reports back.
+
+    ``per_symbol`` maps each probed symbol to the set of CURIE namespace prefixes BioMapper
+    produced for it (e.g. ``{"ENSEMBL", "NCBIGENE", "UNIPROTKB"}``).
+    """
+
+    key_ok: bool
+    kestrel_ok: bool
+    per_symbol: dict[str, set[str]]
+
+
+@dataclass(frozen=True)
+class GeneProteinGateResult:
+    verdict: str  # "proceed" | "stop"
+    reason: str
+    observation: GeneProteinObservation
+
+    @property
+    def passed(self) -> bool:
+        return self.verdict == "proceed"
+
+
+def run_gene_protein_gate(
+    smoke_fn: Callable[[], GeneProteinObservation],
+    *,
+    required_namespaces: tuple[str, ...] = REQUIRED_GENE_NAMESPACES,
+) -> GeneProteinGateResult:
+    """Assert every probed symbol reached each required namespace. Fail loud, name the gap."""
+    obs = smoke_fn()
+    if not obs.key_ok:
+        return GeneProteinGateResult("stop", "KESTREL_API_KEY missing/invalid", obs)
+    if not obs.kestrel_ok:
+        return GeneProteinGateResult("stop", "Kestrel API unreachable", obs)
+    if not obs.per_symbol:
+        return GeneProteinGateResult("stop", "gene/protein smoke produced no results (empty)", obs)
+
+    required = {ns.upper() for ns in required_namespaces}
+    for symbol, namespaces in obs.per_symbol.items():
+        present = {ns.upper() for ns in namespaces}
+        missing = required - present
+        if missing:
+            return GeneProteinGateResult(
+                "stop",
+                f"symbol {symbol!r} resolved to {sorted(present)} but is missing required "
+                f"namespace(s) {sorted(missing)} — cross-category symbol->UniProt unverified",
+                obs,
+            )
+    return GeneProteinGateResult(
+        "proceed",
+        f"all {len(obs.per_symbol)} probe symbols reached {sorted(required)}",
+        obs,
+    )
+
+
+def _namespace_of(curie: str) -> str | None:
+    s = str(curie).strip()
+    if ":" not in s:
+        return None
+    return s.split(":", 1)[0].strip().upper()
+
+
+def build_live_gene_protein_smoke_fn(
+    mapper,
+    *,
+    symbols: tuple[str, ...] = DEFAULT_GENE_SYMBOLS,
+    entity_type: str = "gene",
+    vocabs: tuple[str, ...] = ("ENSEMBL", "NCBIGene", "UniProtKB"),
+) -> Callable[[], GeneProteinObservation]:
+    """Wire a live gene/protein smoke closure over the real Mapper (network path).
+
+    Not exercised by unit tests. Resolves each symbol and collects the namespace prefixes of the
+    chosen id + its KG equivalent ids, so the gate can assert Ensembl AND UniProt coverage.
+    """
+    from biomapper2.config import get_kestrel_api_key
+
+    def _smoke() -> GeneProteinObservation:
+        key_ok = True
+        try:
+            get_kestrel_api_key()
+        except Exception:
+            key_ok = False
+
+        kestrel_ok = True
+        per_symbol: dict[str, set[str]] = {}
+        for sym in symbols:
+            namespaces: set[str] = set()
+            try:
+                res = mapper.map_entity_to_kg(
+                    item={"name": sym},
+                    name_field="name",
+                    provided_id_fields=[],
+                    entity_type=entity_type,
+                    vocab=list(vocabs),
+                    annotation_mode="all",
+                )
+                chosen = res.get("chosen_kg_id") if isinstance(res, dict) else None
+                ns = _namespace_of(chosen) if chosen else None
+                if ns:
+                    namespaces.add(ns)
+                equiv = (res.get("kg_equivalent_ids") if isinstance(res, dict) else None) or {}
+                for _k, ids in equiv.items():
+                    values = ids if isinstance(ids, (list, tuple, set)) else [ids]
+                    for v in values:
+                        vns = _namespace_of(v)
+                        if vns:
+                            namespaces.add(vns)
+            except Exception:
+                kestrel_ok = False
+            per_symbol[sym] = namespaces
+        return GeneProteinObservation(key_ok=key_ok, kestrel_ok=kestrel_ok, per_symbol=per_symbol)
 
     return _smoke
