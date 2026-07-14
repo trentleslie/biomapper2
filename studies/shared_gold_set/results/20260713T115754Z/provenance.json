@@ -1,0 +1,15 @@
+{
+  "generated_utc": "2026-07-13T11:58:03.893448+00:00",
+  "git_commit": "8acdc58fa33439db08f79a401f9e079094536bef",
+  "kestrel_api_url": "https://kestrel.nathanpricelab.com/api",
+  "limit": null,
+  "n_pairs": 172,
+  "n_auto_labeled": 22,
+  "n_expert_residual": 150,
+  "inputs": {
+    "chebi_disagreements_cat.csv": "af7162b374be781a20c500c1ad57e33388a1f80eec96c9e37fba70f7f78ebd05",
+    "rank_probe_results.csv": "fcd56c5429a729e30c685fa63ff1f37cbccf27601d7b8bd17681c8860836e26d"
+  },
+  "label_method": "inchikey_first_block_connectivity",
+  "retrievable_window_note": "retrievable@200 from the chebi_filter probe arm; probe window n_candidates~50 is a conservative lower bound for @200"
+}
