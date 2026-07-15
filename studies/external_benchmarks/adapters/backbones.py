@@ -176,9 +176,16 @@ def stream_source_lines(url: str, *, timeout: float = 300.0) -> Iterator[str]:
             for raw in gz:
                 yield raw.decode("utf-8", "replace").rstrip("\n")
     else:
+        # Some sources (RefMet's ``refmet_download.php``) reply ``Content-Type: application/x-download``
+        # with NO charset, so requests leaves ``resp.encoding=None`` and ``iter_lines(decode_unicode=True)``
+        # yields BYTES -> ``csv.reader`` raises "iterator should return strings, not bytes". Force a UTF-8
+        # fallback when the server declared no charset, and defensively decode any residual bytes.
+        if resp.encoding is None:
+            resp.encoding = "utf-8"
         for line in resp.iter_lines(decode_unicode=True):
-            if line is not None:
-                yield line
+            if line is None:
+                continue
+            yield line if isinstance(line, str) else line.decode("utf-8", "replace")
 
 
 def build_input_df(records: list[dict[str, str]], config: CurieDatasetConfig) -> pd.DataFrame:

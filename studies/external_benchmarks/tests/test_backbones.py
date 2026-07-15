@@ -133,6 +133,47 @@ def test_stream_source_lines_is_the_network_seam():
     assert hasattr(backbones, "stream_source_lines")
 
 
+class _CharsetlessResponse:
+    """Mimics a ``requests`` response for a server that declares NO charset (RefMet's
+    ``application/x-download``): ``encoding`` starts None and ``iter_lines(decode_unicode=True)``
+    yields BYTES until ``encoding`` is set — exactly the behavior that broke the live RefMet run.
+    """
+
+    def __init__(self, lines: list[str]) -> None:
+        self._lines = lines
+        self.encoding = None  # server sent Content-Type with no charset
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def iter_lines(self, decode_unicode: bool = False):
+        for line in self._lines:
+            raw = line.encode("utf-8")
+            # requests only decodes when an encoding is known; otherwise it yields raw bytes.
+            yield raw.decode(self.encoding) if (decode_unicode and self.encoding) else raw
+
+
+def test_stream_source_lines_decodes_charsetless_response(monkeypatch):
+    """RefMet URL fetch: a charset-less (application/x-download) response must decode to str.
+
+    Reproduces the live-run failure ``_csv.Error: iterator should return strings, not bytes`` and
+    verifies the encoding fallback yields decoded ``str`` lines that ``csv.reader`` can consume.
+    """
+    import csv
+    import types
+
+    payload = [" refmet_id,refmet_name,inchi_key", "RM0000001,Cholesterol,HVYWMOMLDIMFJA-DPAQBDIFSA-N"]
+    fake_requests = types.SimpleNamespace(get=lambda url, **kw: _CharsetlessResponse(payload))
+    monkeypatch.setitem(__import__("sys").modules, "requests", fake_requests)
+
+    out = list(backbones.stream_source_lines("https://www.metabolomicsworkbench.org/refmet_download.php"))
+    assert all(isinstance(line, str) for line in out)  # never bytes
+    assert out == payload
+    # the decoded stream is consumable by csv.reader (the exact call that raised in the live run)
+    rows = list(csv.reader(iter(out)))
+    assert rows[1][1] == "Cholesterol"
+
+
 # ---------------- Reproducibility: persist + reload the scored subsample ----------------
 
 
