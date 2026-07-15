@@ -259,6 +259,181 @@ def orchestrate_necs(
     return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
 
 
+def orchestrate_refmet(
+    *,
+    source,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the RefMet metabolite slice live (structure oracle, strict + charge-normalized).
+
+    RefMet is LARGE, so the source is streamed + reservoir-subsampled from the InChIKey-bearing
+    population and the exact scored subsample is PERSISTED beside the card. One accuracy number per
+    dataset (single CHEBI vocab), no competitor figure. ``source`` is a URL string (streamed) or a
+    line iterator (tests). Heavy deps imported lazily so this module imports offline.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters import refmet as refmet_adapter
+    from .adapters.backbones import resolve_source_version
+    from .config import REFMET
+    from .oracle import KGStructureOracle
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_all
+    from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
+    from .verify import reconcile
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(REFMET, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper),
+            n_rows=REFMET.subsample_n or 1500,
+            per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD,
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the RefMet run: {gate_result.reason}")
+
+    # The bulk CSV is a mutable current release, so URL+seed+n cannot reconstruct the scored subset.
+    # Resolve the upstream version (best effort) and PERSIST the exact subsample beside the card —
+    # that persisted artifact, not the URL, is what makes the run reproducible.
+    source_version = resolve_source_version(source) if isinstance(source, str) else None
+    bundle = refmet_adapter.load_refmet(source, REFMET, source_version=source_version)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+    refmet_adapter.persist_subsample(bundle, out_dir)
+
+    primary = REFMET.target_vocabs[0]
+    runs = run_all(
+        mapper, bundle.input_df, REFMET, out_dir, dataset_sha=bundle.card["subsample_sha256"], repo_root=repo_root
+    )
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"RefMet primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+    result = score_structure_oracle(
+        mapped_df, REFMET, oracle, vocab=primary, gold_smiles_normalizer=neutralize_first_block
+    )
+    # Fail-closed on an unscorable run — the same rule the other arms enforce. top1_accuracy is None
+    # only when no sampled row carried a scorable gold structure; refuse BEFORE writing results.
+    if result["comparable_core"]["top1_accuracy"] is None:
+        raise RuntimeError(
+            f"RefMet: no scorable rows (top1_accuracy is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable run as success."
+        )
+    rec = reconcile({"structure": result}, mapped_df, REFMET, oracle)
+    if not rec.passed:
+        raise RuntimeError(f"RefMet reconciliation failed: {rec.mismatches}")
+    (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{REFMET.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[{"key": REFMET.key, "result": result}],
+        curie_entries=[],
+        integrity={"reconciliation_passed": rec.passed, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+
+
+def orchestrate_srm1950(
+    *,
+    source: bytes | str,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the NIST SRM 1950 metabolite slice live (structure oracle, strict + charge-normalized).
+
+    Small enough to load in full; the gold InChIKey oracle is derived from the certified SMILES in
+    the adapter. One accuracy number per dataset (single CHEBI vocab), no competitor figure. Heavy
+    deps imported lazily so this module imports offline.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters.srm1950 import fetch_supplement, load_srm1950
+    from .config import SRM1950
+    from .oracle import KGStructureOracle
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_all
+    from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
+    from .verify import reconcile
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(SRM1950, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper), n_rows=1058, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the SRM1950 run: {gate_result.reason}")
+
+    if isinstance(source, str):
+        source = fetch_supplement(source)
+    bundle = load_srm1950(source, SRM1950)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+
+    primary = SRM1950.target_vocabs[0]
+    runs = run_all(
+        mapper, bundle.input_df, SRM1950, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
+    )
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"SRM1950 primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+    result = score_structure_oracle(
+        mapped_df, SRM1950, oracle, vocab=primary, gold_smiles_normalizer=neutralize_first_block
+    )
+    if result["comparable_core"]["top1_accuracy"] is None:
+        raise RuntimeError(
+            f"SRM1950: no scorable rows (top1_accuracy is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable run as success."
+        )
+    rec = reconcile({"structure": result}, mapped_df, SRM1950, oracle)
+    if not rec.passed:
+        raise RuntimeError(f"SRM1950 reconciliation failed: {rec.mismatches}")
+    (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{SRM1950.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[{"key": SRM1950.key, "result": result}],
+        curie_entries=[],
+        integrity={"reconciliation_passed": rec.passed, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+
+
 def orchestrate_backbone(
     *,
     config,
@@ -621,6 +796,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mb.add_argument("--out", default=None, help="override output dir (default: runs/)")
     mb.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # RefMet (Metabolomics Workbench reference nomenclature): streamed + reservoir-subsampled.
+    rm = sub.add_parser("refmet", help="run the RefMet name->structure slice (streamed + subsampled)")
+    rm.add_argument("--source", required=True, help="path/URL to the RefMet bulk CSV")
+    rm.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    rm.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # NIST SRM 1950 / SRM1950-DB: certified clinical-plasma reference set (loaded in full).
+    sr = sub.add_parser("srm1950", help="run the NIST SRM 1950 name->structure slice")
+    sr.add_argument("--source", required=True, help="path/URL to the SRM1950-DB metabolites.csv")
+    sr.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    sr.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     return parser
 
 
@@ -656,6 +843,23 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = orchestrate_metabench(source=src, out_dir=out, run_gate_first=not args.no_gate)
         print(f"Saved MetaBench run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "refmet":
+        # RefMet is streamed: a local file becomes a line iterator (gzip-aware), a URL streams.
+        p = Path(args.source)
+        src = _local_line_iter(p) if p.exists() else args.source
+        out = Path(args.out) if args.out else None
+        result = orchestrate_refmet(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved RefMet run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "srm1950":
+        # SRM1950 loads in full: a local file is read to bytes, a URL is fetched by the adapter.
+        src = _resolve_source_arg(args.source)
+        out = Path(args.out) if args.out else None
+        result = orchestrate_srm1950(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved SRM1950 run to {result['out_dir']}; report at {result['report']}")
         return
 
     # Legacy name-input Hajjar path.
