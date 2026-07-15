@@ -18,9 +18,9 @@ Design:
     in-memory fixture. ``fetch_maf_set`` FAILS LOUD on a needs-fetching placeholder accession, so an
     unresolved accession can never be silently scored.
 
-ACCESSION STATUS: the six real MTBLS accessions were not obtainable (ACS full text/SI blocked); the
-config ships placeholders flagged ``needs-fetching``. Fill ``config.accessions`` with the real ids
-before any live run.
+ACCESSION STATUS: RESOLVED 2026-07-14 — the six MTBLS accessions are in ``config.accessions`` (from
+the paper's Methods + Table 1). The needs-fetching sentinel + fail-loud fetch guard remain so any
+future unresolved accession still refuses to score.
 """
 
 from __future__ import annotations
@@ -155,11 +155,14 @@ def _extract_filenames(payload: Any) -> list[str]:
 def _download_study_file(
     accession: str, filename: str, config: NameHitDatasetConfig, *, timeout: float = 60.0
 ) -> bytes:
-    """Download one named file from a MetaboLights study (network). Isolated so tests never hit it."""
+    """Download one named file from the MetaboLights public FTP mirror (network). Isolated so tests
+    never hit it. The web-service ``/download`` route returns HTTP 400 for these studies, so the MAF
+    bytes come from the FTP mirror (``maf_download_url_template``), which serves per-study files
+    directly."""
     import requests
 
-    base = config.source_url_template.format(accession=accession)
-    resp = requests.get(f"{base}/download/{filename}", timeout=timeout)
+    url = config.maf_download_url_template.format(accession=accession, filename=filename)
+    resp = requests.get(url, timeout=timeout)
     resp.raise_for_status()
     return resp.content
 

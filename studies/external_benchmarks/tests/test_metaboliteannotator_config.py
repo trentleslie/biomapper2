@@ -33,12 +33,16 @@ def test_configs_satisfy_runnable_protocol():
     assert METABOLITEANNOTATOR_POS.name_column == "metabolite_identification"
 
 
-def test_six_accessions_flagged_needs_fetching():
-    # The exact 6 MTBLS accessions were not obtainable (ACS full text blocked); placeholders are
-    # flagged, never fabricated/substituted with arbitrary MetaboLights sets.
+def test_six_accessions_resolved_to_real_mtbls_ids():
+    # RESOLVED 2026-07-14 — the six MTBLS accessions are from the paper's Methods + Table 1
+    # (PMID 41691569). No placeholder should remain, and the status flips to "resolved".
     assert len(METABOLITEANNOTATOR_ACCESSIONS) == 6
-    assert all(a.startswith(NEEDS_FETCHING_SENTINEL) for a in METABOLITEANNOTATOR_ACCESSIONS)
-    assert METABOLITEANNOTATOR_POS.accessions_status == "needs-fetching"
+    assert set(METABOLITEANNOTATOR_ACCESSIONS) == {
+        "MTBLS12997", "MTBLS13105", "MTBLS12764", "MTBLS11733", "MTBLS12636", "MTBLS13039"
+    }
+    assert not any(a.startswith(NEEDS_FETCHING_SENTINEL) for a in METABOLITEANNOTATOR_ACCESSIONS)
+    assert METABOLITEANNOTATOR_POS.accessions_status == "resolved"
+    assert METABOLITEANNOTATOR_NEG.accessions_status == "resolved"
     assert METABOLITEANNOTATOR_POS.accessions == METABOLITEANNOTATOR_ACCESSIONS
 
 
