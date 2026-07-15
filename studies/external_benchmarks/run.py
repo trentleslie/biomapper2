@@ -348,6 +348,87 @@ def orchestrate_metaboliteannotator(
     return {"out_dir": str(out_dir), "report": str(report_path), "modes": [e["mode"] for e in entries]}
 
 
+def orchestrate_metlinkr(
+    *,
+    source: Any = "fetch",
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+    enforce_assigned: bool = True,
+) -> dict[str, Any]:
+    """Run the metLinkR same-task cross-linking head-to-head live (dual curator + InChIKey oracle).
+
+    ``source`` is the sentinel ``"fetch"`` for a live run (EuropePMC mirror; fail-loud on placeholder)
+    or a raw DataFrame/bytes in a driver/smoke. Runs EVERY target vocab and unions the passes (a link
+    is confirmed if the two members share a canonical id in ANY vocab), then scores BOTH oracles and
+    renders the internal dual-oracle report beside metLinkR's transcribed ~85.3% baseline. Heavy deps
+    imported lazily so offline tests can import this module without a Mapper.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters.metlinkr import load_metlinkr
+    from .config import METLINKR, METLINKR_COMPETITORS
+    from .oracle import KGStructureOracle
+    from .report.metlinkr import assemble_metlinkr_report
+    from .runner import run_all
+    from .scorers.metlinkr_scorer import merge_vocab_runs, score_metlinkr
+
+    config = METLINKR
+    repo_root = repo_root or Path.cwd()
+    stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out_dir = out_dir or (Path(__file__).parent / "runs" / f"metlinkr_{stamp}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper), n_rows=100, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the metLinkR run: {gate_result.reason}")
+
+    bundle = load_metlinkr(source, config)  # fails loud on a needs-fetching placeholder
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+
+    runs = run_all(
+        mapper,
+        bundle.input_df,
+        config,
+        out_dir,
+        dataset_sha=bundle.card["source_sha256"],
+        repo_root=repo_root,
+        enforce_assigned=enforce_assigned,
+    )
+    ok_vocabs = [v for v, vr in runs.items() if vr.ok and vr.output_tsv]
+    if not ok_vocabs:
+        errs = {v: vr.error for v, vr in runs.items()}
+        raise RuntimeError(f"{config.key}: no target vocab produced a result (mapper failed: {errs!r}).")
+    # dtype=str + keep-NA-empty so bare numeric curator PubChem ids are not coerced to float
+    # (``159663`` -> ``159663.0``) and blanks stay "" — both would break structural resolution.
+    mapped_dfs = [
+        pd.read_csv(runs[v].output_tsv, sep="\t", dtype=str, keep_default_na=False) for v in ok_vocabs
+    ]
+    merged_df = merge_vocab_runs(mapped_dfs, config)
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    result = score_metlinkr(merged_df, config, vocab="+".join(ok_vocabs), oracle=oracle)
+    (out_dir / "metlinkr_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / "metlinkr_report.md"
+    assemble_metlinkr_report(
+        result=result, card=bundle.card, competitors=METLINKR_COMPETITORS, out_path=report_path
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "result": result}
+
+
 def orchestrate_refmet(
     *,
     source,
