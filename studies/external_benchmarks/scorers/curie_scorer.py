@@ -45,14 +45,8 @@ def normalize_curie(curie: Any) -> str | None:
     return s.upper()
 
 
-def split_gold_curies(value: Any) -> set[str]:
-    """Split a ``|``-delimited gold CURIE cell into a normalized set.
-
-    The single canonical gold-cell splitter reused across every arm (gene/protein CURIE
-    equality, provided-ID reachability, and metabolite name-hit ID concordance) so a gold
-    cell like ``"CHEBI:17234|CHEBI:4167"`` is parsed identically everywhere. ``_split_curies``
-    is retained as a back-compat alias for existing imports.
-    """
+def _split_curies(value: Any) -> set[str]:
+    """Split a ``|``-delimited gold CURIE cell into a normalized set."""
     if value is None or (isinstance(value, float) and pd.isna(value)):
         return set()
     out: set[str] = set()
@@ -63,9 +57,29 @@ def split_gold_curies(value: Any) -> set[str]:
     return out
 
 
-# Back-compat alias — the splitter was originally module-private; callers (provided_id_scorer,
-# this module) may still import the underscore name.
-_split_curies = split_gold_curies
+def split_gold_curies(value: Any, namespace: str) -> set[str]:
+    """Split a ``|``-delimited gold cell, prefixing BARE values with their DECLARED namespace.
+
+    Golds are stored two ways depending on the source: CURIE-prefixed (e.g. ``NCBIGene:1234``,
+    the gene/protein backbones) or BARE (e.g. an InChIKey ``KDXKERNSBIXSRK-YFKPBYRVSA-N`` with no
+    ``INCHIKEY:`` prefix, the Hajjar structure anchor). ``predicted_curies`` always emits the
+    prefixed form (``prefix:local``), so a bare gold would never intersect and the dataset would
+    under-report as 0%. This prefixes any bare value with its declared target ``namespace`` before
+    normalization so it matches the prediction form; an already-prefixed value keeps its own prefix
+    (untouched). Generic across namespaces — no per-vocab special-casing.
+    """
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return set()
+    out: set[str] = set()
+    for part in str(value).split(CURIE_DELIM):
+        raw = part.strip()
+        if not raw or raw.lower() == "nan":
+            continue
+        curie = raw if ":" in raw else f"{namespace}:{raw}"
+        n = normalize_curie(curie)
+        if n is not None:
+            out.add(n)
+    return out
 
 
 def _parse_equiv(value: Any) -> dict[str, Any]:

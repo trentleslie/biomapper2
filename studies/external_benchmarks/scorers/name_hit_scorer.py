@@ -167,7 +167,10 @@ def score_name_hit(
         if has_hit:
             matched += 1
 
-        gold_ids = split_gold_curies(row.get(config.gold_id_column))
+        # The MAF ``database_identifier`` gold is CURIE-prefixed by spec (e.g. ``CHEBI:17234``), so
+        # split_gold_curies leaves each value's own prefix untouched; the declared namespace only
+        # backfills a non-standard BARE value, defaulting to the primary target vocab (ChEBI).
+        gold_ids = split_gold_curies(row.get(config.gold_id_column), config.target_vocabs[0])
         row_concordant: bool | None = None
         if has_hit and gold_ids:
             id_scored += 1

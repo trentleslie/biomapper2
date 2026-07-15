@@ -24,7 +24,7 @@ from typing import Any
 import pandas as pd
 
 from ..config import ProvidedIdDatasetConfig
-from .curie_scorer import _f1, _split_curies, predicted_curies
+from .curie_scorer import _f1, predicted_curies, split_gold_curies
 
 
 class TargetInProvidedError(ValueError):
@@ -55,10 +55,14 @@ def assert_target_held_out(config: ProvidedIdDatasetConfig) -> None:
 
 
 def gold_target_curies(row: pd.Series, config: ProvidedIdDatasetConfig) -> set[str]:
-    """Union of the held-out TARGET cross-ref CURIEs across the target namespaces for a row."""
+    """Union of the held-out TARGET cross-ref CURIEs across the target namespaces for a row.
+
+    Bare gold values (e.g. a raw InChIKey) are prefixed to their DECLARED target namespace so they
+    match BioMapper's prefixed equivalence-set predictions; already-prefixed golds are untouched.
+    """
     out: set[str] = set()
-    for _namespace, column in config.gold_target_columns:
-        out |= _split_curies(row.get(column))
+    for namespace, column in config.gold_target_columns:
+        out |= split_gold_curies(row.get(column), namespace)
     return out
 
 
@@ -98,7 +102,7 @@ def score_provided_id(
             if row_correct:
                 correct += 1
         for namespace, column in config.gold_target_columns:
-            ns_gold = _split_curies(row.get(column))
+            ns_gold = split_gold_curies(row.get(column), namespace)
             if ns_gold:
                 per_namespace[namespace]["scored"] += 1
                 if preds & ns_gold:

@@ -113,12 +113,14 @@ def test_source_id_cannot_trivially_self_match():
     assert result["comparable_core"]["top1_accuracy"] == pytest.approx(0.0)
 
 
-def test_split_gold_curies_public_name_and_back_compat_alias():
-    # PR #20 promoted the gold-cell splitter to a public name; the private alias must still resolve
-    # so existing imports (provided_id_scorer) keep working.
-    from studies.external_benchmarks.scorers.curie_scorer import _split_curies, split_gold_curies
+def test_split_gold_curies_prefixes_bare_but_keeps_curies_as_the_name_hit_arm_uses_it():
+    # dev's canonical split_gold_curies(value, namespace): already-prefixed CURIEs keep their own
+    # prefix (namespace ignored) — the case the MetaboliteAnnotator name-hit arm relies on for its
+    # CURIE-prefixed MAF database_identifier gold. A BARE value is backfilled with the namespace.
+    from studies.external_benchmarks.scorers.curie_scorer import split_gold_curies
 
-    assert split_gold_curies("CHEBI:17234|chebi:4167") == {"CHEBI:17234", "CHEBI:4167"}
-    assert split_gold_curies("") == set()
-    assert split_gold_curies(None) == set()
-    assert _split_curies is split_gold_curies
+    assert split_gold_curies("CHEBI:17234|chebi:4167", "CHEBI") == {"CHEBI:17234", "CHEBI:4167"}
+    assert split_gold_curies("HMDB:HMDB0000122", "CHEBI") == {"HMDB:HMDB0000122"}  # own prefix kept
+    assert split_gold_curies("HMDB0000122", "HMDB") == {"HMDB:HMDB0000122"}  # bare -> namespace-prefixed
+    assert split_gold_curies("", "CHEBI") == set()
+    assert split_gold_curies(None, "CHEBI") == set()
