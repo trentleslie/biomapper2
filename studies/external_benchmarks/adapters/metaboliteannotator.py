@@ -38,6 +38,12 @@ from ..config import METABOLITEANNOTATOR_POS, NEEDS_FETCHING_SENTINEL, NameHitDa
 # coverage / traceability — never the headline).
 SOURCE_ACCESSION_COL = "source_accession"
 
+# Stable per-input-row identity (accession-scoped), carried into the mapper output so the name-hit
+# scorer can union a single input row's per-vocab passes WITHOUT collapsing distinct inputs that
+# happen to share a metabolite name (e.g. "glucose" in two different MetaboLights studies, or twice
+# within one study). It rides along untouched like the gold columns; BioMapper never reads it.
+INPUT_ROW_ID_COL = "input_row_id"
+
 # Canonical held-out column -> candidate raw MAF headers (case-insensitive, first match wins).
 QUERY_CANDIDATES: tuple[str, ...] = (
     "metabolite_identification",
@@ -216,6 +222,15 @@ def build_input_df(raw_df: pd.DataFrame, config: NameHitDatasetConfig = METABOLI
     # A blank name is a MAF feature with no identification: not a queryable input name -> drop it so
     # it never dilutes the name-hit denominator (the metric is per-INPUT-NAME).
     out = out[out[config.name_column] != ""].reset_index(drop=True)
+
+    # Stable per-input-row id. Scoped by accession where available (``{acc}:{n}``) and globally
+    # unique via the reset positional index, so two inputs sharing a name — across studies or within
+    # one — remain distinct scored rows when the scorer unions their per-vocab passes.
+    if SOURCE_ACCESSION_COL in out.columns:
+        seq = out.groupby(SOURCE_ACCESSION_COL).cumcount()
+        out[INPUT_ROW_ID_COL] = out[SOURCE_ACCESSION_COL].str.cat(seq.astype(str), sep=":")
+    else:
+        out[INPUT_ROW_ID_COL] = out.index.map(lambda i: f"row:{i}")
     return out
 
 

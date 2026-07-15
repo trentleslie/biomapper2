@@ -176,3 +176,23 @@ def test_fetch_maf_set_no_maf_in_study_fails_loud(monkeypatch):
     monkeypatch.setattr(maf, "_download_study_file", boom)
     with pytest.raises(NoMafError):
         fetch_maf_set("MTBLS999", METABOLITEANNOTATOR_POS)
+
+
+def test_build_input_df_emits_unique_input_row_id_even_for_duplicate_names():
+    # Same metabolite name across two studies AND twice within one study must each get a distinct,
+    # stable input_row_id so the vocab-union merge never collapses distinct inputs.
+    from studies.external_benchmarks.adapters.metaboliteannotator import INPUT_ROW_ID_COL
+
+    raw = pd.DataFrame(
+        {
+            "database_identifier": ["CHEBI:17234", "CHEBI:17234", "CHEBI:17234"],
+            "metabolite_identification": ["glucose", "glucose", "glucose"],
+            "smiles": ["", "", ""],
+            "source_accession": ["MTBLS111", "MTBLS111", "MTBLS222"],
+        }
+    )
+    df = build_input_df(raw, METABOLITEANNOTATOR_POS)
+    ids = list(df[INPUT_ROW_ID_COL])
+    assert len(set(ids)) == 3  # all unique despite identical name
+    # accession-scoped + sequential within an accession
+    assert ids == ["MTBLS111:0", "MTBLS111:1", "MTBLS222:0"]

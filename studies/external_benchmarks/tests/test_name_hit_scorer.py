@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
-from studies.external_benchmarks.adapters.metaboliteannotator import SOURCE_ACCESSION_COL
+from studies.external_benchmarks.adapters.metaboliteannotator import INPUT_ROW_ID_COL, SOURCE_ACCESSION_COL
 from studies.external_benchmarks.config import METABOLITEANNOTATOR_POS
 from studies.external_benchmarks.scorers.name_hit_scorer import (
     UnscorableRunError,
@@ -14,8 +14,8 @@ from studies.external_benchmarks.scorers.name_hit_scorer import (
 )
 
 
-def _row(name, chosen, gold_id, equiv=None, smiles="", acc="MTBLS111"):
-    return {
+def _row(name, chosen, gold_id, equiv=None, smiles="", acc="MTBLS111", row_id=None):
+    r = {
         METABOLITEANNOTATOR_POS.name_column: name,
         "chosen_kg_id": chosen,
         METABOLITEANNOTATOR_POS.gold_id_column: gold_id,
@@ -23,6 +23,9 @@ def _row(name, chosen, gold_id, equiv=None, smiles="", acc="MTBLS111"):
         METABOLITEANNOTATOR_POS.gold_smiles_column: smiles,
         SOURCE_ACCESSION_COL: acc,
     }
+    if row_id is not None:
+        r[INPUT_ROW_ID_COL] = row_id
+    return r
 
 
 def test_name_hit_rate_is_fraction_of_names_that_produced_an_id():
@@ -170,3 +173,56 @@ def test_merge_vocab_runs_unions_hits_across_passes():
     result = score_name_hit(merged, METABOLITEANNOTATOR_POS)
     assert result["comparable_core"]["matched"] == 2  # both names hit after the union
     assert result["comparable_core"]["total"] == 2
+
+
+# --- Merge keys by input-row IDENTITY, not name (Greptile PR#22 re-review of the union fix) -------
+
+
+def test_merge_keeps_same_name_different_accession_as_two_rows():
+    # Regression: `glucose` appearing in two different MetaboLights studies are TWO distinct input
+    # rows and must stay two scored rows after the vocab-union merge (old name-only key collapsed
+    # them to one, shrinking the denominator and losing per-accession totals).
+    chebi = pd.DataFrame(
+        [
+            _row("glucose", "CHEBI:4167", "CHEBI:17234", acc="MTBLS111"),
+            _row("glucose", "CHEBI:4167", "CHEBI:17234", acc="MTBLS222"),
+        ]
+    )
+    merged = merge_vocab_runs([chebi], METABOLITEANNOTATOR_POS)
+    assert len(merged) == 2  # not collapsed to one
+    result = score_name_hit(merged, METABOLITEANNOTATOR_POS)
+    assert result["comparable_core"]["total"] == 2
+    assert result["comparable_core"]["matched"] == 2
+    # per-accession totals preserved (one glucose per study)
+    per = result["per_accession"]
+    assert per["MTBLS111"]["total"] == 1
+    assert per["MTBLS222"]["total"] == 1
+
+
+def test_merge_uses_input_row_id_for_duplicate_names_in_one_accession():
+    # Same name twice within ONE study -> distinct input_row_ids keep them as two scored rows.
+    df = pd.DataFrame(
+        [
+            _row("glucose", "CHEBI:4167", "CHEBI:17234", acc="MTBLS111", row_id="MTBLS111:0"),
+            _row("glucose", "", "CHEBI:17234", acc="MTBLS111", row_id="MTBLS111:1"),  # a miss
+        ]
+    )
+    merged = merge_vocab_runs([df], METABOLITEANNOTATOR_POS)
+    assert len(merged) == 2
+    result = score_name_hit(merged, METABOLITEANNOTATOR_POS)
+    assert result["comparable_core"]["total"] == 2
+    assert result["comparable_core"]["matched"] == 1  # one hit, one miss — not collapsed to one hit
+
+
+def test_merge_unions_passes_of_same_input_row_by_id():
+    # The SAME input row (same input_row_id) across two vocab passes still merges into ONE row: the
+    # HMDB pass supplies the hit the CHEBI pass missed.
+    chebi_pass = pd.DataFrame([_row("betaine", "", "HMDB:HMDB0000043", acc="MTBLS111", row_id="MTBLS111:0")])
+    hmdb_pass = pd.DataFrame(
+        [_row("betaine", "HMDB:HMDB0000043", "HMDB:HMDB0000043", acc="MTBLS111", row_id="MTBLS111:0")]
+    )
+    merged = merge_vocab_runs([chebi_pass, hmdb_pass], METABOLITEANNOTATOR_POS)
+    assert len(merged) == 1  # same input row, unioned
+    result = score_name_hit(merged, METABOLITEANNOTATOR_POS)
+    assert result["comparable_core"]["total"] == 1
+    assert result["comparable_core"]["matched"] == 1

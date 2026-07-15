@@ -36,8 +36,10 @@ from ..config import NameHitDatasetConfig
 from .curie_scorer import EQUIV_COL, predicted_curies, split_gold_curies
 from .structure_oracle_scorer import CHOSEN_COL, _has_prediction, neutralize_first_block
 
-# Passthrough accession column produced by the adapter (kept optional so a bare df still scores).
+# Passthrough columns produced by the adapter (kept optional so a bare df still scores). Values must
+# match the adapter's constants of the same name.
 SOURCE_ACCESSION_COL = "source_accession"
+INPUT_ROW_ID_COL = "input_row_id"
 
 
 class UnscorableRunError(RuntimeError):
@@ -63,35 +65,51 @@ def resolves_to_target_vocab(row: pd.Series, target_vocabs: tuple[str, ...]) -> 
     return False
 
 
-def merge_vocab_runs(mapped_dfs: list[pd.DataFrame], config: NameHitDatasetConfig) -> pd.DataFrame:
-    """Union the per-vocab mapper runs into one row per input name (no per-vocab axis).
+def _row_identity(row: pd.Series, config: NameHitDatasetConfig) -> tuple:
+    """The stable identity of ONE input row, used to union its per-vocab passes.
 
-    ``run_all`` runs one mapper pass per target vocab; a name may resolve in the HMDB pass but not
-    the CHEBI pass. This folds every pass's predictions (``chosen_kg_id`` + ``kg_equivalent_ids``)
-    into a single row per name so ``score_name_hit`` sees the UNION of namespaces — a hit caught in
-    any pass counts, exactly once. Gold columns (identical across passes) are carried through.
+    Prefers the adapter's ``input_row_id`` (accession-scoped, unique even for duplicate names). Falls
+    back to ``(name, source_accession)`` for bare/legacy frames without the id — so two inputs sharing
+    a metabolite name (across studies, or within one) are NEVER collapsed into a single scored row.
+    """
+    rid = _norm(row.get(INPUT_ROW_ID_COL))
+    if rid:
+        return ("id", rid)
+    return ("name_acc", _norm(row.get(config.name_column)), _norm(row.get(SOURCE_ACCESSION_COL)))
+
+
+def merge_vocab_runs(mapped_dfs: list[pd.DataFrame], config: NameHitDatasetConfig) -> pd.DataFrame:
+    """Union the per-vocab mapper passes of the SAME input row into one row (no per-vocab axis).
+
+    ``run_all`` runs one mapper pass per target vocab; a given input row may resolve in the HMDB pass
+    but not the CHEBI pass. Keyed by per-input-row IDENTITY (``_row_identity``), this folds every
+    pass's predictions (``chosen_kg_id`` + ``kg_equivalent_ids``) for that row into a single row so
+    ``score_name_hit`` sees the UNION of namespaces — a hit caught in any pass counts, exactly once.
+    Distinct input rows (same name, different accession, or duplicate names) stay separate, preserving
+    the per-input denominator and per-accession totals. Gold columns are carried through.
     """
     if not mapped_dfs:
         raise ValueError("merge_vocab_runs: no vocab runs to merge")
     name_col = config.name_column
-    agg: dict[str, dict[str, Any]] = {}
-    order: list[str] = []
+    agg: dict[tuple, dict[str, Any]] = {}
+    order: list[tuple] = []
     for df in mapped_dfs:
         for _, row in df.iterrows():
-            name = _norm(row.get(name_col))
-            rec = agg.get(name)
+            key = _row_identity(row, config)
+            rec = agg.get(key)
             if rec is None:
                 rec = {
-                    name_col: name,
+                    name_col: _norm(row.get(name_col)),
                     CHOSEN_COL: "",
                     "_ns": {},  # namespace -> set of local ids seen across passes
                     config.gold_id_column: _norm(row.get(config.gold_id_column)),
                     SOURCE_ACCESSION_COL: _norm(row.get(SOURCE_ACCESSION_COL)),
+                    INPUT_ROW_ID_COL: _norm(row.get(INPUT_ROW_ID_COL)),
                 }
                 if config.gold_smiles_column:
                     rec[config.gold_smiles_column] = _norm(row.get(config.gold_smiles_column))
-                agg[name] = rec
-                order.append(name)
+                agg[key] = rec
+                order.append(key)
             chosen = row.get(CHOSEN_COL)
             if _has_prediction(chosen) and not rec[CHOSEN_COL]:
                 rec[CHOSEN_COL] = str(chosen).strip()  # representative node (first non-empty pass)
@@ -103,8 +121,8 @@ def merge_vocab_runs(mapped_dfs: list[pd.DataFrame], config: NameHitDatasetConfi
             if config.gold_smiles_column and not rec.get(config.gold_smiles_column):
                 rec[config.gold_smiles_column] = _norm(row.get(config.gold_smiles_column))
     rows: list[dict[str, Any]] = []
-    for name in order:
-        rec = agg[name]
+    for key in order:
+        rec = agg[key]
         rec[EQUIV_COL] = {ns: sorted(locals_) for ns, locals_ in rec.pop("_ns").items()}
         rows.append(rec)
     return pd.DataFrame(rows)
