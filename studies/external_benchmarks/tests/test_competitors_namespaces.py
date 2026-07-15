@@ -22,9 +22,17 @@ def test_canonicalize_strips_ensembl_version_suffix():
     assert canonicalize_local("RefSeq", "NP_009225.1") == "NP_009225"
 
 
+def test_canonicalize_strips_uniprot_version_suffix():
+    # g:Convert's UNIPROTSWISSPROT returns versioned accessions (P04637.307); gold is unversioned.
+    # A UniProt accession never legitimately contains a ``.<digits>`` (isoforms use ``-N``).
+    assert canonicalize_local("UniProtKB", "P04637.307") == "P04637"
+    assert canonicalize_local("UniProtKB", "P38398") == "P38398"  # unversioned untouched
+    assert canonicalize_local("UniProtKB", "P04637-2") == "P04637-2"  # isoform dash NOT stripped
+
+
 def test_canonicalize_leaves_unversioned_namespaces_untouched():
     assert canonicalize_local("NCBIGene", "672") == "672"
-    assert canonicalize_local("UniProtKB", "P38398") == "P38398"
+    assert canonicalize_local("SYMBOL", "TP53") == "TP53"
 
 
 def test_canonicalize_drops_sentinels():

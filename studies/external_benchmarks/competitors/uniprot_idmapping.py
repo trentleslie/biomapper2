@@ -22,14 +22,19 @@ scope. This is exactly the kind of native-scope difference the head-to-head is m
 from __future__ import annotations
 
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 
 from .base import CompetitorClient, CompetitorOutageError, HttpResponse, HttpTransport, RateLimiter, ResponseCache
-from .namespaces import UNIPROT_DB, UNIPROT_TARGET_CODES, to_curie
+from .namespaces import UNIPROT_DB, UNIPROT_TARGET_CODES, UNIPROTKB, to_curie
 
 BASE_URL = "https://rest.uniprot.org/idmapping"
 RESULT_PAGE_SIZE = 500
 _DONE_STATES = {"FINISHED"}
+# The single "from" db that can reach cross-reference targets (Ensembl/GeneID/RefSeq). UniProt's
+# idmapping is a hub-and-spoke: from any non-UniProtKB source (e.g. a gene Gene_Name/SYMBOL) the
+# ONLY valid target is UniProtKB itself — ``from=Gene_Name&to=Ensembl`` is rejected HTTP 400
+# ("The combination ... is invalid"), a deterministic PROTOCOL DELTA, not an outage or a miss.
+_UNIPROTKB_HUB_FROM = "UniProtKB_AC-ID"
 
 
 class UniProtIdMappingClient(CompetitorClient):
@@ -44,8 +49,11 @@ class UniProtIdMappingClient(CompetitorClient):
         cache: ResponseCache | None = None,
         sleep: Callable[[float], None] = time.sleep,
         max_attempts: int = 4,
-        poll_attempts: int = 30,
-        poll_interval_s: float = 1.0,
+        # UniProt idmapping is ASYNC and queues jobs server-side; a 500-id batch can take well over
+        # 30s to reach FINISHED. The old 30x1s=30s budget mis-fired as a CompetitorOutageError on a
+        # perfectly healthy service. 90x2s=180s/job is ample headroom for a hosted, rate-limited API.
+        poll_attempts: int = 90,
+        poll_interval_s: float = 2.0,
         max_result_pages: int = 200,
     ) -> None:
         super().__init__(transport, rate_limiter=rate_limiter, cache=cache, sleep=sleep, max_attempts=max_attempts)
@@ -58,6 +66,26 @@ class UniProtIdMappingClient(CompetitorClient):
 
     def target_code(self, target_ns: str) -> str | None:
         return UNIPROT_TARGET_CODES.get(target_ns)
+
+    def supported_targets(
+        self, target_namespaces: Iterable[str], source_ns: str | None = None
+    ) -> tuple[list[str], list[str]]:
+        """Source-aware target support: model UniProt's from/to combination constraint.
+
+        A target is expressible only if (a) UniProt has a ``to`` code for it AND (b) the
+        combination is legal: from the UniProtKB hub (``UniProtKB_AC-ID``) every cross-ref target
+        is reachable, but from ANY other source (e.g. a gene SYMBOL -> ``Gene_Name``) only the
+        UniProtKB target is legal. The rest are recorded as unsupported PROTOCOL DELTAS by the
+        runner — never attempted (they would 400) and never scored as misses.
+        """
+        supported, unsupported = [], []
+        from_hub = source_ns is not None and self.source_code(source_ns) == _UNIPROTKB_HUB_FROM
+        for ns in target_namespaces:
+            expressible = self.target_code(ns) is not None
+            if expressible and source_ns is not None and not from_hub and ns != UNIPROTKB:
+                expressible = False  # non-hub source -> only UniProtKB is a legal target
+            (supported if expressible else unsupported).append(ns)
+        return supported, unsupported
 
     # --- workflow ------------------------------------------------------------------------------
 

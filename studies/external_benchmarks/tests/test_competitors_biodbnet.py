@@ -20,10 +20,11 @@ def test_source_and_target_codes():
 
 def test_parse_single_and_multivalue_rows():
     def handler(method, url, **kwargs):
-        # db2db returns the requested output column keyed by its display name.
+        # db2db returns the requested output column keyed by its display name. Multi-valued fields
+        # are ``//``-delimited (bioDBnet's real list separator, verified live) — NOT ``"; "``.
         rows = [
             {"InputValue": "BRCA1", "Ensembl Gene ID": "ENSG00000012048"},
-            {"InputValue": "BRCA2", "Ensembl Gene ID": "ENSG00000139618; ENSG00000000001"},
+            {"InputValue": "BRCA2", "Ensembl Gene ID": "ENSG00000139618//ENSG00000000001"},
             {"InputValue": "NOPE", "Ensembl Gene ID": "-"},  # bioDBnet no-mapping sentinel
         ]
         return HttpResponse(status_code=200, json_body=rows)
@@ -33,6 +34,28 @@ def test_parse_single_and_multivalue_rows():
     assert preds["BRCA1"] == {"ENSEMBL:ENSG00000012048"}
     assert preds["BRCA2"] == {"ENSEMBL:ENSG00000139618", "ENSEMBL:ENSG00000000001"}
     assert preds["NOPE"] == set()
+
+
+def test_multivalue_uniprot_accessions_split_on_double_slash():
+    """Regression: symbol -> UniProt Accession returns a ``//``-joined list; the canonical accession
+    IS in it. Splitting on the wrong delimiter collapsed the list into one bogus id and scored a
+    real mapping as ~0% (the artifact this fix corrects)."""
+
+    def handler(method, url, **kwargs):
+        # Real shape: TP53 -> many UniProt accessions incl. the canonical P04637.
+        rows = [{"InputValue": "TP53", "UniProt Accession": "Q8J016//Q9UQ61//P04637//L0EQ92"}]
+        return HttpResponse(status_code=200, json_body=rows)
+
+    c = _client(handler)
+    preds = c.map_ids(["TP53"], "SYMBOL", ("UniProtKB",))
+    # The canonical accession is recovered (among the others), so the gold P04637 matches.
+    assert "UniProtKB:P04637" in preds["TP53"]
+    assert preds["TP53"] == {
+        "UniProtKB:Q8J016",
+        "UniProtKB:Q9UQ61",
+        "UniProtKB:P04637",
+        "UniProtKB:L0EQ92",
+    }
 
 
 def test_version_suffix_aligned_for_refseq():

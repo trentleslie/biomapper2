@@ -261,8 +261,16 @@ class CompetitorClient(ABC):
     def target_code(self, target_ns: str) -> str | None:
         """Tool-specific code for a TARGET namespace, or None if the tool can't emit it."""
 
-    def supported_targets(self, target_namespaces: Iterable[str]) -> tuple[list[str], list[str]]:
-        """Split requested targets into (supported, unsupported) for this tool."""
+    def supported_targets(
+        self, target_namespaces: Iterable[str], source_ns: str | None = None
+    ) -> tuple[list[str], list[str]]:
+        """Split requested targets into (supported, unsupported) for this tool.
+
+        ``source_ns`` is optional so subclasses can model a tool whose target support is
+        SOURCE-DEPENDENT (a from/to combination constraint) — e.g. UniProt idmapping can only
+        reach cross-ref targets FROM a UniProtKB accession, not from a gene symbol. When a
+        subclass ignores ``source_ns`` the split is purely per-target as before.
+        """
         supported, unsupported = [], []
         for ns in target_namespaces:
             (supported if self.target_code(ns) is not None else unsupported).append(ns)
@@ -288,7 +296,7 @@ class CompetitorClient(ABC):
         """
         if self.source_code(source_ns) is None:
             raise CompetitorConfigError(f"{self.name}: source namespace {source_ns!r} is not expressible by this tool.")
-        supported, _ = self.supported_targets(target_namespaces)
+        supported, _ = self.supported_targets(target_namespaces, source_ns)
         merged: dict[str, set[str]] = {q: set() for q in queries}
         # Preserve first-seen query order but de-duplicate for the wire.
         unique_queries = list(dict.fromkeys(q for q in queries if str(q).strip()))
