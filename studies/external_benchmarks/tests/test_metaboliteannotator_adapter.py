@@ -71,6 +71,44 @@ def test_input_df_has_name_query_and_held_out_gold(raw_maf_df):
     assert atp[METABOLITEANNOTATOR_POS.gold_id_column] == ""
 
 
+def test_duplicate_names_collapse_to_unique_per_accession_with_unioned_gold():
+    # The paper's denominator is UNIQUE names per study: duplicate MAF features sharing a name collapse
+    # to one input row, unioning their held-out gold CURIEs so no reference identifier is lost.
+    raw = pd.DataFrame(
+        {
+            "database_identifier": ["CHEBI:17234", "CHEBI:4167", "HMDB:HMDB0000122", "CHEBI:30769"],
+            "metabolite_identification": ["glucose", "glucose", "glucose", "citrate"],
+            "smiles": ["", "OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O", "", "OC(=O)CC(O)(CC(=O)O)C(=O)O"],
+            "chemical_formula": ["C6H12O6", "C6H12O6", "C6H12O6", "C6H8O7"],
+            "source_accession": ["MTBLSx", "MTBLSx", "MTBLSx", "MTBLSx"],
+        }
+    )
+    df = build_input_df(raw, METABOLITEANNOTATOR_POS)
+    assert len(df) == 2  # 3x glucose + 1x citrate -> 2 unique names
+    glu = df[df[METABOLITEANNOTATOR_POS.name_column] == "glucose"].iloc[0]
+    # gold CURIEs unioned across the 3 glucose features (order-preserving, deduped)
+    assert glu[METABOLITEANNOTATOR_POS.gold_id_column] == "CHEBI:17234|CHEBI:4167|HMDB:HMDB0000122"
+    # first non-blank SMILES kept
+    assert glu[METABOLITEANNOTATOR_POS.gold_smiles_column] == "OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O"
+
+
+def test_same_name_in_two_studies_counts_once_per_study():
+    # Dedup is PER study, not global: a name shared across two MetaboLights sets stays two input rows
+    # (the paper's per-study totals sum across sets).
+    raw = pd.DataFrame(
+        {
+            "database_identifier": ["CHEBI:17234", "CHEBI:17234"],
+            "metabolite_identification": ["glucose", "glucose"],
+            "smiles": ["", ""],
+            "chemical_formula": ["C6H12O6", "C6H12O6"],
+            "source_accession": ["MTBLSa", "MTBLSb"],
+        }
+    )
+    df = build_input_df(raw, METABOLITEANNOTATOR_POS)
+    assert len(df) == 2
+    assert set(df[SOURCE_ACCESSION_COL]) == {"MTBLSa", "MTBLSb"}
+
+
 def test_card_reports_mode_and_per_accession_coverage(raw_maf_df):
     card = build_card(raw_maf_df, source_sha="deadbeef", config=METABOLITEANNOTATOR_POS)
     assert card["mode"] == "positive"
@@ -185,9 +223,10 @@ def test_fetch_maf_set_no_maf_in_study_fails_loud(monkeypatch):
         fetch_maf_set("MTBLS999", METABOLITEANNOTATOR_POS)
 
 
-def test_build_input_df_emits_unique_input_row_id_even_for_duplicate_names():
-    # Same metabolite name across two studies AND twice within one study must each get a distinct,
-    # stable input_row_id so the vocab-union merge never collapses distinct inputs.
+def test_build_input_df_emits_unique_input_row_id_per_unique_name():
+    # A name repeated WITHIN a study collapses to one row (unique-name denominator); the same name in
+    # a DIFFERENT study stays a separate row. Each surviving row gets a distinct, accession-scoped,
+    # stable input_row_id so the vocab-union merge keys cleanly.
     from studies.external_benchmarks.adapters.metaboliteannotator import INPUT_ROW_ID_COL
 
     raw = pd.DataFrame(
@@ -200,6 +239,7 @@ def test_build_input_df_emits_unique_input_row_id_even_for_duplicate_names():
     )
     df = build_input_df(raw, METABOLITEANNOTATOR_POS)
     ids = list(df[INPUT_ROW_ID_COL])
-    assert len(set(ids)) == 3  # all unique despite identical name
-    # accession-scoped + sequential within an accession
-    assert ids == ["MTBLS111:0", "MTBLS111:1", "MTBLS222:0"]
+    # two MTBLS111 glucose features collapse to one; MTBLS222 glucose stays separate -> 2 rows
+    assert len(df) == 2
+    assert len(set(ids)) == 2
+    assert ids == ["MTBLS111:0", "MTBLS222:0"]

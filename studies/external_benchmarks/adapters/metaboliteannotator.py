@@ -226,9 +226,32 @@ def build_input_df(raw_df: pd.DataFrame, config: NameHitDatasetConfig = METABOLI
     # it never dilutes the name-hit denominator (the metric is per-INPUT-NAME).
     out = out[out[config.name_column] != ""].reset_index(drop=True)
 
-    # Stable per-input-row id. Scoped by accession where available (``{acc}:{n}``) and globally
-    # unique via the reset positional index, so two inputs sharing a name — across studies or within
-    # one — remain distinct scored rows when the scorer unions their per-vocab passes.
+    # Collapse duplicate names to UNIQUE names per study. MetaboliteAnnotator's name-hit denominator
+    # is the count of unique metabolite names per MetaboLights set, not per MAF feature — the same
+    # metabolite named identically on several features is ONE input name. Deduping per (accession,
+    # name) reproduces the paper's published per-study totals exactly (e.g. 4314 positive) so the
+    # hit-rate lands apples-to-apples beside the 93.2%/93.5% baselines; leaving features un-collapsed
+    # inflates the denominator (MTBLS12764/MTBLS12636 carry repeated names). Held-out gold CURIEs are
+    # UNIONed across the collapsed features so no reference identifier is lost, and the first non-blank
+    # SMILES is kept. Dedup is case-sensitive on the normalized name (the exact-string match that
+    # reproduces the paper's counts). Group order is first-appearance (``sort=False``) for determinism.
+    group_keys = [config.name_column]
+    if SOURCE_ACCESSION_COL in out.columns:
+        group_keys = [SOURCE_ACCESSION_COL, config.name_column]
+
+    def _union_gold(series: pd.Series) -> str:
+        curies: list[str] = []
+        for value in series:
+            curies.extend(c for c in str(value).split("|") if c)
+        return "|".join(dict.fromkeys(curies))  # order-preserving dedup
+
+    agg: dict[str, Any] = {config.gold_id_column: _union_gold}
+    if config.gold_smiles_column:
+        agg[config.gold_smiles_column] = lambda s: next((x for x in s if str(x).strip()), "")
+    out = out.groupby(group_keys, as_index=False, sort=False).agg(agg).reset_index(drop=True)
+
+    # Stable per-input-row id, one per unique name per accession. Scoped by accession where available
+    # (``{acc}:{n}``); the scorer keys on this id when it unions a name's per-vocab passes.
     if SOURCE_ACCESSION_COL in out.columns:
         seq = out.groupby(SOURCE_ACCESSION_COL).cumcount()
         out[INPUT_ROW_ID_COL] = out[SOURCE_ACCESSION_COL].str.cat(seq.astype(str), sep=":")
