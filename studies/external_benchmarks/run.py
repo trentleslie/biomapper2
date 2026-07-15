@@ -523,6 +523,116 @@ def orchestrate_srm1950(
     return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
 
 
+def orchestrate_pham(
+    *,
+    source,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the Pham name-DISAMBIGUATION slice live (referent-set structural membership).
+
+    The bare ambiguous NAME is the sole query; the held-out referent set (independent MetaNetX
+    InChIKeys) is consumed only by the scorer. Runs every target vocab and scores each; the primary
+    vocab's referent-membership rate is the headline (structural precision + ambiguity-collapse are
+    reported alongside). No same-set competitor -> no competitor figure. ``source`` is a reconstructed
+    raw table (bytes/DataFrame) or the needs-reconstruction sentinel (fails loud). Heavy deps imported
+    lazily so this module imports offline.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters.pham import load_pham
+    from .config import PHAM_DISAMBIGUATION
+    from .oracle import KGStructureOracle
+    from .runner import run_all
+    from .scorers.pham_scorer import score_pham_disambiguation
+
+    config = PHAM_DISAMBIGUATION
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(config, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper), n_rows=200, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the Pham run: {gate_result.reason}")
+
+    # load_pham fails loud on the needs-reconstruction sentinel (no downloadable SI exists).
+    bundle = load_pham(source, config)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+
+    runs = run_all(
+        mapper, bundle.input_df, config, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
+    )
+    primary = config.target_vocabs[0]
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"Pham primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+    result = score_pham_disambiguation(mapped_df, config, oracle, vocab=primary)
+    # Fail-closed on an unscorable run (same rule as the other arms): membership rate is None only when
+    # no row carried a referent set. Persisting that would file a run that measured nothing.
+    if result["comparable_core"]["referent_membership_rate"] is None:
+        raise RuntimeError(
+            f"{config.key}: no scorable ambiguous names (referent_membership_rate is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable Pham run as success."
+        )
+    (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+
+    # Inline minimal report: the Pham result shape (referent-membership, not top1_accuracy) differs
+    # from the structure-oracle campaign row, so it is written directly rather than through the shared
+    # campaign report (kept additive — no change to shared report code).
+    core = result["comparable_core"]
+    prec = result["structural_precision"]
+    amb = result["ambiguity"]
+    cov = result["coverage"]
+
+    def _pct(x: Any) -> str:
+        return "n/a" if x is None else f"{x * 100:.1f}%"
+
+    report_path = out_dir / f"{config.key}_report.md"
+    report_path.write_text(
+        "\n".join(
+            [
+                f"# {config.key} — name-disambiguation (INTERNAL)",
+                "",
+                f"Source: Pham et al. 2019 (DOI {config.source_doi}, PMID {config.source_pmid}); "
+                f"status={bundle.card['source_status']}.",
+                f"Ambiguous names scored: {core['scored_denominator']} "
+                f"(mean {amb['mean_gold_referents']:.2f} referents/name).",
+                "",
+                "| metric | value |",
+                "| --- | --- |",
+                f"| referent-membership rate ({primary}) | {_pct(core['referent_membership_rate'])} "
+                f"({core['member']}/{core['scored_denominator']}) |",
+                f"| structural precision | {_pct(prec['precision'])} "
+                f"({prec['member']}/{prec['predicted_denominator']}) |",
+                f"| coverage | {cov['n_predicted']}/{cov['total']} |",
+                f"| ambiguity collapse rate (diagnostic) | {_pct(amb['collapse_rate'])} |",
+                "",
+                "Circularity guard: referent InChIKeys are the INDEPENDENT MetaNetX chem_prop source; "
+                "only BioMapper's prediction was resolved through the KG oracle.",
+            ]
+        )
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+
+
 def orchestrate_backbone(
     *,
     config,
@@ -897,6 +1007,17 @@ def build_parser() -> argparse.ArgumentParser:
     sr.add_argument("--source", required=True, help="path/URL to the SRM1950-DB metabolites.csv")
     sr.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     sr.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # Pham et al. 2019 name-DISAMBIGUATION (referent-set structural membership). No downloadable SI —
+    # --source is the reconstructed raw table (path) or the needs-reconstruction sentinel (fails loud).
+    ph = sub.add_parser("pham", help="run the Pham name-disambiguation slice (referent-set membership)")
+    ph.add_argument(
+        "--source",
+        required=True,
+        help="path to the reconstructed Pham raw table (CSV), or the needs-reconstruction sentinel",
+    )
+    ph.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    ph.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     return parser
 
 
@@ -949,6 +1070,15 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = orchestrate_srm1950(source=src, out_dir=out, run_gate_first=not args.no_gate)
         print(f"Saved SRM1950 run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "pham":
+        # A local file is read to bytes (reconstructed raw table); a non-path (the sentinel) is passed
+        # through so the adapter fails loud — no downloadable SI exists.
+        src = _resolve_source_arg(args.source)
+        out = Path(args.out) if args.out else None
+        result = orchestrate_pham(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved Pham run to {result['out_dir']}; report at {result['report']}")
         return
 
     # Legacy name-input Hajjar path.

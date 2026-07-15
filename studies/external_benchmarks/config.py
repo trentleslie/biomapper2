@@ -727,6 +727,136 @@ NAME_HIT_REGISTRY: dict[str, NameHitDatasetConfig] = {
     METABOLITEANNOTATOR_NEG.key: METABOLITEANNOTATOR_NEG,
 }
 
+
+# ==================================================================================================
+# Pham et al. 2019 name-DISAMBIGUATION arm (Metabolites 9(2):28, DOI 10.3390/metabo9020028,
+# PMID 30736318, PMC6409771). The hard NAME-input frontier: a single metabolite name/abbreviation
+# maps to MULTIPLE structurally-DISTINCT compounds across 11 biochemical databases (BiGG, ChEBI,
+# enviPath, HMDB, KEGG, LIPID MAPS, MetaCyc, Reactome, SABIO-RK, SEED, SwissLipids), inter-database
+# inconsistency up to 83.1%. This is the ambiguity BioMapper's resolver must survive on bare NAME
+# input — distinct from the other metabolite arms (one name -> one gold structure); here one name ->
+# a SET of legitimate structural referents.
+#
+# ACQUISITION (2026-07-15): the paper ships NO supplementary data file. Verified against the
+# EuropePMC full-text XML (PMC6409771): zero <supplementary-material> tags, no "Supplementary
+# Materials"/"Data Availability" section, no MDPI ``/s1`` link, no Zenodo/figshare/authors' code
+# repo. The concrete ambiguous cases live in the paper's OWN Table 9 ("Examples of mapping
+# inconsistencies") and Table 3 ("high ambiguity and multiplicity"). The full ambiguous-name
+# population is only RECONSTRUCTIBLE from the paper's inputs — the MetaNetX ``chem_xref.tsv`` name<->ID
+# crosswalk (paper pins the 31 Oct 2018 download) joined to ``chem_prop.tsv`` for INDEPENDENT curated
+# InChIKeys per MetaNetX bridge id. Hence ``source_status="needs-reconstruction"`` + a fail-loud guard
+# (mirrors MetaboliteAnnotator's needs-fetching sentinel) until the reconstruction lands; the offline
+# unit tests use the Table 9 fixture so the transform + scorer are fully testable meanwhile.
+#
+# ORACLE / CIRCULARITY (design for human sign-off; see the adapter + scorer docstrings): the gold is
+# the SET of distinct InChIKey first-blocks a name legitimately maps to, resolved from an INDEPENDENT
+# source — MetaNetX ``chem_prop.tsv`` (the paper's own bridge namespace, ships InChIKey+SMILES per
+# MNXM id), cross-checked against PubChem-by-name — NEVER via BioMapper's resolver. Only BioMapper's
+# PREDICTION (``chosen_kg_id``) is resolved through the KG oracle, exactly like the structure-oracle
+# arm. This keeps the SUT and the gold on disjoint infrastructure (no circularity).
+# ==================================================================================================
+
+# The 11 databases Pham et al. surveyed (ordering not load-bearing; recorded on the card for provenance).
+PHAM_DATABASES: tuple[str, ...] = (
+    "BiGG", "ChEBI", "enviPath", "HMDB", "KEGG", "LIPID MAPS", "MetaCyc", "Reactome", "SABIO-RK",
+    "SEED", "SwissLipids",
+)
+
+# Sentinel marking a source that must be RECONSTRUCTED from MetaNetX (no downloadable SI exists), so a
+# placeholder can never be silently scored (mirrors NEEDS_FETCHING_SENTINEL / the MetaboliteAnnotator
+# fail-loud guard).
+PHAM_NEEDS_RECONSTRUCTION_SENTINEL = "PHAM-NEEDS-RECONSTRUCTION"
+
+PHAM_DOI = "10.3390/metabo9020028"
+PHAM_PMID = "30736318"
+
+
+@dataclass(frozen=True)
+class PhamDisambiguationDatasetConfig:
+    """A NAME-DISAMBIGUATION benchmark registry entry (Pham et al. 2019 regime).
+
+    The unit is the ambiguous NAME. Unlike the structure-oracle arms (one name -> one gold InChIKey),
+    a genuinely ambiguous name maps to a SET of distinct structural referents, so there is NO single
+    "correct" structure to demand (that is exactly the paper's finding). Correctness is therefore
+    STRUCTURAL-MEMBERSHIP: given the bare ambiguous name, does BioMapper resolve to a structure that is
+    a MEMBER of the name's legitimate referent set (a real referent, not an off-target/hallucinated
+    structure)? — measured by InChIKey first-block. The referent set is the held-out
+    ``gold_referent_inchikey_column`` (``|``-delimited distinct InChIKeys from the INDEPENDENT MetaNetX
+    ``chem_prop`` source); ``gold_referent_id_column`` (candidate CURIEs) + ``gold_metanetx_column``
+    (MNXM bridge ids) are coverage/provenance. All ride along with ``provided_id_columns=[]`` so
+    BioMapper only ever sees the name.
+
+    The run mode is name-input (``name_column`` sole query, ``annotation_mode='all'``), so this config
+    satisfies the runner's ``RunnableConfig`` protocol and drives through ``runner.run_all`` unchanged.
+
+    ANTI-TRIVIAL guard (``__post_init__``, fail-loud): the held-out referent gold column must exist and
+    must NOT equal the ``name_column`` — a gold-equals-query config would let a name self-match and
+    score a trivial 100%.
+    """
+
+    key: str
+    arm: str  # "metabolite"
+    entity_type: str  # "metabolite"
+    name_column: str  # the ambiguous name/abbreviation handed to the mapper (the ONLY input)
+    gold_referent_inchikey_column: str  # held-out ``|``-delimited distinct InChIKeys — the referent SET
+    gold_referent_id_column: str  # held-out ``|``-delimited candidate CURIEs across DBs (coverage)
+    gold_metanetx_column: str  # held-out ``|``-delimited MNXM bridge ids (independent-structure provenance)
+    referent_count_column: str  # per-name count of distinct structural referents (ambiguity degree)
+    target_vocabs: tuple[str, ...]  # vocabs the name is mapped to; membership is via the InChIKey block
+    source_url: str  # the MetaNetX reconstruction inputs / sentinel (no downloadable SI exists)
+    license: str
+    input_type: str = "name"
+    source_doi: str = PHAM_DOI
+    source_pmid: str = PHAM_PMID
+    # Only genuinely AMBIGUOUS names (>= this many distinct structural referents) enter the scored set;
+    # names below it are not disambiguation cases and are dropped (documented, like the blank-name drop).
+    min_referents: int = 2
+    source_status: str = "needs-reconstruction"  # flipped to "resolved" once the MetaNetX join lands
+    databases: tuple[str, ...] = PHAM_DATABASES
+
+    def __post_init__(self) -> None:
+        if not (self.gold_referent_inchikey_column and self.gold_referent_inchikey_column.strip()):
+            raise ValueError(
+                f"{self.key}: anti-trivial violation — a held-out referent InChIKey column is required "
+                f"to adjudicate structural membership; none was given."
+            )
+        if self.gold_referent_inchikey_column == self.name_column:
+            raise ValueError(
+                f"{self.key}: anti-trivial violation — the referent gold column "
+                f"{self.gold_referent_inchikey_column!r} equals the query name_column; the gold must be "
+                f"held out, not the input. Refusing a config that would self-match to a trivial 100%."
+            )
+        if self.min_referents < 2:
+            raise ValueError(
+                f"{self.key}: min_referents must be >= 2 (a disambiguation case needs >= 2 distinct "
+                f"structural referents); got {self.min_referents}."
+            )
+
+
+PHAM_DISAMBIGUATION = PhamDisambiguationDatasetConfig(
+    key="pham-disambiguation",
+    arm="metabolite",
+    entity_type="metabolite",
+    name_column="metabolite_name",  # the ambiguous name/abbreviation query
+    gold_referent_inchikey_column="gold_referent_inchikeys",
+    gold_referent_id_column="gold_referent_ids",
+    gold_metanetx_column="gold_metanetx_ids",
+    referent_count_column="referent_count",
+    target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
+    # The reconstruction inputs (no downloadable SI): MetaNetX chem_xref (name<->ID) + chem_prop
+    # (InChIKey per MNXM). URL kept as provenance; the adapter fails loud on the sentinel until the
+    # join is supplied. The paper pins the 31 Oct 2018 chem_xref download for exact reproducibility.
+    source_url="https://www.metanetx.org/ftp/  (chem_xref.tsv @2018-10-31 + chem_prop.tsv)",
+    license="Pham et al. 2019 is CC BY 4.0; MetaNetX/MNXref data are CC BY 4.0.",
+)
+
+# The name-disambiguation registry (single entry). No published same-set competitor tool exists (the
+# paper reports inconsistency matrices, not a tool leaderboard), so — like NECS/RefMet/SRM1950 — NO
+# competitor figure is drawn.
+PHAM_DISAMBIGUATION_REGISTRY: dict[str, PhamDisambiguationDatasetConfig] = {
+    PHAM_DISAMBIGUATION.key: PHAM_DISAMBIGUATION,
+}
+
 # Published same-set baselines for the head-to-head. Following the CompetitorResult discipline
 # (Metabolon-96.5% scar): ``value=None`` in source control — transcribed + verified against the
 # paper's table at run time, NOT baked from the abstract/memory. The abstract-reported aggregates
