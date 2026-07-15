@@ -259,6 +259,95 @@ def orchestrate_necs(
     return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
 
 
+def orchestrate_metaboliteannotator(
+    *,
+    sources: dict[str, Any],
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the MetaboliteAnnotator name-hit head-to-head live (both ion modes).
+
+    ``sources`` maps each mode config key -> its source (an accessions tuple for a live run, or a
+    raw DataFrame/bytes in a driver). For each mode: run EVERY target vocab and union the passes
+    (a name is a hit if it resolves in ANY target vocab), score the name-hit-rate with ID-concordance
+    + charge-normalized structure qualifiers, then render the internal head-to-head report beside the
+    transcribed baselines. Heavy deps imported lazily.
+
+    Fails loud if a mode's source is unresolved (needs-fetching accessions) — the adapter refuses a
+    placeholder before any scoring, so an unresolved run never looks green.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters.metaboliteannotator import load_metaboliteannotator
+    from .config import METABOLITEANNOTATOR_COMPETITORS, NAME_HIT_REGISTRY
+    from .oracle import KGStructureOracle
+    from .report.name_hit import assemble_name_hit_report
+    from .runner import run_all
+    from .scorers.name_hit_scorer import merge_vocab_runs, score_name_hit
+
+    repo_root = repo_root or Path.cwd()
+    stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out_dir = out_dir or (Path(__file__).parent / "runs" / f"metaboliteannotator_{stamp}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper), n_rows=100, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the MetaboliteAnnotator run: {gate_result.reason}")
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    entries: list[dict[str, Any]] = []
+    for key, config in NAME_HIT_REGISTRY.items():
+        if key not in sources:
+            continue
+        mode_dir = out_dir / config.mode
+        bundle = load_metaboliteannotator(sources[key], config)  # fails loud on placeholder accessions
+        (mode_dir).mkdir(parents=True, exist_ok=True)
+        (mode_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+
+        # Run EVERY target vocab and union the passes: a name is a hit if it resolves in ANY vocab
+        # (CHEBI/HMDB/PubChem/KEGG), so scoring the CHEBI pass alone would under-count. Still ONE
+        # name-hit-rate per mode — merge_vocab_runs folds the passes into one row per name.
+        runs = run_all(
+            mapper, bundle.input_df, config, mode_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
+        )
+        ok_vocabs = [v for v, vr in runs.items() if vr.ok and vr.output_tsv]
+        if not ok_vocabs:
+            errs = {v: vr.error for v, vr in runs.items()}
+            raise RuntimeError(f"{key}: no target vocab produced a result (mapper failed: {errs!r}).")
+        mapped_dfs = [pd.read_csv(runs[v].output_tsv, sep="\t") for v in ok_vocabs]
+        merged_df = merge_vocab_runs(mapped_dfs, config)
+        result = score_name_hit(  # fail-loud on unscorable; hit = union across target vocabs
+            merged_df, config, vocab="+".join(ok_vocabs), oracle=oracle
+        )
+        (mode_dir / "name_hit_results.json").write_text(json.dumps(result, indent=2))
+        entries.append({"key": key, "mode": config.mode, "result": result})
+
+    if not entries:
+        raise RuntimeError("No MetaboliteAnnotator mode had a resolvable source — nothing scored.")
+
+    report_path = out_dir / "metaboliteannotator_report.md"
+    assemble_name_hit_report(
+        entries=entries,
+        competitors=METABOLITEANNOTATOR_COMPETITORS,
+        integrity={"accessions_status": next(iter(NAME_HIT_REGISTRY.values())).accessions_status},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "modes": [e["mode"] for e in entries]}
+
+
 def orchestrate_refmet(
     *,
     source,
