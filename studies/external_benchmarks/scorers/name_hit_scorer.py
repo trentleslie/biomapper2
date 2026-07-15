@@ -1,16 +1,23 @@
 """Name-hit-rate scorer (MetaboliteAnnotator regime) — the same-set NAME-input head-to-head.
 
 The comparable core is a per-input NAME-HIT-RATE: the fraction of input names for which BioMapper
-produced a target-vocab identifier. This is MetaboliteAnnotator's own metric, computed identically so
-BioMapper's number lands directly beside the published 93.2% (pos) / 93.5% (neg) and the
-MetaboAnalyst 6.0 / metaboliteIDmapping baselines. It is a coverage-shaped number (labeled
+produced an identifier in ANY of the target vocabs. This is MetaboliteAnnotator's own metric, computed
+identically so BioMapper's number lands directly beside the published 93.2% (pos) / 93.5% (neg) and
+the MetaboAnalyst 6.0 / metaboliteIDmapping baselines. It is a coverage-shaped number (labeled
 ``input_type=name``) and is NEVER merged with the correctness qualifiers below.
+
+HIT DEFINITION (union across target vocabs — the one number is NOT per-vocab): a name is a HIT when
+its resolved node exposes an identifier in ANY of ``config.target_vocabs`` (CHEBI/HMDB/PubChem/KEGG),
+read from BioMapper's ``chosen_kg_id`` PLUS its cross-namespace ``kg_equivalent_ids``. Requiring the
+CHEBI-specific id alone would score a name that maps only to HMDB/PubChem/KEGG a miss and under-count
+the hit rate. The live orchestrator additionally unions the per-vocab runs (``merge_vocab_runs``) so a
+hit caught in any run counts — still exactly ONE name-hit-rate, no per-vocab axis.
 
 Discipline (Hajjar/NECS learnings):
   - ONE number per dataset — one ``name_hit_rate`` per mode config (per-accession is traceability).
-  - ANTI-TRIVIAL: the hit is adjudicated on BioMapper's OUTPUT (``chosen_kg_id``), never on the
-    held-out gold column. A name with a gold id but no produced id is a MISS. (The runner's
-    ``assigned>0`` guard separately enforces the name path so the gold can't leak in as a provided id.)
+  - ANTI-TRIVIAL: the hit is adjudicated on BioMapper's OUTPUT (``chosen_kg_id`` + equivalents), never
+    on the held-out gold column. A name with a gold id but no produced target-vocab id is a MISS. (The
+    runner's ``assigned>0`` guard separately enforces the name path so the gold can't leak as an id.)
   - FAIL-LOUD on unscorable: zero input names raises rather than reporting a hollow ``None``.
   - ID-CONCORDANCE qualifier: of the names we hit that also carry a gold ``database_identifier``, how
     many hit the RIGHT id — reusing ``curie_scorer.split_gold_curies`` for the ``|``-multi gold cell.
@@ -26,7 +33,7 @@ from typing import Any, Protocol
 import pandas as pd
 
 from ..config import NameHitDatasetConfig
-from .curie_scorer import predicted_curies, split_gold_curies
+from .curie_scorer import EQUIV_COL, predicted_curies, split_gold_curies
 from .structure_oracle_scorer import CHOSEN_COL, _has_prediction, neutralize_first_block
 
 # Passthrough accession column produced by the adapter (kept optional so a bare df still scores).
@@ -35,6 +42,72 @@ SOURCE_ACCESSION_COL = "source_accession"
 
 class UnscorableRunError(RuntimeError):
     """Raised when there is nothing to score (zero input names) — never report a hollow rate."""
+
+
+def _norm(value: Any) -> str:
+    return "" if value is None else str(value).strip()
+
+
+def resolves_to_target_vocab(row: pd.Series, target_vocabs: tuple[str, ...]) -> bool:
+    """True iff the row resolved to an identifier in ANY target vocab (the hit definition).
+
+    Reads BioMapper's predicted CURIEs (``chosen_kg_id`` + cross-namespace ``kg_equivalent_ids``)
+    and tests whether any of their namespaces is a target vocab — so a name mapping only to
+    HMDB/PubChem/KEGG (not CHEBI) is a hit. Reads predictions only, never the held-out gold.
+    """
+    targets = {v.strip().upper() for v in target_vocabs}
+    for curie in predicted_curies(row):
+        prefix = curie.split(":", 1)[0].upper() if ":" in curie else curie.upper()
+        if prefix in targets:
+            return True
+    return False
+
+
+def merge_vocab_runs(mapped_dfs: list[pd.DataFrame], config: NameHitDatasetConfig) -> pd.DataFrame:
+    """Union the per-vocab mapper runs into one row per input name (no per-vocab axis).
+
+    ``run_all`` runs one mapper pass per target vocab; a name may resolve in the HMDB pass but not
+    the CHEBI pass. This folds every pass's predictions (``chosen_kg_id`` + ``kg_equivalent_ids``)
+    into a single row per name so ``score_name_hit`` sees the UNION of namespaces — a hit caught in
+    any pass counts, exactly once. Gold columns (identical across passes) are carried through.
+    """
+    if not mapped_dfs:
+        raise ValueError("merge_vocab_runs: no vocab runs to merge")
+    name_col = config.name_column
+    agg: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for df in mapped_dfs:
+        for _, row in df.iterrows():
+            name = _norm(row.get(name_col))
+            rec = agg.get(name)
+            if rec is None:
+                rec = {
+                    name_col: name,
+                    CHOSEN_COL: "",
+                    "_ns": {},  # namespace -> set of local ids seen across passes
+                    config.gold_id_column: _norm(row.get(config.gold_id_column)),
+                    SOURCE_ACCESSION_COL: _norm(row.get(SOURCE_ACCESSION_COL)),
+                }
+                if config.gold_smiles_column:
+                    rec[config.gold_smiles_column] = _norm(row.get(config.gold_smiles_column))
+                agg[name] = rec
+                order.append(name)
+            chosen = row.get(CHOSEN_COL)
+            if _has_prediction(chosen) and not rec[CHOSEN_COL]:
+                rec[CHOSEN_COL] = str(chosen).strip()  # representative node (first non-empty pass)
+            for curie in predicted_curies(row):
+                ns, _, local = curie.partition(":")
+                rec["_ns"].setdefault(ns, set()).add(local or ns)
+            if not rec[config.gold_id_column]:
+                rec[config.gold_id_column] = _norm(row.get(config.gold_id_column))
+            if config.gold_smiles_column and not rec.get(config.gold_smiles_column):
+                rec[config.gold_smiles_column] = _norm(row.get(config.gold_smiles_column))
+    rows: list[dict[str, Any]] = []
+    for name in order:
+        rec = agg[name]
+        rec[EQUIV_COL] = {ns: sorted(locals_) for ns, locals_ in rec.pop("_ns").items()}
+        rows.append(rec)
+    return pd.DataFrame(rows)
 
 
 class NeutralBlockOracle(Protocol):
@@ -70,7 +143,9 @@ def score_name_hit(
 
     for _, row in mapped_df.iterrows():
         chosen = row.get(CHOSEN_COL)
-        has_hit = _has_prediction(chosen)  # the hit is from the PREDICTION, not the gold
+        # HIT = resolved to an id in ANY target vocab (CHEBI/HMDB/PubChem/KEGG), read from the
+        # prediction (chosen + equivalents), never the gold — so an HMDB/PubChem/KEGG-only name counts.
+        has_hit = resolves_to_target_vocab(row, config.target_vocabs)
         if has_hit:
             matched += 1
 
@@ -83,7 +158,7 @@ def score_name_hit(
                 id_concordant += 1
 
         cn_row: bool | None = None
-        if cn_available and has_hit and config.gold_smiles_column:
+        if cn_available and has_hit and config.gold_smiles_column and _has_prediction(chosen):
             gold_smiles = row.get(config.gold_smiles_column)
             gold_cn = neutralize_first_block(gold_smiles)
             if gold_cn is not None:
@@ -103,7 +178,7 @@ def score_name_hit(
         per_row.append(
             {
                 "name": row.get(config.name_column),
-                "chosen_kg_id": str(chosen).strip() if has_hit else None,
+                "chosen_kg_id": str(chosen).strip() if _has_prediction(chosen) else None,
                 "hit": has_hit,
                 "id_concordant": row_concordant,
             }

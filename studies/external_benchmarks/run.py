@@ -287,7 +287,7 @@ def orchestrate_metaboliteannotator(
     from .oracle import KGStructureOracle
     from .report.name_hit import assemble_name_hit_report
     from .runner import run_all
-    from .scorers.name_hit_scorer import score_name_hit
+    from .scorers.name_hit_scorer import merge_vocab_runs, score_name_hit
 
     repo_root = repo_root or Path.cwd()
     stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
@@ -317,17 +317,22 @@ def orchestrate_metaboliteannotator(
         (mode_dir).mkdir(parents=True, exist_ok=True)
         (mode_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
 
-        primary = config.target_vocabs[0]
+        # Run EVERY target vocab and union the passes: a name is a hit if it resolves in ANY vocab
+        # (CHEBI/HMDB/PubChem/KEGG), so scoring the CHEBI pass alone would under-count. Still ONE
+        # name-hit-rate per mode — merge_vocab_runs folds the passes into one row per name.
         runs = run_all(
             mapper, bundle.input_df, config, mode_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
         )
-        vr = runs.get(primary)
-        if vr is None or not vr.ok or not vr.output_tsv:
-            err = vr.error if vr else "no run recorded"
-            raise RuntimeError(f"{key} primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
-        mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
-        result = score_name_hit(mapped_df, config, vocab=primary, oracle=oracle)  # fail-loud on unscorable
-        (mode_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+        ok_vocabs = [v for v, vr in runs.items() if vr.ok and vr.output_tsv]
+        if not ok_vocabs:
+            errs = {v: vr.error for v, vr in runs.items()}
+            raise RuntimeError(f"{key}: no target vocab produced a result (mapper failed: {errs!r}).")
+        mapped_dfs = [pd.read_csv(runs[v].output_tsv, sep="\t") for v in ok_vocabs]
+        merged_df = merge_vocab_runs(mapped_dfs, config)
+        result = score_name_hit(  # fail-loud on unscorable; hit = union across target vocabs
+            merged_df, config, vocab="+".join(ok_vocabs), oracle=oracle
+        )
+        (mode_dir / "name_hit_results.json").write_text(json.dumps(result, indent=2))
         entries.append({"key": key, "mode": config.mode, "result": result})
 
     if not entries:

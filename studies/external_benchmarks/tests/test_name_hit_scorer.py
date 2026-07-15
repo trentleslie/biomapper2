@@ -9,6 +9,7 @@ from studies.external_benchmarks.adapters.metaboliteannotator import SOURCE_ACCE
 from studies.external_benchmarks.config import METABOLITEANNOTATOR_POS
 from studies.external_benchmarks.scorers.name_hit_scorer import (
     UnscorableRunError,
+    merge_vocab_runs,
     score_name_hit,
 )
 
@@ -120,3 +121,52 @@ def test_structure_qualifier_is_none_without_oracle():
     df = pd.DataFrame([_row("glucose", "CHEBI:4167", "CHEBI:4167", smiles="CCO")])
     result = score_name_hit(df, METABOLITEANNOTATOR_POS)
     assert result["structure_concordance_charge_normalized"] is None
+
+
+# --- Hit = ANY target vocab, not CHEBI-only (Greptile PR#22 re-review) ----------------------------
+
+
+def test_row_resolving_to_hmdb_not_chebi_is_a_hit():
+    # Regression: the metric is a HIT when a name resolves to ANY target vocab. A name that maps to
+    # HMDB/PubChem/KEGG but NOT CHEBI must count as a hit (old CHEBI-only scoring called it a miss).
+    df = pd.DataFrame(
+        [
+            _row("betaine", "HMDB:HMDB0000043", "HMDB:HMDB0000043"),  # HMDB only -> HIT
+            _row("sucrose", "CHEBI:99999", "CHEBI:17992", equiv={"PUBCHEM": ["5988"]}),  # CHEBI+PubChem -> HIT
+            _row("glutamate", "", "KEGG:C00025", equiv={"KEGG": ["C00025"]}),  # KEGG via equiv only -> HIT
+            _row("odd", "FOO:1", ""),  # resolves only to a NON-target vocab -> MISS
+            _row("nothing", "", ""),  # no id at all -> MISS
+        ]
+    )
+    result = score_name_hit(df, METABOLITEANNOTATOR_POS)
+    core = result["comparable_core"]
+    assert core["matched"] == 3  # betaine, sucrose, glutamate
+    assert core["total"] == 5
+    assert core["name_hit_rate"] == pytest.approx(3 / 5)
+    hits = {r["name"]: r["hit"] for r in result["per_row"]}
+    assert hits["betaine"] is True
+    assert hits["glutamate"] is True  # hit via a target-vocab equivalent even with empty chosen
+    assert hits["odd"] is False
+    assert hits["nothing"] is False
+
+
+def test_merge_vocab_runs_unions_hits_across_passes():
+    # run_all produces one pass per vocab. A name resolves only in the HMDB pass (empty in CHEBI);
+    # merging the passes must surface it as a hit — still ONE row per name, no per-vocab axis.
+    chebi_pass = pd.DataFrame(
+        [
+            _row("glucose", "CHEBI:4167", "CHEBI:17234"),  # resolved in CHEBI pass
+            _row("betaine", "", "HMDB:HMDB0000043"),  # NOT resolved in CHEBI pass
+        ]
+    )
+    hmdb_pass = pd.DataFrame(
+        [
+            _row("glucose", "", "CHEBI:17234", equiv={"HMDB": ["HMDB0000122"]}),
+            _row("betaine", "HMDB:HMDB0000043", "HMDB:HMDB0000043"),  # resolved in HMDB pass
+        ]
+    )
+    merged = merge_vocab_runs([chebi_pass, hmdb_pass], METABOLITEANNOTATOR_POS)
+    assert len(merged) == 2  # one row per unique name
+    result = score_name_hit(merged, METABOLITEANNOTATOR_POS)
+    assert result["comparable_core"]["matched"] == 2  # both names hit after the union
+    assert result["comparable_core"]["total"] == 2
