@@ -246,6 +246,50 @@ SRM1950 = DatasetConfig(
 )
 
 
+# Liebisch et al. 2020, J. Lipid Res., DOI 10.1194/jlr.S120001025 — the LIPID MAPS shorthand
+# nomenclature governing LMSD (the LIPID MAPS Structure Database). The bulk SDF download
+# (lipidmaps.org/files/?file=LMSD&ext=sdf.zip, CC BY 4.0, ~50k curated records) ships a lipid
+# shorthand ``ABBREVIATION`` + common ``NAME`` + ``SYSTEMATIC_NAME`` + ``INCHI_KEY`` + ``SMILES`` +
+# a crosswalk to PubChem/HMDB/KEGG/ChEBI/SwissLipids. This targets BioMapper's KNOWN lipid weakness
+# (NIST SRM 1950 lipids scored only 40.3%) with an honest gap-characterization on lipid NAME inputs.
+#
+# CONTAMINATION CONTROL: the query is a lipid NAME (shorthand/common/systematic) whose structure must
+# be inferred; the ``LM_ID`` is HELD OUT — never a query, never the oracle. The Kestrel KG recognizes
+# the LIPIDMAPS namespace (normalizer ``LM`` prefix), so scoring on LM_IDs would be circular; scoring
+# on names forces BioMapper to resolve structure independently. The independent oracle is LMSD's own
+# ``INCHI_KEY`` first block (+ charge-normalized via the record's SMILES). >~50k records, so the SDF
+# is streamed + reservoir-subsampled (n=1500, seed 42) from the InChIKey-bearing population
+# (``require_gold_structure``) and the exact subsample is persisted. Single CHEBI target vocab (one
+# accuracy number per dataset; correctness always via the InChIKey block). No same-set competitor
+# exists, so no competitor figure is drawn.
+LMSD = DatasetConfig(
+    key="lmsd",
+    arm="metabolite",
+    entity_type="metabolite",
+    input_type="name",
+    target_vocabs=("CHEBI",),
+    name_column="lipid_name",
+    gold_chebi_column="",  # LMSD's CHEBI_ID is a coverage crosswalk, not the oracle (InChIKey is)
+    gold_inchikey_column="gold_inchikey",
+    gold_smiles_column="gold_smiles",  # SDF ships SMILES -> enables the charge-normalized variant
+    source_doi="10.1194/jlr.S120001025",
+    source_url="https://www.lipidmaps.org/files/?file=LMSD&ext=sdf.zip",
+    license="LMSD structures + annotations are available under CC BY 4.0 (lipidmaps.org).",
+    subsample_n=1500,
+    subsample_seed=42,
+    require_gold_structure=True,
+    gold_coverage_columns=(
+        ("INCHIKEY", "gold_inchikey"),
+        ("SMILES", "gold_smiles"),
+        ("CHEBI", "gold_chebi"),
+        ("HMDB", "gold_hmdb"),
+        ("PUBCHEM", "gold_pubchem"),
+        ("KEGG", "gold_kegg"),
+        ("SWISSLIPIDS", "gold_swisslipids"),
+    ),
+)
+
+
 @dataclass(frozen=True)
 class CurieDatasetConfig:
     """A gene/protein cross-reference backbone registry entry (CURIE-equality arm).
@@ -467,15 +511,17 @@ HAJJAR_PROVIDED_ID_PARITY_CELL = CompetitorResult(
 
 
 # The metabolite registry (structure-oracle arm). Hajjar remains the merged reference; NECS was
-# the first deferred follow-on; RefMet (Metabolomics Workbench reference nomenclature) and NIST
-# SRM 1950 (certified clinical-plasma reference set) are added here. All four are name->structure,
-# scored by the independent InChIKey oracle (strict + charge-normalized); none has a same-set
-# competitor, so no competitor figure is drawn for any of them.
+# the first deferred follow-on; RefMet (Metabolomics Workbench reference nomenclature), NIST SRM 1950
+# (certified clinical-plasma reference set), and LMSD (LIPID MAPS Structure Database — lipid-name
+# gap characterization) are added here. All are name->structure, scored by the independent InChIKey
+# oracle (strict + charge-normalized); none has a same-set competitor, so no competitor figure is
+# drawn for any of them.
 REGISTRY: dict[str, DatasetConfig] = {
     HAJJAR.key: HAJJAR,
     NECS.key: NECS,
     REFMET.key: REFMET,
     SRM1950.key: SRM1950,
+    LMSD.key: LMSD,
 }
 
 # The gene/protein registry (CURIE-equality arm). No published same-set competitor exists for
