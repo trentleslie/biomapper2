@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from types import SimpleNamespace
 
 import pytest
@@ -15,6 +16,11 @@ _RAW = (
     b"What is the HMDB ID of KEGG ID C07251?,HMDB0014982\n"
     b"What is the ChEBI ID of metabolite Rolapitant hydrochloride?,90911\n"
 )
+
+# Synthetic fixtures cannot match the real acquisition SHA pin, so the offline orchestrator tests
+# run with the gate disabled (blank pin). The gate is exercised directly in
+# test_orchestrate_metabench_refuses_sha_mismatch and in test_metabench_adapter.py.
+_UNPINNED = dataclasses.replace(METABENCH, expected_source_sha256="")
 
 
 def test_cli_parses_metabench_subcommand():
@@ -76,7 +82,9 @@ def test_orchestrate_metabench_offline_one_number_and_report(monkeypatch, tmp_pa
         lambda mapper, input_df, config, out_dir, **k: writer(mapper, input_df, config, "provided", out_dir),
     )
 
-    out = run_mod.orchestrate_metabench(source=_RAW, out_dir=tmp_path / "out", run_gate_first=False)
+    out = run_mod.orchestrate_metabench(
+        source=_RAW, config=_UNPINNED, out_dir=tmp_path / "out", run_gate_first=False
+    )
     assert out["dataset"] == "metabench-grounding"
     results_json = tmp_path / "out" / "metabench-grounding_results.json"
     report_md = tmp_path / "out" / "metabench-grounding_report.md"
@@ -111,5 +119,19 @@ def test_orchestrate_metabench_refuses_unscorable(monkeypatch, tmp_path):
     )
     out_dir = tmp_path / "out"
     with pytest.raises(RuntimeError, match="no scorable held-out targets|top1_accuracy is None"):
+        run_mod.orchestrate_metabench(source=_RAW, config=_UNPINNED, out_dir=out_dir, run_gate_first=False)
+    assert not (out_dir / "metabench-grounding_results.json").exists()
+
+
+def test_orchestrate_metabench_refuses_sha_mismatch(monkeypatch, tmp_path):
+    # A drifted upstream file (synthetic bytes vs the real pin) must halt the orchestrator BEFORE
+    # any scoring/report — no results json, no report md, no card written.
+    from studies.external_benchmarks.adapters.metabench import MetaBenchShaMismatchError
+
+    monkeypatch.setattr("biomapper2.mapper.Mapper", lambda *a, **k: SimpleNamespace(linker=object()))
+    out_dir = tmp_path / "out"
+    with pytest.raises(MetaBenchShaMismatchError):
+        # default config = METABENCH carries the real pin; synthetic _RAW cannot match it
         run_mod.orchestrate_metabench(source=_RAW, out_dir=out_dir, run_gate_first=False)
     assert not (out_dir / "metabench-grounding_results.json").exists()
+    assert not (out_dir / "metabench-grounding_report.md").exists()

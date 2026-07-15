@@ -49,6 +49,34 @@ class MetaBenchParseError(ValueError):
     """Raised when a grounding question does not match any known template (fail-loud, never drop)."""
 
 
+class MetaBenchShaMismatchError(RuntimeError):
+    """Raised when the fetched grounding CSV SHA does not match the pinned acquisition SHA.
+
+    The MetaBench comparison is only valid against the SAME 1,000-pair file the 25-LLM baselines
+    were scored on. If the upstream HuggingFace CSV drifts, silently scoring a *different* dataset
+    invalidates the same-set comparison — so the pin GATES the run rather than merely decorating the
+    card. Re-pin ``expected_source_sha256`` intentionally (after re-verifying the dataset) to accept
+    a new file.
+    """
+
+
+def enforce_sha_pin(sha: str, config: MetaBenchDatasetConfig) -> None:
+    """Fail loud if the fetched CSV SHA does not match the pinned acquisition SHA.
+
+    A blank ``expected_source_sha256`` disables the gate (intentionally un-pinned — e.g. an
+    in-memory fixture whose SHA is not known ahead of time). A non-blank pin MUST match.
+    """
+    expected = (config.expected_source_sha256 or "").strip()
+    if expected and sha != expected:
+        raise MetaBenchShaMismatchError(
+            f"{config.key}: fetched grounding CSV SHA256 {sha} does not match the pinned acquisition "
+            f"SHA256 {expected}. The upstream MetaBench file has changed — the same-set LLM "
+            f"comparison is only valid against the pinned file, so this run is REFUSED before any "
+            f"parsing/scoring. If the change is intentional, re-verify the dataset and update "
+            f"config.py's expected_source_sha256 to re-pin it."
+        )
+
+
 def sha256_bytes(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
@@ -256,7 +284,9 @@ def load_metabench(source: Any, config: MetaBenchDatasetConfig = METABENCH) -> M
     """Load MetaBench end to end. ``source`` is raw CSV bytes, a URL string, or a raw QA DataFrame.
 
     The SHA is computed over the fetched CSV bytes (URL/bytes); a DataFrame source (tests) records
-    the SHA of its CSV serialization.
+    the SHA of its CSV serialization. The SHA is then GATED against ``config.expected_source_sha256``
+    (``enforce_sha_pin``): a mismatch raises ``MetaBenchShaMismatchError`` before any parse/score, so
+    a drifted upstream file can never be scored/reported as a valid same-set run.
     """
     if isinstance(source, pd.DataFrame):
         raw = source.to_csv(index=False).encode("utf-8")
@@ -267,6 +297,7 @@ def load_metabench(source: Any, config: MetaBenchDatasetConfig = METABENCH) -> M
     else:
         raise TypeError(f"unsupported MetaBench source type: {type(source)!r}")
     sha = sha256_bytes(raw)
+    enforce_sha_pin(sha, config)  # fail loud BEFORE parse/score if the file drifted from the pin
     long_df = parse_grounding(raw, config)
     subgroups = build_subgroups(long_df, config)
     card = build_card(long_df, source_sha=sha, config=config)

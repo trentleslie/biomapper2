@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import dataclasses
+
 import pandas as pd
 import pytest
 
 from studies.external_benchmarks.adapters import metabench
 from studies.external_benchmarks.config import METABENCH
+
+# A config whose SHA gate is disabled (blank pin), for feeding the synthetic fixture through
+# load_metabench without matching the real acquisition SHA. The gate itself is tested separately.
+_UNPINNED = dataclasses.replace(METABENCH, expected_source_sha256="")
 
 # A tiny stand-in for the 1,000-row Grounding CSV: one row per template (all five regimes),
 # plus KEGG-DRUG (D-number) and bare-ChEBI answers.
@@ -107,7 +113,7 @@ def test_input_df_never_carries_source_id_as_a_provided_target():
 
 
 def test_load_metabench_card_records_counts_sha_and_license():
-    bundle = metabench.load_metabench(_raw_bytes(), METABENCH)
+    bundle = metabench.load_metabench(_raw_bytes(), _UNPINNED)
     card = bundle.card
     assert card["dataset"] == "metabench-grounding"
     assert card["n_rows"] == 6
@@ -121,6 +127,30 @@ def test_load_metabench_card_records_counts_sha_and_license():
 
 def test_load_metabench_accepts_dataframe_source():
     raw_df = pd.read_csv(pd.io.common.BytesIO(_raw_bytes()), dtype=str)
-    bundle = metabench.load_metabench(raw_df, METABENCH)
+    bundle = metabench.load_metabench(raw_df, _UNPINNED)
     assert bundle.card["n_rows"] == 6
     assert len(bundle.subgroups) == 5
+
+
+def test_sha_pin_mismatch_raises_before_any_parse_or_scoring():
+    # The synthetic fixture's SHA cannot match the real acquisition pin -> the gate must FAIL LOUD
+    # (no bundle, no long_df, no scoring/report can follow).
+    with pytest.raises(metabench.MetaBenchShaMismatchError) as exc:
+        metabench.load_metabench(_raw_bytes(), METABENCH)  # METABENCH carries the real pin
+    # both the fetched and the pinned hash are named, plus re-pin guidance
+    assert METABENCH.expected_source_sha256 in str(exc.value)
+    assert "re-pin" in str(exc.value).lower() or "expected_source_sha256" in str(exc.value)
+
+
+def test_sha_pin_matching_hash_proceeds():
+    # Pin the config to the fixture's actual SHA -> the gate passes and the run proceeds.
+    actual_sha = metabench.sha256_bytes(_raw_bytes())
+    pinned = dataclasses.replace(METABENCH, expected_source_sha256=actual_sha)
+    bundle = metabench.load_metabench(_raw_bytes(), pinned)
+    assert bundle.card["n_rows"] == 6
+    assert bundle.card["source_sha256"] == actual_sha
+
+
+def test_enforce_sha_pin_blank_pin_disables_gate():
+    # An intentionally un-pinned config never gates (documented escape hatch).
+    metabench.enforce_sha_pin("any-hash-whatsoever", _UNPINNED)  # does not raise
