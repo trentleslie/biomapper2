@@ -677,6 +677,132 @@ def orchestrate_provided(
     return {"out_dir": str(out_dir), "report": str(report_path), "dataset": config.key}
 
 
+def orchestrate_metabench(
+    *,
+    source,
+    config=None,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the MetaBench Grounding benchmark live — the one external set with a valid LLM head-to-head.
+
+    Decomposes the 1,000-pair set into per-subgroup runs (ID->ID in provided-ID mode, name->ID in
+    name-input mode), concatenates every subgroup's mapper output (each carries the held-out gold +
+    target-namespace columns verbatim), and scores ONCE into a single accuracy. Then places that one
+    number alongside the paper's published 25-LLM baseline distribution (transcribed with citation
+    discipline; values left needs-verification). Heavy deps imported lazily.
+    """
+    import pandas as pd
+
+    from biomapper2.mapper import Mapper
+
+    from .adapters import metabench as metabench_adapter
+    from .config import (
+        METABENCH,
+        CurieDatasetConfig,
+        MetaBenchDatasetConfig,
+        ProvidedIdDatasetConfig,
+    )
+    from .report.metabench import assemble_metabench_report
+    from .runner import run_provided_id, run_vocab
+    from .scorers.metabench_scorer import score_metabench
+
+    config = config or METABENCH
+    assert isinstance(config, MetaBenchDatasetConfig)
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or (Path(__file__).parent / "runs" / f"{config.key}_latest")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper), n_rows=100, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"MetaBench Phase-0 gate stopped the run: {gate_result.reason}")
+
+    bundle = metabench_adapter.load_metabench(source, config)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+    dataset_sha = bundle.card["source_sha256"]
+
+    mapped_frames: list[pd.DataFrame] = []
+    for sub in bundle.subgroups:
+        sub_dir = out_dir / sub.key
+        if sub.pair_type == "id2id":
+            # Provided-ID mode: the source id is handed to BioMapper; the target is held out. The
+            # ProvidedIdDatasetConfig __post_init__ re-enforces source-namespace != target-namespace.
+            assert sub.source_id_column is not None  # build_subgroups always sets it for id2id
+            pid = ProvidedIdDatasetConfig(
+                key=sub.key,
+                arm=config.arm,
+                entity_type=config.entity_type,
+                source_id_column=sub.source_id_column,
+                source_namespace=sub.source_namespace,
+                name_column=config.name_column,
+                gold_target_columns=((sub.target_namespace, config.gold_target_column),),
+                target_vocabs=(sub.target_namespace,),
+                source_label=f"MetaBench Grounding ({sub.key})",
+                source_url=config.source_url,
+                license=config.license,
+            )
+            run = run_provided_id(
+                mapper, sub.input_df, pid, sub_dir, dataset_sha=dataset_sha, repo_root=repo_root
+            )
+            output_tsv = run.output_tsv
+        else:
+            # Name-input mode: the metabolite name is annotated; the target id is held out. Reuse the
+            # CURIE-arm RunnableConfig purely for the runner machinery — scoring is uniform below.
+            cfg = CurieDatasetConfig(
+                key=sub.key,
+                arm=config.arm,
+                entity_type=config.entity_type,
+                input_type="name",
+                name_column=config.name_column,
+                target_vocabs=(sub.vocab,),
+                gold_curie_columns=((sub.target_namespace, config.gold_target_column),),
+                source_label=f"MetaBench Grounding ({sub.key})",
+                source_url=config.source_url,
+                license=config.license,
+            )
+            vr = run_vocab(
+                mapper, sub.input_df, cfg, sub.vocab, sub_dir, dataset_sha=dataset_sha, repo_root=repo_root
+            )
+            output_tsv = vr.output_tsv
+        if not output_tsv:
+            raise RuntimeError(f"{sub.key}: mapper produced no output — refusing to score a partial MetaBench run.")
+        mapped_frames.append(pd.read_csv(output_tsv, sep="\t"))
+
+    mapped_df = pd.concat(mapped_frames, ignore_index=True)
+    result = score_metabench(mapped_df, config)
+    # Fail-closed on an unscorable run (same rule as the name-input / provided-ID flows): top1 is
+    # None only when nothing carried a held-out gold. Persisting that would file a run that measured
+    # nothing.
+    if result["comparable_core"]["top1_accuracy"] is None:
+        raise RuntimeError(
+            f"{config.key}: no scorable held-out targets (top1_accuracy is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable MetaBench run as success."
+        )
+    (out_dir / f"{config.key}_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{config.key}_report.md"
+    assemble_metabench_report(
+        config=config,
+        result=result,
+        card=bundle.card,
+        baselines=config.baseline_competitors,
+        integrity={"reconciliation_passed": None, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "dataset": config.key}
+
+
 def _resolve_source_arg(arg: str) -> bytes | str:
     """A local path is read to bytes; anything else is treated as a URL (streamed by the adapter).
 
@@ -751,6 +877,15 @@ def build_parser() -> argparse.ArgumentParser:
     pv.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     pv.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
 
+    mb = sub.add_parser("metabench", help="run the MetaBench Grounding benchmark (LLM head-to-head)")
+    mb.add_argument(
+        "--source",
+        default=None,
+        help="path/URL to the MetaBench Grounding CSV (default: the pinned HuggingFace source URL)",
+    )
+    mb.add_argument("--out", default=None, help="override output dir (default: runs/)")
+    mb.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
     # RefMet (Metabolomics Workbench reference nomenclature): streamed + reservoir-subsampled.
     rm = sub.add_parser("refmet", help="run the RefMet name->structure slice (streamed + subsampled)")
     rm.add_argument("--source", required=True, help="path/URL to the RefMet bulk CSV")
@@ -788,6 +923,15 @@ def main() -> None:
     if args.command == "provided-id":
         result = _run_provided_cli(args, parser)
         print(f"Saved provided-ID run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "metabench":
+        from .config import METABENCH
+
+        src = _resolve_source_arg(args.source) if args.source else METABENCH.source_url
+        out = Path(args.out) if args.out else None
+        result = orchestrate_metabench(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved MetaBench run to {result['out_dir']}; report at {result['report']}")
         return
 
     if args.command == "refmet":
