@@ -3,9 +3,11 @@
 Hajjar-100 (metabolite, name input) was the merged vertical slice. This module adds the
 deferred follow-on: the NECS Metabolon metabolite set (structure-oracle) and the three
 gene/protein cross-reference backbones (HGNC, UniProt idmapping, NCBI gene2ensembl),
-scored by CURIE equality. MetaBench (Lu et al. 2025, arXiv:2510.14944) is now wired in —
-its 1,000-pair cross-database Grounding set is the ONE external dataset with a valid
-LLM head-to-head (25 published baselines on the same set).
+scored by CURIE equality. It also adds the MetaboliteAnnotator name-hit head-to-head (Lu et al.
+2026) — a same-set, NAME-input regime scored by name-hit-rate against MetaboAnalyst 6.0 /
+metaboliteIDmapping baselines. MetaBench (Lu et al. 2025, arXiv:2510.14944) is now wired in too —
+its 1,000-pair cross-database Grounding set is the ONE external dataset with a valid LLM
+head-to-head (25 published baselines on the same set).
 """
 
 from __future__ import annotations
@@ -598,3 +600,138 @@ METABENCH = MetaBenchDatasetConfig()
 
 # The MetaBench registry (single entry; the one external set with a valid LLM head-to-head).
 METABENCH_REGISTRY: dict[str, MetaBenchDatasetConfig] = {METABENCH.key: METABENCH}
+
+
+# ==================================================================================================
+# MetaboliteAnnotator name-hit-rate arm (Lu et al. 2026, J. Proteome Res., DOI 10.1021/acs.jproteome
+# .5c00477, PMID 41691569). A same-set, NAME-input head-to-head — the novel regime this harness
+# targets. MetaboliteAnnotator benchmarked on SIX MetaboLights sets with a per-input NAME-HIT-RATE
+# (fraction of input names for which a target-vocab identifier was produced), reporting 93.2%
+# (positive, 4021/4314) and 93.5% (negative, 2344/2510) vs MetaboAnalyst 6.0 and metaboliteIDmapping.
+#
+# ACCESSION ACQUISITION: the 6 MTBLS accessions are NOT in the abstract; ACS full text/SI is
+# paywalled (HTTP 403), no PMC/Europe-PMC full text exists, and no public MetaboliteAnnotator repo
+# was found. Per the no-fabrication rule they are flagged NEEDS-FETCHING placeholders — NOT
+# substituted with arbitrary MetaboLights sets. Fill ``METABOLITEANNOTATOR_ACCESSIONS`` with the six
+# real MTBLS######## ids (from the paper's Methods/SI, PMID 41691569) before any live run; the
+# adapter fetch layer fails loud on a placeholder so an unresolved accession can never be scored.
+# ==================================================================================================
+
+NEEDS_FETCHING_SENTINEL = "MTBLS-NEEDS-FETCHING-"
+
+# Six placeholders — one per MetaboLights set MetaboliteAnnotator benchmarked on. Replace each with
+# the real accession once obtained. Ordering is not load-bearing.
+METABOLITEANNOTATOR_ACCESSIONS: tuple[str, ...] = tuple(f"{NEEDS_FETCHING_SENTINEL}{i}" for i in range(1, 7))
+
+
+@dataclass(frozen=True)
+class NameHitDatasetConfig:
+    """A NAME-input, name-hit-rate benchmark registry entry (MetaboliteAnnotator regime).
+
+    The comparable metric is a per-input NAME-HIT-RATE — the fraction of input names for which
+    BioMapper produced a target-vocab identifier — computed with the SAME protocol as
+    MetaboliteAnnotator so BioMapper's number lands directly beside the published 93.2%/93.5% and
+    the MetaboAnalyst 6.0 / metaboliteIDmapping baselines. One config per ion mode -> exactly ONE
+    headline number per config (the "one number per dataset" learning; the two configs reproduce the
+    paper's two reported numbers).
+
+    The run mode mirrors the metabolite arm: ``name_column`` is the sole query, ``provided_id_columns
+    =[]`` so nothing is handed to BioMapper but the name (the runner's assigned>0 guard enforces the
+    name path). ``gold_id_column`` (the MetaboLights MAF ``database_identifier``, ``|``-multi) and the
+    optional ``gold_smiles_column`` are HELD OUT — consumed only by the scorer's ID-concordance /
+    charge-normalized structure qualifiers, never by BioMapper.
+
+    ANTI-TRIVIAL guard (``__post_init__``, fail-loud): the held-out ``gold_id_column`` must exist and
+    must NOT be the ``name_column`` — a gold-equals-query config would let every row self-hit and
+    silently score a trivial 100%.
+    """
+
+    key: str
+    arm: str  # "metabolite"
+    entity_type: str  # "metabolite"
+    mode: str  # "positive" | "negative" — the ion mode this config aggregates across the 6 sets
+    name_column: str  # the query column handed to the mapper (MAF metabolite_identification)
+    gold_id_column: str  # held-out MAF database_identifier (|-delimited CURIEs) — ID-concordance gold
+    gold_smiles_column: str  # held-out MAF SMILES ("" when absent) — charge-normalized structure gold
+    target_vocabs: tuple[str, ...]  # vocabs the name is mapped to; hit = any target-vocab id produced
+    accessions: tuple[str, ...]  # the 6 MetaboLights MTBLS sets (placeholders until fetched)
+    source_url_template: str  # MetaboLights MAF URL template, ``{accession}`` substituted at fetch
+    license: str
+    input_type: str = "name"  # the unsolved regime this arm targets
+    source_doi: str = "10.1021/acs.jproteome.5c00477"
+    source_pmid: str = "41691569"
+    accessions_status: str = "needs-fetching"  # flipped to "resolved" once real accessions are filled
+
+    def __post_init__(self) -> None:
+        if not (self.gold_id_column and self.gold_id_column.strip()):
+            raise ValueError(
+                f"{self.key}: anti-trivial violation — a held-out gold_id_column is required to "
+                f"adjudicate a name hit against a reference; none was given."
+            )
+        if self.gold_id_column == self.name_column:
+            raise ValueError(
+                f"{self.key}: anti-trivial violation — gold_id_column {self.gold_id_column!r} equals "
+                f"the query name_column; the gold must be held out, not the input. Refusing a config "
+                f"that would self-hit to a trivial 100%."
+            )
+
+
+METABOLITEANNOTATOR_POS = NameHitDatasetConfig(
+    key="metaboliteannotator-positive",
+    arm="metabolite",
+    entity_type="metabolite",
+    mode="positive",
+    name_column="metabolite_identification",  # MetaboLights MAF query column
+    gold_id_column="gold_database_identifier",  # held-out MAF database_identifier (|-multi CURIEs)
+    gold_smiles_column="gold_smiles",
+    target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
+    accessions=METABOLITEANNOTATOR_ACCESSIONS,
+    # Base study endpoint; the adapter derives the file-listing ({base}/files) and per-file download
+    # ({base}/download/{file}) URLs so it fetches the m_*.tsv MAF table, NOT the whole study bundle.
+    source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}",
+    license="MetaboLights data are available under CC0 (per-study terms apply).",
+)
+
+METABOLITEANNOTATOR_NEG = NameHitDatasetConfig(
+    key="metaboliteannotator-negative",
+    arm="metabolite",
+    entity_type="metabolite",
+    mode="negative",
+    name_column="metabolite_identification",
+    gold_id_column="gold_database_identifier",
+    gold_smiles_column="gold_smiles",
+    target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
+    accessions=METABOLITEANNOTATOR_ACCESSIONS,
+    source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}",
+    license="MetaboLights data are available under CC0 (per-study terms apply).",
+)
+
+# The name-hit registry — one entry per ion mode (one headline number each).
+NAME_HIT_REGISTRY: dict[str, NameHitDatasetConfig] = {
+    METABOLITEANNOTATOR_POS.key: METABOLITEANNOTATOR_POS,
+    METABOLITEANNOTATOR_NEG.key: METABOLITEANNOTATOR_NEG,
+}
+
+# Published same-set baselines for the head-to-head. Following the CompetitorResult discipline
+# (Metabolon-96.5% scar): ``value=None`` in source control — transcribed + verified against the
+# paper's table at run time, NOT baked from the abstract/memory. The abstract-reported aggregates
+# (MetaboliteAnnotator 93.2% pos / 93.5% neg; MetaboAnalyst 6.0 and metaboliteIDmapping lower) are
+# the numbers to transcribe; ``doi`` + ``table_ref`` make each entry citeable so citation_spot_check
+# admits it. MetaboliteAnnotator's OWN headline is included as the tool BioMapper is measured beside.
+METABOLITEANNOTATOR_DOI = "10.1021/acs.jproteome.5c00477"
+METABOLITEANNOTATOR_TABLE_REF = (
+    "Lu et al. 2026, J. Proteome Res. (DOI 10.1021/acs.jproteome.5c00477), name-hit-rate comparison "
+    "across the six MetaboLights sets (positive + negative mode) — transcribe per-mode cell at run time"
+)
+METABOLITEANNOTATOR_COMPETITORS: tuple[CompetitorResult, ...] = tuple(
+    CompetitorResult(
+        tool=tool,
+        metric="name_hit_rate",
+        input_type=mode,  # "positive" / "negative" — the paper reports one number per mode
+        value=None,
+        doi=METABOLITEANNOTATOR_DOI,
+        table_ref=f"{METABOLITEANNOTATOR_TABLE_REF} [{mode} mode]",
+    )
+    for mode in ("positive", "negative")
+    for tool in ("MetaboliteAnnotator", "MetaboAnalyst 6.0", "metaboliteIDmapping")
+)
