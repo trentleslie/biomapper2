@@ -17,7 +17,11 @@ from studies.external_benchmarks.adapters.metaboliteannotator import (
     select_maf_filename,
     sha256_bytes,
 )
-from studies.external_benchmarks.config import METABOLITEANNOTATOR_NEG, METABOLITEANNOTATOR_POS
+from studies.external_benchmarks.config import (
+    METABOLITEANNOTATOR_NEG,
+    METABOLITEANNOTATOR_POS,
+    NEEDS_FETCHING_SENTINEL,
+)
 
 # A realistic MetaboLights ISA-Tab study file listing: investigation/sample/assay descriptors, raw
 # data, and TWO MAF tables (one per ion mode). The adapter must select the m_*.tsv MAF, never the
@@ -78,7 +82,7 @@ def test_card_reports_mode_and_per_accession_coverage(raw_maf_df):
     assert card["per_accession"]["MTBLS222"]["n_names"] == 2
     # gold-ID coverage: 3 of 4 names carry a database_identifier (ATP does not)
     assert card["gold_id_coverage"]["n"] == 3
-    assert card["accessions_status"] == "needs-fetching"
+    assert card["accessions_status"] == "resolved"
     assert card["source_doi"] == METABOLITEANNOTATOR_POS.source_doi
 
 
@@ -90,15 +94,18 @@ def test_load_from_dataframe_sha_is_deterministic(raw_maf_df):
 
 
 def test_fetch_fails_loud_on_placeholder_accession():
-    # A live fetch against an unresolved placeholder must refuse, not silently produce nothing.
+    # The config's accessions are now resolved, but the fail-loud guard must still refuse any future
+    # unresolved placeholder rather than silently produce nothing.
     with pytest.raises(AccessionNotResolvedError, match="needs-fetching"):
-        fetch_maf_set(METABOLITEANNOTATOR_POS.accessions[0], METABOLITEANNOTATOR_POS)
+        fetch_maf_set(f"{NEEDS_FETCHING_SENTINEL}1", METABOLITEANNOTATOR_POS)
 
 
 def test_load_over_accessions_fails_loud_when_unresolved():
-    # Passing the config's accessions tuple (all placeholders) must fail loud before any scoring.
+    # Passing a placeholder accession tuple must fail loud before any scoring (the guard still bites).
     with pytest.raises(AccessionNotResolvedError):
-        load_metaboliteannotator(METABOLITEANNOTATOR_POS.accessions, METABOLITEANNOTATOR_POS)
+        load_metaboliteannotator(
+            (f"{NEEDS_FETCHING_SENTINEL}1", f"{NEEDS_FETCHING_SENTINEL}2"), METABOLITEANNOTATOR_POS
+        )
 
 
 def test_fetch_is_isolated(monkeypatch, raw_maf_df):

@@ -609,19 +609,26 @@ METABENCH_REGISTRY: dict[str, MetaBenchDatasetConfig] = {METABENCH.key: METABENC
 # (fraction of input names for which a target-vocab identifier was produced), reporting 93.2%
 # (positive, 4021/4314) and 93.5% (negative, 2344/2510) vs MetaboAnalyst 6.0 and metaboliteIDmapping.
 #
-# ACCESSION ACQUISITION: the 6 MTBLS accessions are NOT in the abstract; ACS full text/SI is
-# paywalled (HTTP 403), no PMC/Europe-PMC full text exists, and no public MetaboliteAnnotator repo
-# was found. Per the no-fabrication rule they are flagged NEEDS-FETCHING placeholders — NOT
-# substituted with arbitrary MetaboLights sets. Fill ``METABOLITEANNOTATOR_ACCESSIONS`` with the six
-# real MTBLS######## ids (from the paper's Methods/SI, PMID 41691569) before any live run; the
-# adapter fetch layer fails loud on a placeholder so an unresolved accession can never be scored.
+# ACCESSION ACQUISITION: RESOLVED 2026-07-14. The six MTBLS accessions are named in the paper's
+# Methods ("applied the tool to six public MetaboLights data sets (MTBLS12997, MTBLS13105, MTBLS12764,
+# MTBLS11733, MTBLS12636, and MTBLS13039)") and detailed in its Table 1 (PMID 41691569, DOI
+# 10.1021/acs.jproteome.5c00477). All six were verified live and public on MetaboLights, each exposing
+# the positive- and negative-mode ``m_*.tsv`` MAF tables the name-hit protocol scores. The sentinel +
+# fail-loud fetch guard are retained so any FUTURE unresolved accession still refuses to score.
 # ==================================================================================================
 
 NEEDS_FETCHING_SENTINEL = "MTBLS-NEEDS-FETCHING-"
 
-# Six placeholders — one per MetaboLights set MetaboliteAnnotator benchmarked on. Replace each with
-# the real accession once obtained. Ordering is not load-bearing.
-METABOLITEANNOTATOR_ACCESSIONS: tuple[str, ...] = tuple(f"{NEEDS_FETCHING_SENTINEL}{i}" for i in range(1, 7))
+# The six MetaboLights sets MetaboliteAnnotator benchmarked on (Lu et al. 2026, Methods + Table 1).
+# Ordering is not load-bearing.
+METABOLITEANNOTATOR_ACCESSIONS: tuple[str, ...] = (
+    "MTBLS12997",  # AB Sciex TripleTOF 6600, XCMS — mouse fecal (largest: 1446 pos / 409 neg names)
+    "MTBLS13105",  # Thermo Q Exactive, MS-DIAL — human fecal
+    "MTBLS12764",  # Thermo Q-Exactive Plus, MS-DIAL — human tumor-associated
+    "MTBLS11733",  # Thermo Q Exactive HF-X, Compound Discoverer — mouse osteocyte
+    "MTBLS12636",  # AB Sciex TripleTOF 4600, XCMS/MetDNA 2 — human vaginal fornix
+    "MTBLS13039",  # Thermo Q Exactive HF-X, XCMS — human serum
+)
 
 
 @dataclass(frozen=True)
@@ -661,6 +668,12 @@ class NameHitDatasetConfig:
     source_doi: str = "10.1021/acs.jproteome.5c00477"
     source_pmid: str = "41691569"
     accessions_status: str = "needs-fetching"  # flipped to "resolved" once real accessions are filled
+    # MAF *bytes* are pulled from the MetaboLights public FTP mirror (per-study files served directly).
+    # The web-service ``/download`` route returns HTTP 400 for these studies, so listing uses
+    # ``source_url_template`` ({base}/files) but the download uses this FTP template.
+    maf_download_url_template: str = (
+        "https://ftp.ebi.ac.uk/pub/databases/metabolights/studies/public/{accession}/{filename}"
+    )
 
     def __post_init__(self) -> None:
         if not (self.gold_id_column and self.gold_id_column.strip()):
@@ -686,8 +699,9 @@ METABOLITEANNOTATOR_POS = NameHitDatasetConfig(
     gold_smiles_column="gold_smiles",
     target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
     accessions=METABOLITEANNOTATOR_ACCESSIONS,
-    # Base study endpoint; the adapter derives the file-listing ({base}/files) and per-file download
-    # ({base}/download/{file}) URLs so it fetches the m_*.tsv MAF table, NOT the whole study bundle.
+    accessions_status="resolved",
+    # Web-service base — the adapter lists files at {base}/files. MAF *bytes* come from the public FTP
+    # (maf_download_url_template) because the web-service /download route returns HTTP 400.
     source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}",
     license="MetaboLights data are available under CC0 (per-study terms apply).",
 )
@@ -702,6 +716,7 @@ METABOLITEANNOTATOR_NEG = NameHitDatasetConfig(
     gold_smiles_column="gold_smiles",
     target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
     accessions=METABOLITEANNOTATOR_ACCESSIONS,
+    accessions_status="resolved",
     source_url_template="https://www.ebi.ac.uk/metabolights/ws/studies/{accession}",
     license="MetaboLights data are available under CC0 (per-study terms apply).",
 )
