@@ -64,6 +64,17 @@ class DatasetConfig:
     # card. Used by the NECS adapter to characterize the source's partial external-ID annotation
     # (InChIKey ~53%, HMDB ~57%, KEGG ~32%, ...). Empty for Hajjar (uniform ChEBI+InChIKey).
     gold_coverage_columns: tuple[tuple[str, str], ...] = ()
+    # Optional deterministic subsample for LARGE reference sets (RefMet ships >200k analytes).
+    # ``None`` => load the full set (Hajjar/NECS/NIST). When set, the adapter STREAMS the source
+    # and reservoir-subsamples ``subsample_n`` rows at ``subsample_seed``, then PERSISTS the exact
+    # subsample beside the card — the source URL is a mutable "current release", so URL+seed+n
+    # alone cannot reconstruct the scored subset (same discipline as the gene/protein backbones).
+    subsample_n: int | None = None
+    subsample_seed: int = 42
+    # When True the load/subsample is restricted to rows carrying a gold InChIKey — the independent
+    # structure oracle REQUIRES a held-out structure, and RefMet's bulk CSV is only ~17% InChIKey-
+    # annotated, so an unfiltered sample would be mostly coverage-only (nothing to score).
+    require_gold_structure: bool = False
 
 
 # Hajjar et al. 2026, Metabolomics, DOI 10.1007/s11306-026-02404-w.
@@ -163,6 +174,70 @@ NECS = DatasetConfig(
         ("CAS", "gold_cas"),
         ("CHEMSPIDER", "gold_chemspider"),
         ("REFMET", "gold_refmet"),
+    ),
+)
+
+
+# Fahy & Subramaniam 2020, Nat. Methods, DOI 10.1038/s41592-020-01009-y — RefMet, the
+# Metabolomics Workbench reference nomenclature. The bulk CSV (databases/refmet/refmet_download.php)
+# ships ``refmet_name`` + a crosswalk to ChEBI/HMDB/PubChem/KEGG/LipidMaps + ``inchi_key``. The
+# InChIKey is the independent structure oracle; the crosswalk IDs are reported as coverage only.
+# >200k analytes, so it is streamed + reservoir-subsampled (n=1500, seed 42) from the InChIKey-
+# bearing population (``require_gold_structure`` — the oracle needs a held-out structure) and the
+# exact subsample is persisted (the download URL is a mutable current release). The bulk CSV ships
+# NO SMILES, so the charge-normalized variant neutralizes only the prediction side (gold falls back
+# to the strict InChIKey block). No same-set competitor exists, so no competitor figure is drawn.
+REFMET = DatasetConfig(
+    key="refmet",
+    arm="metabolite",
+    entity_type="metabolite",
+    input_type="name",
+    target_vocabs=("CHEBI",),
+    name_column="refmet_name",
+    gold_chebi_column="",  # RefMet's chebi_id is a coverage crosswalk, not the oracle (InChIKey is)
+    gold_inchikey_column="gold_inchikey",
+    gold_smiles_column=None,  # bulk CSV ships no SMILES; charge-normalized uses the strict gold block
+    source_doi="10.1038/s41592-020-01009-y",
+    source_url="https://www.metabolomicsworkbench.org/databases/refmet/refmet_download.php",
+    license="RefMet / Metabolomics Workbench data are freely available (metabolomicsworkbench.org).",
+    subsample_n=1500,
+    subsample_seed=42,
+    require_gold_structure=True,
+    gold_coverage_columns=(
+        ("INCHIKEY", "gold_inchikey"),
+        ("CHEBI", "gold_chebi"),
+        ("HMDB", "gold_hmdb"),
+        ("PUBCHEM", "gold_pubchem"),
+        ("KEGG", "gold_kegg"),
+        ("LIPIDMAPS", "gold_lipidmaps"),
+    ),
+)
+
+
+# Mandal et al. 2025, Anal. Chem., DOI 10.1021/acs.analchem.4c05018 — NIST SRM 1950 / SRM1950-DB,
+# 1,058 certified human-plasma metabolites (srm1950-data.wishartlab.com). The CSV ships HMDB_ID +
+# NAME + SMILES; the INCHIKEY column is EMPTY in the delivery, so the independent structure oracle
+# InChIKey is DERIVED from the certified SMILES (RDKit, deterministic, zero shared infra with
+# BioMapper's resolver). Clinical-lab framing. Small enough to load in full (no subsample). Rows
+# whose SMILES fails to parse (or is absent) are coverage-only — excluded from the accuracy
+# denominator by the structure-oracle scorer. No same-set competitor, so no competitor figure.
+SRM1950 = DatasetConfig(
+    key="srm1950",
+    arm="metabolite",
+    entity_type="metabolite",
+    input_type="name",
+    target_vocabs=("CHEBI",),
+    name_column="metabolite_name",
+    gold_chebi_column="",  # SRM1950-DB ships no ChEBI; oracle is the (SMILES-derived) InChIKey
+    gold_inchikey_column="gold_inchikey",
+    gold_smiles_column="gold_smiles",
+    source_doi="10.1021/acs.analchem.4c05018",
+    source_url="https://srm1950-data.wishartlab.com/metabolites.csv",
+    license="SRM1950-DB data are freely available (wishartlab.com); NIST SRM 1950 certified values.",
+    gold_coverage_columns=(
+        ("INCHIKEY", "gold_inchikey"),
+        ("SMILES", "gold_smiles"),
+        ("HMDB", "gold_hmdb"),
     ),
 )
 
@@ -387,9 +462,17 @@ HAJJAR_PROVIDED_ID_PARITY_CELL = CompetitorResult(
 )
 
 
-# The metabolite registry (structure-oracle arm). Hajjar remains the merged reference; NECS is
-# the deferred follow-on added here.
-REGISTRY: dict[str, DatasetConfig] = {HAJJAR.key: HAJJAR, NECS.key: NECS}
+# The metabolite registry (structure-oracle arm). Hajjar remains the merged reference; NECS was
+# the first deferred follow-on; RefMet (Metabolomics Workbench reference nomenclature) and NIST
+# SRM 1950 (certified clinical-plasma reference set) are added here. All four are name->structure,
+# scored by the independent InChIKey oracle (strict + charge-normalized); none has a same-set
+# competitor, so no competitor figure is drawn for any of them.
+REGISTRY: dict[str, DatasetConfig] = {
+    HAJJAR.key: HAJJAR,
+    NECS.key: NECS,
+    REFMET.key: REFMET,
+    SRM1950.key: SRM1950,
+}
 
 # The gene/protein registry (CURIE-equality arm). No published same-set competitor exists for
 # any of these, so — unlike Hajjar — NO competitor figure is emitted for them (BioMapper-vs-
