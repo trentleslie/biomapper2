@@ -102,3 +102,26 @@ def test_with_retries_raises_outage_after_exhaustion():
 def test_with_retries_returns_nonretryable_4xx_as_is():
     resp = with_retries(lambda: json_response({"err": "bad"}, status=400), sleep=no_sleep)
     assert resp.status_code == 400  # a client error is the client's to read, not an outage
+
+
+def test_supported_targets_accepts_optional_source_ns():
+    """The base split stays per-target and back-compatible; the optional ``source_ns`` is a hook for
+    source-aware subclasses (UniProt) and must not change the default behavior."""
+    from studies.external_benchmarks.competitors.base import CompetitorClient
+
+    class _Tool(CompetitorClient):
+        name = "t"
+
+        def source_code(self, source_ns):
+            return source_ns
+
+        def target_code(self, target_ns):
+            return target_ns if target_ns in {"ENSEMBL", "UniProtKB"} else None
+
+        def map_batch(self, ids, source_ns, target_ns):  # pragma: no cover - unused here
+            raise NotImplementedError
+
+    t = _Tool(transport=None)  # type: ignore[arg-type]
+    assert t.supported_targets(("ENSEMBL", "NCBIGene", "UniProtKB")) == (["ENSEMBL", "UniProtKB"], ["NCBIGene"])
+    # passing a source_ns is accepted and (for the base impl) does not change the split
+    assert t.supported_targets(("ENSEMBL", "NCBIGene"), "SYMBOL") == (["ENSEMBL"], ["NCBIGene"])

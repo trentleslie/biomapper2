@@ -4,7 +4,10 @@
 ``method=db2db&input=<db>&outputs=<db1,db2>&inputValues=<id1,id2>&taxonId=9606`` maps a batch from
 one input db to several output dbs at once. Response is a JSON array of row objects keyed by the
 db display names, e.g. ``[{"InputValue": "BRCA1", "Ensembl Gene ID": "ENSG...", "Gene ID": "672"}]``.
-Multi-valued fields are ``"; "``-separated; an unmapped field is ``"-"`` (an honest miss).
+Multi-valued fields are ``//``-separated (bioDBnet's list delimiter, e.g. a symbol -> many UniProt
+accessions ``P04637//Q8J016//...``); an unmapped field is ``"-"`` (an honest miss). Splitting on the
+wrong delimiter silently collapses a whole list into one bogus id, so a real mapping (the canonical
+accession IS in the list) scores as a miss — see ``_MULTI_SEP``.
 
 Unlike g:Convert, db2db returns every requested output db in one call, so ``map_batch`` maps a
 chunk to ONE target namespace (the base fan-out asks per namespace) but reads that namespace's
@@ -18,7 +21,11 @@ from .namespaces import BIODBNET_DB, to_curie
 
 BIODBNET_URL = "https://biodbnet-abcc.ncifcrf.gov/webServices/rest.php/biodbnetRestApi.json"
 TAXON_HUMAN = "9606"
-_MULTI_SEP = "; "
+# bioDBnet db2db returns multi-valued output fields as a ``//``-delimited list (verified live:
+# ``Gene Symbol`` -> ``UniProt Accession`` yields e.g. ``P04637//Q8J016//...`` for TP53). An earlier
+# ``"; "`` guess never matched, collapsing every multi-accession list into one bogus id — the reason
+# symbol->UniProtKB scored ~0% for a mapping the tool actually returns correctly.
+_MULTI_SEP = "//"
 _NO_MAPPING = {"-", "", "null", "none", "nan"}
 
 

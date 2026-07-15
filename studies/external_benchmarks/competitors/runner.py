@@ -74,7 +74,7 @@ def build_competitor_mapped_df(
 def run_competitor(client: CompetitorClient, input_df: pd.DataFrame, config: CurieDatasetConfig) -> CompetitorRun:
     """Run one competitor over a backbone's rows; return a scorable run + its protocol deltas."""
     source_ns = source_namespace_for(config)
-    supported, unsupported = client.supported_targets(config.target_vocabs)
+    supported, unsupported = client.supported_targets(config.target_vocabs, source_ns)
     queries = [str(q) for q in input_df[config.name_column].tolist()]
     predictions = client.map_ids(queries, source_ns, config.target_vocabs) if supported else {}
     mapped_df = build_competitor_mapped_df(input_df, config, predictions)

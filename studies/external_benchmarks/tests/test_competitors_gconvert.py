@@ -65,6 +65,26 @@ def test_multiple_converted_rows_for_one_incoming():
     assert preds["BRCA1"] == {"ENSEMBL:ENSG00000012048", "ENSEMBL:ENSG00000000000"}
 
 
+def test_uniprot_swissprot_version_suffix_stripped():
+    """Regression: g:Convert's UNIPROTSWISSPROT target returns VERSIONED accessions (``P04637.307``)
+    while the gold is unversioned (``P04637``). Without stripping, every UniProtKB hit scored as a
+    miss (~0%) despite being a correct mapping — the artifact this fix corrects."""
+
+    def handler(method, url, **kwargs):
+        body = kwargs["json"]
+        assert body["target"] == "UNIPROTSWISSPROT"
+        result = [
+            {"incoming": "TP53", "converted": "P04637.307"},
+            {"incoming": "BRCA1", "converted": "P38398.277"},
+        ]
+        return HttpResponse(status_code=200, json_body={"result": result})
+
+    c = _client(handler)
+    preds = c.map_ids(["TP53", "BRCA1"], "SYMBOL", ("UniProtKB",))
+    assert preds["TP53"] == {"UniProtKB:P04637"}  # version suffix stripped to match unversioned gold
+    assert preds["BRCA1"] == {"UniProtKB:P38398"}
+
+
 def test_cache_avoids_second_http_call():
     transport = ScriptedTransport(_handler)
     cache = InMemoryCache()

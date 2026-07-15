@@ -122,3 +122,42 @@ def test_never_finishing_job_is_outage():
     c = _client(handler, poll_attempts=3)
     with pytest.raises(CompetitorOutageError):
         c.map_ids(["P1"], "UniProtKB", ("ENSEMBL",))
+
+
+def test_supported_targets_are_source_aware():
+    """UniProt idmapping is hub-and-spoke: cross-ref targets are reachable only FROM UniProtKB_AC-ID.
+    From a gene SYMBOL (Gene_Name) only UniProtKB is legal — Ensembl/GeneID are protocol deltas
+    (the API returns HTTP 400 "combination invalid"), NOT misses and NOT outages."""
+    c = _client(UniProtScript({}))
+    # From a gene symbol: only UniProtKB is expressible.
+    sup, unsup = c.supported_targets(("ENSEMBL", "NCBIGene", "UniProtKB"), "SYMBOL")
+    assert sup == ["UniProtKB"]
+    assert set(unsup) == {"ENSEMBL", "NCBIGene"}
+    # From a UniProtKB accession (the hub): cross-ref targets ARE expressible.
+    sup2, unsup2 = c.supported_targets(("RefSeq", "ENSEMBL"), "UniProtKB")
+    assert set(sup2) == {"RefSeq", "ENSEMBL"}
+    assert unsup2 == []
+    # No source given (back-compat): purely per-target, no combination filtering.
+    sup3, _ = c.supported_targets(("ENSEMBL", "UniProtKB"))
+    assert set(sup3) == {"ENSEMBL", "UniProtKB"}
+
+
+def test_symbol_source_never_attempts_invalid_combination():
+    """From a symbol, map_ids must query ONLY the legal UniProtKB target — never fire a run for the
+    invalid Gene_Name->Ensembl combination (which would 400 and mis-classify as an outage)."""
+    script = UniProtScript({"UniProtKB": {"TP53": {"primaryAccession": "P04637"}}})
+    transport = ScriptedTransport(script)
+    c = UniProtIdMappingClient(transport, cache=InMemoryCache(), sleep=no_sleep, poll_interval_s=0.0)
+    preds = c.map_ids(["TP53"], "SYMBOL", ("ENSEMBL", "NCBIGene", "UniProtKB"))
+    assert preds["TP53"] == {"UniProtKB:P04637"}
+    # every run/status/results call targeted the UniProtKB job — no Ensembl/GeneID run was submitted.
+    run_targets = [k["data"]["to"] for (m, u, k) in transport.calls if u.endswith("/run")]
+    assert run_targets == ["UniProtKB"]
+
+
+def test_default_poll_budget_is_generous():
+    """The async poll budget must tolerate a hosted job queueing >30s; the old 30x1s default
+    mis-fired as an outage on a healthy service."""
+    c = UniProtIdMappingClient(ScriptedTransport(UniProtScript({})))
+    assert c._poll_attempts >= 90
+    assert c._poll_interval_s >= 2.0

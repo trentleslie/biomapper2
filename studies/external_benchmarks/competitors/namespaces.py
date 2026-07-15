@@ -34,7 +34,11 @@ BACKBONE_SOURCE_NAMESPACE: dict[str, str] = {
 }
 
 # Namespaces whose local IDs carry a ``.N`` version suffix the gold omits (aligned before scoring).
-_VERSIONED = frozenset({ENSEMBL, REFSEQ})
+# UniProtKB is included because g:Convert's ``UNIPROTSWISSPROT`` target returns VERSIONED accessions
+# (e.g. ``P04637.307``) while the backbone gold is unversioned (``P04637``). A UniProt accession never
+# legitimately contains a ``.<digits>`` (isoforms use ``-N``), so stripping a trailing numeric ``.N``
+# aligns representation without ever mangling a real id — the tool is scored on mapping, not format.
+_VERSIONED = frozenset({ENSEMBL, REFSEQ, UNIPROTKB})
 
 
 def _canonical_ns(ns: str) -> str:
