@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pandas as pd
 import pytest
 
-from studies.external_benchmarks.config import PROVIDED_NCBI_GENE2ENSEMBL
+from studies.external_benchmarks.config import PROVIDED_HAJJAR, PROVIDED_NCBI_GENE2ENSEMBL
 from studies.external_benchmarks.scorers.provided_id_scorer import (
     TargetInProvidedError,
     assert_target_held_out,
@@ -84,6 +84,44 @@ def test_assert_target_held_out_rejects_same_namespace_round_trip():
     )
     with pytest.raises(TargetInProvidedError, match="round-trip|namespace"):
         assert_target_held_out(bad)
+
+
+def _hajjar_mapped_df():
+    """Bare-gold regression fixture (the InChIKey case that reported a false 0%).
+
+    ``gold_inchikey`` is stored BARE (no ``INCHIKEY:`` prefix); BioMapper's equivalence set exposes
+    the same InChIKey PREFIXED as ``INCHIKEY:<key>``. Rows: a bare-gold hit, an already-prefixed
+    gold hit (must still work), and a genuinely-absent target (must NOT falsely score).
+    """
+    return pd.DataFrame(
+        {
+            "chebi": [18019, 16797, 15729],
+            "chosen_kg_id": ["CHEBI:53633", "CHEBI:16797", "CHEBI:15729"],
+            "kg_equivalent_ids": [
+                "{'INCHIKEY': ['KDXKERNSBIXSRK-YFKPBYRVSA-N', 'NSFPJVJQYCOMBV-UHFFFAOYSA-N']}",  # reaches bare gold
+                "{'INCHIKEY': ['RQFCJASXJCIDSX-UHFFFAOYSA-N']}",  # reaches already-prefixed gold
+                "{'INCHIKEY': ['ZZZZZZZZZZZZZZ-ZZZZZZZZZZ-Z']}",  # gold genuinely absent -> miss
+            ],
+            "gold_inchikey": [
+                "KDXKERNSBIXSRK-YFKPBYRVSA-N",  # BARE gold -> must match the prefixed prediction
+                "INCHIKEY:RQFCJASXJCIDSX-UHFFFAOYSA-N",  # already CURIE-prefixed -> must still match
+                "OARARGKWHDFELS-UHFFFAOYSA-N",  # bare gold NOT in the equivalence set -> incorrect
+            ],
+        }
+    )
+
+
+def test_bare_gold_inchikey_matches_prefixed_prediction():
+    # The Hajjar ChEBI->InChIKey regression: bare gold must reach the prefixed equivalence set.
+    result = score_provided_id(_hajjar_mapped_df(), PROVIDED_HAJJAR)
+    core = result["comparable_core"]
+    assert core["scored_denominator"] == 3  # all three rows carry a gold InChIKey
+    assert core["correct"] == 2  # bare-gold hit + already-prefixed hit; the absent target misses
+    assert core["top1_accuracy"] == pytest.approx(2 / 3)
+    per_row = result["per_row"]
+    assert per_row[0]["correct"] is True  # BARE gold matched -> the bug this fixes
+    assert per_row[1]["correct"] is True  # already-prefixed gold still matches (no regression)
+    assert per_row[2]["correct"] is False  # genuinely-absent target is not a false positive
 
 
 def test_scorer_calls_guard_before_scoring():
