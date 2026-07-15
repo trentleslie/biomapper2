@@ -26,13 +26,34 @@ CHOSEN_COL = "chosen_kg_id"
 EQUIV_COL = "kg_equivalent_ids"
 CURIE_DELIM = "|"
 
+# Namespace-prefix synonyms that denote the SAME identifier space, canonicalized to one form so
+# equal entities compare equal regardless of which prefix a source emitted. The metabolite KG /
+# equivalence expansion writes the Biolink-style database-section prefixes (``KEGG.COMPOUND``,
+# ``PUBCHEM.COMPOUND``) while the benchmark golds ship the bare database prefix (``KEGG``,
+# ``PUBCHEM``); without this, gold ``KEGG:C00626`` never matches predicted ``KEGG.COMPOUND:C00626``
+# and every KEGG-target row scores 0 (the live-run 24.3% vs 54.5% gap). Keys/values are the
+# UPPERCASED prefix (matched after the prefix is upper-cased). Generic across namespaces — no
+# per-row special-casing; only the compound identifier space is aliased (KEGG.GLYCAN / KEGG.DRUG
+# are DELIBERATELY not folded in, they are different id spaces).
+_NAMESPACE_ALIASES: dict[str, str] = {
+    "KEGG.COMPOUND": "KEGG",
+    "PUBCHEM.COMPOUND": "PUBCHEM",
+}
+
+
+def canonical_prefix(prefix: str) -> str:
+    """Map a (already stripped/upper-cased) namespace prefix to its canonical synonym."""
+    return _NAMESPACE_ALIASES.get(prefix, prefix)
+
 
 def normalize_curie(curie: Any) -> str | None:
-    """Canonicalize a CURIE for equality: strip, uppercase the prefix, keep the local part.
+    """Canonicalize a CURIE for equality: strip, canonicalize+uppercase the prefix, keep the local part.
 
     Gene/protein identifiers (Ensembl/UniProt/Entrez/RefSeq) are conventionally case-stable in
     the local part but the *prefix* casing varies across sources (``Ensembl`` vs ``ENSEMBL``),
-    so only the prefix is uppercased. Returns None for blank/NaN.
+    so only the prefix is uppercased. Prefix SYNONYMS for one identifier space are folded to a
+    canonical form via ``_NAMESPACE_ALIASES`` (e.g. ``KEGG.COMPOUND`` -> ``KEGG``) so a bare-vs-
+    database-section prefix mismatch cannot under-count equal entities. Returns None for blank/NaN.
     """
     if curie is None or (isinstance(curie, float) and pd.isna(curie)):
         return None
@@ -41,8 +62,8 @@ def normalize_curie(curie: Any) -> str | None:
         return None
     if ":" in s:
         prefix, local = s.split(":", 1)
-        return f"{prefix.strip().upper()}:{local.strip()}"
-    return s.upper()
+        return f"{canonical_prefix(prefix.strip().upper())}:{local.strip()}"
+    return canonical_prefix(s.upper())
 
 
 def _split_curies(value: Any) -> set[str]:

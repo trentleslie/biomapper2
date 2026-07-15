@@ -136,3 +136,36 @@ def test_subsample_n_required():
     cfg = replace(REFMET, subsample_n=None)
     with pytest.raises(ValueError, match="subsample_n"):
         rm.load_refmet(lines(), cfg)
+
+
+def test_load_refmet_url_charsetless_fetch_decodes_end_to_end(monkeypatch):
+    """The live RefMet URL fetch (charset-less ``application/x-download``) must run clean.
+
+    Regression for the run failure ``_csv.Error: iterator should return strings, not bytes``:
+    ``load_refmet(url)`` routes through the REAL ``stream_source_lines`` against a server that
+    declares no charset. The encoding fallback must yield ``str`` so the CSV parse + subsample
+    complete without the bytes error.
+    """
+    import types
+
+    class _CharsetlessResponse:
+        def __init__(self, payload):
+            self._payload = payload
+            self.encoding = None  # no charset declared
+
+        def raise_for_status(self):
+            return None
+
+        def iter_lines(self, decode_unicode=False):
+            for line in self._payload:
+                raw = line.encode("utf-8")
+                yield raw.decode(self.encoding) if (decode_unicode and self.encoding) else raw
+
+    payload = [HEADER, *ROWS]
+    fake_requests = types.SimpleNamespace(get=lambda url, **kw: _CharsetlessResponse(payload))
+    monkeypatch.setitem(__import__("sys").modules, "requests", fake_requests)
+
+    cfg = replace(REFMET, subsample_n=2, subsample_seed=42)
+    bundle = rm.load_refmet("https://www.metabolomicsworkbench.org/databases/refmet/refmet_download.php", cfg)
+    assert bundle.card["n_scanned"] == 3  # three structure-bearing rows parsed, no bytes error
+    assert len(bundle.input_df) == 2
