@@ -749,6 +749,7 @@ def orchestrate_pham(
     run_gate_first: bool = True,
     run_crosscheck: bool = True,
     crosscheck_fn: Any = None,
+    ambiguous_only: bool = False,
 ) -> dict[str, Any]:
     """Run the Pham name-DISAMBIGUATION slice live (referent-set structural membership).
 
@@ -795,7 +796,7 @@ def orchestrate_pham(
 
     # Deterministic WITHIN-strata subsample (mirror RefMet: reservoir + seed 42, persisted) so the
     # non-lipid headline is not swamped by the lipid-isomer majority. Each stratum is sampled on its own.
-    scored_df, subsample_meta = subsample_within_strata(bundle.input_df, config)
+    scored_df, subsample_meta = subsample_within_strata(bundle.input_df, config, ambiguous_only=ambiguous_only)
     persist_stratified_subsample(scored_df, config.key, out_dir)
     bundle.card["stratified_subsample"] = subsample_meta
     (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
