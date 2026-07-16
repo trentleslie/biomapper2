@@ -750,3 +750,154 @@ METABOLITEANNOTATOR_COMPETITORS: tuple[CompetitorResult, ...] = tuple(
     for mode in ("positive", "negative")
     for tool in ("MetaboliteAnnotator", "MetaboAnalyst 6.0", "metaboliteIDmapping")
 )
+
+
+# ==================================================================================================
+# metLinkR head-to-head (Patt et al. 2025, J. Proteome Res., DOI 10.1021/acs.jproteome.4c01051,
+# PMC12053952) — the closest same-TASK tool: metabolite-ID cross-linking on RefMet + RaMP-DB.
+# ==================================================================================================
+# metLinkR harmonizes metabolite lists across datasets and reports (i) coverage and (ii) AGREEMENT
+# with the COMETS expert curators (~85.3% headline in the paper). Crucially, metLinkR does NOT
+# validate its links against an InChIKey structural oracle — that gap is BioMapper's differentiator.
+#
+# This arm scores BioMapper on the FIVE COMETS-curator-cross-linked datasets (the paper's
+# ``inputs_*`` files), whose expert grouping is delivered in ``ManualMappings.csv`` (SI zip
+# pr4c01051_si_003.zip). One row per source metabolite carries: the metabolite NAME
+# (``IPT_METABOLITE_NAME``), the curator's manual cross-link group label
+# (``Manual_Metabolite_Group_Label`` — two rows sharing a label are the SAME compound per the
+# curators), and the curator/Metabolon PROVIDED reference IDs (``IPT_HMDB_ID`` / ``IPT_PUBCHEM``).
+#
+# DUAL, LABELLED SCORING (see scorers/metlinkr_scorer.py):
+#   (a) CURATOR-AGREEMENT rate — metLinkR's own ~85.3% metric. Over the curator's cross-dataset
+#       linked PAIRS, the fraction that BioMapper also links (its two name-resolved canonical
+#       identifier sets intersect). Held-out gold = the curator group label (never shown to
+#       BioMapper); anti-trivial because BioMapper must independently arrive at the same canonical
+#       for both members from the NAME alone.
+#   (b) INCHIKEY STRUCTURAL CONCORDANCE — the oracle metLinkR LACKS. For each row carrying a
+#       held-out curator provided ID, resolve BOTH BioMapper's name-chosen ID AND the curator ID to
+#       an InChIKey first-block and compare. Validates the LINK against a STRUCTURE, not just
+#       identifier/name agreement.
+#
+# ACQUISITION (2026-07-15): the ACS SI is Cloudflare-bot-blocked on direct fetch, but the identical
+# SI zips are mirrored on EuropePMC's PMC12053952 ``supplementaryFiles`` bundle (fetched live). The
+# scored table ``ManualMappings.csv`` SHA is pinned below; the adapter re-pins whatever bytes it
+# fetches on the dataset card. INPUT MODE is NAME-ONLY (provided_id_columns=[]) — consistent with the
+# whole name-input harness and required to keep oracle (b) non-trivial (a provided curator ID handed
+# back as input would self-echo its own structure). See the module docstring for the run-mode note.
+
+NEEDS_FETCHING_SENTINEL_METLINKR = "METLINKR-NEEDS-FETCHING-"
+
+METLINKR_DOI = "10.1021/acs.jproteome.4c01051"
+METLINKR_PMCID = "PMC12053952"
+# Canonical ACS SI URL (Cloudflare-blocked on direct bot fetch; recorded for provenance).
+METLINKR_SI_URL = (
+    "https://pubs.acs.org/doi/suppl/10.1021/acs.jproteome.4c01051/suppl_file/pr4c01051_si_003.zip"
+)
+# Working live mirror: EuropePMC bundles every supplementary file (incl. both SI zips) for a PMCID.
+METLINKR_FETCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12053952/supplementaryFiles"
+# The SI zip (inside the EuropePMC bundle) that holds the curator oracle, and the file inside it.
+METLINKR_SI_ZIP_MEMBER = "pr4c01051_si_003.zip"
+METLINKR_MANUAL_MAPPINGS_MEMBER = "ManualMappings.csv"
+# SHA256 of ManualMappings.csv as fetched at acquisition (2026-07-15). Pinned for reproducibility;
+# the card re-pins the bytes actually fetched at run time.
+METLINKR_MANUAL_MAPPINGS_SHA256 = "3c94b2d0a6463b7dc446884a873b8a4d0e3d80943ea91de0bf1d599e1183e5ac"
+
+
+@dataclass(frozen=True)
+class MetLinkRDatasetConfig:
+    """metLinkR head-to-head registry entry — a same-TASK, cross-linking benchmark.
+
+    The parsed scoring table (from ``ManualMappings.csv``) is one row per source metabolite across
+    the 5 COMETS datasets. Columns the adapter emits: the query NAME (``name_column``) plus three
+    HELD-OUT columns consumed only by the scorer — the curator cross-link group label
+    (``group_label_column``), and the curator PROVIDED reference IDs
+    (``gold_hmdb_column`` / ``gold_pubchem_column``). ``source_file_column`` tags which COMETS
+    dataset a row came from (cross-dataset pairing / traceability).
+
+    Run mode mirrors the metabolite name-input arm: ``name_column`` is the SOLE query,
+    ``provided_id_columns=[]``, so nothing but the name reaches BioMapper (runner's assigned>0 guard
+    enforces the name path). The curator group label and provided IDs are held out.
+
+    ANTI-TRIVIAL guard (``__post_init__``, fail-loud): the held-out ``group_label_column`` must exist
+    and must NOT equal ``name_column`` — a label-equals-query config would leak the grouping into the
+    input and let every curator pair self-link to a trivial 100%.
+    """
+
+    key: str = "metlinkr-comets"
+    arm: str = "metabolite"
+    entity_type: str = "metabolite"
+    input_type: str = "name"
+    name_column: str = "metabolite_name"  # query handed to mapper (from IPT_METABOLITE_NAME)
+    # HELD OUT — the COMETS curator manual cross-link grouping (oracle (a) gold). Two rows sharing a
+    # value are the SAME compound per the expert curators.
+    group_label_column: str = "curator_group_label"
+    # HELD OUT — the curator/Metabolon provided reference IDs (oracle (b) structural anchor).
+    gold_hmdb_column: str = "curator_hmdb"
+    gold_pubchem_column: str = "curator_pubchem"
+    source_file_column: str = "source_file"  # which COMETS dataset (cross-dataset pairing)
+    # Vocabs the name is mapped to; a link is BioMapper-confirmed iff both members share a canonical
+    # id in ANY of these (union — not per-vocab).
+    target_vocabs: tuple[str, ...] = ("CHEBI", "HMDB", "PUBCHEM", "KEGG", "REFMET")
+    source_doi: str = METLINKR_DOI
+    source_pmcid: str = METLINKR_PMCID
+    source_url: str = METLINKR_SI_URL  # canonical ACS SI (provenance)
+    fetch_url: str = METLINKR_FETCH_URL  # working EuropePMC mirror (live fetch)
+    si_zip_member: str = METLINKR_SI_ZIP_MEMBER
+    manual_mappings_member: str = METLINKR_MANUAL_MAPPINGS_MEMBER
+    expected_manual_mappings_sha256: str = METLINKR_MANUAL_MAPPINGS_SHA256
+    license: str = (
+        "metLinkR SI (Patt et al. 2025, ACS J. Proteome Res.); COMETS/Metabolon-derived curator "
+        "mappings — see ACS supporting-information terms."
+    )
+
+    def __post_init__(self) -> None:
+        if not (self.group_label_column and self.group_label_column.strip()):
+            raise ValueError(
+                f"{self.key}: anti-trivial violation — a held-out group_label_column is required to "
+                f"adjudicate a link against the curator grouping; none was given."
+            )
+        if self.group_label_column == self.name_column:
+            raise ValueError(
+                f"{self.key}: anti-trivial violation — group_label_column {self.group_label_column!r} "
+                f"equals the query name_column; the curator grouping must be held out, not the input. "
+                f"Refusing a config that would self-link to a trivial 100%."
+            )
+
+
+METLINKR = MetLinkRDatasetConfig()
+
+# The metLinkR registry (single entry; the closest same-task tool).
+METLINKR_REGISTRY: dict[str, MetLinkRDatasetConfig] = {METLINKR.key: METLINKR}
+
+# Published same-task baseline. Following the CompetitorResult discipline (Metabolon-96.5% scar):
+# metLinkR's curator-agreement headline is TRANSCRIBED + VERIFIED against the paper's Results text
+# (Patt et al. 2025, "MetLinkR vs Manual Annotation" subsection) — NOT asserted from memory. The
+# verified sentences (PMC12053952 full text, checked 2026-07-16):
+#   - "Among metabolite entities identified across data sets by the curator, metLinkR identified
+#      these entities at an 85.3% rate."  -> curator agreement = 85.3% (our oracle-(a) comparator).
+#   - "When removing identifiers that metLinkR was unable to map ... that number rose to a 90.7%
+#      rate."  -> 90.7% excluding unmapped (a different, mapped-only denominator; recorded for context).
+#   - Global mapping rate 82.3% (5-dataset set) / 72.5% (13-dataset set) — overall harmonization
+#      success, NOT a curator-agreement or structural number, so it is context only (no competitor
+#      cell; conflating it with oracle (a)/(b) would be an apples-to-oranges comparison).
+# ``doi`` + ``table_ref`` make the cell citeable so citation_spot_check admits it. The structural-
+# concordance metric has NO competitor cell: metLinkR reports no InChIKey-oracle number (the point).
+METLINKR_CURATOR_AGREEMENT_VALUE = 0.853  # verified: "identified these entities at an 85.3% rate"
+METLINKR_CURATOR_AGREEMENT_EXCL_UNMAPPED = 0.907  # verified context: "rose to a 90.7% rate"
+METLINKR_GLOBAL_MAPPING_5SET = 0.823  # verified context: "global mapping rate of 82.3%" (5-set)
+METLINKR_GLOBAL_MAPPING_13SET = 0.725  # verified context: "global mapping rate of 72.5%" (13-set)
+METLINKR_TABLE_REF = (
+    "Patt et al. 2025, J. Proteome Res. (DOI 10.1021/acs.jproteome.4c01051, PMC12053952), Results & "
+    "Discussion — 'MetLinkR vs Manual Annotation': 'metLinkR identified these entities at an 85.3% "
+    "rate' (90.7% excluding unmapped identifiers)"
+)
+METLINKR_COMPETITORS: tuple[CompetitorResult, ...] = (
+    CompetitorResult(
+        tool="metLinkR",
+        metric="curator_agreement_rate",
+        input_type="cross_link",
+        value=METLINKR_CURATOR_AGREEMENT_VALUE,  # 85.3%, verified against the paper's Results text
+        doi=METLINKR_DOI,
+        table_ref=METLINKR_TABLE_REF,
+    ),
+)
