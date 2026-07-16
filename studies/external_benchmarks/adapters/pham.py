@@ -42,9 +42,10 @@ from __future__ import annotations
 
 import contextlib
 import hashlib
+import re
 import socket
 from collections.abc import Iterable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 import pandas as pd
@@ -142,6 +143,101 @@ def first_block(inchikey: Any) -> str | None:
     if not s or s.lower() == "nan":
         return None
     return s.split("-")[0]
+
+
+# ==================================================================================================
+# LIPID vs NON-LIPID classifier (documented, defensible) — see PhamDisambiguationDatasetConfig.
+# ==================================================================================================
+#
+# A referent (one distinct structure of an ambiguous name) is classified LIPID by two signals, the
+# namespace signal PREFERRED over the name-pattern fallback:
+#
+#   1. Namespace / cross-reference signal (preferred, authoritative): the referent's MetaNetX MNXM id
+#      carries a cross-reference into a dedicated LIPID database namespace — LIPID MAPS (``lipidmaps``)
+#      or SwissLipids (``slm``). A compound that LIPID MAPS / SwissLipids curate as a lipid IS a lipid;
+#      this is an independent curatorial judgment, not a string heuristic.
+#   2. Canonical lipid-shorthand NAME pattern (fallback, only when signal 1 is absent): the referent's
+#      compound name follows the community lipid shorthand — a lipid-class abbreviation followed by a
+#      composition (``TG(``, ``PC(``, ``PE(``, ``Cer(``, ``SM(`` ...) or an acyl-chain shorthand with
+#      two ``carbons:double-bonds`` chains joined by ``/`` (``18:1/16:0``, ``d18:1/24:0``).
+#
+# A NAME is assigned to the LIPID stratum when its referents are PREDOMINANTLY lipids (>= 50% of its
+# distinct referents are lipid); otherwise NON-lipid. The >=50% (ties -> lipid) rule keeps the NON-lipid
+# stratum — the reported headline — PURE: a name only lands there when a strict majority of its
+# referents are non-lipids.
+#
+# False-positive / false-negative risk (documented, not hidden):
+#   - FALSE POSITIVE (non-lipid wrongly called lipid): a non-lipid name that (a) happens to have a
+#     LIPID MAPS / SwissLipids xref — rare, those namespaces are lipid-scoped — or (b) matches the
+#     shorthand regex by accident. The regex requires either a leading lipid-class token immediately
+#     followed by ``(``/space, or a TWO-chain ``a:b/c:d`` acyl shorthand, both of which are highly
+#     lipid-specific, so accidental matches are unlikely. A false positive removes a real non-lipid case
+#     from the headline stratum (conservative: it can only shrink, never inflate, the headline).
+#   - FALSE NEGATIVE (lipid wrongly called non-lipid): a lipid with NO LIPID MAPS / SwissLipids xref AND
+#     a full IUPAC name (no shorthand) — this leaks into the non-lipid stratum. The namespace signal
+#     catches the large majority of genuine lipids (LIPID MAPS + SwissLipids are the two dominant lipid
+#     resources MetaNetX integrates), so residual leakage is small; it is the one direction that could
+#     contaminate the headline, so the per-name stratum + referent counts are persisted on the card for
+#     audit. Neither signal fabricates chemistry — both read MetaNetX's own curated cross-refs / names.
+
+# MetaNetX chem_xref source-namespace prefixes for the two dedicated lipid resources. Confirmed against
+# the real chem_xref.tsv (release 4.5), which carries case + "model" (``M``-suffixed) spelling variants:
+# SwissLipids appears as ``slm:`` / ``SLM:`` and LIPID MAPS as ``lipidmaps:`` / ``lipidmapsM:``. All are
+# lowercased before the check, so the set enumerates the lowercased variants.
+LIPID_SOURCE_PREFIXES: frozenset[str] = frozenset({"slm", "lipidmaps", "lipidmapsm"})
+
+# Fallback name-pattern signal (used ONLY when a referent has no lipid-namespace cross-ref). Anchored,
+# case-insensitive lipid-class token immediately followed by a composition delimiter.
+_LIPID_CLASS_RE = re.compile(
+    r"(?i)^(?:TAG|TG|DAG|DG|MAG|MG|PC|PE|PS|PI|PG|PA|PIP[123]?|BMP|CL|LPC|LPE|LPS|LPI|LPG|LPA"
+    r"|CER|SM|HEX2?CER|GLCCER|GALCER|LACCER|CE|FAHFA|FA|WE|MGDG|DGDG|SQDG|SPH|CoQ)[\s(]"
+)
+# Two-chain acyl shorthand (``18:1/16:0``, ``d18:1/24:0``) — highly lipid-specific, low false-positive.
+_LIPID_ACYL_RE = re.compile(r"(?i)\b[dtme]?\d{1,2}:\d{1,2}/\d{1,2}:\d{1,2}\b")
+
+
+def name_is_lipid_pattern(name: Any) -> bool:
+    """True iff ``name`` matches the canonical lipid-shorthand fallback pattern (class token or acyl)."""
+    s = _norm(name)
+    if not s:
+        return False
+    return bool(_LIPID_CLASS_RE.match(s) or _LIPID_ACYL_RE.search(s))
+
+
+def classify_referent_lipid(compound_name: Any, source_prefixes: Iterable[str]) -> bool:
+    """Classify one referent LIPID/non-lipid. Namespace signal (LIPID MAPS / SwissLipids xref) preferred;
+    the lipid-shorthand name pattern is the fallback used only when no lipid-namespace signal is present.
+    """
+    prefixes = {str(p).strip().lower() for p in source_prefixes if str(p).strip()}
+    if prefixes & LIPID_SOURCE_PREFIXES:
+        return True
+    return name_is_lipid_pattern(compound_name)
+
+
+def name_stratum(is_lipid_flags: Iterable[bool]) -> str:
+    """Stratum for a name from its distinct referents' lipid flags: ``"lipid"`` iff >= 50% are lipid.
+
+    A name with no resolvable referents is ``"non_lipid"`` (it is not a lipid case). The >= 50% rule
+    (ties -> lipid) keeps the reported NON-lipid headline stratum pure — a name lands there only when a
+    strict majority of its referents are non-lipids.
+    """
+    flags = list(is_lipid_flags)
+    if not flags:
+        return "non_lipid"
+    return "lipid" if (sum(1 for f in flags if f) / len(flags)) >= 0.5 else "non_lipid"
+
+
+def _prefix_of(source_curie: str) -> str:
+    """Namespace prefix of a chem_xref source token (``lipidmaps:LMFA...`` -> ``lipidmaps``)."""
+    s = _norm(source_curie)
+    return s.split(":", 1)[0].strip().lower() if ":" in s else s.strip().lower()
+
+
+def _truthy(value: Any) -> bool:
+    """Parse a lipid flag from a raw cell that may be a bool or a CSV-roundtripped string."""
+    if isinstance(value, bool):
+        return value
+    return _norm(value).lower() in {"1", "true", "yes", "t"}
 
 
 def _candidate_curie(candidate_id: str, database: str) -> str:
@@ -343,19 +439,45 @@ class _NameGroup:
     block_mnxm: dict[str, str]
     block_name: dict[str, str]
     block_curie: dict[str, str]
+    block_is_lipid: dict[str, bool] = field(default_factory=dict)  # per-referent lipid flag (finalized)
+
+    def stratum(self) -> str:
+        """LIPID/non-lipid stratum for this name from its referents' lipid flags (>= 50% -> lipid)."""
+        return name_stratum(self.block_is_lipid.get(b, False) for b in self.block_ik)
 
 
 @dataclass
 class ReferentPopulation:
-    """The reconstructed name -> referent-set population + summary counts."""
+    """The reconstructed name -> referent-set population + summary counts (full + per stratum)."""
 
     groups: dict[str, _NameGroup]  # normalized-name -> group
     n_names_total: int
     n_ambiguous: int  # names with >= ambiguous_min_referents distinct structural referents
+    n_lipid: int = 0  # full-population names in the LIPID stratum
+    n_non_lipid: int = 0  # full-population names in the NON-lipid stratum
+    n_ambiguous_lipid: int = 0  # ambiguous-subset names in the LIPID stratum
+    n_ambiguous_non_lipid: int = 0  # ambiguous-subset names in the NON-lipid stratum (the headline)
 
     def ambiguous_names(self, ambiguous_min: int = 2) -> list[str]:
         """Normalized names with >= ``ambiguous_min`` distinct structural referents (deterministic order)."""
         return [k for k, g in self.groups.items() if len(g.block_ik) >= ambiguous_min]
+
+    def names_in_stratum(
+        self, stratum: str, *, ambiguous_min: int | None = None
+    ) -> list[str]:
+        """Normalized names in ``stratum`` (``"lipid"``/``"non_lipid"``), deterministic order.
+
+        ``ambiguous_min`` restricts to names with >= that many distinct referents (the ambiguous
+        subset); ``None`` returns the full population of the stratum.
+        """
+        out: list[str] = []
+        for k, g in self.groups.items():
+            if g.stratum() != stratum:
+                continue
+            if ambiguous_min is not None and len(g.block_ik) < ambiguous_min:
+                continue
+            out.append(k)
+        return out
 
 
 def build_referent_population(
@@ -371,7 +493,12 @@ def build_referent_population(
     InChIKey kept). A name with >= ``config.ambiguous_min_referents`` distinct skeletons is ambiguous.
     """
     groups: dict[str, _NameGroup] = {}
+    # Global MNXM -> set of source-namespace prefixes (the LIPID MAPS / SwissLipids signal is authoritative
+    # at the MNXM level: a lipid's lipidmaps/slm xref may ride a DIFFERENT synonym row than the ambiguous
+    # name, so the namespace signal is accumulated across ALL of the MNXM's xref rows, not just this name's).
+    mnxm_prefixes: dict[str, set[str]] = {}
     for source, mnxm, syn in _iter_chem_xref_names(xref_path):
+        mnxm_prefixes.setdefault(mnxm, set()).add(_prefix_of(source))
         rec = prop.get(mnxm)
         if rec is None:
             continue  # no independent structure -> cannot anchor a referent
@@ -393,9 +520,39 @@ def build_referent_population(
             # Representative source CURIE for this referent (source like ``chebi:57945`` is already a CURIE).
             g.block_curie[block] = source
 
+    # Finalize per-referent lipid flags now that the full MNXM->prefixes map is complete (a referent's
+    # lipidmaps/slm xref may have appeared on a later row than the referent's first sighting).
+    for g in groups.values():
+        for block, mnxm in g.block_mnxm.items():
+            g.block_is_lipid[block] = classify_referent_lipid(
+                g.block_name.get(block, ""), mnxm_prefixes.get(mnxm, set())
+            )
+
     ambiguous_min = int(config.ambiguous_min_referents)
-    n_ambiguous = sum(1 for g in groups.values() if len(g.block_ik) >= ambiguous_min)
-    return ReferentPopulation(groups=groups, n_names_total=len(groups), n_ambiguous=n_ambiguous)
+    n_ambiguous = 0
+    n_lipid = n_non_lipid = n_ambiguous_lipid = n_ambiguous_non_lipid = 0
+    for g in groups.values():
+        stratum = g.stratum()
+        is_amb = len(g.block_ik) >= ambiguous_min
+        if stratum == "lipid":
+            n_lipid += 1
+        else:
+            n_non_lipid += 1
+        if is_amb:
+            n_ambiguous += 1
+            if stratum == "lipid":
+                n_ambiguous_lipid += 1
+            else:
+                n_ambiguous_non_lipid += 1
+    return ReferentPopulation(
+        groups=groups,
+        n_names_total=len(groups),
+        n_ambiguous=n_ambiguous,
+        n_lipid=n_lipid,
+        n_non_lipid=n_non_lipid,
+        n_ambiguous_lipid=n_ambiguous_lipid,
+        n_ambiguous_non_lipid=n_ambiguous_non_lipid,
+    )
 
 
 def population_to_raw_table(
@@ -426,11 +583,17 @@ def population_to_raw_table(
                     "metanetx_id": g.block_mnxm.get(block, ""),
                     "compound_name": g.block_name.get(block, ""),
                     "inchikey": full_ik,
+                    # Per-referent lipid flag (namespace-signal-aware; carried so build_input_df need not
+                    # re-derive the namespace signal, which it cannot see from the raw table alone).
+                    "is_lipid_referent": bool(g.block_is_lipid.get(block, False)),
                 }
             )
     return pd.DataFrame(
         rows,
-        columns=["metabolite_name", "source_database", "candidate_id", "metanetx_id", "compound_name", "inchikey"],
+        columns=[
+            "metabolite_name", "source_database", "candidate_id", "metanetx_id", "compound_name",
+            "inchikey", "is_lipid_referent",
+        ],
     )
 
 
@@ -552,6 +715,11 @@ def build_input_df(
     cid_raw = _resolve_column(raw_df, CANDIDATE_ID_CANDIDATES)
     db_raw = _resolve_column(raw_df, DATABASE_CANDIDATES)
     mnx_raw = _resolve_column(raw_df, METANETX_CANDIDATES)
+    cmpd_raw = _resolve_column(raw_df, COMPOUND_CANDIDATES)
+    # The per-referent lipid flag is emitted by the MetaNetX reconstruction (``population_to_raw_table``);
+    # when a raw table lacks it (hand-built DataFrame/CSV), each referent's lipid status is derived from
+    # the fallback signals available on the row (source-database prefix + compound-name pattern).
+    lipid_raw = _resolve_column(raw_df, (config.is_lipid_referent_column, "is_lipid_referent"))
 
     # Group candidates by ambiguous name, preserving first-appearance order for determinism.
     order: list[str] = []
@@ -562,13 +730,20 @@ def build_input_df(
             continue  # blank name — nothing to query
         rec = groups.get(name)
         if rec is None:
-            rec = {"inchikeys": {}, "curies": [], "mnx": []}  # block -> full inchikey (dedup by skeleton)
+            # block -> full inchikey (dedup by skeleton); block_lipid -> per-referent lipid flag.
+            rec = {"inchikeys": {}, "curies": [], "mnx": [], "block_lipid": {}}
             groups[name] = rec
             order.append(name)
         ik = _norm(row[ik_raw])
         block = first_block(ik)
         if block is not None and block not in rec["inchikeys"]:
             rec["inchikeys"][block] = ik  # first full InChIKey seen for this connectivity skeleton
+            if lipid_raw is not None:
+                rec["block_lipid"][block] = _truthy(row[lipid_raw])
+            else:  # fallback: derive lipid status from the row's own source prefix + compound name
+                db_prefix = _prefix_of(_norm(row[db_raw])) if db_raw else ""
+                cmpd = _norm(row[cmpd_raw]) if cmpd_raw else ""
+                rec["block_lipid"][block] = classify_referent_lipid(cmpd, {db_prefix} if db_prefix else set())
         curie = _candidate_curie(_norm(row[cid_raw]) if cid_raw else "", _norm(row[db_raw]) if db_raw else "")
         if curie and curie not in rec["curies"]:
             rec["curies"].append(curie)
@@ -589,6 +764,7 @@ def build_input_df(
                 config.gold_referent_id_column: "|".join(rec["curies"]),
                 config.gold_metanetx_column: "|".join(rec["mnx"]),
                 config.referent_count_column: referent_count,
+                config.stratum_column: name_stratum(rec["block_lipid"].values()),
             }
         )
     columns = [
@@ -597,6 +773,7 @@ def build_input_df(
         config.gold_referent_id_column,
         config.gold_metanetx_column,
         config.referent_count_column,
+        config.stratum_column,
     ]
     return pd.DataFrame(rows, columns=columns)
 
@@ -621,6 +798,15 @@ def build_card(
     max_referents = int(counts.max()) if n else 0
     mean_amb_referents = float(amb_counts.mean()) if len(amb_counts) else 0.0
 
+    # LIPID vs NON-LIPID stratum sizes (critical: quantifies how much of the population is the abbreviation
+    # / cross-class ambiguity Pham is about vs lipid-isomer nomenclature that overlaps the LMSD arm).
+    strata = input_df[config.stratum_column] if n else pd.Series([], dtype=str)
+    is_amb = counts >= ambiguous_min if n else pd.Series([], dtype=bool)
+    n_lipid = int((strata == "lipid").sum()) if n else 0
+    n_non_lipid = int((strata == "non_lipid").sum()) if n else 0
+    n_amb_lipid = int(((strata == "lipid") & is_amb).sum()) if n else 0
+    n_amb_non_lipid = int(((strata == "non_lipid") & is_amb).sum()) if n else 0
+
     # Per-source coverage: how many candidate CURIEs came from each surveyed source-prefix (traceability).
     per_source: dict[str, int] = {}
     for cell in input_df.get(config.gold_referent_id_column, pd.Series([""] * n)):
@@ -639,6 +825,17 @@ def build_card(
         "n_ambiguous": n_ambiguous,  # highlighted hard-case subset (>= ambiguous_min_referents)
         "min_referents": config.min_referents,
         "ambiguous_min_referents": ambiguous_min,
+        # LIPID vs NON-LIPID stratification (approved 2026-07-16). Headline = the NON-lipid ambiguous
+        # subset (Pham's distinct contribution); the lipid subset overlaps the LMSD arm.
+        "strata": {
+            "full_population": {"lipid": n_lipid, "non_lipid": n_non_lipid},
+            "ambiguous_subset": {"lipid": n_amb_lipid, "non_lipid": n_amb_non_lipid},
+            "lipid_classifier": {
+                "namespace_signal": sorted(LIPID_SOURCE_PREFIXES),
+                "rule": "referent lipid if MNXM has a LIPID MAPS/SwissLipids xref, else lipid-shorthand "
+                "name pattern; name is lipid-stratum if >= 50% of its distinct referents are lipid",
+            },
+        },
         "ambiguity_degree": {
             "mean_referents": mean_referents,
             "max_referents": max_referents,
@@ -704,3 +901,71 @@ def load_pham(
 
     sha = sha256_bytes(raw_bytes)
     return PhamBundle(input_df=build_input_df(raw_df, config), card=build_card(raw_df, sha, config))
+
+
+# ==================================================================================================
+# Deterministic WITHIN-strata subsample for the gated run (mirrors RefMet: reservoir + seed, persisted).
+# ==================================================================================================
+
+
+def _stratum_n(stratum: str, config: PhamDisambiguationDatasetConfig) -> int | None:
+    return config.subsample_n_lipid if stratum == "lipid" else config.subsample_n_non_lipid
+
+
+def subsample_within_strata(
+    input_df: pd.DataFrame,
+    config: PhamDisambiguationDatasetConfig = PHAM_DISAMBIGUATION,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """Reservoir-subsample EACH stratum independently to its per-stratum n (or keep it in full).
+
+    The reconstructed ambiguous population is a lipid-isomer majority, so a single global subsample would
+    swamp the NON-lipid headline. Each stratum is therefore sampled on its OWN so the non-lipid stratum
+    keeps enough cases to report. Deterministic (seed ``config.subsample_seed``, first-appearance row
+    order), so the scored subset is reproducible and persistable. Returns ``(subsampled_df, meta)`` where
+    ``meta`` records per-stratum available/target/sampled counts + the seed.
+    """
+    from .backbones import reservoir_sample
+
+    seed = int(config.subsample_seed)
+    strata_order = ["non_lipid", "lipid"]  # non-lipid first (the headline) for deterministic output order
+    kept_frames: list[pd.DataFrame] = []
+    meta: dict[str, Any] = {"seed": seed, "method": "reservoir", "per_stratum": {}}
+    stratum_series = input_df.get(config.stratum_column)
+    for stratum in strata_order:
+        if stratum_series is None:
+            sub = input_df.iloc[0:0]
+        else:
+            sub = input_df[stratum_series == stratum]
+        available = len(sub)
+        target = _stratum_n(stratum, config)
+        if target is None or available <= target:
+            sampled_positions = list(range(available))  # keep the stratum in full
+        else:
+            sampled_positions = sorted(reservoir_sample(range(available), target, seed))
+        kept = sub.iloc[sampled_positions]
+        kept_frames.append(kept)
+        meta["per_stratum"][stratum] = {
+            "available": available,
+            "target": target,
+            "sampled": len(kept),
+        }
+    subsampled = pd.concat(kept_frames, ignore_index=True) if kept_frames else input_df.iloc[0:0]
+    return subsampled, meta
+
+
+def stratified_subsample_filename(key: str) -> str:
+    """Filename for the persisted within-strata subsample beside the dataset card."""
+    return f"{key}_stratified_subsample.csv"
+
+
+def persist_stratified_subsample(
+    subsampled_df: pd.DataFrame, key: str, out_dir: Any
+) -> Any:
+    """Write the exact within-strata subsample beside the card (the scored input, reproducible)."""
+    import os
+
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, stratified_subsample_filename(key))
+    with open(path, "wb") as fh:
+        fh.write(subsampled_df.to_csv(index=False).encode("utf-8"))
+    return path

@@ -142,3 +142,53 @@ def test_empty_frame_fails_loud():
     empty = pd.DataFrame({C.name_column: [], C.gold_referent_inchikey_column: [], "chosen_kg_id": []})
     with pytest.raises(UnscorableRunError, match="nothing to score"):
         score_pham_disambiguation(empty, C, _oracle())
+
+
+# ==================================================================================================
+# LIPID vs NON-LIPID stratified reporting (by_stratum + non-lipid headline).
+# ==================================================================================================
+
+
+def _stratified_df() -> pd.DataFrame:
+    """The base mapped frame + a ``stratum`` column: suc/tmp/gluc non-lipid, H/PPP lipid, cov unlabeled."""
+    df = _mapped_df()
+    df[C.stratum_column] = ["non_lipid", "lipid", "non_lipid", "lipid", "non_lipid", ""]
+    return df
+
+
+def test_full_population_unchanged_by_stratification():
+    # Top-level keys stay the FULL-population numbers (backward compatible with the un-stratified path).
+    result = score_pham_disambiguation(_stratified_df(), C, _oracle(), vocab="CHEBI")
+    assert result["comparable_core"]["scored_denominator"] == 5
+    assert result["comparable_core"]["member"] == 3
+
+
+def test_by_stratum_partitions_rows():
+    result = score_pham_disambiguation(_stratified_df(), C, _oracle(), vocab="CHEBI")
+    by = result["by_stratum"]
+    # non_lipid = suc(member), tmp(off-target), gluc(member) -> 2 scored ambiguous (suc,tmp), 1 member.
+    nl = by["non_lipid"]
+    assert nl["comparable_core"]["scored_denominator"] == 3  # suc, tmp, gluc
+    assert nl["ambiguous_subset"]["scored_denominator"] == 2  # suc, tmp (gluc unambiguous)
+    assert nl["ambiguous_subset"]["member"] == 1  # suc
+    # lipid = H(member), PPP(no prediction) -> both ambiguous; 1 member.
+    lp = by["lipid"]
+    assert lp["ambiguous_subset"]["scored_denominator"] == 2
+    assert lp["ambiguous_subset"]["member"] == 1
+    # cov row (blank stratum) buckets under UNSTRATIFIED but has empty gold -> nothing scored.
+    assert "unstratified" in by
+    assert by["unstratified"]["comparable_core"]["scored_denominator"] == 0
+
+
+def test_headline_points_at_non_lipid_ambiguous_subset():
+    result = score_pham_disambiguation(_stratified_df(), C, _oracle(), vocab="CHEBI")
+    headline = result["headline"]
+    assert headline["stratum"] == "non_lipid"
+    assert headline["ambiguous_subset"] == result["by_stratum"]["non_lipid"]["ambiguous_subset"]
+
+
+def test_missing_stratum_column_buckets_all_unstratified():
+    # A legacy mapped frame without the stratum column must still score (all rows -> UNSTRATIFIED).
+    result = score_pham_disambiguation(_mapped_df(), C, _oracle(), vocab="CHEBI")
+    assert set(result["by_stratum"]) == {"unstratified"}
+    assert result["by_stratum"]["unstratified"]["comparable_core"]["scored_denominator"] == 5

@@ -568,12 +568,20 @@ def orchestrate_pham(
         if not gate_result.passed:
             raise RuntimeError(f"Phase-0 gate stopped the Pham run: {gate_result.reason}")
 
+    from .adapters.pham import persist_stratified_subsample, subsample_within_strata
+
     # load_pham fails loud on the needs-reconstruction sentinel (no downloadable SI exists).
     bundle = load_pham(source, config)
+
+    # Deterministic WITHIN-strata subsample (mirror RefMet: reservoir + seed 42, persisted) so the
+    # non-lipid headline is not swamped by the lipid-isomer majority. Each stratum is sampled on its own.
+    scored_df, subsample_meta = subsample_within_strata(bundle.input_df, config)
+    persist_stratified_subsample(scored_df, config.key, out_dir)
+    bundle.card["stratified_subsample"] = subsample_meta
     (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
 
     runs = run_all(
-        mapper, bundle.input_df, config, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
+        mapper, scored_df, config, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
     )
     primary = config.target_vocabs[0]
     vr = runs.get(primary)
@@ -603,12 +611,27 @@ def orchestrate_pham(
     prec = result["structural_precision"]
     amb = result["ambiguity"]
     cov = result["coverage"]
+    by_stratum = result.get("by_stratum", {})
+    non_lipid = by_stratum.get("non_lipid", {})
+    lipid = by_stratum.get("lipid", {})
 
     def _pct(x: Any) -> str:
         return "n/a" if x is None else f"{x * 100:.1f}%"
 
+    def _stratum_row(label: str, s: dict[str, Any]) -> str:
+        if not s:
+            return f"| {label} | (no rows in this stratum) |"
+        ss = s["ambiguous_subset"]
+        sp = s["structural_precision"]
+        return (
+            f"| {label} ambiguous membership | {_pct(ss['referent_membership_rate'])} "
+            f"({ss['member']}/{ss['scored_denominator']}); precision {_pct(sp['precision'])} "
+            f"({sp['member']}/{sp['predicted_denominator']}) |"
+        )
+
     mean_amb = amb["mean_gold_referents"]
     mean_amb_str = "n/a" if mean_amb is None else f"{mean_amb:.2f}"
+    strata_card = bundle.card.get("strata", {})
     report_path = out_dir / f"{config.key}_report.md"
     report_path.write_text(
         "\n".join(
@@ -622,20 +645,33 @@ def orchestrate_pham(
                 f"(>= {subset['ambiguous_min_referents']} referents): {subset['scored_denominator']} "
                 f"(mean {mean_amb_str} referents/name).",
                 "",
+                "## Stratum sizes (full reconstructed population, pre-subsample)",
+                f"- ambiguous subset: {strata_card.get('ambiguous_subset', {})} (lipid vs non_lipid)",
+                f"- full population: {strata_card.get('full_population', {})}",
+                "",
+                "## HEADLINE — NON-lipid ambiguous stratum (Pham's distinct contribution)",
+                "| metric | value |",
+                "| --- | --- |",
+                _stratum_row("**NON-LIPID**", non_lipid),
+                _stratum_row("lipid (overlaps LMSD)", lipid),
+                "",
+                "## Full-population + diagnostics",
                 "| metric | value |",
                 "| --- | --- |",
                 f"| full-population membership ({primary}) | {_pct(core['referent_membership_rate'])} "
                 f"({core['member']}/{core['scored_denominator']}) |",
-                f"| **ambiguous-subset membership** ({primary}) | {_pct(subset['referent_membership_rate'])} "
+                f"| all-ambiguous membership ({primary}) | {_pct(subset['referent_membership_rate'])} "
                 f"({subset['member']}/{subset['scored_denominator']}) |",
-                f"| structural precision | {_pct(prec['precision'])} "
+                f"| structural precision (full) | {_pct(prec['precision'])} "
                 f"({prec['member']}/{prec['predicted_denominator']}) |",
                 f"| coverage | {cov['n_predicted']}/{cov['total']} |",
                 f"| ambiguity collapse rate (diagnostic) | {_pct(amb['collapse_rate'])} |",
                 "",
                 "Circularity guard: referent InChIKeys are the INDEPENDENT MetaNetX chem_prop source "
                 "(cross-checked against PubChem-by-name); only BioMapper's prediction was resolved "
-                "through the KG oracle.",
+                "through the KG oracle. Lipid classifier: LIPID MAPS / SwissLipids namespace signal "
+                "(preferred) + lipid-shorthand name pattern (fallback); a name is lipid-stratum if "
+                ">= 50% of its distinct referents are lipid.",
             ]
         )
     )

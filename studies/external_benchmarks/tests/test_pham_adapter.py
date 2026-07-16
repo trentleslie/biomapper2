@@ -15,18 +15,25 @@ from __future__ import annotations
 import pandas as pd
 import pytest
 
+import dataclasses
+
 from studies.external_benchmarks.adapters.pham import (
     MetaNetXFiles,
     SourceNotReconstructedError,
     build_card,
     build_input_df,
     build_referent_population,
+    classify_referent_lipid,
     load_pham,
+    name_is_lipid_pattern,
+    name_stratum,
     normalize_name,
     parse_chem_prop,
+    persist_stratified_subsample,
     population_to_raw_table,
     reconstruct_from_metanetx,
     sha256_bytes,
+    subsample_within_strata,
 )
 from studies.external_benchmarks.config import (
     PHAM_DISAMBIGUATION,
@@ -283,3 +290,175 @@ def test_config_anti_trivial_guard_rejects_gold_equals_query():
             source_url="x",
             license="x",
         )
+
+
+# ==================================================================================================
+# Layer 3 — LIPID vs NON-LIPID stratification (classifier + stratum column + card sizes + subsample).
+# ==================================================================================================
+
+C = PHAM_DISAMBIGUATION
+
+
+def test_name_is_lipid_pattern_class_and_acyl():
+    # Lipid-class abbreviation + composition, and two-chain acyl shorthand -> lipid.
+    assert name_is_lipid_pattern("PC(16:0/18:1)")
+    assert name_is_lipid_pattern("TG(16:0/18:1/18:2)")
+    assert name_is_lipid_pattern("Cer(d18:1/24:0)")
+    assert name_is_lipid_pattern("18:1/16:0")
+    assert name_is_lipid_pattern("d18:1/24:0")
+    # Non-lipid names (the Pham abbreviation kind) -> not a lipid pattern.
+    assert not name_is_lipid_pattern("tmp")
+    assert not name_is_lipid_pattern("succinate")
+    assert not name_is_lipid_pattern("catechol")
+    assert not name_is_lipid_pattern("")
+
+
+def test_classify_referent_lipid_prefers_namespace_signal():
+    # Namespace signal (LIPID MAPS / SwissLipids) is authoritative even when the name looks non-lipid.
+    assert classify_referent_lipid("some curated lipid", {"slm"})
+    assert classify_referent_lipid("whatever", {"lipidmaps"})
+    assert classify_referent_lipid("model-variant", {"lipidmapsm"})
+    # No lipid namespace -> fall back to the name pattern.
+    assert classify_referent_lipid("PC(16:0/18:1)", {"chebi"})
+    assert not classify_referent_lipid("succinate", {"chebi", "kegg.compound"})
+    assert not classify_referent_lipid("tmp", set())
+
+
+def test_name_stratum_majority_rule_ties_to_lipid():
+    assert name_stratum([True, True]) == "lipid"
+    assert name_stratum([False, False]) == "non_lipid"
+    assert name_stratum([True, False]) == "lipid"  # tie (50%) -> lipid (keeps non-lipid headline pure)
+    assert name_stratum([True, False, False]) == "non_lipid"  # strict minority lipid
+    assert name_stratum([]) == "non_lipid"  # no referents -> not a lipid case
+
+
+# --- reconstruction-level: namespace signal rides a DIFFERENT synonym row than the ambiguous name ---
+
+_CHEM_PROP_LIPID = """\
+#ID	name	reference	formula	charge	mass	InChI	InChIKey	SMILES
+MNXM1	succinate	chebi:30031	C4H4O4	-2	116.0	InChI=x	SUCCINATEBLOCK-AAAAAAAAAA-N	C
+MNXM2	sucrose	chebi:17992	C12H22O11	0	342.0	InChI=y	SUCROSEBLOCKXX-BBBBBBBBBB-N	C
+MNXM5	PC(16:0/18:1)	slm:000012345	C42	0	760.0	InChI=p	PCLIPIDBLOCKX-EEEEEEEEEE-N	C
+MNXM6	18:1/16:0	chebi:55555	C18	0	282.0	InChI=q	ACYLBLOCKXXXX-FFFFFFFFFF-N	C
+"""
+
+# MNXM5's SwissLipids (slm) xref rides the synonym "labc", NOT the ambiguous test name — the namespace
+# signal must still tag every referent of MNXM5 as lipid (MNXM-level accumulation).
+_CHEM_XREF_LIPID = """\
+#source	ID	description
+chebi:30031	MNXM1	suc||succinate
+kegg.compound:C00089	MNXM2	suc||sucrose
+slm:000012345	MNXM5	labc
+chebi:99	MNXM5	labc
+chebi:55555	MNXM6	18:1/16:0
+"""
+
+
+@pytest.fixture
+def metanetx_lipid_files(tmp_path) -> MetaNetXFiles:
+    prop = tmp_path / "chem_prop.tsv"
+    xref = tmp_path / "chem_xref.tsv"
+    prop.write_text(_CHEM_PROP_LIPID)
+    xref.write_text(_CHEM_XREF_LIPID)
+    return MetaNetXFiles(chem_prop_path=str(prop), chem_xref_path=str(xref))
+
+
+def test_reconstruction_classifies_strata_via_namespace_and_pattern(metanetx_lipid_files):
+    prop = parse_chem_prop(metanetx_lipid_files.chem_prop_path)
+    pop = build_referent_population(prop, metanetx_lipid_files.chem_xref_path, C)
+    # "suc" = succinate + sucrose (both non-lipid) -> non-lipid ambiguous.
+    assert pop.groups["suc"].stratum() == "non_lipid"
+    # "labc" -> MNXM5 which carries an slm xref (on this very row) -> lipid via namespace signal.
+    assert pop.groups["labc"].stratum() == "lipid"
+    # "18:1/16:0" -> MNXM6 has NO lipid namespace, but the name matches the acyl pattern -> lipid.
+    assert pop.groups["18:1/16:0"].stratum() == "lipid"
+    assert pop.n_ambiguous == 1  # only "suc"
+    assert pop.n_ambiguous_non_lipid == 1
+    assert pop.n_ambiguous_lipid == 0
+    assert pop.n_lipid == 2  # labc, 18:1/16:0
+    assert pop.n_non_lipid == 3  # suc, succinate, sucrose
+    assert pop.names_in_stratum("non_lipid", ambiguous_min=2) == ["suc"]
+
+
+def test_reconstructed_raw_table_carries_is_lipid_referent(metanetx_lipid_files):
+    raw = reconstruct_from_metanetx(metanetx_lipid_files, C)
+    assert "is_lipid_referent" in raw.columns
+    labc = raw[raw["metabolite_name"] == "labc"]
+    assert bool(labc["is_lipid_referent"].iloc[0]) is True
+
+
+# --- transform-level: stratum column + card sizes + within-strata subsample ---
+
+
+@pytest.fixture
+def raw_strat_df() -> pd.DataFrame:
+    """Raw candidate table exercising both classifier paths + the majority rule.
+
+    - ``tmp`` (2 non-lipid referents) -> non_lipid ambiguous (the Pham kind).
+    - ``PC`` (2 lipid referents, explicit is_lipid_referent) -> lipid ambiguous.
+    - ``mix`` (1 lipid + 1 non-lipid) -> tie -> lipid.
+    - ``nl3`` (2 non-lipid + 1 lipid) -> strict minority lipid -> non_lipid.
+    """
+    return pd.DataFrame(
+        {
+            "metabolite_name": ["tmp", "tmp", "PC", "PC", "mix", "mix", "nl3", "nl3", "nl3"],
+            "source_database": ["ChEBI", "KEGG", "SwissLipids", "SwissLipids", "ChEBI", "ChEBI",
+                                "ChEBI", "KEGG", "SwissLipids"],
+            "candidate_id": ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+            "metanetx_id": ["MNXM1", "MNXM2", "MNXM3", "MNXM4", "MNXM5", "MNXM6", "MNXM7", "MNXM8", "MNXM9"],
+            "compound_name": ["thymidine-MP", "thiamine-MP", "PC(16:0/18:1)", "PC(18:0/20:4)",
+                              "aspirin", "PC(14:0/16:0)", "glutamate", "leucine", "PE(16:0/18:1)"],
+            "inchikey": [
+                "TMPBLOCKXXXXXX-AAAAAAAAAA-N", "THIAMINEMPXXXX-BBBBBBBBBB-N",
+                "PC1BLOCKXXXXXX-CCCCCCCCCC-N", "PC2BLOCKXXXXXX-DDDDDDDDDD-N",
+                "ASPIRINBLOCKX-EEEEEEEEEE-N", "PC3BLOCKXXXXXX-FFFFFFFFFF-N",
+                "GLUTBLOCKXXXXX-GGGGGGGGGG-N", "LEUBLOCKXXXXXX-HHHHHHHHHH-N", "PE1BLOCKXXXXXX-IIIIIIIIII-N",
+            ],
+            "is_lipid_referent": [False, False, True, True, False, True, False, False, True],
+        }
+    )
+
+
+def test_input_df_carries_stratum_column(raw_strat_df):
+    df = build_input_df(raw_strat_df, C)
+    strat = dict(zip(df[C.name_column], df[C.stratum_column]))
+    assert strat == {"tmp": "non_lipid", "PC": "lipid", "mix": "lipid", "nl3": "non_lipid"}
+
+
+def test_input_df_stratum_fallback_without_lipid_column(raw_strat_df):
+    # Drop the explicit per-referent flag -> classification falls back to source prefix + name pattern.
+    fallback = raw_strat_df.drop(columns=["is_lipid_referent"])
+    df = build_input_df(fallback, C)
+    strat = dict(zip(df[C.name_column], df[C.stratum_column]))
+    # SwissLipids source prefix + lipid-shorthand names still recover the lipid strata.
+    assert strat["tmp"] == "non_lipid"
+    assert strat["PC"] == "lipid"
+
+
+def test_card_reports_stratum_sizes(raw_strat_df):
+    card = build_card(raw_strat_df, source_sha="deadbeef", config=C)
+    assert card["strata"]["full_population"] == {"lipid": 2, "non_lipid": 2}
+    assert card["strata"]["ambiguous_subset"] == {"lipid": 2, "non_lipid": 2}
+    assert "slm" in card["strata"]["lipid_classifier"]["namespace_signal"]
+
+
+def test_subsample_within_strata_is_independent_and_deterministic(raw_strat_df):
+    df = build_input_df(raw_strat_df, C)  # 2 lipid + 2 non-lipid names
+    cfg = dataclasses.replace(C, subsample_n_lipid=1, subsample_n_non_lipid=10)
+    sub, meta = subsample_within_strata(df, cfg)
+    # Lipid stratum sampled to 1; non-lipid kept in full (only 2 < 10).
+    assert meta["per_stratum"]["lipid"] == {"available": 2, "target": 1, "sampled": 1}
+    assert meta["per_stratum"]["non_lipid"] == {"available": 2, "target": 10, "sampled": 2}
+    assert (sub[C.stratum_column] == "lipid").sum() == 1
+    assert (sub[C.stratum_column] == "non_lipid").sum() == 2
+    # Deterministic: same seed -> byte-identical selection.
+    sub2, _ = subsample_within_strata(df, cfg)
+    pd.testing.assert_frame_equal(sub, sub2)
+
+
+def test_persist_stratified_subsample_roundtrips(raw_strat_df, tmp_path):
+    df = build_input_df(raw_strat_df, C)
+    sub, _ = subsample_within_strata(df, C)
+    path = persist_stratified_subsample(sub, C.key, tmp_path)
+    reloaded = pd.read_csv(path, dtype=str, keep_default_na=False)
+    assert list(reloaded[C.name_column]) == list(sub[C.name_column].astype(str))

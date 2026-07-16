@@ -818,6 +818,22 @@ class PhamDisambiguationDatasetConfig:
     input_type: str = "name"
     source_doi: str = PHAM_DOI
     source_pmid: str = PHAM_PMID
+    # LIPID vs NON-LIPID stratification (approved 2026-07-16). The reconstructed ambiguous population is
+    # ~100% lipid-isomer nomenclature, which overlaps the LMSD lipid arm and misses the abbreviation /
+    # cross-class ambiguity Pham 2019 is actually about (``tmp`` -> thymidine-MP / thiamine-MP; ``suc``
+    # -> succinate / sucrose). Each name is stratified by whether its referents are predominantly lipids
+    # (namespace signal preferred: a LIPID MAPS / SwissLipids cross-reference on the referent's MNXM;
+    # fallback: canonical lipid-shorthand NAME patterns). The NON-lipid stratum is the headline (Pham's
+    # distinct contribution); the lipid stratum is reported separately (it overlaps LMSD).
+    stratum_column: str = "stratum"  # per-name "lipid" | "non_lipid" label carried in the input_df
+    is_lipid_referent_column: str = "is_lipid_referent"  # per-referent lipid flag in the raw candidate table
+    # Deterministic WITHIN-strata subsample for the gated run (mirrors RefMet's reservoir + seed 42), so
+    # the non-lipid headline is not swamped by the lipid majority. Each stratum is sampled INDEPENDENTLY
+    # to its per-stratum n (or kept in full when the stratum is smaller); the exact scored subset is
+    # persisted beside the card. ``None`` keeps a stratum in full.
+    subsample_n_non_lipid: int | None = 1500
+    subsample_n_lipid: int | None = 1500
+    subsample_seed: int = 42
     # A name is RETAINED in the scored population if it has >= this many distinct structural referents.
     # Default 1 = the FULL population (every name with at least one resolvable structure); a name with
     # zero referents / no InChIKey among its candidates is dropped (nothing to score). The approved
