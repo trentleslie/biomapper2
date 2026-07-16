@@ -5,6 +5,7 @@ from __future__ import annotations
 import studies.external_benchmarks.run as run_mod
 from studies.external_benchmarks.report.campaign import (
     CAMPAIGN_FRAMING,
+    LIPID_CHARGE_NORM_NOTE,
     assemble_campaign_report,
 )
 
@@ -65,6 +66,54 @@ def test_campaign_report_two_arms_one_number_each(tmp_path):
     assert "not transcribed" not in text  # no fabricated competitor cells
     # learning #1: no per-vocab axis language
     assert "per-vocab" in text.lower()  # the note explaining its omission
+
+
+def _regime(strict, cn, correct, scored, n_rows, n_pred):
+    return {
+        "comparable_core": {"top1_accuracy": strict, "correct": correct, "scored_denominator": scored},
+        "comparable_core_charge_normalized": (
+            None if cn is None else {"top1_accuracy": cn, "correct": correct, "scored_denominator": scored}
+        ),
+        "n_rows": n_rows,
+        "coverage": {"n_predicted": n_pred, "total": n_rows, "fraction": n_pred / n_rows},
+    }
+
+
+def test_campaign_report_renders_name_source_regime_breakout(tmp_path):
+    out = tmp_path / "lmsd.md"
+    result = _metab_result(0.55, 0.55)  # blended; charge-norm coincides with strict (lipid case)
+    result["by_name_source_regime"] = {
+        "shorthand": _regime(0.50, 0.50, 675, 1350, 1350, 1350),  # the hard class, ~90% of the sample
+        "common_systematic": _regime(0.95, 0.95, 142, 150, 150, 150),
+    }
+    text = assemble_campaign_report(
+        metabolite_entries=[{"key": "lmsd", "result": result}],
+        curie_entries=[],
+        integrity={"reconciliation_passed": True, "validation_passed": None},
+        out_path=out,
+    )
+    # blended overall retained for continuity
+    assert "55.0%" in text
+    # both regimes broken out, shorthand listed as the hard class
+    assert "shorthand (ABBREVIATION)" in text
+    assert "common / systematic" in text
+    assert "50.0%" in text and "95.0%" in text
+    # the charge-norm == strict note is stated once
+    assert LIPID_CHARGE_NORM_NOTE in text
+    assert text.count(LIPID_CHARGE_NORM_NOTE) == 1
+
+
+def test_campaign_report_omits_regime_section_when_absent(tmp_path):
+    # A metabolite entry without the breakout (e.g. NECS/RefMet) must not render the regime section.
+    out = tmp_path / "necs.md"
+    text = assemble_campaign_report(
+        metabolite_entries=[{"key": "necs-metabolon", "result": _metab_result(0.82, 0.965)}],
+        curie_entries=[],
+        integrity={"reconciliation_passed": True, "validation_passed": None},
+        out_path=out,
+    )
+    assert "regime breakout" not in text.lower()
+    assert LIPID_CHARGE_NORM_NOTE not in text
 
 
 def test_run_module_exposes_new_orchestrations():
