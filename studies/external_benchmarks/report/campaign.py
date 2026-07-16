@@ -35,6 +35,57 @@ def _pct(x: float | None) -> str:
     return "n/a" if x is None else f"{x * 100:.1f}%"
 
 
+# Human labels for the name-source regimes emitted by the structure-oracle scorer.
+REGIME_LABELS: dict[str, str] = {
+    "shorthand": "shorthand (ABBREVIATION)",
+    "common_systematic": "common / systematic",
+}
+
+# Both the strict and charge-normalized Top-1 columns are reported per regime. The design
+# expectation was that they would COINCIDE for lipids (misses being connectivity errors — chain
+# length / double-bond position / headgroup — not protonation), but the ~20-name live smoke
+# contradicted that: charge-normalization recovered extra matches (blended 57.1% vs strict 42.9%),
+# i.e. some lipid misses ARE charge-state differences. Lipids with fixed-charge headgroups (e.g. the
+# phosphocholine [O-]...[N+] of glycerophospholipids) can carry an explicit charge in the source
+# SMILES that shifts the InChIKey first block relative to the KG's neutral form; neutralizing charge
+# collapses those. So the two columns may DIFFER — read strict as the conservative floor and the gap
+# (strict -> charge-normalized) as protonation/charge-state recoveries, not connectivity fixes.
+LIPID_CHARGE_NORM_NOTE = (
+    "Strict and charge-normalized Top-1 are BOTH reported per regime and may differ for lipids: "
+    "charge-normalization neutralizes protonation/charge state before the InChIKey-connectivity "
+    "comparison, so lipids with fixed-charge headgroups (e.g. phosphocholine) whose source SMILES "
+    "carries an explicit charge can be recovered by the charge-normalized column that the strict "
+    "first-block comparison misses. Read strict as the conservative floor; the gap to charge-"
+    "normalized is charge-state recoveries, not connectivity fixes. (The ~20-name live smoke showed "
+    "charge-norm above strict — the initial 'the two coincide' expectation did not hold.)"
+)
+
+
+def _name_source_regime_rows(entry: dict[str, Any]) -> list[str]:
+    """One table row per name-source regime for a metabolite entry that carries the breakout.
+
+    Shorthand (the hard class) is listed first; any unexpected regime keys follow in a stable order.
+    Returns ``[]`` for entries without a ``by_name_source_regime`` block (all non-LMSD arms).
+    """
+    by = entry["result"].get("by_name_source_regime")
+    if not by:
+        return []
+    preferred = ["shorthand", "common_systematic"]
+    keys = [k for k in preferred if k in by] + sorted(k for k in by if k not in preferred)
+    rows: list[str] = []
+    for k in keys:
+        r = by[k]
+        core = r["comparable_core"]
+        cn = r.get("comparable_core_charge_normalized")
+        cn_acc = _pct(cn["top1_accuracy"]) if cn else "n/a"
+        cov = r.get("coverage", {})
+        rows.append(
+            f"| {entry['key']} | {REGIME_LABELS.get(k, k)} | {_pct(core['top1_accuracy'])} | {cn_acc} | "
+            f"{core['scored_denominator']} | {cov.get('n_predicted', '?')}/{cov.get('total', '?')} |"
+        )
+    return rows
+
+
 def _metabolite_row(entry: dict[str, Any]) -> str:
     core = entry["result"]["comparable_core"]
     cn = entry["result"].get("comparable_core_charge_normalized")
@@ -91,6 +142,29 @@ def assemble_campaign_report(
         for entry in metabolite_entries:
             lines.append(_metabolite_row(entry))
         lines.append("")
+
+        # Name-source regime breakout (LMSD lipid arm): the blended number above averages two very
+        # different input populations, so break it out where the scorer supplied the split.
+        regime_entries = [e for e in metabolite_entries if e["result"].get("by_name_source_regime")]
+        if regime_entries:
+            lines.append("### Name-source regime breakout (shorthand vs common/systematic)")
+            lines.append("")
+            lines.append(
+                "The blended Top-1 above averages two very different input populations. The lipid "
+                "shorthand `ABBREVIATION` (e.g. `TG 57:6`) is the hardest name->structure class and "
+                "dominates the sample (~90%); common/systematic names are easier. Broken out here per "
+                "regime; the blended overall is retained above for continuity."
+            )
+            lines.append("")
+            lines.append(
+                "| Dataset | Name-source regime | Top-1 (strict) | Top-1 (charge-normalized) | Scored n | Coverage |"
+            )
+            lines.append("|---|---|---|---|---|---|")
+            for entry in regime_entries:
+                lines.extend(_name_source_regime_rows(entry))
+            lines.append("")
+            lines.append(f"- {LIPID_CHARGE_NORM_NOTE}")
+            lines.append("")
 
     if curie_entries:
         lines.append("## Gene/protein arm — CURIE-equality accuracy (one number per dataset)")

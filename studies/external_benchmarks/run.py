@@ -348,6 +348,99 @@ def orchestrate_metaboliteannotator(
     return {"out_dir": str(out_dir), "report": str(report_path), "modes": [e["mode"] for e in entries]}
 
 
+def orchestrate_metlinkr(
+    *,
+    source: Any = "fetch",
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+    enforce_assigned: bool = True,
+) -> dict[str, Any]:
+    """Run the metLinkR same-task cross-linking head-to-head live (dual curator + InChIKey oracle).
+
+    ``source`` is the sentinel ``"fetch"`` for a live run (EuropePMC mirror; fail-loud on placeholder)
+    or a raw DataFrame/bytes in a driver/smoke. Runs EVERY target vocab and unions the passes (a link
+    is confirmed if the two members share a canonical id in ANY vocab), then scores BOTH oracles and
+    renders the internal dual-oracle report beside metLinkR's transcribed ~85.3% baseline. Heavy deps
+    imported lazily so offline tests can import this module without a Mapper.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters.metlinkr import load_metlinkr
+    from .config import METLINKR, METLINKR_COMPETITORS
+    from .oracle import KGStructureOracle
+    from .report.metlinkr import assemble_metlinkr_report
+    from .runner import run_all
+    from .scorers.metlinkr_scorer import merge_vocab_runs, score_metlinkr
+
+    config = METLINKR
+    repo_root = repo_root or Path.cwd()
+    stamp = _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out_dir = out_dir or (Path(__file__).parent / "runs" / f"metlinkr_{stamp}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper), n_rows=100, per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the metLinkR run: {gate_result.reason}")
+
+    bundle = load_metlinkr(source, config)  # fails loud on a needs-fetching placeholder
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+
+    runs = run_all(
+        mapper,
+        bundle.input_df,
+        config,
+        out_dir,
+        dataset_sha=bundle.card["source_sha256"],
+        repo_root=repo_root,
+        enforce_assigned=enforce_assigned,
+    )
+    ok_vocabs = [v for v, vr in runs.items() if vr.ok and vr.output_tsv]
+    if not ok_vocabs:
+        errs = {v: vr.error for v, vr in runs.items()}
+        raise RuntimeError(f"{config.key}: no target vocab produced a result (mapper failed: {errs!r}).")
+    # dtype=str + keep-NA-empty so bare numeric curator PubChem ids are not coerced to float
+    # (``159663`` -> ``159663.0``) and blanks stay "" — both would break structural resolution.
+    mapped_dfs = [
+        pd.read_csv(runs[v].output_tsv, sep="\t", dtype=str, keep_default_na=False) for v in ok_vocabs
+    ]
+    merged_df = merge_vocab_runs(mapped_dfs, config)
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    # Oracle (b)'s GOLD side is resolved by an INDEPENDENT external source (PubChem PUG-REST), NOT the
+    # KG oracle above — so the structural concordance is not circular (BioMapper's prediction still
+    # rides the KG oracle). Rows the external source cannot cover are flagged needs-verification.
+    from .scorers.independent_inchikey import PubChemInChIKeyResolver
+
+    independent_resolver = PubChemInChIKeyResolver()
+    result = score_metlinkr(
+        merged_df,
+        config,
+        vocab="+".join(ok_vocabs),
+        oracle=oracle,
+        independent_resolver=independent_resolver,
+    )
+    (out_dir / "metlinkr_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / "metlinkr_report.md"
+    assemble_metlinkr_report(
+        result=result, card=bundle.card, competitors=METLINKR_COMPETITORS, out_path=report_path
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "result": result}
+
+
 def orchestrate_refmet(
     *,
     source,
@@ -433,6 +526,109 @@ def orchestrate_refmet(
     report_path = out_dir / f"{REFMET.key}_report.md"
     assemble_campaign_report(
         metabolite_entries=[{"key": REFMET.key, "result": result}],
+        curie_entries=[],
+        integrity={"reconciliation_passed": rec.passed, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+
+
+def orchestrate_lmsd(
+    *,
+    source,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the LMSD lipid-name->structure slice live (structure oracle, strict + charge-normalized).
+
+    LMSD is LARGE (~50k curated records), so the SDF is streamed + reservoir-subsampled from the
+    InChIKey-bearing population and the exact scored subsample is PERSISTED beside the card. The
+    query is a lipid NAME (shorthand/common/systematic); the LM_ID is held out (contamination
+    control). One accuracy number per dataset (single CHEBI vocab), no competitor figure. ``source``
+    is the ``.sdf.zip`` URL (streamed) or a line iterator (tests). Heavy deps imported lazily so this
+    module imports offline.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters import lmsd as lmsd_adapter
+    from .adapters.backbones import resolve_source_version
+    from .config import LMSD
+    from .oracle import KGStructureOracle
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_all
+    from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
+    from .verify import reconcile
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(LMSD, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper),
+            n_rows=LMSD.subsample_n or 1500,
+            per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD,
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the LMSD run: {gate_result.reason}")
+
+    # The SDF download is a mutable current release, so URL+seed+n cannot reconstruct the scored
+    # subset. Resolve the upstream version (best effort) and PERSIST the exact subsample beside the
+    # card — that persisted artifact, not the URL, is what makes the run reproducible.
+    source_version = resolve_source_version(source) if isinstance(source, str) else None
+    bundle = lmsd_adapter.load_lmsd(source, LMSD, source_version=source_version)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+    lmsd_adapter.persist_subsample(bundle, out_dir)
+
+    primary = LMSD.target_vocabs[0]
+    runs = run_all(
+        mapper, bundle.input_df, LMSD, out_dir, dataset_sha=bundle.card["subsample_sha256"], repo_root=repo_root
+    )
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"LMSD primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+    result = score_structure_oracle(
+        mapped_df,
+        LMSD,
+        oracle,
+        vocab=primary,
+        gold_smiles_normalizer=neutralize_first_block,
+        # Break the strict + charge-normalized Top-1 out per name-source regime (shorthand vs
+        # common/systematic) — the sample is ~90% lipid shorthand (the hard class), so the blended
+        # number alone would hide two very different populations. The adapter records the source per
+        # row as ``query_source``; the blended overall is still reported for continuity.
+        name_source_column=lmsd_adapter.QUERY_SOURCE_COL,
+    )
+    # Fail-closed on an unscorable run — the same rule the other arms enforce. top1_accuracy is None
+    # only when no sampled row carried a scorable gold structure; refuse BEFORE writing results.
+    if result["comparable_core"]["top1_accuracy"] is None:
+        raise RuntimeError(
+            f"LMSD: no scorable rows (top1_accuracy is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable run as success."
+        )
+    rec = reconcile({"structure": result}, mapped_df, LMSD, oracle)
+    if not rec.passed:
+        raise RuntimeError(f"LMSD reconciliation failed: {rec.mismatches}")
+    (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{LMSD.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[{"key": LMSD.key, "result": result}],
         curie_entries=[],
         integrity={"reconciliation_passed": rec.passed, "validation_passed": None},
         out_path=report_path,
@@ -1100,6 +1296,12 @@ def build_parser() -> argparse.ArgumentParser:
     rm.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     rm.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
 
+    # LMSD (LIPID MAPS Structure Database): lipid-name->structure, streamed + reservoir-subsampled.
+    lm = sub.add_parser("lmsd", help="run the LMSD lipid-name->structure slice (streamed .sdf.zip + subsampled)")
+    lm.add_argument("--source", required=True, help="path/URL to the LMSD .sdf.zip bulk download (or a local .sdf)")
+    lm.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    lm.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
     # NIST SRM 1950 / SRM1950-DB: certified clinical-plasma reference set (loaded in full).
     sr = sub.add_parser("srm1950", help="run the NIST SRM 1950 name->structure slice")
     sr.add_argument("--source", required=True, help="path/URL to the SRM1950-DB metabolites.csv")
@@ -1116,6 +1318,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ph.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     ph.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # metLinkR head-to-head (same-task cross-linking): fetched from the EuropePMC SI mirror by
+    # default; a local ManualMappings.csv can be passed for a driver/smoke run.
+    mlr = sub.add_parser("metlinkr", help="run the metLinkR same-task cross-linking head-to-head")
+    mlr.add_argument(
+        "--source",
+        default=None,
+        help="path to a local ManualMappings.csv (default: fetch from the pinned EuropePMC SI mirror)",
+    )
+    mlr.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    mlr.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     return parser
 
 
@@ -1162,6 +1375,33 @@ def main() -> None:
         print(f"Saved RefMet run to {result['out_dir']}; report at {result['report']}")
         return
 
+    if args.command == "lmsd":
+        # LMSD is streamed from an SDF: a URL streams the .sdf.zip; a local file becomes a line
+        # iterator (plain .sdf, or a .sdf.zip read via zipfile).
+        p = Path(args.source)
+        if not p.exists():
+            src: Any = args.source  # URL -> stream_sdf_lines
+        elif p.suffix.lower() == ".zip":
+            import io
+            import zipfile
+
+            def _zip_sdf_lines(path: Path):
+                zf = zipfile.ZipFile(path)
+                names = [n for n in zf.namelist() if n.lower().endswith(".sdf")]
+                if not names:
+                    raise ValueError(f"{path} contains no .sdf member")
+                with zf.open(names[0]) as member:
+                    for raw in io.TextIOWrapper(member, encoding="utf-8", errors="replace"):
+                        yield raw.rstrip("\n")
+
+            src = _zip_sdf_lines(p)
+        else:
+            src = _local_line_iter(p)
+        out = Path(args.out) if args.out else None
+        result = orchestrate_lmsd(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved LMSD run to {result['out_dir']}; report at {result['report']}")
+        return
+
     if args.command == "srm1950":
         # SRM1950 loads in full: a local file is read to bytes, a URL is fetched by the adapter.
         src = _resolve_source_arg(args.source)
@@ -1177,6 +1417,15 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = orchestrate_pham(source=src, out_dir=out, run_gate_first=not args.no_gate)
         print(f"Saved Pham run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "metlinkr":
+        # A local ManualMappings.csv is read to bytes; no --source falls back to "fetch" (the live
+        # EuropePMC SI mirror, SHA-verified in the adapter).
+        src: bytes | str = _resolve_source_arg(args.source) if args.source else "fetch"
+        out = Path(args.out) if args.out else None
+        result = orchestrate_metlinkr(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved metLinkR run to {result['out_dir']}; report at {result['report']}")
         return
 
     # Legacy name-input Hajjar path.
