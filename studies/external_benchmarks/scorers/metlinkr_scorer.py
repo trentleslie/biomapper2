@@ -14,8 +14,11 @@ validate its links against an InChIKey structural oracle. This scorer emits BOTH
 
   (b) INCHIKEY STRUCTURAL CONCORDANCE — the oracle metLinkR LACKS (BioMapper's differentiator). For
       each row carrying a HELD-OUT curator/Metabolon provided reference id (HMDB / PubChem), resolve
-      BOTH BioMapper's name-chosen id AND the curator id to an InChIKey first-block and compare. This
-      asks whether BioMapper's LINK is structurally right, not merely identifier/name-consistent.
+      BioMapper's name-chosen id through the KG oracle AND resolve the curator id through an
+      INDEPENDENT external source (PubChem PUG-REST — see ``scorers/independent_inchikey.py``), then
+      compare the two InChIKey first-blocks. Because the GOLD side does not share infrastructure with
+      the prediction side, the concordance is NOT circular. This asks whether BioMapper's LINK is
+      structurally right, not merely identifier/name-consistent.
 
 Discipline (Hajjar/NECS/MetaboliteAnnotator learnings):
   - TWO numbers, each labelled; the coverage-shaped curator-agreement is NEVER merged with the
@@ -24,11 +27,12 @@ Discipline (Hajjar/NECS/MetaboliteAnnotator learnings):
     the curator grouping / provided-id columns are present-for-the-scorer-only and are NOT the query.
   - FAIL-LOUD on unscorable: a run with zero curator cross-pairs AND zero structural rows raises
     rather than reporting a hollow rate.
-  - SHARED-INFRA CAVEAT: oracle (b) resolves BOTH the prediction and the curator id through the same
-    KG structure oracle, so it is not fully infra-independent the way a curated-InChIKey column is
-    (there is no such column in the metLinkR SI). The number is honest about validating the LINK
-    against the curator's structural reference; a fully-independent external resolver for the curator
-    id is a documented follow-on (reported as a caveat, never silently asserted).
+  - INDEPENDENT GOLD SIDE: oracle (b) resolves the curator id through an EXTERNAL resolver (PubChem
+    PUG-REST) that is independent of the KG structure oracle used for the prediction, so the
+    concordance is not circular (the earlier shared-KG-oracle approach is retained only as a legacy
+    fallback when no ``independent_resolver`` is supplied, and self-labels a shared-infra caveat).
+    Rows the external source cannot cover are counted as ``needs_verification`` — excluded from the
+    concordance denominator and reported, never silently dropped or resolved via the KG instead.
 """
 
 from __future__ import annotations
@@ -69,6 +73,18 @@ class StructureBlockOracle(Protocol):
     """Minimal live-oracle surface: resolve a node id / CURIE to an InChIKey first-block."""
 
     def resolved_block(self, node_id: str) -> str | None: ...
+
+
+class IndependentInChIKeyResolver(Protocol):
+    """External, KG-INDEPENDENT resolver of a curator provided id -> InChIKey first-block.
+
+    Powers oracle (b)'s GOLD side so it does not share infrastructure with the KG oracle that
+    resolves BioMapper's PREDICTION (see ``scorers/independent_inchikey.py``). Returns ``None`` when
+    the external source cannot cover the id (fail-soft -> the row is marked ``needs-verification``).
+    """
+
+    def block_for_pubchem(self, cid: str) -> str | None: ...
+    def block_for_hmdb(self, hmdb: str) -> str | None: ...
 
 
 def _norm(value: Any) -> str:
@@ -157,6 +173,39 @@ def curator_resolution_curies(row: pd.Series, config: MetLinkRDatasetConfig) -> 
             else:
                 for pfx in _CURATOR_RESOLUTION_PREFIXES[key]:
                     _add(f"{pfx}:{v}")
+    return out
+
+
+def curator_external_ids(row: pd.Series, config: MetLinkRDatasetConfig) -> list[tuple[str, str]]:
+    """The row's HELD-OUT curator provided ids as ``(namespace, bare-id)`` pairs for the INDEPENDENT
+    external resolver (PubChem PUG-REST), HMDB first then PubChem.
+
+    Namespace prefixes are stripped (the external resolver addresses bare ids via ``cid/{n}`` and
+    ``xref/RegistryID/{acc}``). HMDB is offered in BOTH the zero-padded modern accession and Metabolon's
+    legacy short form (``_hmdb_accession_forms``) so a stale registry form still resolves. ``|``-multi
+    values are expanded. Order fixes the resolution order (first cover wins) in ``score_metlinkr``.
+    """
+    out: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def _add(ns: str, val: str) -> None:
+        if (ns, val) not in seen:
+            seen.add((ns, val))
+            out.append((ns, val))
+
+    for column, key in ((config.gold_hmdb_column, "hmdb"), (config.gold_pubchem_column, "pubchem")):
+        raw = _norm(row.get(column))
+        if not raw:
+            continue
+        for part in raw.split("|"):
+            v = _clean_id_value(part)
+            if not v:
+                continue
+            if key == "hmdb":
+                for form in _hmdb_accession_forms(v):
+                    _add("hmdb", form)
+            else:
+                _add("pubchem", v)
     return out
 
 
@@ -249,8 +298,15 @@ def score_metlinkr(
     vocab: str | None = None,
     *,
     oracle: StructureBlockOracle | None = None,
+    independent_resolver: IndependentInChIKeyResolver | None = None,
 ) -> dict[str, Any]:
-    """Dual-oracle scoring: curator-agreement rate + InChIKey structural concordance."""
+    """Dual-oracle scoring: curator-agreement rate + InChIKey structural concordance.
+
+    Oracle (b)'s GOLD side is resolved by ``independent_resolver`` (external PubChem PUG-REST,
+    KG-independent) when supplied — the intended production/smoke path, so the concordance is NOT
+    circular. When it is ``None``, the gold id falls back to the KG ``oracle`` (legacy, shared-infra
+    caveat). Rows whose curator id the INDEPENDENT resolver cannot cover are counted as
+    ``needs_verification`` (excluded from the concordance denominator, never silently dropped)."""
     assert_curator_held_out(mapped_df, config)  # anti-trivial: grouping/provided-ids held out
     total_rows = len(mapped_df)
 
@@ -266,28 +322,66 @@ def score_metlinkr(
     curator_rate = (linked / len(pairs)) if pairs else None
 
     # ---- Oracle (b): InChIKey structural concordance vs the held-out curator provided id -----------
-    struct_available = oracle is not None and hasattr(oracle, "resolved_block")
+    # GOLD side is externally resolved (INDEPENDENT of the KG) when an ``independent_resolver`` is
+    # supplied — the intended path, so pred and gold do NOT share infrastructure. Only the PREDICTION
+    # continues through the KG ``oracle``. If neither is available there is nothing to score.
+    use_independent = independent_resolver is not None
+    struct_available = use_independent or (oracle is not None and hasattr(oracle, "resolved_block"))
     struct_scored = 0
     struct_concordant = 0
+    struct_needs_verification = 0
     struct_per_row: list[dict[str, Any]] = []
+    needs_verification_rows: list[dict[str, Any]] = []
     if struct_available:
         for i in range(total_rows):
             row = mapped_df.iloc[i]
             chosen = row.get(CHOSEN_COL)
-            curator_ids = curator_resolution_curies(row, config)
-            if not curator_ids or not _has_prediction(chosen):
+            if not _has_prediction(chosen):
                 continue
             # Prediction side: inline INCHIKEY (no network) with an oracle fallback.
             pred_block = prediction_block(row, oracle)
-            # Curator (reference) side: first held-out provided id that the oracle resolves to a block.
+            if pred_block is None:
+                continue  # prediction unresolvable -> coverage-only exclusion (not a gold-side gap)
+
+            # Curator (reference) side.
             gold_block: str | None = None
-            for cid in curator_ids:
-                b = oracle.resolved_block(cid)  # type: ignore[union-attr]
-                if b is not None:
-                    gold_block = b
-                    break
-            if pred_block is None or gold_block is None:
-                continue  # coverage-only: unresolved either side -> excluded from the denominator
+            if use_independent:
+                ext_ids = curator_external_ids(row, config)
+                if not ext_ids:
+                    continue  # no held-out curator id on this row -> not a structural row at all
+                for ns, val in ext_ids:  # first external cover wins (HMDB then PubChem)
+                    b = (
+                        independent_resolver.block_for_hmdb(val)  # type: ignore[union-attr]
+                        if ns == "hmdb"
+                        else independent_resolver.block_for_pubchem(val)  # type: ignore[union-attr]
+                    )
+                    if b is not None:
+                        gold_block = b
+                        break
+                if gold_block is None:
+                    # The INDEPENDENT external source could not cover this curator id — flag it for
+                    # manual verification rather than dropping it silently or trusting the KG.
+                    struct_needs_verification += 1
+                    needs_verification_rows.append(
+                        {
+                            "input_row_id": _norm(row.get(INPUT_ROW_ID_COL)),
+                            "name": row.get(config.name_column),
+                            "curator_ids": [f"{ns}:{v}" for ns, v in ext_ids],
+                        }
+                    )
+                    continue
+            else:
+                curator_ids = curator_resolution_curies(row, config)
+                if not curator_ids:
+                    continue
+                for cid in curator_ids:  # legacy KG path (shared-infra caveat)
+                    b = oracle.resolved_block(cid)  # type: ignore[union-attr]
+                    if b is not None:
+                        gold_block = b
+                        break
+                if gold_block is None:
+                    continue  # coverage-only: unresolved -> excluded from the denominator
+
             struct_scored += 1
             concordant = pred_block == gold_block
             if concordant:
@@ -316,11 +410,23 @@ def score_metlinkr(
             "scored": struct_scored,
             "concordant": struct_concordant,
             "concordance_rate": (struct_concordant / struct_scored) if struct_scored else None,
-            "shared_infra_caveat": (
-                "prediction and curator id both resolved via the KG structure oracle; not a fully "
-                "infra-independent curated-InChIKey column (none exists in the metLinkR SI)"
+            "needs_verification": struct_needs_verification,
+            "needs_verification_rows": needs_verification_rows,
+            "gold_resolution": (
+                "independent_external_pubchem_pugrest" if use_independent else "kg_shared_oracle"
             ),
         }
+        if use_independent:
+            structural["independence_note"] = (
+                "curator gold id resolved via PubChem PUG-REST (external), INDEPENDENT of the KG "
+                "structure oracle that resolved BioMapper's prediction — the concordance is not "
+                "circular; rows the external source could not cover are counted as needs_verification"
+            )
+        else:
+            structural["shared_infra_caveat"] = (
+                "prediction and curator id both resolved via the KG structure oracle; not a fully "
+                "infra-independent curated-InChIKey column (none exists in the metLinkR SI)"
+            )
     else:
         structural = None
 

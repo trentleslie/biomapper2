@@ -139,7 +139,19 @@ def fetch_manual_mappings(config: MetLinkRDatasetConfig = METLINKR, *, timeout: 
         resp = requests.get(config.fetch_url, timeout=timeout)
         resp.raise_for_status()
         bundle = resp.content
-    return _extract_manual_mappings_bytes(bundle, config)
+    mm_bytes = _extract_manual_mappings_bytes(bundle, config)
+    # Verify the fetched curator oracle against the pinned SHA BEFORE any scoring. If EuropePMC serves
+    # different/corrupt bytes (mirror drift, truncated download, a swapped SI revision), fail LOUD —
+    # silently scoring a different ManualMappings.csv would benchmark against the wrong curator oracle.
+    actual_sha = sha256_bytes(mm_bytes)
+    if actual_sha != config.expected_manual_mappings_sha256:
+        raise RuntimeError(
+            f"metLinkR {config.manual_mappings_member!r} SHA256 mismatch: fetched {actual_sha} but the "
+            f"config pins {config.expected_manual_mappings_sha256} (DOI {config.source_doi}, "
+            f"{config.source_pmcid}). The mirror served different/corrupt bytes; refusing to score a "
+            f"curator oracle that is not the pinned one."
+        )
+    return mm_bytes
 
 
 def parse_manual_mappings(raw: bytes) -> pd.DataFrame:

@@ -419,7 +419,19 @@ def orchestrate_metlinkr(
     merged_df = merge_vocab_runs(mapped_dfs, config)
 
     oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
-    result = score_metlinkr(merged_df, config, vocab="+".join(ok_vocabs), oracle=oracle)
+    # Oracle (b)'s GOLD side is resolved by an INDEPENDENT external source (PubChem PUG-REST), NOT the
+    # KG oracle above — so the structural concordance is not circular (BioMapper's prediction still
+    # rides the KG oracle). Rows the external source cannot cover are flagged needs-verification.
+    from .scorers.independent_inchikey import PubChemInChIKeyResolver
+
+    independent_resolver = PubChemInChIKeyResolver()
+    result = score_metlinkr(
+        merged_df,
+        config,
+        vocab="+".join(ok_vocabs),
+        oracle=oracle,
+        independent_resolver=independent_resolver,
+    )
     (out_dir / "metlinkr_results.json").write_text(json.dumps(result, indent=2))
 
     report_path = out_dir / "metlinkr_report.md"

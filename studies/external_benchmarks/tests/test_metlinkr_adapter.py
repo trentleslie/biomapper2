@@ -140,3 +140,35 @@ def test_extract_fails_loud_when_no_mappings():
         z.writestr("pr4c01051_si_003.zip", b"not-a-zip")
     with pytest.raises((NoManualMappingsError, zipfile.BadZipFile)):
         ml._extract_manual_mappings_bytes(empty.getvalue(), METLINKR)
+
+
+class _FakeResp:
+    def __init__(self, content: bytes):
+        self.content = content
+
+    def raise_for_status(self):
+        return None
+
+
+def test_fetch_raises_on_sha_mismatch(monkeypatch, raw_mm_df):
+    # EuropePMC serves a bundle whose ManualMappings.csv bytes do NOT match the config's pinned SHA
+    # (the fixture differs from the real curator oracle) -> fail LOUD before any scoring.
+    bundle = _nested_bundle(raw_mm_df.to_csv(index=False).encode("utf-8"))
+    import requests
+
+    monkeypatch.setattr(requests, "get", lambda url, timeout=90.0: _FakeResp(bundle))
+    with pytest.raises(RuntimeError, match="SHA256 mismatch"):
+        fetch_manual_mappings(METLINKR)  # METLINKR pins the real SHA; the fixture won't match
+
+
+def test_fetch_returns_bytes_when_sha_matches(monkeypatch, raw_mm_df):
+    # A config whose expected SHA equals the fetched ManualMappings bytes' SHA passes verification.
+    csv_bytes = raw_mm_df.to_csv(index=False).encode("utf-8")
+    bundle = _nested_bundle(csv_bytes)
+    cfg = MetLinkRDatasetConfig(expected_manual_mappings_sha256=sha256_bytes(csv_bytes))
+    import requests
+
+    monkeypatch.setattr(requests, "get", lambda url, timeout=90.0: _FakeResp(bundle))
+    got = fetch_manual_mappings(cfg)
+    assert sha256_bytes(got) == cfg.expected_manual_mappings_sha256
+    assert b"Manual_Metabolite_Group_Label" in got

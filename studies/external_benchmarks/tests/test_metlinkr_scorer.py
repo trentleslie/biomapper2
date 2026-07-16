@@ -10,6 +10,7 @@ from studies.external_benchmarks.scorers.metlinkr_scorer import (
     CuratorLeakError,
     UnscorableRunError,
     assert_curator_held_out,
+    curator_external_ids,
     curator_resolution_curies,
     merge_vocab_runs,
     prediction_block,
@@ -25,6 +26,20 @@ class FakeBlockOracle:
 
     def resolved_block(self, node_id: str):
         return self._b.get(node_id)
+
+
+class FakeIndependentResolver:
+    """External, KG-independent gold resolver (test double): curator HMDB/PubChem id -> block."""
+
+    def __init__(self, hmdb: dict[str, str | None] | None = None, pubchem: dict[str, str | None] | None = None):
+        self._h = hmdb or {}
+        self._p = pubchem or {}
+
+    def block_for_hmdb(self, hmdb: str):
+        return self._h.get(hmdb)
+
+    def block_for_pubchem(self, cid: str):
+        return self._p.get(cid)
 
 
 def _mapped_row(rid, name, group, source_file, chosen, equiv, hmdb="", pubchem=""):
@@ -109,6 +124,49 @@ def test_curator_resolution_normalizes_legacy_hmdb_and_float_pubchem():
     assert "PUBCHEM.COMPOUND:159663" in cands  # float ".0" tail stripped
     assert not any(c.endswith(".0") for c in cands)
     assert "HMDB:nan" not in cands
+
+
+def test_structural_uses_independent_resolver_for_gold(mapped_df):
+    # PREDICTION side rides the KG oracle; GOLD side rides the INDEPENDENT external resolver (not the
+    # KG). glucose: pred CHEBI:4167 -> block == curator HMDB block -> concordant. D-glucose: pred same
+    # block, curator PubChem 5793 -> different block -> discordant. 1 concordant of 2 scored.
+    oracle = FakeBlockOracle({"CHEBI:4167": "WQZGKKKJIJFFOK"})
+    indep = FakeIndependentResolver(
+        hmdb={"HMDB0000122": "WQZGKKKJIJFFOK"},  # curator gold for glucose -> concordant
+        pubchem={"5793": "XXXXXXXXXXXXXX"},  # curator gold for D-glucose -> discordant
+    )
+    result = score_metlinkr(mapped_df, METLINKR, oracle=oracle, independent_resolver=indep)
+    st = result["inchikey_structural_concordance"]
+    assert st["scored"] == 2
+    assert st["concordant"] == 1
+    assert st["concordance_rate"] == 0.5
+    assert st["gold_resolution"] == "independent_external_pubchem_pugrest"
+    assert st["needs_verification"] == 0
+    assert "independence_note" in st
+    assert "shared_infra_caveat" not in st  # independent path is not circular
+
+
+def test_structural_marks_needs_verification_when_external_uncovered(mapped_df):
+    # The independent external resolver can cover glucose's HMDB but NOT D-glucose's PubChem id ->
+    # that row is flagged needs-verification and EXCLUDED from the denominator (not KG-resolved).
+    oracle = FakeBlockOracle({"CHEBI:4167": "WQZGKKKJIJFFOK"})
+    indep = FakeIndependentResolver(hmdb={"HMDB0000122": "WQZGKKKJIJFFOK"}, pubchem={})  # 5793 -> None
+    result = score_metlinkr(mapped_df, METLINKR, oracle=oracle, independent_resolver=indep)
+    st = result["inchikey_structural_concordance"]
+    assert st["scored"] == 1
+    assert st["concordant"] == 1
+    assert st["concordance_rate"] == 1.0
+    assert st["needs_verification"] == 1
+    assert st["needs_verification_rows"][0]["name"] == "D-glucose"
+
+
+def test_curator_external_ids_bare_forms_hmdb_first():
+    row = pd.Series({METLINKR.gold_hmdb_column: "HMDB02759", METLINKR.gold_pubchem_column: "159663.0"})
+    ids = curator_external_ids(row, METLINKR)
+    assert ("hmdb", "HMDB0002759") in ids  # legacy 5-digit zero-padded to modern accession
+    assert ("pubchem", "159663") in ids  # float ".0" readback tail stripped
+    assert ids[0][0] == "hmdb"  # HMDB offered before PubChem (resolution order)
+    assert not any(v.endswith(".0") for _, v in ids)
 
 
 def test_structural_none_when_no_oracle(mapped_df):

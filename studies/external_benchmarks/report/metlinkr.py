@@ -1,11 +1,15 @@
 """metLinkR head-to-head report assembler (dual curator + InChIKey oracle).
 
-Renders BOTH labelled scores side by side: the curator-agreement rate (metLinkR's own ~85.3%
+Renders BOTH labelled scores side by side: the curator-agreement rate (metLinkR's own 85.3%
 metric, with metLinkR's published cell as the competitor column) and the InChIKey structural
 concordance (the oracle metLinkR LACKS — BioMapper's differentiator, which therefore has NO
-competitor cell). Following the CompetitorResult discipline (Metabolon-96.5% scar), metLinkR's
-``value`` is ``None`` in source control and renders ``n/a (transcribe)`` until verified against the
-paper's table at run time; nothing is fabricated from the abstract/memory.
+competitor cell). Oracle (b)'s GOLD side is resolved by an INDEPENDENT external source (PubChem
+PUG-REST), so the concordance is not circular — this is the crux of the "we validate structurally
+where metLinkR cannot" claim, and is labelled as such in the output.
+
+metLinkR's competitor number is transcribed from the paper's Results text with an exact ``table_ref``
+(CompetitorResult discipline, Metabolon-96.5% scar); an entry left ``value=None`` renders
+``n/a (transcribe)`` — nothing is fabricated from memory.
 
 Internal only — never invokes /publish-wiki. Every BioMapper number is sourced from a scored
 results bundle passed in.
@@ -23,10 +27,12 @@ METLINKR_FRAMING = (
     "Same-TASK head-to-head against metLinkR (Patt et al. 2025, J. Proteome Res., DOI "
     "10.1021/acs.jproteome.4c01051) — metabolite-ID cross-linking on the five COMETS-curator-"
     "cross-linked datasets. TWO labelled oracles, never merged: (a) CURATOR-AGREEMENT rate — "
-    "metLinkR's own metric (~85.3% published) — the fraction of the curators' cross-dataset linked "
+    "metLinkR's own metric (85.3% published) — the fraction of the curators' cross-dataset linked "
     "pairs that BioMapper also links from the NAME alone (curator grouping held out); (b) INCHIKEY "
-    "STRUCTURAL CONCORDANCE — the oracle metLinkR does NOT report — BioMapper's name-chosen id and "
-    "the held-out curator provided id each resolved to an InChIKey first-block and compared."
+    "STRUCTURAL CONCORDANCE — the oracle metLinkR does NOT report — BioMapper's name-chosen id "
+    "(resolved via the KG) and the held-out curator provided id (resolved via an INDEPENDENT external "
+    "source, PubChem PUG-REST) each reduced to an InChIKey first-block and compared. The independent "
+    "gold side is what makes (b) a non-circular structural check metLinkR cannot offer."
 )
 
 
@@ -78,9 +84,12 @@ def assemble_metlinkr_report(
         f"{_competitor_cell(competitors, 'metLinkR')} |"
     )
     if st:
+        nv = st.get("needs_verification") or 0
+        nv_note = f" (+{nv} needs-verification)" if nv else ""
         lines.append(
-            f"| (b) InChIKey structural concordance | {_pct(st.get('concordance_rate'))} | "
-            f"{st.get('concordant')}/{st.get('scored')} provided-id rows | "
+            f"| (b) InChIKey structural concordance (gold: independent PubChem PUG-REST) | "
+            f"{_pct(st.get('concordance_rate'))} | "
+            f"{st.get('concordant')}/{st.get('scored')} provided-id rows{nv_note} | "
             f"n/a — metLinkR reports no structural oracle (differentiator) |"
         )
     else:
@@ -109,15 +118,29 @@ def assemble_metlinkr_report(
     lines.append("## Notes")
     lines.append("")
     lines.append(
-        "- metLinkR's ~85.3% curator-agreement is transcribed from the paper at run time (value=None "
-        "in source control); an unverified cell renders 'n/a (transcribe)' — no number is baked in."
+        "- metLinkR's 85.3% curator-agreement is transcribed from the paper's Results text (Patt et al. "
+        "2025; 'metLinkR identified these entities at an 85.3% rate', rising to 90.7% when unmapped "
+        "identifiers are excluded), cited with an exact table_ref (CompetitorResult discipline)."
     )
     lines.append(
         "- Oracle (a) is coverage/recall-shaped; oracle (b) is a correctness qualifier. The two are "
         "NEVER merged into a single figure."
     )
+    lines.append(
+        "- Oracle (b)'s GOLD side is resolved by an INDEPENDENT external source (PubChem PUG-REST), "
+        "NOT the KG oracle that resolves BioMapper's prediction — so the structural concordance is not "
+        "circular. This is where BioMapper validates structurally and metLinkR cannot."
+    )
+    if st and st.get("independence_note"):
+        lines.append(f"- Independence (oracle b): {st['independence_note']}.")
+    if st and st.get("needs_verification"):
+        lines.append(
+            f"- {st['needs_verification']} row(s) carried a curator provided id the INDEPENDENT external "
+            f"resolver could not cover — flagged needs-verification and EXCLUDED from the concordance "
+            f"denominator (not resolved via the KG, not dropped silently)."
+        )
     if st and st.get("shared_infra_caveat"):
-        lines.append(f"- Structural-oracle caveat (needs-verification): {st['shared_infra_caveat']}.")
+        lines.append(f"- Structural-oracle caveat (legacy shared-infra path): {st['shared_infra_caveat']}.")
     lines.append(
         "- Input mode is NAME-ONLY; the curator grouping and provided IDs are held out (anti-trivial). "
         "A '+provided-ID' parity variant matching metLinkR's exact inputs is a documented follow-on."

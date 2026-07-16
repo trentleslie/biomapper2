@@ -870,20 +870,33 @@ METLINKR = MetLinkRDatasetConfig()
 METLINKR_REGISTRY: dict[str, MetLinkRDatasetConfig] = {METLINKR.key: METLINKR}
 
 # Published same-task baseline. Following the CompetitorResult discipline (Metabolon-96.5% scar):
-# ``value=None`` in source control — metLinkR's ~85.3% curator-agreement headline is transcribed +
-# verified against the paper at run time, NOT baked from the abstract/memory. ``doi`` + ``table_ref``
-# make it citeable so citation_spot_check admits it. Note the structural-concordance metric has NO
-# competitor cell: metLinkR reports no InChIKey-oracle number (that is precisely the differentiator).
+# metLinkR's curator-agreement headline is TRANSCRIBED + VERIFIED against the paper's Results text
+# (Patt et al. 2025, "MetLinkR vs Manual Annotation" subsection) — NOT asserted from memory. The
+# verified sentences (PMC12053952 full text, checked 2026-07-16):
+#   - "Among metabolite entities identified across data sets by the curator, metLinkR identified
+#      these entities at an 85.3% rate."  -> curator agreement = 85.3% (our oracle-(a) comparator).
+#   - "When removing identifiers that metLinkR was unable to map ... that number rose to a 90.7%
+#      rate."  -> 90.7% excluding unmapped (a different, mapped-only denominator; recorded for context).
+#   - Global mapping rate 82.3% (5-dataset set) / 72.5% (13-dataset set) — overall harmonization
+#      success, NOT a curator-agreement or structural number, so it is context only (no competitor
+#      cell; conflating it with oracle (a)/(b) would be an apples-to-oranges comparison).
+# ``doi`` + ``table_ref`` make the cell citeable so citation_spot_check admits it. The structural-
+# concordance metric has NO competitor cell: metLinkR reports no InChIKey-oracle number (the point).
+METLINKR_CURATOR_AGREEMENT_VALUE = 0.853  # verified: "identified these entities at an 85.3% rate"
+METLINKR_CURATOR_AGREEMENT_EXCL_UNMAPPED = 0.907  # verified context: "rose to a 90.7% rate"
+METLINKR_GLOBAL_MAPPING_5SET = 0.823  # verified context: "global mapping rate of 82.3%" (5-set)
+METLINKR_GLOBAL_MAPPING_13SET = 0.725  # verified context: "global mapping rate of 72.5%" (13-set)
 METLINKR_TABLE_REF = (
-    "Patt et al. 2025, J. Proteome Res. (DOI 10.1021/acs.jproteome.4c01051), COMETS-curator agreement "
-    "on the five cross-linked datasets — transcribe the ~85.3% headline cell at run time"
+    "Patt et al. 2025, J. Proteome Res. (DOI 10.1021/acs.jproteome.4c01051, PMC12053952), Results & "
+    "Discussion — 'MetLinkR vs Manual Annotation': 'metLinkR identified these entities at an 85.3% "
+    "rate' (90.7% excluding unmapped identifiers)"
 )
 METLINKR_COMPETITORS: tuple[CompetitorResult, ...] = (
     CompetitorResult(
         tool="metLinkR",
         metric="curator_agreement_rate",
         input_type="cross_link",
-        value=None,  # needs-verification: transcribe the paper's ~85.3% cell, do not assert from memory
+        value=METLINKR_CURATOR_AGREEMENT_VALUE,  # 85.3%, verified against the paper's Results text
         doi=METLINKR_DOI,
         table_ref=METLINKR_TABLE_REF,
     ),
