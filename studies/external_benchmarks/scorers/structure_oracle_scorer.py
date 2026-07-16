@@ -23,6 +23,31 @@ from ..config import DatasetConfig
 
 CHOSEN_COL = "chosen_kg_id"
 
+# ------------------------------------------------------------------------------------------------
+# Name-source regimes (LMSD lipid arm — two-regime split).
+#
+# The LMSD sample is ~90% lipid SHORTHAND (the ``ABBREVIATION`` field, e.g. ``TG 57:6``) — by far
+# the hardest name->structure input class — vs the easier common/systematic names. A single blended
+# accuracy averages two very different populations, so when the caller supplies a name-source column
+# (the adapter's ``query_source``, recording which SDF field supplied each query) the scorer breaks
+# the strict + charge-normalized Top-1 out PER REGIME, alongside the blended overall (continuity).
+# The split is purely additive: absent the column, ``by_name_source_regime`` is None and nothing
+# else changes (NECS/RefMet/SRM1950/Hajjar are unaffected).
+# ------------------------------------------------------------------------------------------------
+SHORTHAND_REGIME = "shorthand"
+COMMON_SYSTEMATIC_REGIME = "common_systematic"
+
+
+def name_source_regime(source: Any) -> str:
+    """Map a per-row name-source tag to its regime label (shorthand vs common/systematic).
+
+    The LMSD adapter records which SDF field supplied each query (``abbreviation`` / ``common_name``
+    / ``systematic_name``). The lipid ``ABBREVIATION`` is the shorthand regime — the hard input
+    class; the common and systematic names fold into one "common/systematic" regime. Any unexpected
+    or blank tag lands in common/systematic (never silently dropped from the breakout).
+    """
+    return SHORTHAND_REGIME if str(source).strip().lower() == "abbreviation" else COMMON_SYSTEMATIC_REGIME
+
 
 class StructureOracle(Protocol):
     """KG-first structure resolution for a predicted node id.
@@ -94,6 +119,7 @@ def score_structure_oracle(
     vocab: str | None = None,
     *,
     gold_smiles_normalizer: Callable[[Any], str | None] | None = None,
+    name_source_column: str | None = None,
 ) -> dict[str, Any]:
     """Compute Top-1 accuracy (structure-oracle) + coverage + the fallback bucket.
 
@@ -103,9 +129,16 @@ def score_structure_oracle(
     blocks neutralized for charge/protonation state. Both numbers are reported; neither replaces
     the other (protonation was the dominant Hajjar miss). When the capability is absent the
     charge-normalized core is ``None`` with a recorded reason.
+
+    When ``name_source_column`` is given AND present in ``mapped_df`` (the LMSD adapter's
+    ``query_source``), the strict + charge-normalized Top-1 are ALSO broken out per name-source
+    regime — shorthand (lipid ``ABBREVIATION``, the hard class) vs common/systematic — under
+    ``by_name_source_regime``, so the blended headline is not read as one homogeneous population.
+    Absent the column the breakout is ``None`` and nothing else changes (purely additive).
     """
     smiles_col = config.gold_smiles_column
     cn_available = gold_smiles_normalizer is not None and hasattr(oracle, "neutral_block")
+    regime_available = name_source_column is not None and name_source_column in mapped_df.columns
 
     total = len(mapped_df)
     n_predicted = 0
@@ -115,6 +148,8 @@ def score_structure_oracle(
     # Charge-normalized tallies (only meaningful when cn_available).
     cn_scored = 0
     cn_correct = 0
+    # Per-regime tallies (only populated when regime_available). regime -> counter dict.
+    regime_tally: dict[str, dict[str, int]] = {}
     per_row: list[dict[str, Any]] = []
 
     for _, row in mapped_df.iterrows():
@@ -161,6 +196,28 @@ def score_structure_oracle(
             if cn_correct_row:
                 cn_correct += 1
 
+        # Per-regime accumulation (shorthand vs common/systematic). Same gating as the blended
+        # tallies so each regime's strict + charge-normalized denominators are internally consistent
+        # and sum to the overall (a row is in exactly one regime).
+        row_source: str | None = None
+        if regime_available:
+            row_source = str(row.get(name_source_column)).strip()
+            t = regime_tally.setdefault(
+                name_source_regime(row_source),
+                {"n_rows": 0, "n_predicted": 0, "scored": 0, "correct": 0, "cn_scored": 0, "cn_correct": 0},
+            )
+            t["n_rows"] += 1
+            if has_pred:
+                t["n_predicted"] += 1
+            if is_scored:
+                t["scored"] += 1
+                if is_correct:
+                    t["correct"] += 1
+            if cn_correct_row is not None:  # row is in the charge-normalized scored set
+                t["cn_scored"] += 1
+                if cn_correct_row:
+                    t["cn_correct"] += 1
+
         per_row.append(
             {
                 "name": row.get(config.name_column),
@@ -171,6 +228,7 @@ def score_structure_oracle(
                 "correct": is_correct,
                 "needed_fallback": needed_fallback,
                 "charge_normalized_correct": cn_correct_row,
+                "name_source": row_source,
             }
         )
 
@@ -184,6 +242,38 @@ def score_structure_oracle(
         }
     else:
         cn_core = None
+
+    # Assemble the per-regime breakout (None when no name-source column was supplied). Each regime
+    # carries its own strict + charge-normalized core + coverage, mirroring the blended shape so a
+    # report renders them uniformly.
+    by_regime: dict[str, Any] | None = None
+    if regime_available:
+        by_regime = {}
+        for regime, t in regime_tally.items():
+            regime_cn: dict[str, Any] | None = None
+            if cn_available:
+                regime_cn = {
+                    "metric": "top1_accuracy_charge_normalized",
+                    "top1_accuracy": (t["cn_correct"] / t["cn_scored"]) if t["cn_scored"] else None,
+                    "correct": t["cn_correct"],
+                    "scored_denominator": t["cn_scored"],
+                }
+            by_regime[regime] = {
+                "comparable_core": {
+                    "metric": "top1_accuracy",
+                    "top1_accuracy": (t["correct"] / t["scored"]) if t["scored"] else None,
+                    "correct": t["correct"],
+                    "scored_denominator": t["scored"],
+                },
+                "comparable_core_charge_normalized": regime_cn,
+                "n_rows": t["n_rows"],
+                "coverage": {
+                    "n_predicted": t["n_predicted"],
+                    "total": t["n_rows"],
+                    "fraction": (t["n_predicted"] / t["n_rows"]) if t["n_rows"] else 0.0,
+                },
+            }
+
     return {
         "vocab": vocab,
         "input_type": config.input_type,
@@ -194,6 +284,7 @@ def score_structure_oracle(
             "scored_denominator": scored,
         },
         "comparable_core_charge_normalized": cn_core,
+        "by_name_source_regime": by_regime,
         "coverage": {
             "n_predicted": n_predicted,
             "total": total,

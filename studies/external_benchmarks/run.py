@@ -509,7 +509,16 @@ def orchestrate_lmsd(
     oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
     mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
     result = score_structure_oracle(
-        mapped_df, LMSD, oracle, vocab=primary, gold_smiles_normalizer=neutralize_first_block
+        mapped_df,
+        LMSD,
+        oracle,
+        vocab=primary,
+        gold_smiles_normalizer=neutralize_first_block,
+        # Break the strict + charge-normalized Top-1 out per name-source regime (shorthand vs
+        # common/systematic) — the sample is ~90% lipid shorthand (the hard class), so the blended
+        # number alone would hide two very different populations. The adapter records the source per
+        # row as ``query_source``; the blended overall is still reported for continuity.
+        name_source_column=lmsd_adapter.QUERY_SOURCE_COL,
     )
     # Fail-closed on an unscorable run — the same rule the other arms enforce. top1_accuracy is None
     # only when no sampled row carried a scorable gold structure; refuse BEFORE writing results.
