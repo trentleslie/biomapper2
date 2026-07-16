@@ -742,19 +742,29 @@ NAME_HIT_REGISTRY: dict[str, NameHitDatasetConfig] = {
 # Materials"/"Data Availability" section, no MDPI ``/s1`` link, no Zenodo/figshare/authors' code
 # repo. The concrete ambiguous cases live in the paper's OWN Table 9 ("Examples of mapping
 # inconsistencies") and Table 3 ("high ambiguity and multiplicity"). The full ambiguous-name
-# population is only RECONSTRUCTIBLE from the paper's inputs — the MetaNetX ``chem_xref.tsv`` name<->ID
-# crosswalk (paper pins the 31 Oct 2018 download) joined to ``chem_prop.tsv`` for INDEPENDENT curated
-# InChIKeys per MetaNetX bridge id. Hence ``source_status="needs-reconstruction"`` + a fail-loud guard
-# (mirrors MetaboliteAnnotator's needs-fetching sentinel) until the reconstruction lands; the offline
-# unit tests use the Table 9 fixture so the transform + scorer are fully testable meanwhile.
+# population is RECONSTRUCTED (2026-07-16) from the paper's own inputs — the MetaNetX ``chem_xref.tsv``
+# name<->MNXM crosswalk (its ``description`` field carries the cross-database synonym names) joined to
+# ``chem_prop.tsv`` for INDEPENDENT curated InChIKeys per MNXM bridge id. Per the approval the CURRENT
+# MetaNetX release is used (4.5, dated 2025/08/13) — NOT the paper's 2018 snapshot — so the benchmark
+# reflects today's namespaces; the exact files are SHA- and md5-pinned on the dataset card. Hence
+# ``source_status`` flips to "resolved" once the two files are supplied; the needs-reconstruction
+# sentinel + a fail-loud guard remain (mirrors MetaboliteAnnotator's needs-fetching sentinel) so an
+# unresolved source can never be silently scored. The offline unit tests drive the transform on tiny
+# in-memory chem_prop/chem_xref fixtures so the reconstruction + scorer are fully testable meanwhile.
 #
 # ORACLE / CIRCULARITY (design for human sign-off; see the adapter + scorer docstrings): the gold is
 # the SET of distinct InChIKey first-blocks a name legitimately maps to, resolved from an INDEPENDENT
 # source — MetaNetX ``chem_prop.tsv`` (the paper's own bridge namespace, ships InChIKey+SMILES per
-# MNXM id), cross-checked against PubChem-by-name — NEVER via BioMapper's resolver. Only BioMapper's
-# PREDICTION (``chosen_kg_id``) is resolved through the KG oracle, exactly like the structure-oracle
-# arm. This keeps the SUT and the gold on disjoint infrastructure (no circularity).
+# MNXM id), cross-checked against PubChem-by-name (disagreements FLAGGED, never silently trusted) —
+# NEVER via BioMapper's resolver. Only BioMapper's PREDICTION (``chosen_kg_id``) is resolved through
+# the KG oracle, exactly like the structure-oracle arm. This keeps the SUT and the gold on disjoint
+# infrastructure (no circularity).
 # ==================================================================================================
+
+# MetaNetX release used for the reconstruction. CURRENT numbered release (not the paper's 2018 snapshot,
+# per the approved design). ``latest/`` on the FTP tracks this; we pin the numbered dir for stability.
+METANETX_RELEASE = "4.5"
+METANETX_FTP_BASE = "https://www.metanetx.org/ftp"
 
 # The 11 databases Pham et al. surveyed (ordering not load-bearing; recorded on the card for provenance).
 PHAM_DATABASES: tuple[str, ...] = (
@@ -808,9 +818,15 @@ class PhamDisambiguationDatasetConfig:
     input_type: str = "name"
     source_doi: str = PHAM_DOI
     source_pmid: str = PHAM_PMID
-    # Only genuinely AMBIGUOUS names (>= this many distinct structural referents) enter the scored set;
-    # names below it are not disambiguation cases and are dropped (documented, like the blank-name drop).
-    min_referents: int = 2
+    # A name is RETAINED in the scored population if it has >= this many distinct structural referents.
+    # Default 1 = the FULL population (every name with at least one resolvable structure); a name with
+    # zero referents / no InChIKey among its candidates is dropped (nothing to score). The approved
+    # scoring design scores this full population AND breaks out the ambiguous subset below — it no
+    # longer pre-filters to ambiguous-only (which would collapse full-population and subset into one).
+    min_referents: int = 1
+    # The AMBIGUOUS subset threshold: names with >= this many distinct structural referents are the
+    # paper's hard case, broken out and reported as the headline (``ambiguous_subset`` in the scorer).
+    ambiguous_min_referents: int = 2
     source_status: str = "needs-reconstruction"  # flipped to "resolved" once the MetaNetX join lands
     databases: tuple[str, ...] = PHAM_DATABASES
 
@@ -826,10 +842,21 @@ class PhamDisambiguationDatasetConfig:
                 f"{self.gold_referent_inchikey_column!r} equals the query name_column; the gold must be "
                 f"held out, not the input. Refusing a config that would self-match to a trivial 100%."
             )
-        if self.min_referents < 2:
+        if self.min_referents < 1:
             raise ValueError(
-                f"{self.key}: min_referents must be >= 2 (a disambiguation case needs >= 2 distinct "
-                f"structural referents); got {self.min_referents}."
+                f"{self.key}: min_referents must be >= 1 (a scorable name needs >= 1 distinct "
+                f"structural referent); got {self.min_referents}."
+            )
+        if self.ambiguous_min_referents < 2:
+            raise ValueError(
+                f"{self.key}: ambiguous_min_referents must be >= 2 (a disambiguation case needs >= 2 "
+                f"distinct structural referents); got {self.ambiguous_min_referents}."
+            )
+        if self.ambiguous_min_referents < self.min_referents:
+            raise ValueError(
+                f"{self.key}: ambiguous_min_referents ({self.ambiguous_min_referents}) must be >= "
+                f"min_referents ({self.min_referents}); the ambiguous subset cannot be looser than the "
+                f"retained population."
             )
 
 
@@ -843,10 +870,11 @@ PHAM_DISAMBIGUATION = PhamDisambiguationDatasetConfig(
     gold_metanetx_column="gold_metanetx_ids",
     referent_count_column="referent_count",
     target_vocabs=("CHEBI", "HMDB", "PUBCHEM", "KEGG"),
-    # The reconstruction inputs (no downloadable SI): MetaNetX chem_xref (name<->ID) + chem_prop
-    # (InChIKey per MNXM). URL kept as provenance; the adapter fails loud on the sentinel until the
-    # join is supplied. The paper pins the 31 Oct 2018 chem_xref download for exact reproducibility.
-    source_url="https://www.metanetx.org/ftp/  (chem_xref.tsv @2018-10-31 + chem_prop.tsv)",
+    # The reconstruction inputs (no downloadable SI): MetaNetX chem_xref (name<->MNXM) + chem_prop
+    # (InChIKey per MNXM). URL kept as provenance; the adapter fails loud on the sentinel until the two
+    # files are supplied. CURRENT release (4.5) is used per the approved design — the exact bytes are
+    # SHA/md5-pinned on the dataset card, so the mutable "current release" is still reproducible.
+    source_url="https://www.metanetx.org/ftp/4.5/  (chem_xref.tsv + chem_prop.tsv)",
     license="Pham et al. 2019 is CC BY 4.0; MetaNetX/MNXref data are CC BY 4.0.",
 )
 

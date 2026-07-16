@@ -584,11 +584,11 @@ def orchestrate_pham(
     oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
     mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
     result = score_pham_disambiguation(mapped_df, config, oracle, vocab=primary)
-    # Fail-closed on an unscorable run (same rule as the other arms): membership rate is None only when
-    # no row carried a referent set. Persisting that would file a run that measured nothing.
+    # Fail-closed on an unscorable run (same rule as the other arms): full-population membership rate is
+    # None only when no row carried a referent set. Persisting that would file a run that measured nothing.
     if result["comparable_core"]["referent_membership_rate"] is None:
         raise RuntimeError(
-            f"{config.key}: no scorable ambiguous names (referent_membership_rate is None; "
+            f"{config.key}: no scorable names (referent_membership_rate is None; "
             f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
             f"persist an unscorable Pham run as success."
         )
@@ -596,8 +596,10 @@ def orchestrate_pham(
 
     # Inline minimal report: the Pham result shape (referent-membership, not top1_accuracy) differs
     # from the structure-oracle campaign row, so it is written directly rather than through the shared
-    # campaign report (kept additive — no change to shared report code).
+    # campaign report (kept additive — no change to shared report code). Both the FULL population and the
+    # AMBIGUOUS-subset (highlighted hard case) membership are reported.
     core = result["comparable_core"]
+    subset = result["ambiguous_subset"]
     prec = result["structural_precision"]
     amb = result["ambiguity"]
     cov = result["coverage"]
@@ -605,6 +607,8 @@ def orchestrate_pham(
     def _pct(x: Any) -> str:
         return "n/a" if x is None else f"{x * 100:.1f}%"
 
+    mean_amb = amb["mean_gold_referents"]
+    mean_amb_str = "n/a" if mean_amb is None else f"{mean_amb:.2f}"
     report_path = out_dir / f"{config.key}_report.md"
     report_path.write_text(
         "\n".join(
@@ -612,21 +616,26 @@ def orchestrate_pham(
                 f"# {config.key} — name-disambiguation (INTERNAL)",
                 "",
                 f"Source: Pham et al. 2019 (DOI {config.source_doi}, PMID {config.source_pmid}); "
-                f"status={bundle.card['source_status']}.",
-                f"Ambiguous names scored: {core['scored_denominator']} "
-                f"(mean {amb['mean_gold_referents']:.2f} referents/name).",
+                f"status={bundle.card['source_status']}. Referents reconstructed from MetaNetX "
+                f"{bundle.card.get('metanetx', {}).get('release', '?')} (independent structure source).",
+                f"Full population scored: {core['scored_denominator']} names; ambiguous subset "
+                f"(>= {subset['ambiguous_min_referents']} referents): {subset['scored_denominator']} "
+                f"(mean {mean_amb_str} referents/name).",
                 "",
                 "| metric | value |",
                 "| --- | --- |",
-                f"| referent-membership rate ({primary}) | {_pct(core['referent_membership_rate'])} "
+                f"| full-population membership ({primary}) | {_pct(core['referent_membership_rate'])} "
                 f"({core['member']}/{core['scored_denominator']}) |",
+                f"| **ambiguous-subset membership** ({primary}) | {_pct(subset['referent_membership_rate'])} "
+                f"({subset['member']}/{subset['scored_denominator']}) |",
                 f"| structural precision | {_pct(prec['precision'])} "
                 f"({prec['member']}/{prec['predicted_denominator']}) |",
                 f"| coverage | {cov['n_predicted']}/{cov['total']} |",
                 f"| ambiguity collapse rate (diagnostic) | {_pct(amb['collapse_rate'])} |",
                 "",
-                "Circularity guard: referent InChIKeys are the INDEPENDENT MetaNetX chem_prop source; "
-                "only BioMapper's prediction was resolved through the KG oracle.",
+                "Circularity guard: referent InChIKeys are the INDEPENDENT MetaNetX chem_prop source "
+                "(cross-checked against PubChem-by-name); only BioMapper's prediction was resolved "
+                "through the KG oracle.",
             ]
         )
     )
