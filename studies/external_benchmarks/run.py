@@ -523,12 +523,36 @@ def orchestrate_srm1950(
     return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
 
 
+def _pham_crosscheck_sentence(summary: dict[str, Any] | None) -> str:
+    """Report sentence for the referent-gold provenance — states ONLY what actually ran.
+
+    The circularity guard (independent MetaNetX gold vs oracle-resolved prediction) is always true.
+    The PubChem cross-check claim is appended ONLY when a cross-check actually ran, with its real
+    agree/disagree/inconclusive counts. When it did not run, the report says so explicitly rather than
+    asserting a validation that never happened (Greptile integrity fix).
+    """
+    base = (
+        "Circularity guard: referent InChIKeys are the INDEPENDENT MetaNetX chem_prop source; only "
+        "BioMapper's prediction was resolved through the KG oracle."
+    )
+    if summary is None:
+        return base + " PubChem-by-name cross-check: NOT RUN for this report."
+    return (
+        base + " Independent PubChem-by-name cross-check of the "
+        f"{summary['n_checked']} scored names' MetaNetX referents: {summary['n_agree']} agreed, "
+        f"{summary['n_disagree']} disagreed (flagged in pubchem_crosscheck.json), "
+        f"{summary['n_inconclusive']} inconclusive (PubChem miss/error)."
+    )
+
+
 def orchestrate_pham(
     *,
     source,
     out_dir: Path | None = None,
     repo_root: Path | None = None,
     run_gate_first: bool = True,
+    run_crosscheck: bool = True,
+    crosscheck_fn: Any = None,
 ) -> dict[str, Any]:
     """Run the Pham name-DISAMBIGUATION slice live (referent-set structural membership).
 
@@ -602,6 +626,31 @@ def orchestrate_pham(
         )
     (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
 
+    # Independent PubChem-by-name cross-check of the SCORED subsample's referent gold (option a). This
+    # validates the MetaNetX referent InChIKeys against a second independent source and FLAGS
+    # disagreements (never fuses sources, never touches BioMapper's prediction). It runs on the scored
+    # subsample only (~1500/stratum), hits free PUG-REST, and persists the full per-name result so the
+    # report can cite REAL numbers instead of an unsubstantiated claim (Greptile integrity fix).
+    from .scorers.pham_scorer import _referent_blocks
+
+    crosscheck_summary: dict[str, Any] | None = None
+    if run_crosscheck:
+        from .adapters.pham import crosscheck_pubchem, summarize_pubchem_crosscheck
+
+        fn = crosscheck_fn or crosscheck_pubchem
+        name_to_blocks: dict[str, set] = {}
+        for _, r in scored_df.iterrows():
+            blocks = _referent_blocks(r.get(config.gold_referent_inchikey_column))
+            if blocks:
+                name_to_blocks[str(r.get(config.name_column))] = blocks
+        crosscheck = fn(name_to_blocks)
+        (out_dir / "pubchem_crosscheck.json").write_text(
+            json.dumps({k: {kk: sorted(vv) if isinstance(vv, set) else vv for kk, vv in v.items()}
+                        for k, v in crosscheck.items()}, indent=2)
+        )
+        crosscheck_summary = summarize_pubchem_crosscheck(crosscheck)
+        (out_dir / "pubchem_crosscheck_summary.json").write_text(json.dumps(crosscheck_summary, indent=2))
+
     # Inline minimal report: the Pham result shape (referent-membership, not top1_accuracy) differs
     # from the structure-oracle campaign row, so it is written directly rather than through the shared
     # campaign report (kept additive — no change to shared report code). Both the FULL population and the
@@ -667,15 +716,19 @@ def orchestrate_pham(
                 f"| coverage | {cov['n_predicted']}/{cov['total']} |",
                 f"| ambiguity collapse rate (diagnostic) | {_pct(amb['collapse_rate'])} |",
                 "",
-                "Circularity guard: referent InChIKeys are the INDEPENDENT MetaNetX chem_prop source "
-                "(cross-checked against PubChem-by-name); only BioMapper's prediction was resolved "
-                "through the KG oracle. Lipid classifier: LIPID MAPS / SwissLipids namespace signal "
-                "(preferred) + lipid-shorthand name pattern (fallback); a name is lipid-stratum if "
-                ">= 50% of its distinct referents are lipid.",
+                _pham_crosscheck_sentence(crosscheck_summary),
+                "Lipid classifier: LIPID MAPS / SwissLipids namespace signal (preferred) + "
+                "lipid-shorthand name pattern (fallback); a name is lipid-stratum if >= 50% of its "
+                "distinct referents are lipid.",
             ]
         )
     )
-    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+    return {
+        "out_dir": str(out_dir),
+        "report": str(report_path),
+        "vocab": primary,
+        "pubchem_crosscheck": crosscheck_summary,
+    }
 
 
 def orchestrate_backbone(

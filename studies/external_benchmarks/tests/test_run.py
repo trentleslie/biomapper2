@@ -12,6 +12,7 @@ integrity gates is exercised deterministically offline. They lock in the Greptil
 
 from __future__ import annotations
 
+from pathlib import Path
 from types import SimpleNamespace
 
 import pandas as pd
@@ -200,3 +201,101 @@ def test_local_and_url_paths_validate_identically(monkeypatch, tmp_path):
             published_parity_cell=PARITY,
         )
         assert validate_calls[0]["source_df"] is not None
+
+
+# ==================================================================================================
+# Pham orchestration — the report must claim ONLY the PubChem cross-check that actually ran (integrity).
+# ==================================================================================================
+
+
+def _pham_result() -> dict:
+    """A minimal Pham-shaped score result carrying every key the inline report reads."""
+    stratum = {
+        "ambiguous_subset": {"referent_membership_rate": 0.5, "member": 1, "scored_denominator": 2,
+                             "ambiguous_min_referents": 2},
+        "structural_precision": {"precision": 0.5, "member": 1, "predicted_denominator": 2},
+    }
+    return {
+        "comparable_core": {"referent_membership_rate": 0.6, "member": 3, "scored_denominator": 5},
+        "ambiguous_subset": {"referent_membership_rate": 0.5, "member": 2, "scored_denominator": 4,
+                             "ambiguous_min_referents": 2},
+        "structural_precision": {"precision": 0.75, "member": 3, "predicted_denominator": 4},
+        "ambiguity": {"mean_gold_referents": 2.25, "collapse_rate": 1.0},
+        "coverage": {"n_predicted": 5, "total": 6},
+        "by_stratum": {"non_lipid": stratum, "lipid": stratum},
+    }
+
+
+def _install_pham_fakes(monkeypatch, tmp_path):
+    """Fake every collaborator ``orchestrate_pham`` imports lazily; keep the crosscheck path real."""
+    import studies.external_benchmarks.adapters.pham as pham_mod
+    import studies.external_benchmarks.oracle as oracle_mod
+    import studies.external_benchmarks.runner as runner_mod
+    import studies.external_benchmarks.scorers.pham_scorer as pham_scorer_mod
+    from studies.external_benchmarks.config import PHAM_DISAMBIGUATION as C
+
+    monkeypatch.setattr("biomapper2.mapper.Mapper", lambda *a, **k: SimpleNamespace(linker=object()))
+    monkeypatch.setattr("biomapper2.core.structure_resolver.StructureResolver", lambda *a, **k: object())
+    monkeypatch.setattr(oracle_mod, "KGStructureOracle", lambda *a, **k: object())
+
+    input_df = pd.DataFrame(
+        {
+            C.name_column: ["suc", "tmp"],
+            C.gold_referent_inchikey_column: [
+                "SUCCINATEBLOCK-AAAAAAAAAA-N|SUCROSEBLOCKXX-BBBBBBBBBB-N",
+                "TMPBLOCKXXXXXX-EEEEEEEEEE-N|THYMIDINEMPXXX-FFFFFFFFFF-N",
+            ],
+            C.stratum_column: ["non_lipid", "non_lipid"],
+        }
+    )
+    bundle = SimpleNamespace(input_df=input_df, card={"source_sha256": "deadbeef", "source_status": "resolved",
+                                                      "strata": {}})
+    monkeypatch.setattr(pham_mod, "load_pham", lambda src, cfg: bundle)
+    monkeypatch.setattr(pham_mod, "subsample_within_strata", lambda df, cfg: (df, {"seed": 42}))
+    monkeypatch.setattr(pham_mod, "persist_stratified_subsample", lambda df, key, out: str(out))
+
+    tsv = tmp_path / "CHEBI_MAPPED.tsv"
+    input_df.assign(chosen_kg_id=["CHEBI:1", "CHEBI:2"]).to_csv(tsv, sep="\t", index=False)
+    vr = VocabRun(vocab="CHEBI", ok=True, output_tsv=str(tsv), stats={}, manifest={})
+    monkeypatch.setattr(runner_mod, "run_all", lambda *a, **k: {"CHEBI": vr})
+    monkeypatch.setattr(pham_scorer_mod, "score_pham_disambiguation", lambda *a, **k: _pham_result())
+
+
+def test_pham_report_states_real_crosscheck_numbers(monkeypatch, tmp_path):
+    # Integrity fix: the report may claim a PubChem cross-check ONLY with the numbers that actually ran.
+    _install_pham_fakes(monkeypatch, tmp_path)
+    seen: dict = {}
+
+    def fake_crosscheck(name_to_blocks):
+        seen["names"] = set(name_to_blocks)
+        return {
+            "suc": {"agrees": True, "metanetx_blocks": ["SUCCINATEBLOCK"], "pubchem_blocks": ["SUCCINATEBLOCK"]},
+            "tmp": {"agrees": False, "metanetx_blocks": ["TMPBLOCKXXXXXX"], "pubchem_blocks": ["OTHER"]},
+        }
+
+    out = tmp_path / "out"
+    result = run_mod.orchestrate_pham(
+        source=b"raw", out_dir=out, run_gate_first=False, crosscheck_fn=fake_crosscheck
+    )
+    # The cross-check was fed the SCORED subsample's names (with non-empty referent sets).
+    assert seen["names"] == {"suc", "tmp"}
+    report = (out / "pham_report.md").read_text() if (out / "pham_report.md").exists() else \
+        Path(result["report"]).read_text()
+    # Real numbers appear; no unqualified "cross-checked against PubChem" claim.
+    assert "2 scored names' MetaNetX referents: 1 agreed, 1 disagreed" in report
+    assert "0 inconclusive" in report
+    assert result["pubchem_crosscheck"] == {"n_checked": 2, "n_agree": 1, "n_disagree": 1, "n_inconclusive": 0}
+    assert (out / "pubchem_crosscheck.json").exists()
+    assert (out / "pubchem_crosscheck_summary.json").exists()
+
+
+def test_pham_report_declares_crosscheck_not_run_when_skipped(monkeypatch, tmp_path):
+    # When the cross-check is skipped, the report must SAY so — never assert a validation that didn't run.
+    _install_pham_fakes(monkeypatch, tmp_path)
+    out = tmp_path / "out"
+    result = run_mod.orchestrate_pham(source=b"raw", out_dir=out, run_gate_first=False, run_crosscheck=False)
+    report = Path(result["report"]).read_text()
+    assert "PubChem-by-name cross-check: NOT RUN" in report
+    assert "agreed," not in report  # no fabricated agreement numbers
+    assert result["pubchem_crosscheck"] is None
+    assert not (out / "pubchem_crosscheck.json").exists()

@@ -677,6 +677,25 @@ def crosscheck_pubchem(
     return out
 
 
+def summarize_pubchem_crosscheck(crosscheck: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """Aggregate ``crosscheck_pubchem`` output into agree / disagree / inconclusive counts.
+
+    ``agrees`` is tri-state per name: ``True`` (PubChem-by-name shares >= 1 referent block with
+    MetaNetX), ``False`` (the two independent sources disagree — flagged for review), or ``None`` (a
+    PubChem miss/error — neither confirmed nor refuted). The summary is what the report cites, so the
+    report can only ever state numbers that actually ran.
+    """
+    agree = sum(1 for e in crosscheck.values() if e.get("agrees") is True)
+    disagree = sum(1 for e in crosscheck.values() if e.get("agrees") is False)
+    inconclusive = sum(1 for e in crosscheck.values() if e.get("agrees") is None)
+    return {
+        "n_checked": len(crosscheck),
+        "n_agree": agree,
+        "n_disagree": disagree,
+        "n_inconclusive": inconclusive,
+    }
+
+
 # ==================================================================================================
 # Transform: raw candidate table -> mapper-ready input_df + dataset card.
 # ==================================================================================================
@@ -721,19 +740,26 @@ def build_input_df(
     # the fallback signals available on the row (source-database prefix + compound-name pattern).
     lipid_raw = _resolve_column(raw_df, (config.is_lipid_referent_column, "is_lipid_referent"))
 
-    # Group candidates by ambiguous name, preserving first-appearance order for determinism.
+    # Group candidates by ambiguous name, preserving first-appearance order for determinism. The grouping
+    # KEY is ``normalize_name`` (casefold + whitespace-collapse) so case/whitespace variants of one name
+    # (``suc``/``SUC``, ``L-Alanine``/``L-ALANINE  ``) collapse to a SINGLE referent set rather than
+    # splitting into spurious one-referent rows (which would corrupt ``referent_count``/``n_ambiguous``).
+    # The first-seen ORIGINAL display form is kept as the human/resolver-friendly query written to
+    # ``config.name_column``. This mirrors the MetaNetX reconstruction path (``build_referent_population``).
     order: list[str] = []
     groups: dict[str, dict[str, Any]] = {}
     for _, row in raw_df.iterrows():
-        name = _norm(row[name_raw])
-        if not name:
+        display = _norm(row[name_raw])
+        if not display:
             continue  # blank name — nothing to query
-        rec = groups.get(name)
+        key = normalize_name(display)
+        rec = groups.get(key)
         if rec is None:
-            # block -> full inchikey (dedup by skeleton); block_lipid -> per-referent lipid flag.
-            rec = {"inchikeys": {}, "curies": [], "mnx": [], "block_lipid": {}}
-            groups[name] = rec
-            order.append(name)
+            # display -> first-seen original spelling (the query); block -> full inchikey (dedup by
+            # skeleton); block_lipid -> per-referent lipid flag.
+            rec = {"display": display, "inchikeys": {}, "curies": [], "mnx": [], "block_lipid": {}}
+            groups[key] = rec
+            order.append(key)
         ik = _norm(row[ik_raw])
         block = first_block(ik)
         if block is not None and block not in rec["inchikeys"]:
@@ -752,14 +778,14 @@ def build_input_df(
             rec["mnx"].append(mnx)
 
     rows: list[dict[str, Any]] = []
-    for name in order:
-        rec = groups[name]
+    for key in order:
+        rec = groups[key]
         referent_count = len(rec["inchikeys"])
         if referent_count < config.min_referents:
             continue  # no resolvable structure — drop (documented)
         rows.append(
             {
-                config.name_column: name,
+                config.name_column: rec["display"],
                 config.gold_referent_inchikey_column: "|".join(rec["inchikeys"].values()),
                 config.gold_referent_id_column: "|".join(rec["curies"]),
                 config.gold_metanetx_column: "|".join(rec["mnx"]),

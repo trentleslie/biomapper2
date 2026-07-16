@@ -12,10 +12,10 @@ Two layers, both network-free:
 
 from __future__ import annotations
 
+import dataclasses
+
 import pandas as pd
 import pytest
-
-import dataclasses
 
 from studies.external_benchmarks.adapters.pham import (
     MetaNetXFiles,
@@ -34,6 +34,7 @@ from studies.external_benchmarks.adapters.pham import (
     reconstruct_from_metanetx,
     sha256_bytes,
     subsample_within_strata,
+    summarize_pubchem_crosscheck,
 )
 from studies.external_benchmarks.config import (
     PHAM_DISAMBIGUATION,
@@ -208,6 +209,49 @@ def test_referent_count_and_skeleton_dedup(raw_pham_df):
     assert counts["H"] == 2
     assert counts["tmp"] == 4
     assert counts["glucose"] == 1  # retained, single referent
+
+
+def test_build_input_df_collapses_mixed_case_duplicate_names():
+    # Greptile FINDING 2: the raw-CSV path must group by normalize_name (casefold + whitespace), not the
+    # exact display string. ``suc``/``SUC``/``Suc  `` are ONE ambiguous name with TWO distinct referent
+    # skeletons (succinate + sucrose); the third row is a charge variant of the succinate skeleton, so it
+    # collapses. Without the fix these split into three separate one-referent rows and referent_count/
+    # n_ambiguous are wrong.
+    raw = pd.DataFrame(
+        {
+            "metabolite_name": ["suc", "SUC", "Suc  "],
+            "source_database": ["chebi", "kegg.compound", "chebi"],
+            "candidate_id": ["30031", "C00089", "99"],
+            "inchikey": [
+                "SUCCINATEBLOCK-AAAAAAAAAA-N",
+                "SUCROSEBLOCKXX-BBBBBBBBBB-N",
+                "SUCCINATEBLOCK-ZZZZZZZZZZ-M",  # succinate skeleton charge variant -> collapses
+            ],
+        }
+    )
+    df = build_input_df(raw, PHAM_DISAMBIGUATION)
+    assert len(df) == 1  # ONE ambiguous name, not three one-referent rows
+    row = df.iloc[0]
+    assert row[PHAM_DISAMBIGUATION.name_column] == "suc"  # first-seen display form preserved
+    assert row[PHAM_DISAMBIGUATION.referent_count_column] == 2  # succinate + sucrose skeletons
+    iks = row[PHAM_DISAMBIGUATION.gold_referent_inchikey_column].split("|")
+    assert iks == ["SUCCINATEBLOCK-AAAAAAAAAA-N", "SUCROSEBLOCKXX-BBBBBBBBBB-N"]
+    card = build_card(raw, source_sha="deadbeef", config=PHAM_DISAMBIGUATION)
+    assert card["n_names"] == 1
+    assert card["n_ambiguous"] == 1  # the collapsed name is ambiguous (2 referents), not 3 unambiguous
+
+
+def test_summarize_pubchem_crosscheck_counts_tristate():
+    # The report cites ONLY these aggregated numbers, so they must map the tri-state ``agrees`` exactly:
+    # True -> agree, False -> disagree, None (miss/error) -> inconclusive.
+    crosscheck = {
+        "suc": {"agrees": True, "pubchem_blocks": ["SUCCINATEBLOCK"], "metanetx_blocks": ["SUCCINATEBLOCK"]},
+        "tmp": {"agrees": False, "pubchem_blocks": ["WRONGBLOCK"], "metanetx_blocks": ["TMPBLOCK"]},
+        "PPP": {"agrees": None, "pubchem_blocks": [], "note": "pubchem-miss"},
+        "H": {"agrees": None, "pubchem_blocks": [], "note": "error:Timeout"},
+    }
+    summary = summarize_pubchem_crosscheck(crosscheck)
+    assert summary == {"n_checked": 4, "n_agree": 1, "n_disagree": 1, "n_inconclusive": 2}
 
 
 def test_held_out_referent_gold_is_delimited_and_deduped(raw_pham_df):
