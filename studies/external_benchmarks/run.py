@@ -990,6 +990,17 @@ def build_parser() -> argparse.ArgumentParser:
     sr.add_argument("--source", required=True, help="path/URL to the SRM1950-DB metabolites.csv")
     sr.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     sr.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # metLinkR head-to-head (same-task cross-linking): fetched from the EuropePMC SI mirror by
+    # default; a local ManualMappings.csv can be passed for a driver/smoke run.
+    mlr = sub.add_parser("metlinkr", help="run the metLinkR same-task cross-linking head-to-head")
+    mlr.add_argument(
+        "--source",
+        default=None,
+        help="path to a local ManualMappings.csv (default: fetch from the pinned EuropePMC SI mirror)",
+    )
+    mlr.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    mlr.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     return parser
 
 
@@ -1042,6 +1053,15 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = orchestrate_srm1950(source=src, out_dir=out, run_gate_first=not args.no_gate)
         print(f"Saved SRM1950 run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "metlinkr":
+        # A local ManualMappings.csv is read to bytes; no --source falls back to "fetch" (the live
+        # EuropePMC SI mirror, SHA-verified in the adapter).
+        src: bytes | str = _resolve_source_arg(args.source) if args.source else "fetch"
+        out = Path(args.out) if args.out else None
+        result = orchestrate_metlinkr(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved metLinkR run to {result['out_dir']}; report at {result['report']}")
         return
 
     # Legacy name-input Hajjar path.
