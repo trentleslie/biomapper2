@@ -941,6 +941,8 @@ def _stratum_n(stratum: str, config: PhamDisambiguationDatasetConfig) -> int | N
 def subsample_within_strata(
     input_df: pd.DataFrame,
     config: PhamDisambiguationDatasetConfig = PHAM_DISAMBIGUATION,
+    *,
+    ambiguous_only: bool = False,
 ) -> tuple[pd.DataFrame, dict[str, Any]]:
     """Reservoir-subsample EACH stratum independently to its per-stratum n (or keep it in full).
 
@@ -949,13 +951,21 @@ def subsample_within_strata(
     keeps enough cases to report. Deterministic (seed ``config.subsample_seed``, first-appearance row
     order), so the scored subset is reproducible and persistable. Returns ``(subsampled_df, meta)`` where
     ``meta`` records per-stratum available/target/sampled counts + the seed.
+
+    When ``ambiguous_only`` is True the population is first restricted to the genuine disambiguation
+    cases — names with ``>= config.ambiguous_min_referents`` distinct structural referents — so the
+    headline is scored on the hard slice, not a full-population sample where ambiguous names are a small
+    minority (a full-population non-lipid draw yields only a handful of truly ambiguous names).
     """
     from .backbones import reservoir_sample
 
     seed = int(config.subsample_seed)
+    if ambiguous_only:
+        counts = input_df[config.referent_count_column].astype(int)
+        input_df = input_df[counts >= int(config.ambiguous_min_referents)]
     strata_order = ["non_lipid", "lipid"]  # non-lipid first (the headline) for deterministic output order
     kept_frames: list[pd.DataFrame] = []
-    meta: dict[str, Any] = {"seed": seed, "method": "reservoir", "per_stratum": {}}
+    meta: dict[str, Any] = {"seed": seed, "method": "reservoir", "ambiguous_only": ambiguous_only, "per_stratum": {}}
     stratum_series = input_df.get(config.stratum_column)
     for stratum in strata_order:
         if stratum_series is None:

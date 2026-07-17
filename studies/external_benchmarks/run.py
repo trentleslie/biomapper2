@@ -749,6 +749,7 @@ def orchestrate_pham(
     run_gate_first: bool = True,
     run_crosscheck: bool = True,
     crosscheck_fn: Any = None,
+    ambiguous_only: bool = False,
 ) -> dict[str, Any]:
     """Run the Pham name-DISAMBIGUATION slice live (referent-set structural membership).
 
@@ -795,7 +796,7 @@ def orchestrate_pham(
 
     # Deterministic WITHIN-strata subsample (mirror RefMet: reservoir + seed 42, persisted) so the
     # non-lipid headline is not swamped by the lipid-isomer majority. Each stratum is sampled on its own.
-    scored_df, subsample_meta = subsample_within_strata(bundle.input_df, config)
+    scored_df, subsample_meta = subsample_within_strata(bundle.input_df, config, ambiguous_only=ambiguous_only)
     persist_stratified_subsample(scored_df, config.key, out_dir)
     bundle.card["stratified_subsample"] = subsample_meta
     (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
@@ -1318,6 +1319,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ph.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     ph.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+    ph.add_argument(
+        "--ambiguous-only",
+        action="store_true",
+        help="restrict to the >=2-referent disambiguation cases before sampling (the hard-case headline)",
+    )
 
     # metLinkR head-to-head (same-task cross-linking): fetched from the EuropePMC SI mirror by
     # default; a local ManualMappings.csv can be passed for a driver/smoke run.
@@ -1415,7 +1421,9 @@ def main() -> None:
         # through so the adapter fails loud — no downloadable SI exists.
         src = _resolve_source_arg(args.source)
         out = Path(args.out) if args.out else None
-        result = orchestrate_pham(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        result = orchestrate_pham(
+            source=src, out_dir=out, run_gate_first=not args.no_gate, ambiguous_only=args.ambiguous_only
+        )
         print(f"Saved Pham run to {result['out_dir']}; report at {result['report']}")
         return
 

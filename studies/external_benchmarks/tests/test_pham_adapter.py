@@ -211,6 +211,21 @@ def test_referent_count_and_skeleton_dedup(raw_pham_df):
     assert counts["glucose"] == 1  # retained, single referent
 
 
+def test_subsample_within_strata_ambiguous_only_drops_single_referent_names(raw_pham_df):
+    # ambiguous_only restricts to the >=2-referent disambiguation cases BEFORE sampling, so a
+    # single-referent name (glucose) is excluded while multi-referent names (suc/H/tmp) remain.
+    df = build_input_df(raw_pham_df, PHAM_DISAMBIGUATION)
+    amb, meta = subsample_within_strata(df, PHAM_DISAMBIGUATION, ambiguous_only=True)
+    kept = set(amb[PHAM_DISAMBIGUATION.name_column])
+    assert "glucose" not in kept  # single referent -> dropped from the hard-case headline
+    assert {"suc", "H", "tmp"} <= kept  # >= 2 distinct referents -> retained
+    assert meta["ambiguous_only"] is True
+    # the default full-population path keeps the single-referent name
+    full, meta2 = subsample_within_strata(df, PHAM_DISAMBIGUATION)
+    assert "glucose" in set(full[PHAM_DISAMBIGUATION.name_column])
+    assert meta2["ambiguous_only"] is False
+
+
 def test_build_input_df_collapses_mixed_case_duplicate_names():
     # Greptile FINDING 2: the raw-CSV path must group by normalize_name (casefold + whitespace), not the
     # exact display string. ``suc``/``SUC``/``Suc  `` are ONE ambiguous name with TWO distinct referent
