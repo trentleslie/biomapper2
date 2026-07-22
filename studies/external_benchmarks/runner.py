@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import os
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,6 +74,40 @@ def _git_commit(repo_root: Path) -> str:
         return "unknown"
 
 
+UNRECORDED = "unrecorded"
+
+
+def kg_provenance(*, probe_health: bool = False) -> dict[str, Any]:
+    """KG-snapshot / ChEBI-release provenance for a run's manifest.
+
+    The Kestrel KG serves the graph BioMapper resolves against, but it exposes no version /
+    ``meta_knowledge_graph`` endpoint (verified live 2026-07-22: ``/version``, ``/meta``,
+    ``/meta_knowledge_graph`` all 404; only ``/health`` responds). So the KG snapshot and the
+    ChEBI release cannot be queried — they are OPERATOR-SUPPLIED out of band via the ``KG_SNAPSHOT``
+    and ``CHEBI_RELEASE`` env vars. A run that omits them records the loud ``"unrecorded"`` sentinel
+    (never a silent green) so an un-pinned run is visible on its face.
+
+    ``probe_health`` adds a live ``/health`` GET as a weak temporal anchor (server status + timestamp)
+    — off by default so manifest construction stays pure/offline for unit tests; live run paths turn
+    it on once per run.
+    """
+    prov: dict[str, Any] = {
+        "kg_snapshot": os.getenv("KG_SNAPSHOT") or UNRECORDED,
+        "chebi_release": os.getenv("CHEBI_RELEASE") or UNRECORDED,
+    }
+    if probe_health:
+        health: dict[str, Any]
+        try:
+            import requests
+
+            r = requests.get(f"{KESTREL_API_URL.rstrip('/')}/health", timeout=8)
+            health = {"ok": r.ok, "status_code": r.status_code, "response": r.json() if r.ok else r.text[:200]}
+        except Exception as exc:  # liveness probe is best-effort; never fail the run over it
+            health = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+        prov["kg_health_probe"] = health
+    return prov
+
+
 def build_manifest(
     *,
     vocab: str,
@@ -81,6 +116,7 @@ def build_manifest(
     biolink_version: str,
     output_tsv: str,
     repo_root: Path,
+    kg_prov: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "dataset": config.key,
@@ -92,6 +128,7 @@ def build_manifest(
         "biomapper2_commit": _git_commit(repo_root),
         "kestrel_api_url": KESTREL_API_URL,
         "biolink_version": biolink_version,
+        **(kg_prov if kg_prov is not None else kg_provenance()),
         "dataset_source_sha256": dataset_sha,
         "output_tsv": output_tsv,
         "timestamp_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
@@ -118,6 +155,7 @@ def run_vocab(
     dataset_sha: str,
     repo_root: Path,
     enforce_assigned: bool = True,
+    kg_prov: dict[str, Any] | None = None,
 ) -> VocabRun:
     """Run one vocab. Consumes the mapper as-is; writes manifest beside the outputs."""
     out_dir = Path(out_dir)
@@ -148,6 +186,7 @@ def run_vocab(
         biolink_version=biolink_version,
         output_tsv=str(output_tsv),
         repo_root=repo_root,
+        kg_prov=kg_prov,
     )
     (out_dir / f"{config.key}_{vocab}_manifest.json").write_text(json.dumps(manifest, indent=2))
     return VocabRun(vocab=vocab, ok=True, output_tsv=str(output_tsv), stats=stats, manifest=manifest)
@@ -169,6 +208,7 @@ def run_all(
     correctness failure of the whole run, not a per-vocab hiccup.
     """
     vocabs = vocabs or config.target_vocabs
+    kg_prov = kg_provenance(probe_health=True)  # probe KG liveness once per run, share across vocabs
     results: dict[str, VocabRun] = {}
     for vocab in vocabs:
         try:
@@ -181,6 +221,7 @@ def run_all(
                 dataset_sha=dataset_sha,
                 repo_root=repo_root,
                 enforce_assigned=enforce_assigned,
+                kg_prov=kg_prov,
             )
         except TrivialMappingError:
             raise
@@ -205,6 +246,7 @@ def build_manifest_provided(
     biolink_version: str,
     output_tsv: str,
     repo_root: Path,
+    kg_prov: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "dataset": config.key,
@@ -219,6 +261,7 @@ def build_manifest_provided(
         "biomapper2_commit": _git_commit(repo_root),
         "kestrel_api_url": KESTREL_API_URL,
         "biolink_version": biolink_version,
+        **(kg_prov if kg_prov is not None else kg_provenance()),
         "dataset_source_sha256": dataset_sha,
         "output_tsv": output_tsv,
         "timestamp_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
@@ -279,6 +322,7 @@ def run_provided_id(
         biolink_version=biolink_version,
         output_tsv=str(output_tsv),
         repo_root=repo_root,
+        kg_prov=kg_provenance(probe_health=True),
     )
     (out_dir / f"{config.key}_provided_manifest.json").write_text(json.dumps(manifest, indent=2))
     return ProvidedRun(ok=True, output_tsv=str(output_tsv), stats=stats, manifest=manifest)
