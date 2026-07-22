@@ -1324,6 +1324,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mlr.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     mlr.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # NECS / Metabolon (Monti et al. 2026 GeroScience aging cohort): structure-oracle metabolite set,
+    # loaded in full. Default source is the pinned Metabolon MOESM5 supplement URL.
+    nc = sub.add_parser("necs", help="run the NECS/Metabolon metabolite structure-oracle slice")
+    nc.add_argument("--source", default=None, help="path/URL to the NECS supplement (default: pinned MOESM5 URL)")
+    nc.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    nc.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # MetaboliteAnnotator name-hit head-to-head (Lu et al.): auto-fetches the six MetaboLights MTBLS
+    # sets per ion mode from ``config.accessions`` — no --source needed for the live run.
+    ma = sub.add_parser(
+        "metaboliteannotator", help="run the MetaboliteAnnotator name-hit head-to-head (auto-fetches 6 MetaboLights)"
+    )
+    ma.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    ma.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # HGNC name-input gene backbone (approved gene symbol -> Ensembl/Entrez/UniProt, CURIE equality).
+    # Streamed + reservoir-subsampled; default source is the pinned HGNC complete-set URL.
+    hg = sub.add_parser("hgnc", help="run the HGNC name-input gene backbone slice (symbol -> cross-ref CURIEs)")
+    hg.add_argument("--source", default=None, help="path/URL to the HGNC complete set (default: pinned genenames URL)")
+    hg.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    hg.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     return parser
 
 
@@ -1423,6 +1445,42 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = orchestrate_metlinkr(source=src, out_dir=out, run_gate_first=not args.no_gate)
         print(f"Saved metLinkR run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "necs":
+        # NECS loads in full: a local file is read to bytes, a URL is fetched by the adapter.
+        from .config import NECS
+
+        src = _resolve_source_arg(args.source) if args.source else NECS.source_url
+        out = Path(args.out) if args.out else None
+        result = orchestrate_necs(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved NECS run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "metaboliteannotator":
+        # Live run: fetch the 6 MetaboLights MTBLS sets per ion mode from each registry config's
+        # accessions (the adapter fails loud on any placeholder accession before scoring).
+        from .config import NAME_HIT_REGISTRY
+
+        sources = {key: cfg.accessions for key, cfg in NAME_HIT_REGISTRY.items()}
+        out = Path(args.out) if args.out else None
+        result = orchestrate_metaboliteannotator(sources=sources, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved MetaboliteAnnotator run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "hgnc":
+        # Backbone is streamed: a local file becomes a line iterator (gzip-aware), a URL streams and
+        # its upstream release version is resolved best-effort inside orchestrate_backbone.
+        from .config import HGNC
+
+        if args.source:
+            p = Path(args.source)
+            src = _local_line_iter(p) if p.exists() else args.source
+        else:
+            src = HGNC.source_url
+        out = Path(args.out) if args.out else None
+        result = orchestrate_backbone(config=HGNC, source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved HGNC run to {result['out_dir']}; report at {result['report']}")
         return
 
     # Legacy name-input Hajjar path.
