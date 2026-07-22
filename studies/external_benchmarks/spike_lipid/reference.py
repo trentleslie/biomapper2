@@ -216,14 +216,17 @@ def default_goslin_parse(name: str) -> ShorthandParse:
     total_c = None
     total_db = None
     if lipid is not None:
-        hg = getattr(lipid, "headgroup", None)
-        lipid_class = getattr(hg, "name", None) if hg is not None else getattr(lipid, "get_class_name", lambda: None)()
         info = getattr(lipid, "info", None)
         if info is not None:
             total_c = getattr(info, "num_carbon", None)
             db = getattr(info, "double_bonds", None)
             # double_bonds may be an int or an object with a count
             total_db = db if isinstance(db, int) else getattr(db, "num_double_bonds", None)
+    # pygoslin's headgroup accessor is version-dependent and often None here; the class
+    # token is the reliable prefix of the SPECIES string (e.g. "TG 57:6" -> "TG",
+    # "Hex(4)-HexNAc-Cer 36:1;O2" -> "Hex(4)-HexNAc-Cer").
+    if species:
+        lipid_class = species.split(" ")[0] or None
 
     return ShorthandParse(
         name=name,
