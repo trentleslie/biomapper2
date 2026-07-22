@@ -82,6 +82,18 @@ def test_runner_refuses_zero_provided_mappings(tmp_path):
         )
 
 
+def test_runner_scores_zero_mappings_when_source_gap_is_known(tmp_path):
+    # A direction with a DOCUMENTED source gap (e.g. MetaBench kegg2hmdb: the KEGG source id is not a
+    # queryable KG node) legitimately maps zero. That is a real 0/n result, not a broken run, so the
+    # guard must NOT abort -- the run proceeds and is scorable as all-misses.
+    import dataclasses
+
+    config = dataclasses.replace(PROVIDED_NCBI_GENE2ENSEMBL, known_source_gap=True)
+    mapper = FakeMapper(provided=0)
+    run = run_provided_id(mapper, _input_df(), config, tmp_path, dataset_sha="s", repo_root=Path.cwd())
+    assert run.ok  # did not raise; a documented-gap direction is scored, not refused
+
+
 def test_runner_anti_trivial_guard_runs_before_mapper(tmp_path):
     # A config whose target is not held out must fail loud BEFORE the mapper is ever called.
     from types import SimpleNamespace

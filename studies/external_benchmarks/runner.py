@@ -264,7 +264,7 @@ def run_provided_id(
         output_dir=out_dir,
         output_prefix=f"{config.key}_provided",
     )
-    if enforce_mapped and not mapped_provided_nonnull(stats):
+    if enforce_mapped and not getattr(config, "known_source_gap", False) and not mapped_provided_nonnull(stats):
         raise NoProvidedMappingError(
             f"{config.key}: provided-ID run produced zero KG mappings via the provided path "
             f"(mapped_to_kg_provided={stats.get('mapped_to_kg_provided')}). The source id never "

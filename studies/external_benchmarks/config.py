@@ -415,6 +415,11 @@ class ProvidedIdDatasetConfig:
     # supplies the source id. None for the Hajjar-derived metabolite anchor.
     backbone_source_key: str | None = None
     backbone_source_column: str | None = None
+    # Set True ONLY for a direction with a DOCUMENTED source gap (the provided source id is not a
+    # queryable KG node, e.g. MetaBench kegg2hmdb). Then a zero provided-path mapping is a genuine 0/n
+    # result, not a broken run: the fail-loud NoProvidedMappingError guard is suppressed and the
+    # direction is scored as all-misses. Never set this to paper over an actually-broken run.
+    known_source_gap: bool = False
 
     def __post_init__(self) -> None:
         provided = {self.source_id_column}
