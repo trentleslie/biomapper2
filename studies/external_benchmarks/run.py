@@ -1142,20 +1142,9 @@ def orchestrate_metabench(
         if sub.pair_type == "id2id":
             # Provided-ID mode: the source id is handed to BioMapper; the target is held out. The
             # ProvidedIdDatasetConfig __post_init__ re-enforces source-namespace != target-namespace.
-            assert sub.source_id_column is not None  # build_subgroups always sets it for id2id
-            pid = ProvidedIdDatasetConfig(
-                key=sub.key,
-                arm=config.arm,
-                entity_type=config.entity_type,
-                source_id_column=sub.source_id_column,
-                source_namespace=sub.source_namespace,
-                name_column=config.name_column,
-                gold_target_columns=((sub.target_namespace, config.gold_target_column),),
-                target_vocabs=(sub.target_namespace,),
-                source_label=f"MetaBench Grounding ({sub.key})",
-                source_url=config.source_url,
-                license=config.license,
-            )
+            # known_source_gap is set for the KEGG-source direction (documented gap): see
+            # metabench_adapter.provided_config_for_subgroup.
+            pid = metabench_adapter.provided_config_for_subgroup(sub, config)
             run = run_provided_id(
                 mapper, sub.input_df, pid, sub_dir, dataset_sha=dataset_sha, repo_root=repo_root
             )

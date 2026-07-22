@@ -29,7 +29,7 @@ from typing import Any, cast
 
 import pandas as pd
 
-from ..config import METABENCH, MetaBenchDatasetConfig
+from ..config import METABENCH, MetaBenchDatasetConfig, ProvidedIdDatasetConfig
 
 RAW_QUESTION_COL = "question"
 RAW_ANSWER_COL = "answer"
@@ -278,6 +278,33 @@ class MetaBenchBundle:
     long_df: pd.DataFrame
     subgroups: list[MetaBenchSubgroup]
     card: dict[str, Any]
+
+
+def provided_config_for_subgroup(
+    sub: MetaBenchSubgroup, config: MetaBenchDatasetConfig = METABENCH
+) -> ProvidedIdDatasetConfig:
+    """Build the provided-ID run config for an id2id subgroup.
+
+    ``known_source_gap`` is set for KEGG-source directions (e.g. kegg2hmdb): a KEGG compound id is not
+    a queryable KG node, a DOCUMENTED gap, so a zero provided-path mapping is a genuine 0/n result and
+    must be scored (all-misses), not refused as a broken run. The ``ProvidedIdDatasetConfig``
+    ``__post_init__`` still re-enforces source-namespace != target-namespace.
+    """
+    assert sub.source_id_column is not None  # build_subgroups always sets it for id2id
+    return ProvidedIdDatasetConfig(
+        key=sub.key,
+        arm=config.arm,
+        entity_type=config.entity_type,
+        source_id_column=sub.source_id_column,
+        source_namespace=sub.source_namespace,
+        name_column=config.name_column,
+        gold_target_columns=((sub.target_namespace, config.gold_target_column),),
+        target_vocabs=(sub.target_namespace,),
+        source_label=f"MetaBench Grounding ({sub.key})",
+        source_url=config.source_url,
+        license=config.license,
+        known_source_gap=(sub.source_namespace.upper() == "KEGG"),
+    )
 
 
 def load_metabench(source: Any, config: MetaBenchDatasetConfig = METABENCH) -> MetaBenchBundle:
