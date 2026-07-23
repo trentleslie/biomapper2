@@ -59,6 +59,27 @@ class StructureResolver:
         self._name_cache[node_name] = block
         return block
 
+    def inchikey_blocks(
+        self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None
+    ) -> set[str]:
+        """ALL KG-asserted InChIKey first-blocks for a node (the full ``equivalent_ids`` list).
+
+        ``inchikey_block`` returns only ``keys[0]``; a KG node's INCHIKEY list is multi-valued
+        (neutral parent, conjugate anion, salt, stereoisomers) and ``keys[0]`` ordering is arbitrary,
+        so a gold structure can match a *non-first* entry (the Hajjar keys[0] artifact). This returns
+        the union of every entry's first-block, letting a scorer test set membership instead of
+        equality against one arbitrary representation. When the KG lists no InChIKey, falls back to
+        the singular name-resolution path (a singleton, or empty when unresolvable) — never a
+        spurious block.
+        """
+        records = records if records is not None else self.linker.get_node_records([node_id])
+        keys = ((records.get(node_id) or {}).get("equivalent_ids") or {}).get("INCHIKEY") or []
+        blocks = {b for b in (self._first_block(k) for k in keys if k) if b}
+        if blocks:
+            return blocks
+        single = self.inchikey_block(node_id, node_name, records)
+        return {single} if single else set()
+
     @staticmethod
     def _first_block(inchikey: str | None) -> str | None:
         return inchikey.split("-")[0] if inchikey else None
