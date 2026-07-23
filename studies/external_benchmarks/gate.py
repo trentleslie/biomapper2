@@ -45,6 +45,7 @@ class SmokeObservation:
     fallback_latencies_s: list[float]
     miss_rate: float
     vocab_count: int
+    error: str | None = None  # first smoke exception (so the gate reason names the real cause)
 
 
 @dataclass(frozen=True)
@@ -123,7 +124,8 @@ def run_gate(
     if not obs.key_ok:
         return GateResult("stop", "KESTREL_API_KEY missing/invalid", None, obs)
     if not obs.kestrel_ok:
-        return GateResult("stop", "Kestrel API unreachable", None, obs)
+        detail = f" (smoke error: {obs.error})" if obs.error else ""
+        return GateResult("stop", f"Kestrel smoke call failed{detail}", None, obs)
     if not obs.results_nonempty:
         return GateResult("stop", "smoke run produced no results (empty)", None, obs)
 
@@ -183,9 +185,10 @@ def build_live_smoke_fn(
         fallback_latencies: list[float] = []
         kestrel_ok = True
         any_result = False
+        first_error: str | None = None
 
         def _time_map(name: str) -> float:
-            nonlocal kestrel_ok, any_result
+            nonlocal kestrel_ok, any_result, first_error
             start = time.perf_counter()
             try:
                 res = mapper.map_entity_to_kg(
@@ -200,8 +203,10 @@ def build_live_smoke_fn(
                     any_result = True
                 elif hasattr(res, "get") and res.get("chosen_kg_id"):
                     any_result = True
-            except Exception:
+            except Exception as exc:  # capture the real cause — not every failure is unreachability
                 kestrel_ok = False
+                if first_error is None:
+                    first_error = f"{type(exc).__name__}: {exc}"
             return time.perf_counter() - start
 
         for nm in present_names:
@@ -219,6 +224,7 @@ def build_live_smoke_fn(
             fallback_latencies_s=fallback_latencies,
             miss_rate=miss_rate,
             vocab_count=len(vocabs),
+            error=first_error,
         )
 
     return _smoke
