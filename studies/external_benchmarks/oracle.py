@@ -32,6 +32,17 @@ class KGStructureOracle:
         name = (recs.get(node_id) or {}).get("name")
         return self.resolver.inchikey_block(node_id, name, recs)
 
+    def resolved_blocks(self, node_id: str) -> set[str]:
+        """All KG-asserted InChIKey first-blocks for the prediction (the full equivalence set).
+
+        Fixes the ``keys[0]`` artifact: a scorer can test whether gold is a member of the chosen
+        node's KG-asserted structural equivalents rather than matching one arbitrarily-ordered
+        representation (see ``StructureResolver.inchikey_blocks``).
+        """
+        recs = self._records(node_id)
+        name = (recs.get(node_id) or {}).get("name")
+        return self.resolver.inchikey_blocks(node_id, name, recs)
+
     def neutral_block(self, node_id: str) -> str | None:
         """Charge/protonation-normalized first-block of the prediction.
 

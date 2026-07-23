@@ -138,6 +138,9 @@ def score_structure_oracle(
     """
     smiles_col = config.gold_smiles_column
     cn_available = gold_smiles_normalizer is not None and hasattr(oracle, "neutral_block")
+    # KG-equivalence-set variant: gold matches ANY first-block in the chosen node's multi-valued
+    # INCHIKEY list, not just keys[0] (the Hajjar keys[0] artifact). Optional oracle capability.
+    eq_set_available = hasattr(oracle, "resolved_blocks")
     regime_available = name_source_column is not None and name_source_column in mapped_df.columns
 
     total = len(mapped_df)
@@ -148,6 +151,9 @@ def score_structure_oracle(
     # Charge-normalized tallies (only meaningful when cn_available).
     cn_scored = 0
     cn_correct = 0
+    # KG-equivalence-set tallies (only meaningful when eq_set_available); same denominator as strict.
+    eq_scored = 0
+    eq_correct = 0
     # Per-regime tallies (only populated when regime_available). regime -> counter dict.
     regime_tally: dict[str, dict[str, int]] = {}
     per_row: list[dict[str, Any]] = []
@@ -176,6 +182,20 @@ def score_structure_oracle(
             scored += 1
             if is_correct:
                 correct += 1
+
+        # KG-equivalence-set membership (same scored population as strict). A hit means gold's
+        # first-block is one of the chosen node's KG-asserted InChIKey blocks — recovers the
+        # neutral-parent-vs-anion/salt keys[0] artifact WITHOUT crossing node boundaries (a wrong
+        # entity only matches if its own node asserts equivalence to gold, so no free inflation).
+        eq_correct_row: bool | None = None
+        if eq_set_available and is_scored:
+            eq_scored += 1
+            eq_blocks: set[str] = set()
+            if chosen_id is not None:  # chosen_id is set iff has_pred
+                eq_blocks = oracle.resolved_blocks(chosen_id)  # type: ignore[attr-defined]
+            eq_correct_row = gold_block in eq_blocks
+            if eq_correct_row:
+                eq_correct += 1
 
         cn_correct_row: bool | None = None
         # Gate the charge-normalized tally on the SAME population as strict (``gold_block is not
@@ -228,6 +248,7 @@ def score_structure_oracle(
                 "correct": is_correct,
                 "needed_fallback": needed_fallback,
                 "charge_normalized_correct": cn_correct_row,
+                "kg_equivalence_set_correct": eq_correct_row,
                 "name_source": row_source,
             }
         )
@@ -242,6 +263,16 @@ def score_structure_oracle(
         }
     else:
         cn_core = None
+
+    if eq_set_available:
+        eq_core: dict[str, Any] | None = {
+            "metric": "top1_accuracy_kg_equivalence_set",
+            "top1_accuracy": (eq_correct / eq_scored) if eq_scored else None,
+            "correct": eq_correct,
+            "scored_denominator": eq_scored,
+        }
+    else:
+        eq_core = None
 
     # Assemble the per-regime breakout (None when no name-source column was supplied). Each regime
     # carries its own strict + charge-normalized core + coverage, mirroring the blended shape so a
@@ -284,6 +315,7 @@ def score_structure_oracle(
             "scored_denominator": scored,
         },
         "comparable_core_charge_normalized": cn_core,
+        "comparable_core_kg_equivalence_set": eq_core,
         "by_name_source_regime": by_regime,
         "coverage": {
             "n_predicted": n_predicted,
