@@ -16,6 +16,7 @@ namespaces, so the source-namespace query id can never trivially self-match.
 from __future__ import annotations
 
 import ast
+import re
 from typing import Any
 
 import pandas as pd
@@ -100,6 +101,51 @@ def split_gold_curies(value: Any, namespace: str) -> set[str]:
         n = normalize_curie(curie)
         if n is not None:
             out.add(n)
+    return out
+
+
+# MetaboLights MAF ``database_identifier`` golds are NOT uniformly CURIE-prefixed. They are a mix of:
+# already-prefixed CURIEs (``CHEBI:17234``), bare chemical accessions (HMDB / KEGG C-number / PubChem
+# CID / InChIKey), and NON-chemical tokens (spectral feature labels ``M###T###``, ``--``/empty
+# placeholders). ``split_gold_curies`` prefixes every bare value with ONE declared namespace, which
+# both mislabels bare HMDB as ``CHEBI:HMDB…`` and pads the id-concordance denominator with rows that
+# can never concord. ``namespace_bare_gold`` assigns each bare value its correct namespace by pattern
+# and DROPS non-chemical tokens so they never enter the scored set.
+_BARE_GOLD_PATTERNS: list[tuple[re.Pattern, str]] = [
+    (re.compile(r"^HMDB\d+$", re.IGNORECASE), "HMDB"),
+    (re.compile(r"^C\d{5}$"), "KEGG.COMPOUND"),
+    (re.compile(r"^[A-Z]{14}-[A-Z]{10}-[A-Z]$"), "INCHIKEY"),
+    (re.compile(r"^\d+$"), "PUBCHEM.COMPOUND"),
+]
+# Non-chemical tokens to drop outright (MetaboLights feature labels + placeholders).
+_NON_CHEMICAL_GOLD = re.compile(r"^(M\d+T\d+.*|--)$", re.IGNORECASE)
+
+
+def namespace_bare_gold(value: Any) -> set[str]:
+    """Normalize a MAF ``database_identifier`` gold cell for id-concordance.
+
+    Per ``|``-delimited part: an already-prefixed CURIE keeps its own namespace; a bare chemical
+    accession is matched to its namespace (HMDB / KEGG.COMPOUND / PUBCHEM.COMPOUND / INCHIKEY); a
+    non-chemical token (feature label, placeholder, unrecognized) is dropped. Returns the set of
+    normalized CURIEs (empty if the cell holds no scorable chemical id).
+    """
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return set()
+    out: set[str] = set()
+    for part in str(value).split(CURIE_DELIM):
+        raw = part.strip()
+        if not raw or raw.lower() == "nan" or _NON_CHEMICAL_GOLD.match(raw):
+            continue
+        if ":" in raw:
+            curie = raw
+        else:
+            ns = next((n for pat, n in _BARE_GOLD_PATTERNS if pat.match(raw)), None)
+            if ns is None:
+                continue
+            curie = f"{ns}:{raw}"
+        normalized = normalize_curie(curie)
+        if normalized is not None:
+            out.add(normalized)
     return out
 
 
