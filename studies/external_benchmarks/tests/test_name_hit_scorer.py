@@ -226,3 +226,26 @@ def test_merge_unions_passes_of_same_input_row_by_id():
     result = score_name_hit(merged, METABOLITEANNOTATOR_POS)
     assert result["comparable_core"]["total"] == 1
     assert result["comparable_core"]["matched"] == 1
+
+
+# --- id-concordance uses namespace_bare_gold, not a blanket CHEBI-prefix (Task 2) ------------------
+
+
+def test_idconcordance_excludes_nonchemical_gold_and_concords_bare_hmdb():
+    df = pd.DataFrame(
+        [
+            # (a) hit + bare-HMDB gold that IS among the predicted equivalents -> scored + concordant
+            _row("cholesterol", "CHEBI:16113", "HMDB0000067", equiv={"HMDB": ["HMDB0000067"], "CHEBI": ["16113"]}),
+            # (b) hit + bare-HMDB gold NOT among equivalents -> scored, not concordant
+            _row("glucose", "CHEBI:4167", "HMDB9999999", equiv={"HMDB": ["HMDB0000122"], "CHEBI": ["4167"]}),
+            # (c) hit + feature-label gold -> EXCLUDED from id_scored
+            _row("unknown_feature", "CHEBI:12345", "M247T123", equiv={"CHEBI": ["12345"]}),
+            # (d) hit + placeholder gold -> EXCLUDED from id_scored
+            _row("unknown2", "CHEBI:222", "--", equiv={"CHEBI": ["222"]}),
+        ]
+    )
+    result = score_name_hit(df, METABOLITEANNOTATOR_POS, vocab="CHEBI+HMDB+PUBCHEM+KEGG", oracle=None)
+    idc = result["id_concordance"]
+    assert idc["scored"] == 2  # only (a) and (b); feature/placeholder excluded
+    assert idc["concordant"] == 1  # only (a)
+    assert idc["excluded_nonchemical"] == 2  # (c) and (d)

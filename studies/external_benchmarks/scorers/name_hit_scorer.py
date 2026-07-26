@@ -20,7 +20,9 @@ Discipline (Hajjar/NECS learnings):
     runner's ``assigned>0`` guard separately enforces the name path so the gold can't leak as an id.)
   - FAIL-LOUD on unscorable: zero input names raises rather than reporting a hollow ``None``.
   - ID-CONCORDANCE qualifier: of the names we hit that also carry a gold ``database_identifier``, how
-    many hit the RIGHT id — reusing ``curie_scorer.split_gold_curies`` for the ``|``-multi gold cell.
+    many hit the RIGHT id — reusing ``curie_scorer.namespace_bare_gold`` for the ``|``-multi gold cell,
+    which namespaces bare chemical accessions correctly and drops non-chemical tokens (feature labels,
+    placeholders) from the denominator rather than mis-prefixing them as ChEBI.
   - CHARGE-NORMALIZED STRUCTURE qualifier (optional, live): when an oracle exposing ``neutral_block``
     is supplied, a protonation-neutralized structure concordance over the hit-and-gold-SMILES subset —
     the dominant-miss variant, reusing ``structure_oracle_scorer.neutralize_first_block``.
@@ -33,7 +35,7 @@ from typing import Any, Protocol
 import pandas as pd
 
 from ..config import NameHitDatasetConfig
-from .curie_scorer import EQUIV_COL, predicted_curies, split_gold_curies
+from .curie_scorer import EQUIV_COL, namespace_bare_gold, predicted_curies
 from .structure_oracle_scorer import CHOSEN_COL, _has_prediction, neutralize_first_block
 
 # Passthrough columns produced by the adapter (kept optional so a bare df still scores). Values must
@@ -154,6 +156,7 @@ def score_name_hit(
     matched = 0
     id_scored = 0  # names that both hit and carry a gold id (concordance denominator)
     id_concordant = 0
+    id_excluded_nonchemical = 0  # hit rows whose gold cell held only non-chemical tokens (feature ids / placeholders)
     cn_scored = 0
     cn_concordant = 0
     per_accession: dict[str, dict[str, int]] = {}
@@ -167,16 +170,20 @@ def score_name_hit(
         if has_hit:
             matched += 1
 
-        # The MAF ``database_identifier`` gold is CURIE-prefixed by spec (e.g. ``CHEBI:17234``), so
-        # split_gold_curies leaves each value's own prefix untouched; the declared namespace only
-        # backfills a non-standard BARE value, defaulting to the primary target vocab (ChEBI).
-        gold_ids = split_gold_curies(row.get(config.gold_id_column), config.target_vocabs[0])
+        # The MAF ``database_identifier`` gold is a mix of already-prefixed CURIEs, bare chemical
+        # accessions (HMDB/KEGG/PubChem/InChIKey — each namespaced by pattern), and non-chemical
+        # tokens (spectral feature labels, placeholders). ``namespace_bare_gold`` assigns each bare
+        # value its correct namespace and drops non-chemical tokens rather than mis-prefixing them.
+        raw_gold = row.get(config.gold_id_column)
+        gold_ids = namespace_bare_gold(raw_gold)
         row_concordant: bool | None = None
         if has_hit and gold_ids:
             id_scored += 1
             row_concordant = bool(predicted_curies(row) & gold_ids)
             if row_concordant:
                 id_concordant += 1
+        elif has_hit and str(raw_gold).strip() not in ("", "nan") and not gold_ids:
+            id_excluded_nonchemical += 1  # had a gold token, but it was non-chemical (feature id / placeholder)
 
         cn_row: bool | None = None
         if cn_available and has_hit and config.gold_smiles_column and _has_prediction(chosen):
@@ -229,6 +236,7 @@ def score_name_hit(
             "scored": id_scored,
             "concordant": id_concordant,
             "concordance_rate": (id_concordant / id_scored) if id_scored else None,
+            "excluded_nonchemical": id_excluded_nonchemical,
         },
         "structure_concordance_charge_normalized": structure_cn,
         "per_accession": per_accession,
