@@ -124,3 +124,47 @@ def test_split_gold_curies_prefixes_bare_but_keeps_curies_as_the_name_hit_arm_us
     assert split_gold_curies("HMDB0000122", "HMDB") == {"HMDB:HMDB0000122"}  # bare -> namespace-prefixed
     assert split_gold_curies("", "CHEBI") == set()
     assert split_gold_curies(None, "CHEBI") == set()
+
+
+from studies.external_benchmarks.scorers.curie_scorer import namespace_bare_gold  # noqa: E402
+
+
+def _n(curie):  # normalize the expected side the same way the function does
+    return normalize_curie(curie)
+
+
+def test_bare_hmdb_gets_hmdb_namespace_not_chebi():
+    assert namespace_bare_gold("HMDB0250631") == {_n("HMDB:HMDB0250631")}
+
+
+def test_bare_kegg_compound_number():
+    assert namespace_bare_gold("C01753") == {_n("KEGG.COMPOUND:C01753")}
+
+
+def test_bare_pubchem_cid_all_digits():
+    assert namespace_bare_gold("222284") == {_n("PUBCHEM.COMPOUND:222284")}
+
+
+def test_bare_inchikey():
+    assert namespace_bare_gold("KZJWDPNRJALLNS-FBZNIEFRSA-N") == {_n("INCHIKEY:KZJWDPNRJALLNS-FBZNIEFRSA-N")}
+
+
+def test_already_prefixed_curie_kept():
+    assert namespace_bare_gold("CHEBI:17234") == {_n("CHEBI:17234")}
+
+
+def test_feature_label_excluded():
+    assert namespace_bare_gold("M247T123") == set()
+
+
+def test_placeholder_and_empty_excluded():
+    assert namespace_bare_gold("--") == set()
+    assert namespace_bare_gold("") == set()
+    assert namespace_bare_gold(None) == set()
+    assert namespace_bare_gold(float("nan")) == set()
+
+
+def test_multi_value_cell_unions_and_drops_noise():
+    # a real-shaped mixed cell: one bare HMDB, one feature label, one placeholder
+    got = namespace_bare_gold("HMDB0000649|M247T123|--")
+    assert got == {_n("HMDB:HMDB0000649")}
