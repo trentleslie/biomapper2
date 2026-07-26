@@ -1,6 +1,7 @@
 """Offline re-score of the MetaboliteAnnotator id-concordance with the fixed gold namespacer.
 No Kestrel, no BioMapper re-run — reads the saved per-vocab MAPPED TSVs from the cli_suite run."""
 from __future__ import annotations
+import argparse
 import sys
 import pandas as pd
 from pathlib import Path
@@ -12,8 +13,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from studies.external_benchmarks.config import METABOLITEANNOTATOR_POS, METABOLITEANNOTATOR_NEG
 from studies.external_benchmarks.scorers.name_hit_scorer import merge_vocab_runs, score_name_hit
 
-RUN = Path("/home/trentleslie/external_benchmark_runs/cli_suite_20260723/metaboliteannotator")
 VOCABS = ("CHEBI", "HMDB", "PUBCHEM", "KEGG")
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument(
+    "run_dir",
+    type=Path,
+    help="path to a MetaboliteAnnotator run dir containing positive/ and negative/ per-vocab *_MAPPED.tsv files "
+    "(e.g. .../cli_suite_20260723/metaboliteannotator)",
+)
+RUN = parser.parse_args().run_dir
 
 for mode, cfg in (("positive", METABOLITEANNOTATOR_POS), ("negative", METABOLITEANNOTATOR_NEG)):
     dfs = [pd.read_csv(RUN / mode / f"metaboliteannotator-{mode}_{v}_MAPPED.tsv", sep="\t", dtype=str).fillna("")
