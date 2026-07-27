@@ -75,22 +75,43 @@ def assemble_name_hit_report(
     header = (
         "| Mode | BioMapper hit-rate | Matched/Total | "
         + " | ".join(baseline_tools)
-        + " | ID-concord. | Struct(cn) |"
+        + " | ID-concord. | ID-eq(UCI) | ID-eq(bridge) | Struct(cn) |"
     )
     lines.append(header)
-    lines.append("|" + "---|" * (5 + len(baseline_tools)))
+    lines.append("|" + "---|" * (7 + len(baseline_tools)))
     for entry in entries:
         core = entry["result"]["comparable_core"]
         idc = entry["result"].get("id_concordance", {})
+        uci = entry["result"].get("id_concordance_uci_equivalence")
+        bridge = entry["result"].get("id_concordance_inchikey_bridge")
         cn = entry["result"].get("structure_concordance_charge_normalized")
         mode = entry.get("mode", core.get("mode", ""))
         comp_cells = " | ".join(_competitor_cell(competitors, t, mode) for t in baseline_tools)
         cn_cell = _pct(cn["concordance_rate"]) if cn else "n/a"
+        uci_cell = _pct(uci["concordance_rate"]) if uci else "n/a"
+        bridge_cell = _pct(bridge["concordance_rate"]) if bridge else "n/a"
         lines.append(
             f"| {mode} | {_pct(core['name_hit_rate'])} | {core['matched']}/{core['total']} | "
-            f"{comp_cells} | {_pct(idc.get('concordance_rate'))} | {cn_cell} |"
+            f"{comp_cells} | {_pct(idc.get('concordance_rate'))} | {uci_cell} | {bridge_cell} | {cn_cell} |"
         )
     lines.append("")
+
+    for entry in entries:
+        matrix = entry["result"].get("namespace_confusion")
+        if not matrix:
+            continue
+        mode = entry.get("mode", "")
+        lines.append(f"## Namespace divergence — gold vs BioMapper-chosen ({mode})")
+        lines.append("")
+        lines.append("Rows the InChIKey bridge credits (right molecule) but strict exact-ID scored a miss.")
+        lines.append("")
+        chosen_ns = sorted({c for row in matrix.values() for c in row})
+        lines.append("| gold ns \\\\ chosen ns | " + " | ".join(chosen_ns) + " |")
+        lines.append("|" + "---|" * (len(chosen_ns) + 1))
+        for gold_ns in sorted(matrix):
+            cells = " | ".join(str(matrix[gold_ns].get(c, 0)) for c in chosen_ns)
+            lines.append(f"| {gold_ns} | {cells} |")
+        lines.append("")
 
     lines.append("## Notes")
     lines.append("")
