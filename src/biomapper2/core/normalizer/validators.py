@@ -4,9 +4,10 @@ import re
 
 
 def is_loinc_id(local_id: str) -> bool:
-    """LOINC codes: digits followed by dash and check digit (e.g., 27858-0)
-    or LP codes: LP followed by digits and dash-digit (e.g., LP32606-3)"""
-    return bool(re.match(r"^(LP)?\d+-\d$", local_id))
+    """LOINC codes: digits followed by a dash and check digit (e.g., 27858-0), plus the
+    prefixed code types that share that shape -- Parts (LP32606-3), Answer strings (LA33-6),
+    Answer lists (LL2223-3), and Groups (LG32863-7)."""
+    return bool(re.match(r"^(LP|LA|LL|LG)?\d+-\d$", local_id))
 
 
 def is_lipidbank_id(local_id: str) -> bool:
