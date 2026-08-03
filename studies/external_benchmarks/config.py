@@ -298,6 +298,40 @@ LMSD = DatasetConfig(
 )
 
 
+# SwissLipids (swisslipids.org) — a lipid database with its OWN names + InChIKeys + a PubChem CID
+# crosswalk, and a SwissLipids dialect Goslin parses natively. SwissLipids is NOT a Kraken ingest
+# source, so it is a LEGAL accuracy gold (unlike LMSD/RefMet, which are IN Kraken and therefore
+# circular). The query is SwissLipids' own name/abbreviation (a non-LIPID-MAPS dialect — this tests
+# Goslin's real dialect-translation job, not an identity map). The gold structure is NOT taken from
+# the KG or from LIPID MAPS: the held-out PubChem CID is resolved to an InChIKey by the INDEPENDENT
+# PubChem resolver at scoring time, so the resolution-path binding (KG/RefMet) and the gold structure
+# (PubChem) are disjoint. This is the REPORTABLE lipid accuracy arm.
+SWISSLIPIDS = DatasetConfig(
+    key="swisslipids",
+    arm="metabolite",
+    entity_type="metabolite",
+    input_type="name",
+    target_vocabs=("CHEBI",),
+    name_column="lipid_name",
+    gold_chebi_column="",
+    gold_inchikey_column="gold_inchikey",  # filled at scoring time from the held-out PubChem CID
+    gold_smiles_column="gold_smiles",
+    source_doi="10.1093/nar/gku1179",  # Aimo et al. 2015, SwissLipids (Bioinformatics/NAR)
+    source_url="https://www.swisslipids.org/api/file.php?cast=normal&file=lipids.tsv",
+    license="SwissLipids data are freely available for academic use (swisslipids.org).",
+    subsample_n=1500,
+    subsample_seed=42,
+    require_gold_structure=True,
+    role="accuracy",
+    gold_coverage_columns=(
+        ("PUBCHEM", "held_out_pubchem"),
+        ("INCHIKEY_SWISSLIPIDS", "gold_inchikey_swisslipids"),
+        ("SMILES", "gold_smiles"),
+        ("HMDB", "gold_hmdb"),
+    ),
+)
+
+
 @dataclass(frozen=True)
 class CurieDatasetConfig:
     """A gene/protein cross-reference backbone registry entry (CURIE-equality arm).
@@ -535,6 +569,7 @@ REGISTRY: dict[str, DatasetConfig] = {
     REFMET.key: REFMET,
     SRM1950.key: SRM1950,
     LMSD.key: LMSD,
+    SWISSLIPIDS.key: SWISSLIPIDS,
 }
 
 # The gene/protein registry (CURIE-equality arm). No published same-set competitor exists for
