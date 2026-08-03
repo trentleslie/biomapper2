@@ -5,6 +5,7 @@ data/kegg_compound_pathway.tsv (SHA pinned in the run manifest). Only 'map####'
 pathways are kept (organism-agnostic reference pathways); 'ko####' / organism
 variants are dropped so the vocabulary stays fixed (Mubeen 2019).
 """
+
 from __future__ import annotations
 
 import hashlib

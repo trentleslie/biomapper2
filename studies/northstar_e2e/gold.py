@@ -10,6 +10,7 @@ VERIFICATION (do before any scored run): confirm each row's direction and each
 gold pathway against the three DOIs, and confirm every gold KEGG compound is a
 member of at least one gold pathway in data/kegg_compound_pathway.tsv (Task 5).
 """
+
 from __future__ import annotations
 
 import csv
@@ -22,7 +23,7 @@ CANONICAL_CSV = DATA_DIR / "suhre2010_canonical.csv"
 SOURCE_DOIS = (
     "10.1371/journal.pone.0013953",  # Suhre et al. 2010 (primary D*)
     "10.1373/clinchem.2014.228965",  # Drogan et al. 2015 (replication cross-check)
-    "10.1007/s00125-016-4069-2",     # Lu et al. 2016 (replication cross-check)
+    "10.1007/s00125-016-4069-2",  # Lu et al. 2016 (replication cross-check)
 )
 
 DISEASE_LABEL = "type 2 diabetes"

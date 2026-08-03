@@ -13,6 +13,7 @@ under a pinned seed:
 G is sacrosanct: logged for the oracle / diagnostic arms only; it never feeds the
 product arm's answer.
 """
+
 from __future__ import annotations
 
 import random
@@ -45,15 +46,15 @@ SYNONYMS: dict[str, str] = {
 @dataclass(frozen=True)
 class MessResult:
     messy_df: pd.DataFrame
-    hidden_mapping: dict[str, str]      # surface form -> canonical name
-    operators_applied: dict[str, str]   # canonical name -> operator label
+    hidden_mapping: dict[str, str]  # surface form -> canonical name
+    operators_applied: dict[str, str]  # canonical name -> operator label
 
 
 def _typo(name: str, rng: random.Random) -> str:
     if len(name) < 4:
         return name
     i = rng.randrange(1, len(name) - 1)
-    return name[:i] + name[i + 1:]  # drop one interior character
+    return name[:i] + name[i + 1 :]  # drop one interior character
 
 
 def make_messy(

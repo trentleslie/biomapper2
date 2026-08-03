@@ -6,6 +6,7 @@ output untouched and are consumed only by the oracle arm / scorers, never by
 BioMapper. Network is isolated behind fetch_supplement so the transform is fully
 offline-testable.
 """
+
 from __future__ import annotations
 
 import hashlib

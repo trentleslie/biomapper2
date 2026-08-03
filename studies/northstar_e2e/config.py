@@ -1,4 +1,5 @@
 """Registry for the north-star end-to-end slice."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -7,19 +8,19 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class NorthStarConfig:
     key: str
-    entity_type: str          # Biolink-standardizable, e.g. "metabolite"
-    name_column: str          # the query column handed to mapper.name_column
-    gold_chebi_column: str    # held-out ground-truth ChEBI (oracle arm only)
+    entity_type: str  # Biolink-standardizable, e.g. "metabolite"
+    name_column: str  # the query column handed to mapper.name_column
+    gold_chebi_column: str  # held-out ground-truth ChEBI (oracle arm only)
     gold_hmdb_column: str
-    gold_kegg_column: str     # held-out gold KEGG compound (oracle arm + provenance)
-    direction_column: str     # measurement: "up" / "down" (rides along, never resolved)
+    gold_kegg_column: str  # held-out gold KEGG compound (oracle arm + provenance)
+    direction_column: str  # measurement: "up" / "down" (rides along, never resolved)
     qvalue_column: str
-    question: str             # the interpretation question posed to the pipeline
-    pathway_vocab: str        # fixed vocabulary; "KEGG" (never mix Reactome)
+    question: str  # the interpretation question posed to the pipeline
+    pathway_vocab: str  # fixed vocabulary; "KEGG" (never mix Reactome)
     source_doi: str
-    source_url: str           # supplement URL; "" when the canonical CSV is committed
-    target_vocab: str         # mapper target vocab for the annotation stage
-    mess_seed: int            # pinned seed for reproducible perturbation
+    source_url: str  # supplement URL; "" when the canonical CSV is committed
+    target_vocab: str  # mapper target vocab for the annotation stage
+    mess_seed: int  # pinned seed for reproducible perturbation
 
 
 SUHRE = NorthStarConfig(
