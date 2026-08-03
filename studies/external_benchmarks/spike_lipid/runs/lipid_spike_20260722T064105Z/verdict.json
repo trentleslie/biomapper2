@@ -1,0 +1,39 @@
+{
+  "spike": "lipid-shorthand #2 difficulty probe",
+  "verdict": "IN-BAND / PROMISING \u2014 build the Harbor task; confirm with harbor analyze.",
+  "anchors": {
+    "lmsd_shorthand_exact_inchikey": 0.054,
+    "lmsd_blended_exact_inchikey": 0.198
+  },
+  "species_vs_strict_gap": 0.1232876712328767,
+  "pins": {
+    "seed": 8617,
+    "query_source": "abbreviation",
+    "n_requested": 100,
+    "n_drawn": 100,
+    "model": "claude-opus-4-8",
+    "subsample_sha256": "a7b046bcdf2ae698ac9fa19c4adac5ecbcfa9fd479d029aea7153768d3f46aa7",
+    "artifact": "/home/trentleslie/external_benchmark_runs/newbench_20260716T173200Z/lmsd"
+  },
+  "scores": {
+    "n_drawn": 100,
+    "n_gradeable": 73,
+    "gate_pass_rate": 0.73,
+    "species_match": {
+      "rate": 0.136986301369863,
+      "denominator": 73,
+      "class_collisions_among_passes": 1
+    },
+    "strict_match": {
+      "first_block_rate": 0.0136986301369863,
+      "full_key_rate": 0.0,
+      "denominator": 73
+    },
+    "failure_taxonomy": {
+      "wrong_class": 20,
+      "formula_mismatch_other": 38,
+      "wrong_double_bond_count": 4,
+      "invalid_smiles": 1
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "experiment": "lipid #2 too-easy PROXY (thinking ENABLED one-shot; NOT the real Harbor run)",
+  "model": "claude-opus-4-8",
+  "thinking": {
+    "type": "adaptive",
+    "effort": "high"
+  },
+  "pins": {
+    "seed": 8617,
+    "n": 35,
+    "subset_source": "/home/trentleslie/worktrees/lipid-shorthand-spike/studies/external_benchmarks/harbor_tasks/lipid-shorthand-structure/tests/gold.jsonl",
+    "subsample_sha256": null
+  },
+  "proxy_thinking_enabled": {
+    "species_match_rate": 0.92,
+    "n_gradeable": 25,
+    "n_drawn": 35,
+    "strict_block_rate": 0.08,
+    "failure_taxonomy": {
+      "formula_mismatch_other": 1,
+      "no_structure_emitted": 1
+    }
+  },
+  "baseline_thinking_disabled_same_subset": null,
+  "full_baseline_thinking_disabled_all_gradeable": 0.1323529411764706,
+  "band": "TB-Science target solve rate 10-20%",
+  "verdict": "TOO-EASY signal: a reasoning-only model already >40% -> a code-writing agent almost certainly scripts past the band."
+}

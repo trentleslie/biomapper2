@@ -1,0 +1,5 @@
+[lipid-spike] verdict: IN-BAND / PROMISING — build the Harbor task; confirm with harbor analyze.
+[lipid-spike] species-match=0.136986301369863 strict-block=0.0136986301369863 strict-full=0.0 (anchors: shorthand 0.054, blended 0.198)
+[lipid-spike] gate: 73/100 gradeable (pass-rate 0.73); species-vs-strict gap 0.1232876712328767
+[lipid-spike] failure taxonomy: {'wrong_class': 20, 'formula_mismatch_other': 38, 'wrong_double_bond_count': 4, 'invalid_smiles': 1}
+[lipid-spike] saved run to /home/trentleslie/worktrees/lipid-shorthand-spike/studies/external_benchmarks/spike_lipid/runs/lipid_spike_20260722T064105Z
