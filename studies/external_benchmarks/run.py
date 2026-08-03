@@ -1436,7 +1436,7 @@ def build_parser() -> argparse.ArgumentParser:
     # NLM-Gene name-input gene benchmark (independent human-curated corpus, ambiguity-partitioned).
     # --source is a LOCAL corpus dir of {pmid}.BioC.XML files; default (no --source) fetches the corpus.
     ng = sub.add_parser("nlmgene", help="run the NLM-Gene name-input gene benchmark (accuracy | flag-rate)")
-    ng.add_argument("--source", default=None, help="local dir of {pmid}.BioC.XML files (default: fetch from pinned FTP)")
+    ng.add_argument("--source", default=None, help="local dir of {pmid}.BioC.XML files (default: fetch pinned FTP)")
     ng.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     ng.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     return parser

@@ -202,7 +202,8 @@ def assemble_campaign_report(
         )
         lines.append("")
         lines.append(
-            "| Dataset | Arm | Flag-rate (abstain) | Flagged n | Silent over-commit | Member when committed | Committed |"
+            "| Dataset | Arm | Flag-rate (abstain) | Flagged n | Silent over-commit | "
+            "Member when committed | Committed |"
         )
         lines.append("|---|---|---|---|---|---|---|")
         for entry in flagrate_entries:

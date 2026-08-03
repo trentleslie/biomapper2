@@ -33,6 +33,7 @@ from pathlib import Path
 from typing import Any
 
 import pandas as pd
+
 # defusedxml, NOT stdlib xml.etree: the corpus is downloaded XML with a ``BioC.dtd`` DOCTYPE, and
 # stdlib parsers are vulnerable to XXE / billion-laughs. ``fromstring`` returns standard Element
 # objects, so ``.iter``/``.findall``/``.find`` below are unchanged.
