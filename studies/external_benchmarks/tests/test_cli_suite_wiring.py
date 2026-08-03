@@ -140,3 +140,18 @@ def test_build_manifest_explicit_kg_prov_wins(tmp_path):
     )
     assert m["kg_snapshot"] == "explicit"
     assert m["chebi_release"] == "explicit-chebi"
+
+
+def test_swisslipids_subcommand_is_registered():
+    from studies.external_benchmarks import run as run_mod
+
+    parser = run_mod.build_parser()  # use the module's existing parser factory
+    ns = parser.parse_args(["swisslipids", "--source", "lipids.tsv"])
+    assert ns.command == "swisslipids"
+    assert ns.source == "lipids.tsv"
+
+
+def test_orchestrate_swisslipids_is_exposed():
+    from studies.external_benchmarks import run as run_mod
+
+    assert hasattr(run_mod, "orchestrate_swisslipids")

@@ -56,9 +56,7 @@ class LipidGrammar:
             "SwissLipidsParser": SwissLipidsParser,
             "HmdbParser": HmdbParser,
         }
-        self._parsers: tuple[tuple[str, object], ...] = tuple(
-            (dialect, classes[cls]()) for dialect, cls in _DIALECTS
-        )
+        self._parsers: tuple[tuple[str, object], ...] = tuple((dialect, classes[cls]()) for dialect, cls in _DIALECTS)
 
     def parse(self, name: str) -> LipidParse | None:
         """Normalized reading of ``name``, or ``None`` if no grammar parses it (fail-soft)."""
