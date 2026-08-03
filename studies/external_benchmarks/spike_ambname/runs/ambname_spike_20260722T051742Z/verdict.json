@@ -1,0 +1,54 @@
+{
+  "spike": "ambiguous-name #3 viability probe",
+  "verdict": "KILL / change-scoring (naive one-shot matches gold too often)",
+  "biomapper_anchor_nonlipid": 0.417,
+  "pins": {
+    "seed": 730,
+    "stratum": "non_lipid",
+    "n_requested": 75,
+    "n_drawn": 75,
+    "model": "claude-opus-4-8",
+    "source_sha256": "298e280c87cc1b2300e7b01d706da1e1d23f684ab849c73b4c7937c549b8fbc6",
+    "artifact": "/home/trentleslie/external_benchmark_runs/pham_ambonly_20260716T220912Z"
+  },
+  "scores": {
+    "block": {
+      "granularity": "block",
+      "n_names": 75,
+      "any_member": {
+        "rate": 0.41333333333333333,
+        "passes": 31,
+        "denominator": 75
+      },
+      "full_set_recall": {
+        "macro_precision": 0.42517006802721086,
+        "macro_recall": 0.2288888888888889,
+        "macro_f1": 0.5849462365591398
+      }
+    },
+    "full": {
+      "granularity": "full",
+      "n_names": 75,
+      "any_member": {
+        "rate": 0.30666666666666664,
+        "passes": 23,
+        "denominator": 75
+      },
+      "full_set_recall": {
+        "macro_precision": 0.24489795918367352,
+        "macro_recall": 0.16444444444444445,
+        "macro_f1": 0.5202898550724638
+      }
+    }
+  },
+  "resolver": {
+    "unresolved_rate": 0.3575418994413408,
+    "lane_counts": {
+      "inchikey_direct": 27,
+      "smiles_rdkit": 80,
+      "name_pubchem": 8,
+      "unresolved": 64
+    },
+    "n_referents_emitted": 179
+  }
+}
