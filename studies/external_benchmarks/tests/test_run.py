@@ -251,7 +251,7 @@ def _install_pham_fakes(monkeypatch, tmp_path):
     bundle = SimpleNamespace(input_df=input_df, card={"source_sha256": "deadbeef", "source_status": "resolved",
                                                       "strata": {}})
     monkeypatch.setattr(pham_mod, "load_pham", lambda src, cfg: bundle)
-    monkeypatch.setattr(pham_mod, "subsample_within_strata", lambda df, cfg: (df, {"seed": 42}))
+    monkeypatch.setattr(pham_mod, "subsample_within_strata", lambda df, cfg, **kw: (df, {"seed": 42}))
     monkeypatch.setattr(pham_mod, "persist_stratified_subsample", lambda df, key, out: str(out))
 
     tsv = tmp_path / "CHEBI_MAPPED.tsv"
