@@ -15,6 +15,7 @@ from ..biolink_client import BiolinkClient
 from ..config import CATEGORY_PREFERRED_NAMESPACES
 from ..utils import AnnotationMode, AssignedIDsDict
 from .annotators.base import BaseAnnotator
+from .annotators.goslin_lipid import GoslinLipidAnnotator
 from .annotators.kestrel_hybrid import KestrelHybridSearchAnnotator
 from .annotators.kestrel_text import KestrelTextSearchAnnotator
 from .annotators.kestrel_vector import KestrelVectorSearchAnnotator
@@ -33,6 +34,7 @@ class AnnotationEngine:
                 KestrelTextSearchAnnotator(),
                 KestrelVectorSearchAnnotator(),
                 MetabolomicsWorkbenchAnnotator(),
+                GoslinLipidAnnotator(),
             ]
         }
         self.biolink_client = biolink_client if biolink_client else BiolinkClient()
@@ -194,6 +196,7 @@ class AnnotationEngine:
         category_with_descendants = self.biolink_client.get_descendants(category)
         if category_with_descendants.intersection({"biolink:SmallMolecule"}):
             annotators.append(MetabolomicsWorkbenchAnnotator.slug)
+            annotators.append(GoslinLipidAnnotator.slug)
 
         # Always include fallback annotator (temp: orchestration will become more advanced later)
         annotators.append(KestrelHybridSearchAnnotator.slug)
