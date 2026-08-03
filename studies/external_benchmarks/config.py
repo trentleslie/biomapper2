@@ -79,6 +79,12 @@ class DatasetConfig:
     # structure oracle REQUIRES a held-out structure, and RefMet's bulk CSV is only ~17% InChIKey-
     # annotated, so an unfiltered sample would be mostly coverage-only (nothing to score).
     require_gold_structure: bool = False
+    # Benchmark ROLE. "accuracy" arms report an independent accuracy number; "capability_regression"
+    # arms (LMSD post-Goslin) certify a capability is wired and gate a resolvability FLOOR — they are
+    # NEVER reported as an accuracy headline. When role == "capability_regression", regression_floor
+    # is the minimum shorthand resolvability the run must clear.
+    role: str = "accuracy"
+    regression_floor: float | None = None
 
 
 # Hajjar et al. 2026, Metabolomics, DOI 10.1007/s11306-026-02404-w.
@@ -278,6 +284,8 @@ LMSD = DatasetConfig(
     subsample_n=1500,
     subsample_seed=42,
     require_gold_structure=True,
+    role="capability_regression",
+    regression_floor=0.90,
     gold_coverage_columns=(
         ("INCHIKEY", "gold_inchikey"),
         ("SMILES", "gold_smiles"),

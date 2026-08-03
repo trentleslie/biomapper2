@@ -217,6 +217,7 @@ def build_card(
     return {
         "dataset": config.key,
         "arm": config.arm,
+        "role": config.role,
         "entity_type": config.entity_type,
         "input_type": config.input_type,
         "target_vocabs": list(config.target_vocabs),
