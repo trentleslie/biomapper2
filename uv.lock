@@ -118,6 +118,7 @@ dependencies = [
     { name = "openpyxl" },
     { name = "pandas" },
     { name = "pydantic" },
+    { name = "pygoslin" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
     { name = "pyyaml" },
@@ -161,6 +162,7 @@ requires-dist = [
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.3.3" },
     { name = "pydantic", specifier = ">=2.10.0" },
+    { name = "pygoslin", specifier = ">=2.0" },
     { name = "python-dotenv", specifier = ">=1.2.1" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "pyyaml", specifier = ">=6.0.3" },
@@ -2145,6 +2147,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b0140bde72ea885a803b82086995367bf2037de0159d924/pygments-2.19.2.tar.gz", hash = "sha256:636cb2477cec7f8952536970bc533bc43743542f70392ae026374600add5b887", size = 4968631 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217 },
+]
+
+[[package]]
+name = "pygoslin"
+version = "2.2.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/be/ad/c163e7ee7c3f091d77e275337d028be5f3acea68b9af9873ce590b847522/pygoslin-2.2.4.tar.gz", hash = "sha256:f018c0a1ce7a9c2434ecb100b0a99fa334c645d934c080674457cba41b564a41", size = 94390 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/61/94/1d0ac2ecf324621f0c364078b007e1cd60c1af85b2d54abcdf0cbb74c1f8/pygoslin-2.2.4-py3-none-any.whl", hash = "sha256:a22f90e38e7b9ab49a76b932793a84c694286a773a2c5ff1475c1029c948a50b", size = 150671 },
 ]
 
 [[package]]
