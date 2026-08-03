@@ -1,0 +1,58 @@
+name: Nightly Benchmarks
+
+# The external-benchmark suite makes live Kraken calls ($ / minutes), so it runs on a schedule and
+# on-demand ONLY — never per-PR. It drives every self-sourcing benchmark into one timestamped suite
+# dir and uploads the pinned manifest so the preprint's numbers are reproducible as code/Kraken move.
+on:
+  schedule:
+    - cron: '0 8 * * *'  # 08:00 UTC nightly (~00:00-01:00 PT)
+  workflow_dispatch:
+    inputs:
+      kg_snapshot:
+        description: 'Operator-supplied KG snapshot label (recorded in the manifest pins)'
+        required: false
+        default: ''
+      chebi_release:
+        description: 'Operator-supplied ChEBI release label (recorded in the manifest pins)'
+        required: false
+        default: ''
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    env:
+      # Point the suite at the PUBLIC Kraken backend (not the internal lab host, not SPOKE). The
+      # public endpoint is https://kestrel.krakenkg.com/api — the base the app.krakenkg.com explorer
+      # itself calls. Verified 2026-08-04: it serves the same endpoints biomapper2 uses (text-search,
+      # vector-search, hybrid-search, canonicalize) and does NOT enforce X-API-Key, so the nightly
+      # runs with no secret configured. A repo secret still overrides, for a gated backend.
+      KESTREL_API_URL: ${{ secrets.KESTREL_API_URL || 'https://kestrel.krakenkg.com/api' }}
+      # biomapper2 always sends X-API-Key (utils.bulk_kestrel_request auth_required defaults True),
+      # so a placeholder is needed even though public Kraken ignores it.
+      KESTREL_API_KEY: ${{ secrets.KESTREL_API_KEY || 'public-kraken-no-auth' }}
+      KG_SNAPSHOT: ${{ github.event.inputs.kg_snapshot }}
+      CHEBI_RELEASE: ${{ github.event.inputs.chebi_release }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Run the benchmark suite against public Kraken
+        run: uv run python -m studies.external_benchmarks.run all --out "$GITHUB_WORKSPACE/benchmark_suite_out"
+
+      - name: Upload suite artifacts (manifest + per-dataset reports)
+        if: always()  # keep the partial suite + manifest even if a dataset failed
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-suite-${{ github.run_id }}
+          path: benchmark_suite_out/
+          if-no-files-found: warn
