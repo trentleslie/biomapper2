@@ -36,6 +36,7 @@ import pandas as pd
 
 from ..config import NameHitDatasetConfig
 from .curie_scorer import EQUIV_COL, namespace_bare_gold, predicted_curies
+from .id_equivalence import IdEquivalenceJudge  # noqa: TC001 (Protocol used in annotation)
 from .structure_oracle_scorer import CHOSEN_COL, _has_prediction, neutralize_first_block
 
 # Passthrough columns produced by the adapter (kept optional so a bare df still scores). Values must
@@ -142,6 +143,7 @@ def score_name_hit(
     vocab: str | None = None,
     *,
     oracle: NeutralBlockOracle | None = None,
+    id_equivalence_judge: IdEquivalenceJudge | None = None,
 ) -> dict[str, Any]:
     """Name-hit-rate + ID-concordance + optional charge-normalized structure concordance."""
     total = len(mapped_df)
@@ -159,6 +161,14 @@ def score_name_hit(
     id_excluded_nonchemical = 0  # hit rows whose gold cell held only non-chemical tokens (feature ids / placeholders)
     cn_scored = 0
     cn_concordant = 0
+    # Independent ID-equivalence-set tallies (only meaningful when a judge is injected). Same
+    # scored population as strict id_concordance (has_hit and gold_ids) — reported BESIDE it.
+    eq_available = id_equivalence_judge is not None
+    uci_concordant = 0
+    uci_needs = 0
+    bridge_concordant = 0
+    bridge_needs = 0
+    ns_confusion: dict[str, dict[str, int]] = {}
     per_accession: dict[str, dict[str, int]] = {}
     per_row: list[dict[str, Any]] = []
 
@@ -184,6 +194,26 @@ def score_name_hit(
                 id_concordant += 1
         elif has_hit and str(raw_gold).strip() not in ("", "nan") and not gold_ids:
             id_excluded_nonchemical += 1  # had a gold token, but it was non-chemical (feature id / placeholder)
+
+        if eq_available and has_hit and gold_ids:
+            preds = predicted_curies(row)
+            uci_v = id_equivalence_judge.uci_equivalent(gold_ids, preds)  # type: ignore[union-attr]
+            bridge_v = id_equivalence_judge.block_equivalent(gold_ids, preds)  # type: ignore[union-attr]
+            if uci_v is True:
+                uci_concordant += 1
+            elif uci_v is None:
+                uci_needs += 1
+            if bridge_v is True:
+                bridge_concordant += 1
+            elif bridge_v is None:
+                bridge_needs += 1
+            # Confusion matrix over rows the bridge newly credits but strict scored discordant.
+            if bridge_v is True and not row_concordant:
+                chosen_ns = str(chosen).split(":", 1)[0].upper() if chosen and ":" in str(chosen) else "?"
+                for g in gold_ids:
+                    g_ns = g.split(":", 1)[0].upper()
+                    ns_confusion.setdefault(g_ns, {}).setdefault(chosen_ns, 0)
+                    ns_confusion[g_ns][chosen_ns] += 1
 
         cn_row: bool | None = None
         if cn_available and has_hit and config.gold_smiles_column and _has_prediction(chosen):
@@ -212,6 +242,33 @@ def score_name_hit(
             }
         )
 
+    id_eq_uci: dict[str, Any] | None = None
+    id_eq_bridge: dict[str, Any] | None = None
+    if eq_available:
+        # Rate over the EVALUABLE subset (scored minus rows the independent judge could not
+        # adjudicate), NOT the full strict population. Folding needs-verification rows into the
+        # denominator would treat "UniChem couldn't check" as "checked, not equivalent" — so the
+        # published rate would drift with UniChem availability, not chemistry. Unresolved rows are
+        # surfaced via ``needs_verification``/``evaluable`` (coverage) instead of deflating the rate.
+        uci_evaluable = id_scored - uci_needs
+        bridge_evaluable = id_scored - bridge_needs
+        id_eq_uci = {
+            "metric": "id_concordance_uci_equivalence_rate",
+            "scored": id_scored,
+            "evaluable": uci_evaluable,
+            "concordant": uci_concordant,
+            "concordance_rate": (uci_concordant / uci_evaluable) if uci_evaluable else None,
+            "needs_verification": uci_needs,
+        }
+        id_eq_bridge = {
+            "metric": "id_concordance_inchikey_bridge_rate",
+            "scored": id_scored,
+            "evaluable": bridge_evaluable,
+            "concordant": bridge_concordant,
+            "concordance_rate": (bridge_concordant / bridge_evaluable) if bridge_evaluable else None,
+            "needs_verification": bridge_needs,
+        }
+
     structure_cn: dict[str, Any] | None = None
     if cn_available:
         structure_cn = {
@@ -238,6 +295,9 @@ def score_name_hit(
             "concordance_rate": (id_concordant / id_scored) if id_scored else None,
             "excluded_nonchemical": id_excluded_nonchemical,
         },
+        "id_concordance_uci_equivalence": id_eq_uci,
+        "id_concordance_inchikey_bridge": id_eq_bridge,
+        "namespace_confusion": ns_confusion if eq_available else None,
         "structure_concordance_charge_normalized": structure_cn,
         "per_accession": per_accession,
         "per_row": per_row,
