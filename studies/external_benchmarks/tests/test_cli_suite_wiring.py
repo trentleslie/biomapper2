@@ -140,3 +140,19 @@ def test_build_manifest_explicit_kg_prov_wins(tmp_path):
     )
     assert m["kg_snapshot"] == "explicit"
     assert m["chebi_release"] == "explicit-chebi"
+
+
+def test_cli_parses_nlmgene_subcommand():
+    parser = run_mod.build_parser()
+    args = parser.parse_args(["nlmgene", "--no-gate"])
+    assert args.command == "nlmgene"
+    assert args.source is None  # main() falls back to fetch_corpus (pinned FTP)
+    assert args.no_gate is True
+
+
+def test_dispatch_nlmgene_routes_to_orchestrator(monkeypatch):
+    calls = _record(monkeypatch, "orchestrate_nlmgene")
+    monkeypatch.setattr("sys.argv", ["run.py", "nlmgene", "--no-gate"])
+    run_mod.main()
+    assert "source" in calls  # a (pmid, xml) iterable was constructed
+    assert calls["run_gate_first"] is False

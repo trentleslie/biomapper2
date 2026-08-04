@@ -538,6 +538,42 @@ CURIE_REGISTRY: dict[str, CurieDatasetConfig] = {
     NCBI_GENE2ENSEMBL.key: NCBI_GENE2ENSEMBL,
 }
 
+# ==================================================================================================
+# NLM-Gene (Islamaj Doğan et al. 2021, J. Biomed. Inform., doi:10.1016/j.jbi.2021.103779) —
+# the INDEPENDENT name-input gene-normalization benchmark. Unlike the HGNC / gene2ensembl backbones
+# (whose golds are authoritative xref TABLES plausibly inside BioMapper's resolution path, so their
+# numbers are equivalence-recall not independent accuracy), NLM-Gene's (mention -> NCBI Gene id) gold
+# was produced by six NLM indexers reading 550 PubMed abstracts. The gold NAMESPACE (NCBIGene) is
+# downstream in BioMapper's path, but the gold MAPPING is human-curated -> independent by construction.
+# Corpus is public domain, BioC XML, one file per PMID under Corpus/. Scored ambiguity-partitioned:
+# unambiguous surface forms -> accuracy (curie_scorer); ambiguous forms -> EITL flag-rate (nlmgene_scorer).
+# ==================================================================================================
+
+# A surface form whose union of gold NCBI Gene ids across the corpus has >= this many distinct genes
+# is AMBIGUOUS (routed to the flag-rate partition). A single multi-id annotation is also ambiguous.
+NLMGENE_AMBIGUOUS_MIN_GENES = 2
+
+NLMGENE = CurieDatasetConfig(
+    key="nlm-gene",
+    arm="gene",
+    entity_type="gene",
+    input_type="name",
+    name_column="mention",
+    target_vocabs=("NCBIGene",),
+    gold_curie_columns=(("NCBIGene", "gold_ncbigene"),),
+    source_label="NLM-Gene corpus (Islamaj Doğan et al. 2021)",
+    source_url="https://ftp.ncbi.nlm.nih.gov/pub/lu/NLMGene",
+    license="Public domain (NLM/NCBI); freely available.",
+    # subsample_n is unused by the NLM-Gene adapter (it parses per-PMID BioC XML, not a single streamed
+    # TSV, and scores the full deduped surface-form set); set high so nothing is silently dropped.
+    subsample_n=1_000_000,
+    subsample_seed=42,
+)
+
+# NLM-Gene is driven by its own adapter/orchestrator (BioC XML + ambiguity partition), NOT the
+# streaming backbone path, so it lives in its own registry rather than CURIE_REGISTRY.
+NLMGENE_REGISTRY: dict[str, CurieDatasetConfig] = {NLMGENE.key: NLMGENE}
+
 # The provided-ID (identifier-input) registry — BioMapper's core cross-namespace-mapping regime,
 # comparable to the incumbent ID-mapping tools. Every entry provides ONLY the source id and holds
 # the target cross-ref out for the scorer (invariant enforced in ``ProvidedIdDatasetConfig``).
