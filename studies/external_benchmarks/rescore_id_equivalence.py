@@ -56,7 +56,12 @@ def _summarize(result: dict[str, Any], persisted_strict: dict[str, Any] | None) 
     bridge = result["id_concordance_inchikey_bridge"]
     sanity = None
     if persisted_strict is not None:
-        sanity = int(persisted_strict.get("concordant", -1)) == int(strict["concordant"])
+        # A faithful reproduction must match BOTH the scored population and the concordant
+        # count — matching concordant alone would certify a changed strict rate as identical.
+        sanity = (
+            int(persisted_strict.get("scored", -1)) == int(strict["scored"])
+            and int(persisted_strict.get("concordant", -1)) == int(strict["concordant"])
+        )
     return {
         "strict": {k: strict[k] for k in ("scored", "concordant", "concordance_rate")},
         "uci_equivalence": uci,
@@ -124,12 +129,15 @@ def _render_md(summary: dict[str, Any]) -> str:
         if not m:
             continue
         s, a, b = m["strict"], m["uci_equivalence"], m["inchikey_bridge"]
+        # Tri-state: True->OK, False->MISMATCH, None (no persisted baseline)->n/a. A truthiness
+        # collapse would mislabel absent baseline data as a scoring discrepancy.
+        sanity_cell = {True: "OK", False: "MISMATCH", None: "n/a"}[m["strict_sanity_ok"]]
         lines.append(
             f"| {mode} | {_pct(s['concordance_rate'])} ({s['concordant']}/{s['scored']}) | "
             f"{_pct(a['concordance_rate'])} ({a['concordant']}/{a['scored']}) | "
             f"{_pct(b['concordance_rate'])} ({b['concordant']}/{b['scored']}) | "
             f"{a['needs_verification']}/{b['needs_verification']} | "
-            f"{'OK' if m['strict_sanity_ok'] else 'MISMATCH'} |"
+            f"{sanity_cell} |"
         )
     lines.append("")
     return "\n".join(lines)

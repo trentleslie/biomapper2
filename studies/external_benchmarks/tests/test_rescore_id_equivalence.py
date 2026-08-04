@@ -58,3 +58,35 @@ def test_rescore_reports_strict_and_equivalence_lift(tmp_path):
 def test_rescore_fails_loud_when_run_dir_missing(tmp_path):
     with pytest.raises(FileNotFoundError):
         rescore(str(tmp_path / "does-not-exist"), str(tmp_path / "out"), judge=FakeJudge())
+
+
+def _fake_result(scored, concordant):
+    eq = {"scored": scored, "concordant": concordant, "concordance_rate": 0.0, "needs_verification": 0}
+    return {
+        "id_concordance": {"scored": scored, "concordant": concordant, "concordance_rate": 0.0},
+        "id_concordance_uci_equivalence": eq,
+        "id_concordance_inchikey_bridge": eq,
+        "namespace_confusion": {},
+    }
+
+
+def test_strict_sanity_fails_when_scored_population_changed():
+    # Same concordant count but a different scored population is NOT a faithful reproduction.
+    from studies.external_benchmarks.rescore_id_equivalence import _summarize
+
+    persisted = {"scored": 999, "concordant": 3, "concordance_rate": 0.003}
+    summary = _summarize(_fake_result(scored=5, concordant=3), persisted)
+    assert summary["strict_sanity_ok"] is False
+
+
+def test_render_sanity_na_when_no_persisted_baseline():
+    # Absent baseline (sanity None) must render as n/a, never a spurious MISMATCH.
+    from studies.external_benchmarks.rescore_id_equivalence import _render_md, _summarize
+
+    summary = {
+        "provenance": {"source_sha": "x", "biomapper2_commit": "y", "unichem_api": "v1", "generated": "t"},
+        "positive": _summarize(_fake_result(scored=5, concordant=3), None),
+    }
+    md = _render_md(summary)
+    assert "n/a |" in md
+    assert "MISMATCH" not in md

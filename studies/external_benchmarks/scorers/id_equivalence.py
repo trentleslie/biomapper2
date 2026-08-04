@@ -59,6 +59,15 @@ def _pick(d: dict[str, Any], *candidates: str) -> Any:
     return None
 
 
+class _TransientLookupError(Exception):
+    """A UniChem request failed transiently (network / non-200 / unparseable response).
+
+    Distinct from a genuine "resolved, no match" negative: transient failures must NOT be
+    written to the disk-backed cache, so a temporary EBI outage can't permanently poison an
+    identifier's verdict — a later run retries instead of replaying a cached ``None``.
+    """
+
+
 class UniChemClient:
     """UniChem 2.0 REST client: source registry + compound cross-reference lookup.
 
@@ -91,22 +100,23 @@ class UniChemClient:
     def _source_ids(self) -> dict[str, int]:
         if self._src_ids is not None:
             return self._src_ids
-        out: dict[str, int] = {}
         try:
             with force_ipv4():
                 resp = self._session.get(
                     f"{_UNICHEM}/sources/", timeout=self._timeout, headers=self._headers
                 )
-            if resp.status_code == 200:
-                body = resp.json()
-                for src in body.get("sources", body if isinstance(body, list) else []):
-                    short = _pick(src, "shortName", "name", "sourceName")
-                    sid = _pick(src, "id", "sourceID", "src_id")
-                    if short is not None and sid is not None:
-                        out[str(short).lower()] = int(sid)
+            if resp.status_code != 200:
+                return {}  # transient — leave uncached so a later lookup retries the registry
+            body = resp.json()
         except Exception:
-            out = {}
-        self._src_ids = out
+            return {}  # transient (network / parse) — leave uncached, retry on next lookup
+        out: dict[str, int] = {}
+        for src in body.get("sources", body if isinstance(body, list) else []):
+            short = _pick(src, "shortName", "name", "sourceName")
+            sid = _pick(src, "id", "sourceID", "src_id")
+            if short is not None and sid is not None:
+                out[str(short).lower()] = int(sid)
+        self._src_ids = out  # memoize only a successfully parsed registry
         return out
 
     # -- compound lookup -------------------------------------------------------------------
@@ -120,13 +130,15 @@ class UniChemClient:
                     headers=self._headers,
                 )
             if resp.status_code != 200:
-                return None
+                raise _TransientLookupError(f"HTTP {resp.status_code}")
             body = resp.json()
-        except Exception:
-            return None
+        except _TransientLookupError:
+            raise
+        except Exception as exc:  # network / JSON parse — transient, must not be cached
+            raise _TransientLookupError(str(exc)) from exc
         compounds = body.get("compounds") if isinstance(body, dict) else None
         if not compounds:
-            return None
+            return None  # genuine: 200 with no cross-reference match — a cacheable negative
         c = compounds[0]
         uci = _pick(c, "uci", "UCI")
         block = _first_block(_pick(c, "standardInchiKey", "standardInChIKey", "inchikey"))
@@ -154,14 +166,24 @@ class UniChemClient:
         prefix, _, local = norm.partition(":")
         prefix = prefix.upper()
         rec: dict[str, Any] | None
-        if prefix == "INCHIKEY":
-            rec = self._post_compounds({"type": "inchikey", "compound": local})
-        else:
-            short = _PREFIX_TO_UNICHEM.get(prefix)
-            sid = self._source_ids().get(short) if short else None
-            rec = None if sid is None else self._post_compounds(
-                {"type": "sourceID", "compound": local, "sourceID": sid}
-            )
+        try:
+            if prefix == "INCHIKEY":
+                rec = self._post_compounds({"type": "inchikey", "compound": local})
+            else:
+                short = _PREFIX_TO_UNICHEM.get(prefix)
+                if short is None:
+                    rec = None  # unsupported prefix — a genuine, cacheable negative
+                else:
+                    sid = self._source_ids().get(short)
+                    if sid is None:
+                        # registry unavailable/incomplete for a known source — treat as
+                        # transient so a later run can retry rather than cache the miss.
+                        raise _TransientLookupError(f"no source id for {short}")
+                    rec = self._post_compounds(
+                        {"type": "sourceID", "compound": local, "sourceID": sid}
+                    )
+        except _TransientLookupError:
+            return None  # fail-soft, but do NOT poison the cache — allow a later retry
         self._cache[norm] = rec
         self._flush()
         return rec

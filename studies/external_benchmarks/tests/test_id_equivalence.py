@@ -106,6 +106,46 @@ def test_lookup_fail_soft_on_non_200():
     assert client.lookup("CHEBI:4167") is None
 
 
+def test_transient_compound_failure_is_not_cached_and_recovers():
+    # A 503 must NOT poison the cache: a later lookup after recovery re-requests and resolves.
+    session = FakeSession({
+        ("GET", "/sources/"): FakeResp(200, _SOURCES),
+        ("POST", "/api/v1/compounds"): [
+            FakeResp(503),                          # transient outage
+            FakeResp(200, _COMPOUNDS_CHEBI_4167),   # service recovered
+        ],
+    })
+    client = UniChemClient(session=session, cache_path=None)
+    assert client.lookup("CHEBI:4167") is None      # fail-soft on the outage
+    rec = client.lookup("CHEBI:4167")               # retried, not served from a poisoned cache
+    assert rec is not None and rec["uci"] == "12345"
+
+
+def test_genuine_no_match_is_cached_one_post():
+    # A 200 with no compounds is a real negative and SHOULD be cached (no retry storm).
+    session = FakeSession({
+        ("GET", "/sources/"): FakeResp(200, _SOURCES),
+        ("POST", "/api/v1/compounds"): FakeResp(200, {"compounds": []}),
+    })
+    client = UniChemClient(session=session, cache_path=None)
+    assert client.lookup("CHEBI:4167") is None
+    assert client.lookup("CHEBI:4167") is None
+    post_calls = [c for c in session.calls if c[0] == "POST"]
+    assert len(post_calls) == 1  # negative served from cache the second time
+
+
+def test_transient_source_registry_failure_recovers():
+    # A failed /sources/ registry fetch must not disable resolution for the client lifetime.
+    session = FakeSession({
+        ("GET", "/sources/"): [FakeResp(503), FakeResp(200, _SOURCES)],
+        ("POST", "/api/v1/compounds"): FakeResp(200, _COMPOUNDS_CHEBI_4167),
+    })
+    client = UniChemClient(session=session, cache_path=None)
+    assert client.lookup("CHEBI:4167") is None      # registry down -> transient, uncached
+    rec = client.lookup("CHEBI:4167")               # registry recovered -> resolves
+    assert rec is not None and rec["uci"] == "12345"
+
+
 def test_judge_uci_equivalence_same_uci_across_namespaces():
     # gold HMDB:HMDB0000122, prediction CHEBI:4167 -> both resolve to UCI 12345 (glucose).
     hmdb_rec = {"compounds": [{
