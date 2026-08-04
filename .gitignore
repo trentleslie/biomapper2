@@ -48,6 +48,10 @@ data/**/*.json
 !data/examples/olink_protein_metadata.tsv
 !data/groundtruth/diseases_handcrafted.tsv
 
+# Pinned benchmark artifacts committed as part of study packages (not scratch data).
+!studies/northstar_e2e/data/suhre2010_canonical.csv
+!studies/northstar_e2e/data/kegg_compound_pathway.tsv
+
 # Other app-specific items
 cache/
 .env
