@@ -326,8 +326,10 @@ def _install_lmsd_fakes(monkeypatch, tmp_path, *, struct_result):
     monkeypatch.setattr(campaign_mod, "assemble_campaign_report", lambda **k: "report")
 
 
-def _lmsd_result(shorthand_fraction):
-    return {
+def _lmsd_result(shorthand_fraction, *, with_regime=True):
+    # Mirrors the PRODUCTION score_structure_oracle shape: coverage lives at the RESULT ROOT, and
+    # comparable_core carries NO coverage sub-key. with_regime=False exercises the blended fallback.
+    result = {
         "vocab": "CHEBI",
         "input_type": "name",
         "comparable_core": {
@@ -335,15 +337,16 @@ def _lmsd_result(shorthand_fraction):
             "top1_accuracy": 0.5,
             "correct": 1,
             "scored_denominator": 2,
-            "coverage": {"fraction": shorthand_fraction},
-        },
-        "by_name_source_regime": {
-            "shorthand": {"coverage": {"fraction": shorthand_fraction, "n_predicted": 5, "total": 100}},
         },
         "coverage": {"n_predicted": 5, "total": 100, "fraction": shorthand_fraction},
         "fallback_bucket": {"count": 0, "rows": []},
         "per_row": [],
     }
+    if with_regime:
+        result["by_name_source_regime"] = {
+            "shorthand": {"coverage": {"fraction": shorthand_fraction, "n_predicted": 5, "total": 100}},
+        }
+    return result
 
 
 def test_lmsd_below_capability_floor_fails_closed(monkeypatch, tmp_path):
@@ -366,3 +369,14 @@ def test_lmsd_above_capability_floor_persists(monkeypatch, tmp_path):
     assert (out / "capability_regression.json").exists()
     assert (out / "CHEBI_results.json").exists()
     assert result["vocab"] == "CHEBI"
+
+
+def test_lmsd_capability_gate_survives_missing_shorthand_regime(monkeypatch, tmp_path):
+    # A production-shaped LMSD result with NO by_name_source_regime must NOT crash the capability
+    # gate: the fallback reads blended coverage from the result root. Below-floor still fails closed
+    # via ValueError, not a KeyError, and the provenance file is still written.
+    _install_lmsd_fakes(monkeypatch, tmp_path, struct_result=_lmsd_result(0.05, with_regime=False))
+    out = tmp_path / "out3"
+    with pytest.raises(ValueError, match="regression floor"):
+        run_mod.orchestrate_lmsd(source=b"local-bytes", out_dir=out, run_gate_first=False)
+    assert (out / "capability_regression.json").exists()

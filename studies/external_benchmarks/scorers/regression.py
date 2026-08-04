@@ -17,13 +17,15 @@ def capability_resolvability(result: dict[str, Any], regime: str = "shorthand") 
 
     Prefers the per-regime coverage (``by_name_source_regime[regime].coverage.fraction``) because the
     LMSD sample is ~90% lipid shorthand — the hard class the capability targets. Absent the regime
-    breakout, uses the blended ``comparable_core.coverage.fraction``.
+    breakout, uses the blended coverage. NOTE: ``score_structure_oracle`` emits ``coverage`` at the
+    RESULT ROOT (not under ``comparable_core``), so the fallback must read ``result["coverage"]`` —
+    reading it under ``comparable_core`` KeyErrors on any regime-less LMSD result.
     """
     by_regime = result.get("by_name_source_regime") or {}
     regime_entry = by_regime.get(regime)
     if regime_entry:
         return float(regime_entry["coverage"]["fraction"])
-    return float(result["comparable_core"]["coverage"]["fraction"])
+    return float(result["coverage"]["fraction"])
 
 
 def assert_capability_floor(result: dict[str, Any], floor: float, regime: str = "shorthand") -> None:
