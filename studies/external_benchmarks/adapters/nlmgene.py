@@ -9,8 +9,8 @@ of BioMapper's xref path by construction. This is the arm's independent name-inp
 
 Distributed as one BioC XML file per PMID under ``{source_url}/Corpus/{pmid}.BioC.XML`` (+
 ``Pmidlist.Train.txt`` / ``Pmidlist.Test.txt``). Each ``<annotation>`` of ``type=Gene`` carries the
-surface ``<text>`` and an ``NCBI Gene identifier`` infon (COMMA-separated when the curators judged the
-span to denote several genes). ``type=GeneRIF`` spans are gene-RELATED descriptive references, NOT
+surface ``<text>`` and an ``NCBI Gene identifier`` infon (comma- OR semicolon-separated when the
+curators judged the span to denote several genes). ``type=GeneRIF`` spans are gene-RELATED descriptive references, NOT
 normalization mentions, and are excluded (verify against NLM-Gene-datadescription.docx).
 
 AMBIGUITY PARTITION (the design point): mentions are grouped by exact surface form; the union of gold
@@ -75,7 +75,10 @@ def parse_bioc_documents(docs: Iterable[tuple[str, str]]) -> Iterator[GeneMentio
             raw_ids = infons.get("NCBI Gene identifier", "").strip()
             if not raw_ids:
                 continue
-            ids = tuple(x.strip() for x in raw_ids.split(",") if x.strip())
+            # NLM-Gene multi-gene spans are delimited by EITHER a comma or a semicolon across the
+            # corpus (e.g. "12458,12772,12775" and "5595;5594"); split on both so a semicolon span
+            # is not fused into one malformed id and mis-routed to the unambiguous partition.
+            ids = tuple(x.strip() for x in raw_ids.replace(";", ",").split(",") if x.strip())
             if not ids:
                 continue
             text_el = ann.find("text")

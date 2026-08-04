@@ -55,6 +55,31 @@ def test_parse_bioc_multiple_documents():
     assert sum(1 for m in mentions if m.mention == "TP53") == 2
 
 
+# NLM-Gene records also use a SEMICOLON to delimit a multi-gene span (e.g. "5595;5594" for ERK1/2).
+_SEMICOLON_DOC = """<?xml version='1.0' encoding='UTF-8'?>
+<collection><document><id>333</id>
+<passage><infon key="type">title</infon><offset>0</offset><text>ERK1/2 signaling.</text>
+<annotation id="0"><infon key="NCBI Gene identifier">5595;5594</infon><infon key="type">Gene</infon><location offset="0" length="6"/><text>ERK1/2</text></annotation>
+</passage></document></collection>"""
+
+
+def test_parse_bioc_splits_semicolon_multi_gene_span():
+    mentions = list(parse_bioc_documents([("333", _SEMICOLON_DOC)]))
+    # A semicolon-delimited span must yield BOTH ids, not one fused "5595;5594".
+    assert [(m.mention, m.gene_ids) for m in mentions] == [("ERK1/2", ("5595", "5594"))]
+
+
+def test_semicolon_span_lands_in_ambiguous_partition():
+    from studies.external_benchmarks.adapters.nlmgene import build_nlmgene_input_df
+
+    mentions = list(parse_bioc_documents([("333", _SEMICOLON_DOC)]))
+    df = build_nlmgene_input_df(mentions)
+    row = df[df["mention"] == "ERK1/2"].iloc[0]
+    # Two distinct referents -> AMBIGUOUS (flag-rate), never a spurious unambiguous accuracy row.
+    assert row["partition"] == "ambiguous"
+    assert set(row["gold_ncbigene"].split("|")) == {"NCBIGene:5595", "NCBIGene:5594"}
+
+
 from studies.external_benchmarks.adapters.nlmgene import (
     AMBIGUOUS,
     UNAMBIGUOUS,
