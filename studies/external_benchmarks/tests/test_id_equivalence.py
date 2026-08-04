@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from studies.external_benchmarks.scorers.id_equivalence import (
     UniChemClient,
     UniChemIdEquivalenceJudge,
@@ -144,6 +146,47 @@ def test_transient_source_registry_failure_recovers():
     assert client.lookup("CHEBI:4167") is None      # registry down -> transient, uncached
     rec = client.lookup("CHEBI:4167")               # registry recovered -> resolves
     assert rec is not None and rec["uci"] == "12345"
+
+
+def test_incomplete_source_registry_is_not_memoized_and_recovers():
+    # A 200 registry missing some sources must not be pinned for the client lifetime: a later
+    # lookup re-fetches and, once the registry is complete, resolves the previously-missing source.
+    incomplete = {"sources": [{"id": 2, "shortName": "hmdb"}]}  # missing chebi/pubchem/kegg
+    session = FakeSession({
+        ("GET", "/sources/"): [FakeResp(200, incomplete), FakeResp(200, _SOURCES)],
+        ("POST", "/api/v1/compounds"): FakeResp(200, _COMPOUNDS_CHEBI_4167),
+    })
+    client = UniChemClient(session=session, cache_path=None)
+    assert client.lookup("CHEBI:4167") is None      # chebi absent from the partial registry
+    rec = client.lookup("CHEBI:4167")               # registry re-fetched, now complete
+    assert rec is not None and rec["uci"] == "12345"
+
+
+def test_persisted_null_cache_entry_is_ignored_and_retried(tmp_path):
+    # A null on disk (possibly a stale transient failure from an older client) is dropped on load
+    # and re-resolved, rather than returned as an unrecoverable miss.
+    cache = tmp_path / "unichem_cache.json"
+    cache.write_text(json.dumps({"CHEBI:4167": None}))
+    session = FakeSession({
+        ("GET", "/sources/"): FakeResp(200, _SOURCES),
+        ("POST", "/api/v1/compounds"): FakeResp(200, _COMPOUNDS_CHEBI_4167),
+    })
+    client = UniChemClient(session=session, cache_path=str(cache))
+    rec = client.lookup("CHEBI:4167")
+    assert rec is not None and rec["uci"] == "12345"
+
+
+def test_genuine_negative_is_not_persisted_to_disk(tmp_path):
+    # Negatives are cached in memory for the session but never written to disk, so they can't
+    # harden into a cross-run poison entry indistinguishable from a transient failure.
+    cache = tmp_path / "unichem_cache.json"
+    session = FakeSession({
+        ("GET", "/sources/"): FakeResp(200, _SOURCES),
+        ("POST", "/api/v1/compounds"): FakeResp(200, {"compounds": []}),
+    })
+    client = UniChemClient(session=session, cache_path=str(cache))
+    assert client.lookup("CHEBI:4167") is None
+    assert "CHEBI:4167" not in json.loads(cache.read_text())  # null not persisted
 
 
 def test_judge_uci_equivalence_same_uci_across_namespaces():

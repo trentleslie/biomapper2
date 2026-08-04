@@ -91,9 +91,14 @@ class UniChemClient:
         self._cache: dict[str, dict[str, Any] | None] = {}
         if self._cache_path and self._cache_path.exists():
             try:
-                self._cache = json.loads(self._cache_path.read_text())
+                loaded = json.loads(self._cache_path.read_text())
             except (ValueError, OSError):
-                self._cache = {}
+                loaded = {}
+            # Drop persisted ``null`` verdicts: on disk a genuine "resolved, no match" is
+            # indistinguishable from a stale transient failure (possibly written by an older
+            # client that cached failures), so re-resolve rather than trust it. Only positively
+            # resolved records survive across runs; negatives are re-checked each run.
+            self._cache = {k: v for k, v in loaded.items() if v is not None}
         self._src_ids: dict[str, int] | None = None
 
     # -- source registry -------------------------------------------------------------------
@@ -116,7 +121,12 @@ class UniChemClient:
             sid = _pick(src, "id", "sourceID", "src_id")
             if short is not None and sid is not None:
                 out[str(short).lower()] = int(sid)
-        self._src_ids = out  # memoize only a successfully parsed registry
+        # Memoize only a COMPLETE registry (all sources we resolve against are present). A 200
+        # that parsed but is missing sources is treated as transient/incomplete: return what we
+        # have for this call but leave ``_src_ids`` unset so a later lookup re-fetches, rather
+        # than pinning a partial registry that permanently blocks the missing namespaces.
+        if set(_PREFIX_TO_UNICHEM.values()) <= out.keys():
+            self._src_ids = out
         return out
 
     # -- compound lookup -------------------------------------------------------------------
@@ -193,7 +203,11 @@ class UniChemClient:
             return
         try:
             self._cache_path.parent.mkdir(parents=True, exist_ok=True)
-            self._cache_path.write_text(json.dumps(self._cache))
+            # Persist only resolved records — never ``null``. A cached negative is kept in memory
+            # for the session but not written, so it can't harden into a cross-run poison entry
+            # that later reads as an unrecoverable miss (see the load-time filter in __init__).
+            resolved = {k: v for k, v in self._cache.items() if v is not None}
+            self._cache_path.write_text(json.dumps(resolved))
         except OSError:
             pass
 
