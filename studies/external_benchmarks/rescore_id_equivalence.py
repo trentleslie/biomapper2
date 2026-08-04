@@ -132,10 +132,12 @@ def _render_md(summary: dict[str, Any]) -> str:
         # Tri-state: True->OK, False->MISMATCH, None (no persisted baseline)->n/a. A truthiness
         # collapse would mislabel absent baseline data as a scoring discrepancy.
         sanity_cell = {True: "OK", False: "MISMATCH", None: "n/a"}[m["strict_sanity_ok"]]
+        # Equivalence fractions are concordant/evaluable (evaluable = scored - needs), matching
+        # the rate; strict has no unresolved rows so its denominator stays the full scored count.
         lines.append(
             f"| {mode} | {_pct(s['concordance_rate'])} ({s['concordant']}/{s['scored']}) | "
-            f"{_pct(a['concordance_rate'])} ({a['concordant']}/{a['scored']}) | "
-            f"{_pct(b['concordance_rate'])} ({b['concordant']}/{b['scored']}) | "
+            f"{_pct(a['concordance_rate'])} ({a['concordant']}/{a['evaluable']}) | "
+            f"{_pct(b['concordance_rate'])} ({b['concordant']}/{b['evaluable']}) | "
             f"{a['needs_verification']}/{b['needs_verification']} | "
             f"{sanity_cell} |"
         )

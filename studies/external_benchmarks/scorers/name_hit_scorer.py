@@ -245,18 +245,27 @@ def score_name_hit(
     id_eq_uci: dict[str, Any] | None = None
     id_eq_bridge: dict[str, Any] | None = None
     if eq_available:
+        # Rate over the EVALUABLE subset (scored minus rows the independent judge could not
+        # adjudicate), NOT the full strict population. Folding needs-verification rows into the
+        # denominator would treat "UniChem couldn't check" as "checked, not equivalent" — so the
+        # published rate would drift with UniChem availability, not chemistry. Unresolved rows are
+        # surfaced via ``needs_verification``/``evaluable`` (coverage) instead of deflating the rate.
+        uci_evaluable = id_scored - uci_needs
+        bridge_evaluable = id_scored - bridge_needs
         id_eq_uci = {
             "metric": "id_concordance_uci_equivalence_rate",
             "scored": id_scored,
+            "evaluable": uci_evaluable,
             "concordant": uci_concordant,
-            "concordance_rate": (uci_concordant / id_scored) if id_scored else None,
+            "concordance_rate": (uci_concordant / uci_evaluable) if uci_evaluable else None,
             "needs_verification": uci_needs,
         }
         id_eq_bridge = {
             "metric": "id_concordance_inchikey_bridge_rate",
             "scored": id_scored,
+            "evaluable": bridge_evaluable,
             "concordant": bridge_concordant,
-            "concordance_rate": (bridge_concordant / id_scored) if id_scored else None,
+            "concordance_rate": (bridge_concordant / bridge_evaluable) if bridge_evaluable else None,
             "needs_verification": bridge_needs,
         }
 

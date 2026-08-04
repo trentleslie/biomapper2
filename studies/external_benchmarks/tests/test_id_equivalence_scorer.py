@@ -57,7 +57,10 @@ def test_equivalence_credits_right_molecule_wrong_namespace():
     assert result["id_concordance_inchikey_bridge"]["concordant"] == 1
 
 
-def test_needs_verification_counted_not_credited():
+def test_needs_verification_excluded_from_rate_not_counted_as_miss():
+    # The only row is unresolvable -> nothing evaluable -> rate is None (unknown), NOT 0.0.
+    # An unverifiable row must not be counted as non-equivalent (that would let a UniChem
+    # outage silently deflate the published concordance rate).
     df = pd.DataFrame([_row("mystery", "CHEBI:99999", "HMDB:HMDB9999999")])
     gold = frozenset({"HMDB:HMDB9999999"})
     pred = frozenset({"CHEBI:99999"})
@@ -65,9 +68,29 @@ def test_needs_verification_counted_not_credited():
     result = score_name_hit(df, METABOLITEANNOTATOR_POS, id_equivalence_judge=judge)
     uci = result["id_concordance_uci_equivalence"]
     assert uci["scored"] == 1
+    assert uci["evaluable"] == 0
     assert uci["concordant"] == 0
     assert uci["needs_verification"] == 1
-    assert uci["concordance_rate"] == pytest.approx(0.0)  # needs-verification lowers the rate
+    assert uci["concordance_rate"] is None  # nothing to adjudicate -> unknown, not a miss
+
+
+def test_rate_is_over_evaluable_subset_with_partial_coverage():
+    # Two rows with a gold id: one adjudicated equivalent, one unresolvable. The rate reflects
+    # the judged subset (1/1 = 100%), with coverage exposed via evaluable/needs_verification.
+    df = pd.DataFrame([
+        _row("glucose", "CHEBI:4167", "HMDB:HMDB0000122"),
+        _row("mystery", "CHEBI:99999", "HMDB:HMDB9999999"),
+    ])
+    g1, p1 = frozenset({"HMDB:HMDB0000122"}), frozenset({"CHEBI:4167"})
+    g2, p2 = frozenset({"HMDB:HMDB9999999"}), frozenset({"CHEBI:99999"})
+    judge = FakeJudge({(g1, p1): True, (g2, p2): None}, {(g1, p1): True, (g2, p2): None})
+    result = score_name_hit(df, METABOLITEANNOTATOR_POS, id_equivalence_judge=judge)
+    uci = result["id_concordance_uci_equivalence"]
+    assert uci["scored"] == 2           # full strict population (both have a gold id)
+    assert uci["evaluable"] == 1        # one row UniChem could adjudicate
+    assert uci["concordant"] == 1
+    assert uci["needs_verification"] == 1
+    assert uci["concordance_rate"] == pytest.approx(1.0)  # over the judged subset, not 0.5
 
 
 def test_equivalence_denominator_matches_strict_id_scored():

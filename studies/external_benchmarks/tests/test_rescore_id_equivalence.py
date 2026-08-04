@@ -61,7 +61,13 @@ def test_rescore_fails_loud_when_run_dir_missing(tmp_path):
 
 
 def _fake_result(scored, concordant):
-    eq = {"scored": scored, "concordant": concordant, "concordance_rate": 0.0, "needs_verification": 0}
+    eq = {
+        "scored": scored,
+        "evaluable": scored,
+        "concordant": concordant,
+        "concordance_rate": 0.0,
+        "needs_verification": 0,
+    }
     return {
         "id_concordance": {"scored": scored, "concordant": concordant, "concordance_rate": 0.0},
         "id_concordance_uci_equivalence": eq,
