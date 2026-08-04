@@ -26,24 +26,37 @@ def test_capability_resolvability_reads_shorthand_regime():
     assert capability_resolvability(_result(0.97), regime="shorthand") == 0.97
 
 
-def test_capability_resolvability_falls_back_to_blended_when_no_regime():
-    # Coverage lives at the RESULT ROOT in the production score_structure_oracle output — NOT under
-    # comparable_core. A regime-less result must fall back to result["coverage"], never KeyError.
-    blended = {"comparable_core": {"top1_accuracy": 0.5}, "coverage": {"fraction": 0.95}}
-    assert capability_resolvability(blended, regime="shorthand") == 0.95
-
-
-def test_capability_resolvability_regime_less_production_shape_does_not_crash():
-    # Regression for the fallback: a production-shaped result with no by_name_source_regime and
-    # coverage only at the root must resolve via the root, not raise under comparable_core.
-    production_like = {
+def test_capability_resolvability_is_none_when_regime_absent():
+    # The capability gate is regime-specific: a regime-less result must NOT fall back to blended
+    # coverage (a high non-shorthand number could otherwise satisfy the shorthand floor). It returns
+    # None ("no observations"), even when a high blended coverage is present at the result root.
+    blended_only = {
         "vocab": "CHEBI",
         "comparable_core": {"metric": "top1_accuracy", "top1_accuracy": 0.5, "scored_denominator": 2},
-        "coverage": {"n_predicted": 5, "total": 100, "fraction": 0.05},
+        "coverage": {"n_predicted": 95, "total": 100, "fraction": 0.95},
     }
-    assert capability_resolvability(production_like, regime="shorthand") == 0.05
-    with pytest.raises(ValueError, match="regression floor"):
-        assert_capability_floor(production_like, floor=0.90, regime="shorthand")
+    assert capability_resolvability(blended_only, regime="shorthand") is None
+
+
+def test_capability_resolvability_is_none_when_regime_empty():
+    # A present-but-zero-observation shorthand regime is also "no observations".
+    empty_regime = {
+        "by_name_source_regime": {"shorthand": {"coverage": {"fraction": 0.0, "n_predicted": 0, "total": 0}}},
+        "coverage": {"fraction": 0.95},
+    }
+    assert capability_resolvability(empty_regime, regime="shorthand") is None
+
+
+def test_gate_fails_closed_when_no_shorthand_observations():
+    # Greptile P1: high blended (non-shorthand) coverage must NOT satisfy the shorthand floor when
+    # the shorthand regime is absent — the capability arm measured nothing in its target class.
+    blended_only = {
+        "vocab": "CHEBI",
+        "comparable_core": {"metric": "top1_accuracy", "top1_accuracy": 0.5, "scored_denominator": 2},
+        "coverage": {"n_predicted": 95, "total": 100, "fraction": 0.95},
+    }
+    with pytest.raises(ValueError, match="no 'shorthand' observations"):
+        assert_capability_floor(blended_only, floor=0.90, regime="shorthand")
 
 
 def test_assert_floor_passes_when_above():

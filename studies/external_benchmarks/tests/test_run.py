@@ -371,12 +371,13 @@ def test_lmsd_above_capability_floor_persists(monkeypatch, tmp_path):
     assert result["vocab"] == "CHEBI"
 
 
-def test_lmsd_capability_gate_survives_missing_shorthand_regime(monkeypatch, tmp_path):
-    # A production-shaped LMSD result with NO by_name_source_regime must NOT crash the capability
-    # gate: the fallback reads blended coverage from the result root. Below-floor still fails closed
-    # via ValueError, not a KeyError, and the provenance file is still written.
-    _install_lmsd_fakes(monkeypatch, tmp_path, struct_result=_lmsd_result(0.05, with_regime=False))
+def test_lmsd_capability_gate_fails_closed_without_shorthand_regime(monkeypatch, tmp_path):
+    # A production-shaped LMSD result with NO by_name_source_regime (e.g. the ABBREVIATION field
+    # disappeared) must fail CLOSED with a "no shorthand observations" error, not a KeyError and not
+    # a blended-coverage pass. High non-shorthand coverage never satisfies the shorthand floor.
+    result = _lmsd_result(0.97, with_regime=False)  # high blended coverage, but no shorthand regime
+    _install_lmsd_fakes(monkeypatch, tmp_path, struct_result=result)
     out = tmp_path / "out3"
-    with pytest.raises(ValueError, match="regression floor"):
+    with pytest.raises(ValueError, match="no 'shorthand' observations"):
         run_mod.orchestrate_lmsd(source=b"local-bytes", out_dir=out, run_gate_first=False)
     assert (out / "capability_regression.json").exists()

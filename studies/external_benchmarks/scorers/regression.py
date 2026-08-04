@@ -12,25 +12,40 @@ from __future__ import annotations
 from typing import Any
 
 
-def capability_resolvability(result: dict[str, Any], regime: str = "shorthand") -> float:
-    """Resolvability (coverage fraction) for a name-source regime, falling back to the blended core.
+def capability_resolvability(result: dict[str, Any], regime: str = "shorthand") -> float | None:
+    """Resolvability (coverage fraction) for a name-source regime, or ``None`` if the regime is
+    absent or has zero observations.
 
-    Prefers the per-regime coverage (``by_name_source_regime[regime].coverage.fraction``) because the
-    LMSD sample is ~90% lipid shorthand — the hard class the capability targets. Absent the regime
-    breakout, uses the blended coverage. NOTE: ``score_structure_oracle`` emits ``coverage`` at the
-    RESULT ROOT (not under ``comparable_core``), so the fallback must read ``result["coverage"]`` —
-    reading it under ``comparable_core`` KeyErrors on any regime-less LMSD result.
+    Reads ONLY the per-regime coverage (``by_name_source_regime[regime].coverage.fraction``). It does
+    NOT fall back to blended coverage: the capability gate is specifically about the target regime
+    (LMSD is ~90% lipid shorthand — the hard class Goslin targets), so a high NON-shorthand blended
+    number must never stand in for an absent shorthand measurement. When the regime is missing (e.g.
+    an LMSD release with no recognized ABBREVIATION field) or empty, the honest answer is "no
+    observations" (``None``), which the gate treats as a failure — not a pass on blended coverage.
     """
-    by_regime = result.get("by_name_source_regime") or {}
-    regime_entry = by_regime.get(regime)
-    if regime_entry:
-        return float(regime_entry["coverage"]["fraction"])
-    return float(result["coverage"]["fraction"])
+    regime_entry = (result.get("by_name_source_regime") or {}).get(regime)
+    if not regime_entry:
+        return None
+    coverage = regime_entry.get("coverage", {})
+    if int(coverage.get("total", 0)) == 0:
+        return None
+    return float(coverage["fraction"])
 
 
 def assert_capability_floor(result: dict[str, Any], floor: float, regime: str = "shorthand") -> None:
-    """Raise ``ValueError`` if the regime resolvability is below ``floor`` (the regression gate)."""
+    """Raise ``ValueError`` if the regime resolvability is absent or below ``floor`` (the gate).
+
+    Fails CLOSED both when the target regime produced no observations (the capability arm measured
+    nothing in its hard class — a blended number is not a valid substitute) and when the measured
+    regime resolvability is below the floor (the Goslin lipid capability has regressed).
+    """
     value = capability_resolvability(result, regime=regime)
+    if value is None:
+        raise ValueError(
+            f"LMSD capability regression gate: no '{regime}' observations — the capability arm "
+            f"measured nothing in its target class (regime absent or empty). Refusing to satisfy the "
+            f"shorthand floor on blended/absent coverage; the Goslin lipid capability is unwired."
+        )
     if value < floor:
         raise ValueError(
             f"LMSD capability regression floor not met: {regime} resolvability {value:.3f} < "
