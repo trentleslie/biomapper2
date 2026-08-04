@@ -17,6 +17,15 @@ import pandas as pd
 # co-descends with BioMapper's binding). SwissLipids / PubChem / experimental sets are NOT here.
 KRAKEN_INGEST_SOURCES = frozenset({"LIPIDMAPS", "REFMET"})
 
+# Outage guard for the reportable accuracy arm. A retained CID is a row we KEPT for scoring because
+# it carried a held-out PubChem CID (the accuracy-eligible population). If the external PubChem
+# resolver fails to return an InChIKey for such a row, the structure scorer silently drops it from
+# its denominator — so a partial PubChem outage would quietly shrink the evaluated set and make the
+# reported accuracy incomparable across runs. We therefore fail CLOSED when resolution completeness
+# falls below this floor: a handful of genuinely structure-less CIDs is tolerated, but an
+# outage-scale shortfall refuses to persist a number computed on a moved population.
+MIN_GOLD_RESOLUTION = 0.90
+
 _RESIDUAL_CAVEAT = (
     "Structure scored against an InChIKey resolved by an external, non-KG source disjoint from the "
     "resolution-path binding. Residual nomenclature-standard overlap remains: Goslin's grammars and "
@@ -45,6 +54,64 @@ def resolve_gold_inchikey_blocks(
         blocks.append(block or "")
     out[out_col] = blocks
     return out
+
+
+def gold_resolution_report(
+    mapped_df: pd.DataFrame,
+    *,
+    pubchem_col: str,
+    gold_col: str,
+) -> dict[str, Any]:
+    """Report how completely the retained held-out PubChem CIDs resolved to a gold InChIKey.
+
+    The eligible population is the rows carrying a non-empty ``pubchem_col`` (accuracy-eligible: the
+    adapter keeps only structure-resolvable rows). ``resolved`` counts those whose ``gold_col`` came
+    back non-empty from the external resolver; the difference is the population the scorer would
+    silently drop. Recording this makes the exact scored denominator reproducible and an outage
+    detectable, per the fail-closed rule below.
+    """
+
+    def _nonempty(v: Any) -> bool:
+        return bool(str(v).strip()) if v is not None else False
+
+    retained_mask = mapped_df[pubchem_col].map(_nonempty) if pubchem_col in mapped_df.columns else None
+    retained = int(retained_mask.sum()) if retained_mask is not None else 0
+    if retained == 0:
+        return {"retained": 0, "resolved": 0, "unresolved": 0, "completeness": None, "unresolved_cids": []}
+    resolved_mask = retained_mask & mapped_df[gold_col].map(_nonempty)
+    resolved = int(resolved_mask.sum())
+    unresolved_cids = sorted(
+        str(c).strip() for c in mapped_df.loc[retained_mask & ~mapped_df[gold_col].map(_nonempty), pubchem_col]
+    )
+    return {
+        "retained": retained,
+        "resolved": resolved,
+        "unresolved": retained - resolved,
+        "completeness": resolved / retained,
+        "unresolved_cids": unresolved_cids,
+    }
+
+
+def assert_gold_resolution_complete(report: dict[str, Any], *, min_completeness: float = MIN_GOLD_RESOLUTION) -> None:
+    """Fail CLOSED when gold-InChIKey resolution over the retained CIDs is below ``min_completeness``.
+
+    An outage-scale shortfall means the scored population moved silently, so the accuracy number is
+    not comparable — refuse to persist it. ``completeness is None`` (no retained CIDs) also raises,
+    since there is nothing legitimate to score.
+    """
+    completeness = report.get("completeness")
+    if completeness is None:
+        raise ValueError(
+            "gold resolution: no retained PubChem CIDs to resolve — the accuracy arm has an empty "
+            "eligible population; refusing to report."
+        )
+    if completeness < min_completeness:
+        raise ValueError(
+            f"gold resolution incomplete: {report['resolved']}/{report['retained']} retained PubChem "
+            f"CIDs resolved to an InChIKey ({completeness:.3f} < floor {min_completeness:.3f}). A "
+            f"partial PubChem outage would silently move the scored population and make the reported "
+            f"accuracy incomparable — refusing to persist. Unresolved: {report['unresolved_cids'][:10]}"
+        )
 
 
 def independence_audit(

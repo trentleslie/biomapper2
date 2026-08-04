@@ -3,6 +3,8 @@ import pytest
 
 from studies.external_benchmarks.scorers.cross_source_gold import (
     KRAKEN_INGEST_SOURCES,
+    assert_gold_resolution_complete,
+    gold_resolution_report,
     independence_audit,
     resolve_gold_inchikey_blocks,
 )
@@ -62,3 +64,39 @@ def test_audit_raises_when_binding_equals_gold():
             lipidmaps_rest_fired=False,
             dialect_breakdown={},
         )
+
+
+def test_gold_resolution_report_counts_retained_and_resolved():
+    # Two rows carry a held-out CID (retained); one resolved, one did not. A blank-CID row is not retained.
+    df = pd.DataFrame(
+        {
+            "held_out_pubchem": ["452110", "9547069", ""],
+            "gold_inchikey": ["KILNVBDSWZSGLL", "", ""],
+        }
+    )
+    r = gold_resolution_report(df, pubchem_col="held_out_pubchem", gold_col="gold_inchikey")
+    assert r["retained"] == 2
+    assert r["resolved"] == 1
+    assert r["unresolved"] == 1
+    assert r["completeness"] == pytest.approx(0.5)
+    assert r["unresolved_cids"] == ["9547069"]
+
+
+def test_assert_gold_resolution_fails_closed_below_floor():
+    df = pd.DataFrame({"held_out_pubchem": ["1", "2"], "gold_inchikey": ["AAA", ""]})
+    r = gold_resolution_report(df, pubchem_col="held_out_pubchem", gold_col="gold_inchikey")
+    with pytest.raises(ValueError, match="gold resolution incomplete"):
+        assert_gold_resolution_complete(r, min_completeness=0.90)
+
+
+def test_assert_gold_resolution_passes_when_complete():
+    df = pd.DataFrame({"held_out_pubchem": ["1", "2"], "gold_inchikey": ["AAA", "BBB"]})
+    r = gold_resolution_report(df, pubchem_col="held_out_pubchem", gold_col="gold_inchikey")
+    assert_gold_resolution_complete(r, min_completeness=0.90)  # 1.0 >= floor, no raise
+
+
+def test_assert_gold_resolution_raises_on_empty_eligible_population():
+    df = pd.DataFrame({"held_out_pubchem": ["", ""], "gold_inchikey": ["", ""]})
+    r = gold_resolution_report(df, pubchem_col="held_out_pubchem", gold_col="gold_inchikey")
+    with pytest.raises(ValueError, match="empty eligible population"):
+        assert_gold_resolution_complete(r)

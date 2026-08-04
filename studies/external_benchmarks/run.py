@@ -661,7 +661,12 @@ def orchestrate_swisslipids(
     from .oracle import KGStructureOracle
     from .report.campaign import assemble_campaign_report
     from .runner import run_all
-    from .scorers.cross_source_gold import independence_audit, resolve_gold_inchikey_blocks
+    from .scorers.cross_source_gold import (
+        assert_gold_resolution_complete,
+        gold_resolution_report,
+        independence_audit,
+        resolve_gold_inchikey_blocks,
+    )
     from .scorers.independent_inchikey import PubChemInChIKeyResolver
     from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
     from .verify import reconcile
@@ -710,6 +715,16 @@ def orchestrate_swisslipids(
         out_col=SWISSLIPIDS.gold_inchikey_column,
     )
 
+    # Fail CLOSED on an outage-scale gold-resolution shortfall BEFORE scoring: the structure scorer
+    # silently drops rows with an empty gold InChIKey, so a partial PubChem outage would shrink the
+    # accuracy denominator and make the number incomparable. Record the exact eligible population and
+    # refuse to persist a number computed on a moved population.
+    resolution = gold_resolution_report(
+        mapped_df, pubchem_col=sl_adapter.HELD_OUT_PUBCHEM_COL, gold_col=SWISSLIPIDS.gold_inchikey_column
+    )
+    (out_dir / "gold_resolution.json").write_text(json.dumps(resolution, indent=2))
+    assert_gold_resolution_complete(resolution)
+
     oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
     result = score_structure_oracle(
         mapped_df,
@@ -735,6 +750,7 @@ def orchestrate_swisslipids(
         lipidmaps_rest_fired=False,
         dialect_breakdown=dialect_breakdown,
     )
+    audit["gold_resolution"] = resolution  # the eligible-population provenance travels with the audit
     (out_dir / "independence_audit.json").write_text(json.dumps(audit, indent=2))
 
     rec = reconcile({"structure": result}, mapped_df, SWISSLIPIDS, oracle)
