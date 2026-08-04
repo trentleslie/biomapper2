@@ -100,3 +100,22 @@ def test_assert_gold_resolution_raises_on_empty_eligible_population():
     r = gold_resolution_report(df, pubchem_col="held_out_pubchem", gold_col="gold_inchikey")
     with pytest.raises(ValueError, match="empty eligible population"):
         assert_gold_resolution_complete(r)
+
+
+def test_default_floor_is_full_resolution():
+    # DEFAULT floor (MIN_GOLD_RESOLUTION) is 1.0: even a single unresolved retained CID fails closed,
+    # so a reported accuracy is never computed over a silently-shrunk, outage-dependent subset.
+    from studies.external_benchmarks.scorers.cross_source_gold import MIN_GOLD_RESOLUTION
+
+    assert MIN_GOLD_RESOLUTION == 1.0
+    # 9/10 resolved would pass the old 0.90 floor but must now fail on the default.
+    df = pd.DataFrame(
+        {
+            "held_out_pubchem": [str(i) for i in range(10)],
+            "gold_inchikey": ["AAA"] * 9 + [""],
+        }
+    )
+    r = gold_resolution_report(df, pubchem_col="held_out_pubchem", gold_col="gold_inchikey")
+    assert r["completeness"] == pytest.approx(0.9)
+    with pytest.raises(ValueError, match="gold resolution incomplete"):
+        assert_gold_resolution_complete(r)  # default floor = 1.0

@@ -17,14 +17,18 @@ import pandas as pd
 # co-descends with BioMapper's binding). SwissLipids / PubChem / experimental sets are NOT here.
 KRAKEN_INGEST_SOURCES = frozenset({"LIPIDMAPS", "REFMET"})
 
-# Outage guard for the reportable accuracy arm. A retained CID is a row we KEPT for scoring because
-# it carried a held-out PubChem CID (the accuracy-eligible population). If the external PubChem
-# resolver fails to return an InChIKey for such a row, the structure scorer silently drops it from
-# its denominator — so a partial PubChem outage would quietly shrink the evaluated set and make the
-# reported accuracy incomparable across runs. We therefore fail CLOSED when resolution completeness
-# falls below this floor: a handful of genuinely structure-less CIDs is tolerated, but an
-# outage-scale shortfall refuses to persist a number computed on a moved population.
-MIN_GOLD_RESOLUTION = 0.90
+# Completeness floor for the reportable accuracy arm. A retained CID is a row we KEPT for scoring
+# because it carried a held-out PubChem CID (the accuracy-eligible population). If the external
+# PubChem resolver returns no InChIKey for such a row, the structure scorer silently drops it from
+# its denominator. Any tolerance < 1.0 therefore leaves the scored denominator dependent on WHICH
+# CIDs happened to resolve — and an empty InChIKey is indistinguishable at scoring time between a
+# genuinely structure-less CID and a transient outage — so even a small allowance reports accuracy
+# over a moving, outage-dependent subset. We require FULL resolution of the retained population:
+# every retained CID must resolve to a gold InChIKey or the run fails closed, listing the offenders.
+# A CID that genuinely has no PubChem InChIKey must be pruned from the pinned subsample WITH A
+# DOCUMENTED REASON and the run re-run, so the reported number is always over a fixed, fully-resolved
+# eligible population (never a silently-shrunk one).
+MIN_GOLD_RESOLUTION = 1.0
 
 _RESIDUAL_CAVEAT = (
     "Structure scored against an InChIKey resolved by an external, non-KG source disjoint from the "
