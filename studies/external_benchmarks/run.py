@@ -1387,6 +1387,92 @@ def _resolve_provided_source(arg: str, backbone_config) -> Any:
     return p.read_bytes()  # Hajjar loader accepts bytes
 
 
+def orchestrate_nlmgene(
+    *,
+    source,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the NLM-Gene name-input gene benchmark live, ambiguity-partitioned.
+
+    ``source`` is an iterable of (pmid, xml_text) — a local corpus dir reader or the network fetch.
+    Splits the mapped output by the held-out ``partition`` label and scores the two partitions with
+    two DIFFERENT scorers (unambiguous -> accuracy; ambiguous -> flag-rate), reported as two separate
+    numbers, never blended. Heavy deps imported lazily.
+    """
+    import pandas as pd
+
+    from biomapper2.mapper import Mapper
+
+    from .adapters import nlmgene as nlmgene_adapter
+    from .adapters.nlmgene import AMBIGUOUS, GOLD_COLUMN, PARTITION_COLUMN, UNAMBIGUOUS
+    from .config import NLMGENE
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_all
+    from .scorers.curie_scorer import score_curie
+    from .scorers.nlmgene_scorer import score_nlmgene_ambiguity
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(NLMGENE, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import build_live_gene_protein_smoke_fn, run_gene_protein_gate
+
+        gate_result = run_gene_protein_gate(build_live_gene_protein_smoke_fn(mapper))
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Gene/protein Phase-0 gate stopped the run: {gate_result.reason}")
+
+    bundle = nlmgene_adapter.load_nlmgene(source, NLMGENE)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+    nlmgene_adapter.persist_input_df(bundle, out_dir)
+
+    # Feed ONLY the name + gold columns to the mapper (partition label held out); one NCBIGene vocab.
+    mapper_input = bundle.input_df[[NLMGENE.name_column, GOLD_COLUMN]]
+    primary = NLMGENE.target_vocabs[0]
+    runs = run_all(
+        mapper, mapper_input, NLMGENE, out_dir, dataset_sha=bundle.card["subsample_sha256"], repo_root=repo_root
+    )
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"{NLMGENE.key} primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+
+    # Re-attach the held-out partition label by exact surface form (1:1 — input is deduped), so the
+    # split does not depend on the mapper passing the extra column through.
+    labels = bundle.input_df[[NLMGENE.name_column, PARTITION_COLUMN]]
+    mapped_df = mapped_df.merge(labels, on=NLMGENE.name_column, how="left")
+    unambiguous_df = mapped_df[mapped_df[PARTITION_COLUMN] == UNAMBIGUOUS]
+    ambiguous_df = mapped_df[mapped_df[PARTITION_COLUMN] == AMBIGUOUS]
+
+    accuracy = score_curie(unambiguous_df, NLMGENE, vocab=primary)  # unambiguous -> accuracy
+    flagging = score_nlmgene_ambiguity(ambiguous_df, NLMGENE, vocab=primary)  # ambiguous -> flag-rate
+    (out_dir / "unambiguous_accuracy.json").write_text(json.dumps(accuracy, indent=2))
+    (out_dir / "ambiguous_flagrate.json").write_text(json.dumps(flagging, indent=2))
+
+    report_path = out_dir / f"{NLMGENE.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[],
+        curie_entries=[{"key": f"{NLMGENE.key} (unambiguous — accuracy)", "arm": NLMGENE.arm, "result": accuracy}],
+        flagrate_entries=[{"key": f"{NLMGENE.key} (ambiguous — flag-rate)", "arm": NLMGENE.arm, "result": flagging}],
+        integrity={"reconciliation_passed": None, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {
+        "out_dir": str(out_dir),
+        "report": str(report_path),
+        "vocab": primary,
+        "unambiguous_accuracy": accuracy["comparable_core"],
+        "ambiguous_flag_rate": flagging["comparable_core"],
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     """CLI: legacy top-level Hajjar flags (back-compat) + a ``provided-id`` subcommand.
 
@@ -1497,6 +1583,13 @@ def build_parser() -> argparse.ArgumentParser:
     hg.add_argument("--source", default=None, help="path/URL to the HGNC complete set (default: pinned genenames URL)")
     hg.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     hg.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
+    # NLM-Gene name-input gene benchmark (independent human-curated corpus, ambiguity-partitioned).
+    # --source is a LOCAL corpus dir of {pmid}.BioC.XML files; default (no --source) fetches the corpus.
+    ng = sub.add_parser("nlmgene", help="run the NLM-Gene name-input gene benchmark (accuracy | flag-rate)")
+    ng.add_argument("--source", default=None, help="local dir of {pmid}.BioC.XML files (default: fetch pinned FTP)")
+    ng.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    ng.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
     return parser
 
 
@@ -1641,6 +1734,21 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = orchestrate_backbone(config=HGNC, source=src, out_dir=out, run_gate_first=not args.no_gate)
         print(f"Saved HGNC run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "nlmgene":
+        # A local corpus dir is read offline; no --source fetches the corpus from the pinned FTP.
+        from .adapters.nlmgene import fetch_corpus, read_local_corpus
+        from .config import NLMGENE
+
+        docs = read_local_corpus(args.source) if args.source else fetch_corpus(NLMGENE)
+        out = Path(args.out) if args.out else None
+        result = orchestrate_nlmgene(source=docs, out_dir=out, run_gate_first=not args.no_gate)
+        print(
+            f"Saved NLM-Gene run to {result['out_dir']}; report at {result['report']} "
+            f"(unambiguous accuracy={result.get('unambiguous_accuracy')}, "
+            f"ambiguous flag-rate={result.get('ambiguous_flag_rate')})"
+        )
         return
 
     # Legacy name-input Hajjar path.

@@ -122,3 +122,42 @@ def test_run_module_exposes_new_orchestrations():
     # existing entry points untouched
     assert hasattr(run_mod, "orchestrate")
     assert hasattr(run_mod, "main")
+
+
+def test_flagrate_entries_render_separate_table_never_blended(tmp_path):
+    from studies.external_benchmarks.report.campaign import assemble_campaign_report
+
+    accuracy = {
+        "comparable_core": {"metric": "top1_accuracy", "top1_accuracy": 0.90, "correct": 9, "scored_denominator": 10},
+        "coverage": {"n_predicted": 10, "total": 10, "fraction": 1.0},
+        "curie_stats": {"precision": 0.9, "recall": 0.9, "f1": 0.9, "predicted_and_gold": 10},
+    }
+    flagging = {
+        "arm": "gene",
+        "input_type": "name",
+        "partition": "ambiguous",
+        "comparable_core": {"metric": "flag_rate", "flag_rate": 0.25, "flagged": 1, "n_ambiguous": 4},
+        "silent_over_commit_rate": 0.25,
+        "member_when_committed": 0.667,
+        "committed": 3,
+    }
+    out = tmp_path / "r.md"
+    text = assemble_campaign_report(
+        metabolite_entries=[],
+        curie_entries=[{"key": "nlm-gene (unambiguous — accuracy)", "arm": "gene", "result": accuracy}],
+        flagrate_entries=[{"key": "nlm-gene (ambiguous — flag-rate)", "arm": "gene", "result": flagging}],
+        out_path=out,
+    )
+    assert "EITL flag-rate" in text
+    assert "Flag-rate" in text and "Silent over-commit" in text
+    # the two partitions are separate table rows/sections — never a single blended number
+    assert "nlm-gene (unambiguous — accuracy)" in text
+    assert "nlm-gene (ambiguous — flag-rate)" in text
+    assert "25.0%" in text  # flag-rate rendered as a percent
+
+
+def test_backward_compatible_without_flagrate_entries(tmp_path):
+    from studies.external_benchmarks.report.campaign import assemble_campaign_report
+
+    text = assemble_campaign_report(metabolite_entries=[], curie_entries=[], out_path=tmp_path / "r2.md")
+    assert "EITL flag-rate" not in text  # section omitted when no flag-rate entries

@@ -155,3 +155,19 @@ def test_orchestrate_swisslipids_is_exposed():
     from studies.external_benchmarks import run as run_mod
 
     assert hasattr(run_mod, "orchestrate_swisslipids")
+
+
+def test_cli_parses_nlmgene_subcommand():
+    parser = run_mod.build_parser()
+    args = parser.parse_args(["nlmgene", "--no-gate"])
+    assert args.command == "nlmgene"
+    assert args.source is None  # main() falls back to fetch_corpus (pinned FTP)
+    assert args.no_gate is True
+
+
+def test_dispatch_nlmgene_routes_to_orchestrator(monkeypatch):
+    calls = _record(monkeypatch, "orchestrate_nlmgene")
+    monkeypatch.setattr("sys.argv", ["run.py", "nlmgene", "--no-gate"])
+    run_mod.main()
+    assert "source" in calls  # a (pmid, xml) iterable was constructed
+    assert calls["run_gate_first"] is False

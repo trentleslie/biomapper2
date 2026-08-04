@@ -109,10 +109,22 @@ def _curie_row(entry: dict[str, Any]) -> str:
     )
 
 
+def _flagrate_row(entry: dict[str, Any]) -> str:
+    """One row for an ambiguous-partition flag-rate entry (score_nlmgene_ambiguity output)."""
+    core = entry["result"]["comparable_core"]
+    member = entry["result"].get("member_when_committed")
+    return (
+        f"| {entry['key']} | {entry.get('arm', 'gene')} | {_pct(core['flag_rate'])} | "
+        f"{core['flagged']}/{core['n_ambiguous']} | {_pct(entry['result'].get('silent_over_commit_rate'))} | "
+        f"{_pct(member)} | {entry['result'].get('committed', 0)} |"
+    )
+
+
 def assemble_campaign_report(
     *,
     metabolite_entries: list[dict[str, Any]],
     curie_entries: list[dict[str, Any]],
+    flagrate_entries: list[dict[str, Any]] | None = None,
     integrity: dict[str, Any] | None = None,
     out_path: str | Path,
 ) -> str:
@@ -120,6 +132,8 @@ def assemble_campaign_report(
 
     ``metabolite_entries`` items: ``{"key", "result": <score_structure_oracle output>}``.
     ``curie_entries`` items: ``{"key", "arm", "result": <score_curie output>}``.
+    ``flagrate_entries`` items: ``{"key", "arm", "result": <score_nlmgene_ambiguity output>}`` —
+    the AMBIGUOUS partition, reported as EITL flag-rate in its OWN table (never blended with accuracy).
     """
     integrity = integrity or {}
     lines: list[str] = []
@@ -173,6 +187,27 @@ def assemble_campaign_report(
         lines.append("|---|---|---|---|---|---|---|---|")
         for entry in curie_entries:
             lines.append(_curie_row(entry))
+        lines.append("")
+
+    flagrate_entries = flagrate_entries or []
+    if flagrate_entries:
+        lines.append("## Gene/protein arm — ambiguous partition (EITL flag-rate; NOT accuracy)")
+        lines.append("")
+        lines.append(
+            "Ambiguous surface forms denote >=2 genes with NO single correct answer absent context; "
+            "the correct behavior is to ABSTAIN / route to expert-in-the-loop, not to emit one "
+            "confident id. This is scored SEPARATELY from accuracy and MUST NOT be blended into it. "
+            "Flag == abstain (no chosen_kg_id) until a first-class EITL flag exists (arbitration "
+            "workstream); 'silent over-commit' is a confident id that is not even a legitimate referent."
+        )
+        lines.append("")
+        lines.append(
+            "| Dataset | Arm | Flag-rate (abstain) | Flagged n | Silent over-commit | "
+            "Member when committed | Committed |"
+        )
+        lines.append("|---|---|---|---|---|---|---|")
+        for entry in flagrate_entries:
+            lines.append(_flagrate_row(entry))
         lines.append("")
 
     lines.append("## Notes")
