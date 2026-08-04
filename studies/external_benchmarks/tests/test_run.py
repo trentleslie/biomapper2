@@ -299,3 +299,70 @@ def test_pham_report_declares_crosscheck_not_run_when_skipped(monkeypatch, tmp_p
     assert "agreed," not in report  # no fabricated agreement numbers
     assert result["pubchem_crosscheck"] is None
     assert not (out / "pubchem_crosscheck.json").exists()
+
+
+def _install_lmsd_fakes(monkeypatch, tmp_path, *, struct_result):
+    """Fake every collaborator orchestrate_lmsd imports lazily, EXCEPT the capability floor gate
+    (assert_capability_floor / capability_resolvability stay REAL so we exercise the enforcement)."""
+    import studies.external_benchmarks.adapters.lmsd as lmsd_mod
+    import studies.external_benchmarks.oracle as oracle_mod
+    import studies.external_benchmarks.report.campaign as campaign_mod
+    import studies.external_benchmarks.runner as runner_mod
+    import studies.external_benchmarks.scorers.structure_oracle_scorer as struct_mod
+    import studies.external_benchmarks.verify as verify_mod
+    from studies.external_benchmarks.config import LMSD
+
+    monkeypatch.setattr("biomapper2.mapper.Mapper", lambda *a, **k: SimpleNamespace(linker=object()))
+    monkeypatch.setattr("biomapper2.core.structure_resolver.StructureResolver", lambda *a, **k: object())
+    monkeypatch.setattr(oracle_mod, "KGStructureOracle", lambda *a, **k: object())
+
+    input_df = pd.DataFrame({LMSD.name_column: ["PC 34:1"], LMSD.gold_inchikey_column: ["AAAAAAAAAAAAAA"]})
+    bundle = SimpleNamespace(input_df=input_df, card={"subsample_sha256": "deadbeef"})
+    monkeypatch.setattr(lmsd_mod, "load_lmsd", lambda src, cfg, **k: bundle)
+    monkeypatch.setattr(lmsd_mod, "persist_subsample", lambda *a, **k: str(tmp_path / "sub.csv"))
+    monkeypatch.setattr(runner_mod, "run_all", lambda *a, **k: {"CHEBI": _ok_run(tmp_path, "CHEBI")})
+    monkeypatch.setattr(struct_mod, "score_structure_oracle", lambda *a, **k: struct_result)
+    monkeypatch.setattr(verify_mod, "reconcile", lambda *a, **k: SimpleNamespace(passed=True, mismatches=[]))
+    monkeypatch.setattr(campaign_mod, "assemble_campaign_report", lambda **k: "report")
+
+
+def _lmsd_result(shorthand_fraction):
+    return {
+        "vocab": "CHEBI",
+        "input_type": "name",
+        "comparable_core": {
+            "metric": "top1_accuracy",
+            "top1_accuracy": 0.5,
+            "correct": 1,
+            "scored_denominator": 2,
+            "coverage": {"fraction": shorthand_fraction},
+        },
+        "by_name_source_regime": {
+            "shorthand": {"coverage": {"fraction": shorthand_fraction, "n_predicted": 5, "total": 100}},
+        },
+        "coverage": {"n_predicted": 5, "total": 100, "fraction": shorthand_fraction},
+        "fallback_bucket": {"count": 0, "rows": []},
+        "per_row": [],
+    }
+
+
+def test_lmsd_below_capability_floor_fails_closed(monkeypatch, tmp_path):
+    # LMSD is role="capability_regression" with regression_floor=0.90. A shorthand resolvability
+    # below the floor means the Goslin lipid capability is missing/regressed — the run MUST fail
+    # closed BEFORE persisting (a declared floor that is never enforced is dead config).
+    _install_lmsd_fakes(monkeypatch, tmp_path, struct_result=_lmsd_result(0.05))
+    out = tmp_path / "out"
+    with pytest.raises(ValueError, match="regression floor"):
+        run_mod.orchestrate_lmsd(source=b"local-bytes", out_dir=out, run_gate_first=False)
+    # The measured resolvability is recorded for provenance even when the gate trips.
+    assert (out / "capability_regression.json").exists()
+
+
+def test_lmsd_above_capability_floor_persists(monkeypatch, tmp_path):
+    # Above the floor the capability is wired; the run proceeds and persists results.
+    _install_lmsd_fakes(monkeypatch, tmp_path, struct_result=_lmsd_result(0.97))
+    out = tmp_path / "out2"
+    result = run_mod.orchestrate_lmsd(source=b"local-bytes", out_dir=out, run_gate_first=False)
+    assert (out / "capability_regression.json").exists()
+    assert (out / "CHEBI_results.json").exists()
+    assert result["vocab"] == "CHEBI"

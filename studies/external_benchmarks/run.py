@@ -560,6 +560,7 @@ def orchestrate_lmsd(
     from .oracle import KGStructureOracle
     from .report.campaign import assemble_campaign_report
     from .runner import run_all
+    from .scorers.regression import assert_capability_floor, capability_resolvability
     from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
     from .verify import reconcile
 
@@ -621,6 +622,23 @@ def orchestrate_lmsd(
             f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
             f"persist an unscorable run as success."
         )
+
+    # ENFORCE the capability/regression floor (LMSD is role="capability_regression"). Post-Goslin,
+    # LMSD is a resolvability GATE, not an accuracy headline: if shorthand resolvability drops below
+    # the declared floor the lipid grammar capability has regressed (or is unwired), so fail closed
+    # BEFORE persisting — a declared floor that is never checked is dead config. The measured
+    # resolvability is recorded for provenance.
+    if LMSD.role == "capability_regression" and LMSD.regression_floor is not None:
+        resolvability = capability_resolvability(result, regime="shorthand")
+        (out_dir / "capability_regression.json").write_text(
+            json.dumps(
+                {"role": LMSD.role, "regime": "shorthand", "resolvability": resolvability,
+                 "regression_floor": LMSD.regression_floor},
+                indent=2,
+            )
+        )
+        assert_capability_floor(result, LMSD.regression_floor, regime="shorthand")
+
     rec = reconcile({"structure": result}, mapped_df, LMSD, oracle)
     if not rec.passed:
         raise RuntimeError(f"LMSD reconciliation failed: {rec.mismatches}")
