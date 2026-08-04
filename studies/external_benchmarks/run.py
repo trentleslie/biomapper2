@@ -560,6 +560,7 @@ def orchestrate_lmsd(
     from .oracle import KGStructureOracle
     from .report.campaign import assemble_campaign_report
     from .runner import run_all
+    from .scorers.regression import assert_capability_floor, capability_resolvability
     from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
     from .verify import reconcile
 
@@ -621,6 +622,23 @@ def orchestrate_lmsd(
             f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
             f"persist an unscorable run as success."
         )
+
+    # ENFORCE the capability/regression floor (LMSD is role="capability_regression"). Post-Goslin,
+    # LMSD is a resolvability GATE, not an accuracy headline: if shorthand resolvability drops below
+    # the declared floor the lipid grammar capability has regressed (or is unwired), so fail closed
+    # BEFORE persisting — a declared floor that is never checked is dead config. The measured
+    # resolvability is recorded for provenance.
+    if LMSD.role == "capability_regression" and LMSD.regression_floor is not None:
+        resolvability = capability_resolvability(result, regime="shorthand")
+        (out_dir / "capability_regression.json").write_text(
+            json.dumps(
+                {"role": LMSD.role, "regime": "shorthand", "resolvability": resolvability,
+                 "regression_floor": LMSD.regression_floor},
+                indent=2,
+            )
+        )
+        assert_capability_floor(result, LMSD.regression_floor, regime="shorthand")
+
     rec = reconcile({"structure": result}, mapped_df, LMSD, oracle)
     if not rec.passed:
         raise RuntimeError(f"LMSD reconciliation failed: {rec.mismatches}")
@@ -634,6 +652,151 @@ def orchestrate_lmsd(
         out_path=report_path,
     )
     return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary}
+
+
+def orchestrate_swisslipids(
+    *,
+    source: bytes | str,
+    out_dir: Path | None = None,
+    repo_root: Path | None = None,
+    run_gate_first: bool = True,
+) -> dict[str, Any]:
+    """Run the SwissLipids cross-source lipid ACCURACY slice live (structure oracle, non-Kraken gold).
+
+    Query = SwissLipids' own lipid name (non-LIPID-MAPS dialect). Gold InChIKey is resolved from the
+    HELD-OUT PubChem CID via the INDEPENDENT PubChem resolver (external, non-KG) so the resolution-path
+    binding (KG/RefMet) and the gold source (PubChem) are disjoint. This is the reportable lipid
+    accuracy number; a fail-loud independence audit is persisted beside the card.
+    """
+    import pandas as pd
+
+    from biomapper2.core.structure_resolver import StructureResolver
+    from biomapper2.mapper import Mapper
+
+    from .adapters import swisslipids as sl_adapter
+    from .adapters.backbones import resolve_source_version
+    from .config import SWISSLIPIDS
+    from .oracle import KGStructureOracle
+    from .report.campaign import assemble_campaign_report
+    from .runner import run_all
+    from .scorers.cross_source_gold import (
+        assert_gold_resolution_complete,
+        gold_resolution_report,
+        independence_audit,
+        resolve_gold_inchikey_blocks,
+    )
+    from .scorers.independent_inchikey import PubChemInChIKeyResolver
+    from .scorers.structure_oracle_scorer import neutralize_first_block, score_structure_oracle
+    from .verify import reconcile
+
+    repo_root = repo_root or Path.cwd()
+    out_dir = out_dir or default_run_dir(SWISSLIPIDS, Path(__file__).parent / "runs")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    mapper = Mapper()
+    if run_gate_first:
+        from .gate import DEFAULT_PER_EXTERNAL_CALL_USD, build_live_smoke_fn, run_gate
+
+        gate_result = run_gate(
+            build_live_smoke_fn(mapper),
+            n_rows=SWISSLIPIDS.subsample_n or 1500,
+            per_external_call_usd=DEFAULT_PER_EXTERNAL_CALL_USD,
+        )
+        (out_dir / "gate_result.json").write_text(
+            json.dumps({"verdict": gate_result.verdict, "reason": gate_result.reason}, indent=2)
+        )
+        if not gate_result.passed:
+            raise RuntimeError(f"Phase-0 gate stopped the SwissLipids run: {gate_result.reason}")
+
+    source_version = resolve_source_version(source) if isinstance(source, str) else None
+    bundle = sl_adapter.load_swisslipids(source, SWISSLIPIDS, source_version=source_version)
+    (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
+    sl_adapter.persist_subsample(bundle, out_dir)
+
+    primary = SWISSLIPIDS.target_vocabs[0]
+    runs = run_all(
+        mapper, bundle.input_df, SWISSLIPIDS, out_dir, dataset_sha=bundle.card["subsample_sha256"], repo_root=repo_root
+    )
+    vr = runs.get(primary)
+    if vr is None or not vr.ok or not vr.output_tsv:
+        err = vr.error if vr else "no run recorded"
+        raise RuntimeError(f"SwissLipids primary vocab {primary!r} produced no result (mapper failed: {err!r}).")
+
+    mapped_df = pd.read_csv(vr.output_tsv, sep="\t")
+    # GOLD side: resolve the held-out PubChem CID -> InChIKey first-block via the INDEPENDENT external
+    # resolver (never the KG). This fills the gold_inchikey column the scorer reads.
+    gold_resolver = PubChemInChIKeyResolver()
+    mapped_df = resolve_gold_inchikey_blocks(
+        mapped_df,
+        gold_resolver,
+        pubchem_col=sl_adapter.HELD_OUT_PUBCHEM_COL,
+        out_col=SWISSLIPIDS.gold_inchikey_column,
+    )
+
+    # Fail CLOSED on an outage-scale gold-resolution shortfall BEFORE scoring: the structure scorer
+    # silently drops rows with an empty gold InChIKey, so a partial PubChem outage would shrink the
+    # accuracy denominator and make the number incomparable. Record the exact eligible population and
+    # refuse to persist a number computed on a moved population.
+    resolution = gold_resolution_report(
+        mapped_df, pubchem_col=sl_adapter.HELD_OUT_PUBCHEM_COL, gold_col=SWISSLIPIDS.gold_inchikey_column
+    )
+    (out_dir / "gold_resolution.json").write_text(json.dumps(resolution, indent=2))
+    assert_gold_resolution_complete(resolution)
+
+    oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
+    result = score_structure_oracle(
+        mapped_df,
+        SWISSLIPIDS,
+        oracle,
+        vocab=primary,
+        gold_smiles_normalizer=neutralize_first_block,
+        name_source_column=sl_adapter.QUERY_SOURCE_COL,
+    )
+    if result["comparable_core"]["top1_accuracy"] is None:
+        raise RuntimeError(
+            f"SwissLipids: no scorable rows (top1_accuracy is None; "
+            f"scored_denominator={result['comparable_core']['scored_denominator']}) — refusing to "
+            f"persist an unscorable run as success."
+        )
+
+    # Independence audit (fail-loud): binding source (KG) must be disjoint from the gold source
+    # (PubChem), and PubChem must not be a Kraken ingest source.
+    dialect_breakdown = _goslin_dialect_breakdown(mapped_df)
+    audit = independence_audit(
+        binding_source="kestrel-kg",
+        gold_source=bundle.card["gold_structure_source"],
+        lipidmaps_rest_fired=False,
+        dialect_breakdown=dialect_breakdown,
+    )
+    audit["gold_resolution"] = resolution  # the eligible-population provenance travels with the audit
+    (out_dir / "independence_audit.json").write_text(json.dumps(audit, indent=2))
+
+    rec = reconcile({"structure": result}, mapped_df, SWISSLIPIDS, oracle)
+    if not rec.passed:
+        raise RuntimeError(f"SwissLipids reconciliation failed: {rec.mismatches}")
+    (out_dir / f"{primary}_results.json").write_text(json.dumps(result, indent=2))
+
+    report_path = out_dir / f"{SWISSLIPIDS.key}_report.md"
+    assemble_campaign_report(
+        metabolite_entries=[{"key": SWISSLIPIDS.key, "result": result}],
+        curie_entries=[],
+        integrity={"reconciliation_passed": rec.passed, "validation_passed": None},
+        out_path=report_path,
+    )
+    return {"out_dir": str(out_dir), "report": str(report_path), "vocab": primary, "independence_audit": audit}
+
+
+def _goslin_dialect_breakdown(mapped_df: Any) -> dict[str, int]:
+    """Count which Goslin dialect fired per row from the goslin-lipid metadata, if present.
+
+    Best-effort: the mapper output carries the goslin metadata only when the Goslin annotator bound
+    the row. Absent the column, returns ``{}`` (the audit still records disjointness).
+    """
+    col = "goslin_dialect"
+    if col not in getattr(mapped_df, "columns", []):
+        return {}
+    counts = mapped_df[col].dropna().map(lambda s: str(s).strip()).replace("", None).dropna().value_counts()
+    return {str(k): int(v) for k, v in counts.items()}
 
 
 def orchestrate_srm1950(
@@ -1378,6 +1541,12 @@ def build_parser() -> argparse.ArgumentParser:
     lm.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
     lm.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
 
+    # SwissLipids: cross-source lipid ACCURACY arm (non-Kraken gold; PubChem-resolved structure oracle).
+    sw = sub.add_parser("swisslipids", help="run the SwissLipids cross-source lipid accuracy slice (streamed TSV)")
+    sw.add_argument("--source", required=True, help="path/URL to the SwissLipids lipids.tsv (or a local .tsv)")
+    sw.add_argument("--out", default=None, help="override output dir (default: timestamped runs/)")
+    sw.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate (NOT recommended)")
+
     # NIST SRM 1950 / SRM1950-DB: certified clinical-plasma reference set (loaded in full).
     sr = sub.add_parser("srm1950", help="run the NIST SRM 1950 name->structure slice")
     sr.add_argument("--source", required=True, help="path/URL to the SRM1950-DB metabolites.csv")
@@ -1510,6 +1679,15 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = orchestrate_lmsd(source=src, out_dir=out, run_gate_first=not args.no_gate)
         print(f"Saved LMSD run to {result['out_dir']}; report at {result['report']}")
+        return
+
+    if args.command == "swisslipids":
+        # SwissLipids is a streamed TSV: a URL string streams; a local file becomes a line iterator.
+        p = Path(args.source)
+        src = _local_line_iter(p) if p.exists() else args.source
+        out = Path(args.out) if args.out else None
+        result = orchestrate_swisslipids(source=src, out_dir=out, run_gate_first=not args.no_gate)
+        print(f"Saved SwissLipids run to {result['out_dir']}; report at {result['report']}")
         return
 
     if args.command == "srm1950":
