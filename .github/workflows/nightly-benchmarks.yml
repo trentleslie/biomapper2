@@ -49,8 +49,12 @@ jobs:
       # this job holds whatever KESTREL_* credentials are configured, so an unpinned remote installer
       # is an avoidable supply-chain exposure. NOTE: .github/workflows/ci.yml still uses the curl|sh
       # form and deserves the same treatment in its own pass.
+      # Pinned to a commit SHA, not the mutable `v7` tag: this is a third-party action running with
+      # whatever KESTREL_* credentials the job carries, and a repointed tag would execute replacement
+      # code here. The `version` input pins the uv BINARY; the SHA pins the action itself. Both are
+      # needed. SHA below is astral-sh/setup-uv v7 (2026-03-16); bump deliberately, not automatically.
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
         with:
           version: '0.12.1'  # pinned: this run's numbers should be attributable to a known toolchain
 
