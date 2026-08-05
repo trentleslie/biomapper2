@@ -39,6 +39,12 @@ jobs:
       # biomapper2 always sends X-API-Key (utils.bulk_kestrel_request auth_required defaults True),
       # so a placeholder is needed even though public Kraken ignores it.
       KESTREL_API_KEY: ${{ secrets.KESTREL_API_KEY || 'public-kraken-no-auth' }}
+      # OVERRIDES ONLY — not the provenance mechanism. These come from github.event.inputs.*, which
+      # exist solely on workflow_dispatch; on the schedule: trigger they evaluate to empty. That is
+      # why provenance is no longer sourced from them: kg_provenance() reads the build from the
+      # graph's own /metagraph, so a cron run records a real snapshot plus a node/edge fingerprint
+      # with no operator discipline. A dispatch that supplies a label still wins, and the fetched
+      # metagraph is recorded alongside it either way.
       KG_SNAPSHOT: ${{ github.event.inputs.kg_snapshot }}
       CHEBI_RELEASE: ${{ github.event.inputs.chebi_release }}
     steps:

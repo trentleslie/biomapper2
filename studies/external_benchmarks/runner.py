@@ -77,25 +77,78 @@ def _git_commit(repo_root: Path) -> str:
 UNRECORDED = "unrecorded"
 
 
-def kg_provenance(*, probe_health: bool = False) -> dict[str, Any]:
+def _fetch_metagraph() -> dict[str, Any]:
+    """GET ``/metagraph`` — the graph's own account of which build is being served.
+
+    Best-effort by design: a provenance probe must never abort a benchmark run, so a failure is
+    RECORDED as an error rather than raised, and the caller falls back to the sentinel.
+    """
+    try:
+        import requests
+
+        r = requests.get(f"{KESTREL_API_URL.rstrip('/')}/metagraph", timeout=20)
+        if not r.ok:
+            return {"error": f"HTTP {r.status_code}"}
+        mg = r.json()
+        # Keep the identity + the fingerprint, drop the multi-thousand-entry category/triple lists so
+        # the manifest stays readable. node_prefixes is kept only for the CHEBI count below.
+        return {
+            "graph": mg.get("graph"),
+            "version": mg.get("version"),
+            "summary": mg.get("summary"),
+            "n_knowledge_sources": len(mg.get("knowledge_sources") or {}),
+            "chebi_node_count": (mg.get("node_prefixes") or {}).get("CHEBI"),
+        }
+    except Exception as exc:  # never fail a run over provenance
+        return {"error": f"{type(exc).__name__}: {exc}"}
+
+
+def kg_provenance(*, probe_live: bool = False) -> dict[str, Any]:
     """KG-snapshot / ChEBI-release provenance for a run's manifest.
 
-    The Kestrel KG serves the graph BioMapper resolves against, but it exposes no version /
-    ``meta_knowledge_graph`` endpoint (verified live 2026-07-22: ``/version``, ``/meta``,
-    ``/meta_knowledge_graph`` all 404; only ``/health`` responds). So the KG snapshot and the
-    ChEBI release cannot be queried — they are OPERATOR-SUPPLIED out of band via the ``KG_SNAPSHOT``
-    and ``CHEBI_RELEASE`` env vars. A run that omits them records the loud ``"unrecorded"`` sentinel
-    (never a silent green) so an un-pinned run is visible on its face.
+    The snapshot is read FROM THE GRAPH: ``GET /metagraph`` self-reports ``graph`` and ``version``
+    plus a summary block (node/edge/category/prefix/predicate counts) that acts as a content
+    fingerprint. That fingerprint is the valuable part, because it separates two builds that both
+    call themselves 2.0.1 — something a hand-typed label cannot do.
 
-    ``probe_health`` adds a live ``/health`` GET as a weak temporal anchor (server status + timestamp)
-    — off by default so manifest construction stays pure/offline for unit tests; live run paths turn
-    it on once per run.
+    This replaces the previous env-var-only scheme. That scheme was not merely weaker, it was inert
+    for the case that matters: the scheduled workflow wired ``KG_SNAPSHOT``/``CHEBI_RELEASE`` from
+    ``github.event.inputs.*``, which exist ONLY on ``workflow_dispatch``. On the ``schedule:``
+    trigger they evaluate to empty, so every unattended run recorded ``"unrecorded"`` and no
+    operator discipline could have fixed it. Reading the graph closes that on both triggers.
+
+    The env vars survive as an OPERATOR OVERRIDE (an out-of-band assertion still beats a guess when
+    someone genuinely knows better), and the fetched metagraph is recorded alongside either way, so
+    an override never hides what was actually served.
+
+    ``chebi_release`` stays env-only: ``/metagraph`` carries no ChEBI version. The CHEBI node count
+    is recorded as its stand-in, which answers the canary question ("did the graph move?") even
+    though it is not a release string.
+
+    ``probe_live`` gates the network (``/metagraph`` + a ``/health`` temporal anchor). Off by
+    default so manifest construction stays pure/offline for unit tests; live run paths turn it on
+    once per run.
+
+    Earlier code asserted this endpoint did not exist, on a 2026-07-22 probe of ``/version``,
+    ``/meta`` and ``/meta_knowledge_graph``. Those do 404. The endpoint is ``/metagraph``, which
+    that probe never tried; the TRAPI-style names were the wrong guess.
     """
     prov: dict[str, Any] = {
         "kg_snapshot": os.getenv("KG_SNAPSHOT") or UNRECORDED,
         "chebi_release": os.getenv("CHEBI_RELEASE") or UNRECORDED,
     }
-    if probe_health:
+    if probe_live:
+        mg = _fetch_metagraph()
+        prov["kg_metagraph"] = mg
+        if mg.get("chebi_node_count") is not None:
+            prov["chebi_node_count"] = mg["chebi_node_count"]
+        # Derive the snapshot only when the operator did not pin one by hand.
+        if prov["kg_snapshot"] == UNRECORDED and mg.get("version"):
+            summary = mg.get("summary") or {}
+            nodes, edges = summary.get("total_nodes"), summary.get("total_edges")
+            fingerprint = f" ({nodes}n/{edges}e)" if nodes and edges else ""
+            prov["kg_snapshot"] = f"{mg.get('graph') or 'kg'} {mg['version']}{fingerprint}"
+
         health: dict[str, Any]
         try:
             import requests
@@ -208,7 +261,7 @@ def run_all(
     correctness failure of the whole run, not a per-vocab hiccup.
     """
     vocabs = vocabs or config.target_vocabs
-    kg_prov = kg_provenance(probe_health=True)  # probe KG liveness once per run, share across vocabs
+    kg_prov = kg_provenance(probe_live=True)  # read the KG build once per run, share across vocabs
     results: dict[str, VocabRun] = {}
     for vocab in vocabs:
         try:
@@ -322,7 +375,7 @@ def run_provided_id(
         biolink_version=biolink_version,
         output_tsv=str(output_tsv),
         repo_root=repo_root,
-        kg_prov=kg_provenance(probe_health=True),
+        kg_prov=kg_provenance(probe_live=True),
     )
     (out_dir / f"{config.key}_provided_manifest.json").write_text(json.dumps(manifest, indent=2))
     return ProvidedRun(ok=True, output_tsv=str(output_tsv), stats=stats, manifest=manifest)

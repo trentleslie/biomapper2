@@ -1589,12 +1589,16 @@ def run_suite(
     datasets: list[str] | None = None,
     runners: dict[str, Any] | None = None,
     run_gate_first: bool = True,
+    probe_live: bool = True,
 ) -> dict[str, Any]:
     """Drive every self-sourcing benchmark into ONE timestamped suite dir + an aggregate manifest.
 
     One bad benchmark never aborts the run: a runner that raises is recorded ``status="failed"`` and
     the suite continues, so a scheduled provenance run always produces a complete manifest of what
     passed and what broke. ``runners`` defaults to the CLI wiring and is injectable for offline tests.
+
+    ``probe_live`` reads the KG's build identity from ``/metagraph`` into the pins; tests turn it off
+    to stay offline.
     """
     runners = _suite_runners() if runners is None else runners
     datasets = list(SUITE_DATASETS if datasets is None else datasets)
@@ -1627,7 +1631,7 @@ def run_suite(
     manifest = {
         "suite_out_dir": str(suite_dir),
         "created": _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
-        "pins": _suite_pins(),
+        "pins": _suite_pins(probe_live=probe_live),
         "datasets": results,
         "n_ok": sum(1 for r in results if r["status"] == "ok"),
         "n_failed": sum(1 for r in results if r["status"] == "failed"),
@@ -1637,12 +1641,17 @@ def run_suite(
     return {"out_dir": str(suite_dir), "manifest": manifest, "results": results}
 
 
-def _suite_pins() -> dict[str, Any]:
+def _suite_pins(*, probe_live: bool = True) -> dict[str, Any]:
     """Reproducibility pins for the suite manifest: which backend it ran against + provenance.
 
     ``backend`` is read from the ``KESTREL_API_URL`` env at call time (the public-Kraken endpoint is
-    supplied there / in ``.env``), falling back to the packaged default. KG-snapshot / ChEBI-release
-    reuse ``runner.kg_provenance`` so the suite pins match the per-dataset manifests.
+    supplied there / in ``.env``), falling back to the packaged default. KG provenance reuses
+    ``runner.kg_provenance`` so the suite pins match the per-dataset manifests.
+
+    ``probe_live`` defaults to TRUE here, unlike ``kg_provenance`` itself. A suite run is by
+    definition a live run, and the whole purpose of these pins is to record which graph produced the
+    numbers — pinning "unrecorded" against a live suite is worse than not pinning at all, because it
+    looks like provenance. Tests pass False to keep aggregation assertions offline.
     """
     import os
 
@@ -1654,7 +1663,7 @@ def _suite_pins() -> dict[str, Any]:
         "backend": os.getenv("KESTREL_API_URL") or KESTREL_API_URL,
         "biolink_version": BIOLINK_VERSION_DEFAULT,
         "git_sha": _runner._git_commit(Path(__file__).parent),
-        **_runner.kg_provenance(),
+        **_runner.kg_provenance(probe_live=probe_live),
     }
 
 

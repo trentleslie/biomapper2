@@ -44,7 +44,9 @@ def _fake_runner(name):
 
 def test_run_suite_aggregates_results_into_one_manifest(tmp_path):
     runners = {"alpha": _fake_runner("alpha"), "beta": _fake_runner("beta")}
-    result = run_mod.run_suite(out_dir=tmp_path, datasets=["alpha", "beta"], runners=runners, run_gate_first=False)
+    result = run_mod.run_suite(
+        out_dir=tmp_path, datasets=["alpha", "beta"], runners=runners, run_gate_first=False, probe_live=False
+    )
     manifest_path = Path(result["out_dir"]) / "suite_manifest.json"
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text())
@@ -63,7 +65,9 @@ def _boom_runner(out_dir, run_gate_first):
 
 def test_run_suite_records_failure_and_continues(tmp_path):
     runners = {"good": _fake_runner("good"), "bad": _boom_runner}
-    result = run_mod.run_suite(out_dir=tmp_path, datasets=["bad", "good"], runners=runners, run_gate_first=False)
+    result = run_mod.run_suite(
+        out_dir=tmp_path, datasets=["bad", "good"], runners=runners, run_gate_first=False, probe_live=False
+    )
     by = {d["dataset"]: d for d in result["manifest"]["datasets"]}
     assert by["bad"]["status"] == "failed" and "kaboom" in by["bad"]["error"]
     assert by["good"]["status"] == "ok"  # the suite continued past the failure
@@ -76,7 +80,11 @@ def test_run_suite_records_failure_and_continues(tmp_path):
 # --------------------------------------------------------------------------------------------------
 def test_manifest_records_deliberate_skips_with_reasons(tmp_path):
     result = run_mod.run_suite(
-        out_dir=tmp_path, datasets=["alpha"], runners={"alpha": _fake_runner("alpha")}, run_gate_first=False
+        out_dir=tmp_path,
+        datasets=["alpha"],
+        runners={"alpha": _fake_runner("alpha")},
+        run_gate_first=False,
+        probe_live=False,
     )
     by = {d["dataset"]: d for d in result["manifest"]["datasets"]}
     for key, reason in run_mod.SUITE_SKIPPED.items():
@@ -95,7 +103,9 @@ def test_every_cli_dataset_is_either_run_or_explicitly_skipped():
 
 def test_explicitly_requested_dataset_is_not_also_reported_skipped(tmp_path):
     key = next(iter(run_mod.SUITE_SKIPPED))
-    result = run_mod.run_suite(out_dir=tmp_path, datasets=[key], runners={key: _fake_runner(key)}, run_gate_first=False)
+    result = run_mod.run_suite(
+        out_dir=tmp_path, datasets=[key], runners={key: _fake_runner(key)}, run_gate_first=False, probe_live=False
+    )
     entries = [d for d in result["manifest"]["datasets"] if d["dataset"] == key]
     assert len(entries) == 1 and entries[0]["status"] == "ok"
 
@@ -153,12 +163,41 @@ def test_manifest_pins_backend_and_provenance(tmp_path, monkeypatch):
         datasets=["alpha"],
         runners={"alpha": _fake_runner("alpha")},
         run_gate_first=False,
+        probe_live=False,
     )
     pins = result["manifest"]["pins"]
     assert pins["backend"] == "https://kestrel.krakenkg.com/api"  # the public-Kraken endpoint is recorded
     assert pins["kg_snapshot"] == "2026-08-01"
     assert "biolink_version" in pins
     assert "git_sha" in pins
+
+
+def test_suite_pins_record_the_graph_build_on_an_unattended_run(monkeypatch, tmp_path):
+    """The regression this closes: a cron run supplies no env, and must still pin a real build.
+
+    _suite_pins defaults probe_live=True precisely so a scheduled suite cannot pin "unrecorded".
+    """
+    monkeypatch.delenv("KG_SNAPSHOT", raising=False)
+    monkeypatch.delenv("CHEBI_RELEASE", raising=False)
+
+    from studies.external_benchmarks import runner as runner_mod
+
+    monkeypatch.setattr(
+        runner_mod,
+        "_fetch_metagraph",
+        lambda: {"graph": "kraken", "version": "2.0.1", "summary": {"total_nodes": 7, "total_edges": 9}},
+    )
+    monkeypatch.setattr(runner_mod, "KESTREL_API_URL", "http://kg.invalid/api")
+
+    result = run_mod.run_suite(
+        out_dir=tmp_path,
+        datasets=["alpha"],
+        runners={"alpha": _fake_runner("alpha")},
+        run_gate_first=False,
+    )
+    pins = result["manifest"]["pins"]
+    assert pins["kg_snapshot"] == "kraken 2.0.1 (7n/9e)"  # derived from the graph, not typed by hand
+    assert pins["kg_metagraph"]["version"] == "2.0.1"
 
 
 # --------------------------------------------------------------------------------------------------
