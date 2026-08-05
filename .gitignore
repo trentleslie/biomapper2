@@ -58,3 +58,7 @@ cache/
 
 # Serena AI tool
 .serena/
+
+# Memtrace code-graph daemon (per-checkout runtime state: pid, port, local MemDB)
+.memdb/
+.memtrace/
