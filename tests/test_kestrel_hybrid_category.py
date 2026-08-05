@@ -17,6 +17,7 @@ Fixture rows are live-verified shapes from KRAKEN 2.0.1, not invented ones. Ever
 ``prefer_human`` miss fires the ``GeneSymbolResolver``, which would drive a live ``/get-nodes`` call.
 """
 
+from typing import Any
 from unittest.mock import patch
 
 import pandas as pd
@@ -44,10 +45,13 @@ CHEMICAL = {
 }
 
 
-def _row(node_id, score, name, categories=..., synonyms=None):
-    """A hybrid-search row. ``categories=...`` omits the key entirely (the missing-key shape)."""
-    row = {"id": node_id, "score": score, "name": name, "synonyms": synonyms or []}
-    if categories is not ...:
+_OMIT: Any = object()  # sentinel distinct from None: omits the `categories` key entirely
+
+
+def _row(node_id: str, score: float, name: str, categories: Any = _OMIT, synonyms: Any = None) -> dict:
+    """A hybrid-search row. Default ``categories`` omits the key entirely (the missing-key shape)."""
+    row: dict[str, Any] = {"id": node_id, "score": score, "name": name, "synonyms": synonyms or []}
+    if categories is not _OMIT:
         row["categories"] = categories
     return row
 

@@ -40,9 +40,16 @@ class StructureResolver:
         shared block simply sits at a different index. This is the same artifact PR #36 fixed in the
         Hajjar scorer (the gold key sat at position 2-4 in 12 of 19 apparent misses).
 
-        Loosening is one-directional and bounded: two nodes that share no block at all still return
-        False, and ``inchikey_blocks`` keeps the MW/PubChem name fallback, so this cannot inflate
-        ``conflict_no_structure``.
+        The loosening is one-directional and its cost is a **false agreement**, not a false conflict:
+        a False can only become True, never the reverse. Where the old form could report a spurious
+        conflict, this form can report a spurious match — if a KG node's ``equivalent_ids.INCHIKEY``
+        list is itself conflated (entries for two genuinely different molecules), any single shared
+        entry now reads as "same molecule" and the divergent-RefMet flag is suppressed. That is the
+        accepted trade: KG INCHIKEY lists are dominated by protonation/salt/stereo variants of one
+        structure, and a suppressed flag is a missed review prompt whereas the old false conflict was
+        an actively wrong adjudication. Nodes sharing no block at all still return False, and
+        ``inchikey_blocks`` keeps the MW/PubChem name fallback, so ``conflict_no_structure`` cannot
+        inflate either.
         """
         records = self.linker.get_node_records([node_a, node_b])
         blocks_a = self.inchikey_blocks(node_a, (records.get(node_a) or {}).get("name"), records)
@@ -70,9 +77,7 @@ class StructureResolver:
         self._name_cache[node_name] = block
         return block
 
-    def inchikey_blocks(
-        self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None
-    ) -> set[str]:
+    def inchikey_blocks(self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None) -> set[str]:
         """ALL KG-asserted InChIKey first-blocks for a node (the full ``equivalent_ids`` list).
 
         ``inchikey_block`` returns only ``keys[0]``; a KG node's INCHIKEY list is multi-valued

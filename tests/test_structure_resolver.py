@@ -148,8 +148,14 @@ def test_disjoint_multivalued_lists_still_return_false():
     sr = StructureResolver(
         _linker(
             {
-                "CHEBI:1": {"name": "x", "equivalent_ids": {"INCHIKEY": ["AAAAAAAAAAAAAA-BB-N", "BBBBBBBBBBBBBB-BB-N"]}},
-                "CHEBI:2": {"name": "y", "equivalent_ids": {"INCHIKEY": ["YYYYYYYYYYYYYY-BB-N", "ZZZZZZZZZZZZZZ-BB-N"]}},
+                "CHEBI:1": {
+                    "name": "x",
+                    "equivalent_ids": {"INCHIKEY": ["AAAAAAAAAAAAAA-BB-N", "BBBBBBBBBBBBBB-BB-N"]},
+                },
+                "CHEBI:2": {
+                    "name": "y",
+                    "equivalent_ids": {"INCHIKEY": ["YYYYYYYYYYYYYY-BB-N", "ZZZZZZZZZZZZZZ-BB-N"]},
+                },
             }
         )
     )
@@ -162,10 +168,36 @@ def test_multivalued_side_still_falls_back_by_name_when_kg_is_silent(monkeypatch
         _linker(
             {
                 "CHEBI:1": {"name": "acid", "equivalent_ids": {}},
-                "CHEBI:2": {"name": "y", "equivalent_ids": {"INCHIKEY": ["QQQQQQQQQQQQQQ-BB-N", "AAAAAAAAAAAAAA-BB-N"]}},
+                "CHEBI:2": {
+                    "name": "y",
+                    "equivalent_ids": {"INCHIKEY": ["QQQQQQQQQQQQQQ-BB-N", "AAAAAAAAAAAAAA-BB-N"]},
+                },
             }
         )
     )
     monkeypatch.setattr(sr, "_fetch_mw_inchikey", lambda name: "AAAAAAAAAAAAAA-XX-M" if name == "acid" else None)
     monkeypatch.setattr(sr, "_fetch_pubchem_inchikey", lambda name: None)
+    assert sr.connectivity_match("CHEBI:1", "CHEBI:2") is True
+
+
+def test_conflated_list_can_produce_a_false_agreement():
+    """The documented cost of D2, pinned so it cannot regress silently into a surprise.
+
+    Loosening is one-directional: a False can become True, never the reverse. If a KG node's INCHIKEY
+    list is itself conflated (entries for two genuinely different molecules), a single shared entry now
+    reads as "same molecule" and suppresses the `divergent_refmet` review flag. Accepted trade — a
+    suppressed prompt beats the old form's actively wrong conflict adjudication.
+    """
+    sr = StructureResolver(
+        _linker(
+            {
+                # Conflated node: carries a block belonging to a different molecule alongside its own.
+                "CHEBI:1": {
+                    "name": "x",
+                    "equivalent_ids": {"INCHIKEY": ["AAAAAAAAAAAAAA-BB-N", "ZZZZZZZZZZZZZZ-BB-N"]},
+                },
+                "CHEBI:2": {"name": "y", "equivalent_ids": {"INCHIKEY": ["ZZZZZZZZZZZZZZ-CC-M"]}},
+            }
+        )
+    )
     assert sr.connectivity_match("CHEBI:1", "CHEBI:2") is True
