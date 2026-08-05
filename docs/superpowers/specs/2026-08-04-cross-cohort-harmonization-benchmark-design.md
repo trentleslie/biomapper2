@@ -99,9 +99,35 @@ species (81%)** and only **93 discrete molecules (19%)**. Names like `Triacylgly
 `Phosphatidylcholine O-36:4`, and `Ceramide d18:2/23:0` denote a *set* of possible molecules, so no
 structural oracle can adjudicate them.
 
-This is why LLFS (220 polar of 408) is the recall partner rather than BLSA, and it is a named,
-quantified finding in its own right: structure-only validation of cross-vendor metabolomics
-harmonization is bounded to the polar fraction. State the boundary; do not hide it.
+This is why LLFS is the recall partner rather than BLSA, and it is a named, quantified finding in
+its own right: structure-only validation of cross-vendor metabolomics harmonization is bounded to
+the polar fraction. State the boundary; do not hide it.
+
+### 3.5 LLFS clears the same gate that BLSA fails (measured 2026-08-04)
+
+Run via `scripts/llfs_step1_sizing.py`, artifacts in `~/external_benchmark_runs/cohort_panels_20260804/`.
+
+| | LLFS | BLSA |
+|---|---|---|
+| panel size | 408 | 497 |
+| sum-composition / discrete | 190 / **218 (53%)** | 404 / 93 (19%) |
+| overlap their method finds | 141 (they report 163) | 188 |
+| **structurally adjudicable** | **111 of 141 (79%)** | 93 ceiling |
+
+The 190/218 split lands within 2 of Monti's stated 188 lipid / 220 polar, so the panel parses
+correctly. **111 is a floor**: the classifier flags any chain notation, which over-flags fully
+specified species (`ACar 10:0` is decanoylcarnitine; `LPC 16:0/0:0` is 1-palmitoyl-GPC, both single
+molecules). Refining the classifier during implementation can only raise it.
+
+**The recall claim is now quantified at its source.** RefMet standardizes 364 of 408 LLFS names
+(89%) but only **1,066 of 1,495 NECS names (71%)**. The 429 unstandardizable NECS names are
+discarded by their `drop_na(refmet_name)` before any join occurs. That silent drop, not the join, is
+the bottleneck.
+
+**Reproduction gap:** we reproduce 141 of their 163. Lead on the remaining 22: their
+`03.platform.mapping.llfs.Rmd` carries the comment `## mapping to refmet (mapping from original
+names > mapping from standardized)`, implying a two-pass fallback we did not implement. Testable
+during implementation; the reproduction guard in section 7 pins whichever value we land on.
 
 ## 4. Arms
 
@@ -172,7 +198,8 @@ Reported alongside, never folded in:
 | Monti et al. supplement | NECS panel, 1,495 rows (786 valid gold InChIKey, 10 corrupt, 699 absent) | published supplement | **in hand** |
 | Watanabe et al. 2023, *Nat Med* 29:996-1008, Supp Data 2 (PMC10115644) | Arivale panel, 766 metabolites with CAS/KEGG/HMDB/PubChem | **CC BY** | **in hand**, SHA-pinnable |
 | `montilab/monti_et_al_necs_metabolomics` v1.0.0, Zenodo 10.5281/zenodo.17107095 | their harmonization code, defines arm B exactly | public repo | **in hand** |
-| Sebastiani et al. 2024, *Cell Rep* 43:114913 (PMC11656345), `TableS1a_All_results_09.01.2023.xlsx` | LLFS panel, 408 metabolites (188 lipid, 220 polar) | CC BY-NC-ND | **OPEN DEPENDENCY**, see section 10 |
+| Sebastiani et al. 2024, *Cell Rep* 43:114913 (PMC11656345), supplement 2 (`NIHMS2038904-supplement-2.xlsx`, the lab's `TableS1a_All_results_09.01.2023.xlsx`) | LLFS panel, 408 metabolites; sheet `annotation` also carries Monti's own precomputed RefMet standardized names, formula, exact mass, and class hierarchy | CC BY-NC-ND | **in hand**, sha256 `16492c59...b3767f57` |
+| Metabolomics Workbench RefMet bulk name service (`name_to_refmet_new_min.php`) | arm B for LLFS; response columns match Monti's `annotation` sheet exactly, confirming it is the service their `refmet_convert` wraps | public service | verified working |
 | Tian et al. 2023, *Metabolites* 13:591 (PMC10221446), Supp Table S2 | BLSA panel, 497 analytes | **CC BY** | in hand, used for the section 3.4 sizing |
 
 All sources SHA-pinned in `config.py` with fail-loud mismatch, per the `metlinkr.py` pattern.
@@ -210,20 +237,18 @@ live API.
 
 ## 10. Sequencing
 
-**Step 1 is a gate, not code.** Obtain the LLFS panel and size its structurally adjudicable subset.
+**Step 1 was a gate, not code, and it PASSED on 2026-08-04.** See section 3.5: LLFS is 53% discrete
+molecules and 111 of the 141 overlapping pairs are structurally adjudicable (79%), against BLSA's
+19% ceiling. The recall arm is viable and the design proceeds unchanged.
 
-If LLFS's adjudicable fraction resembles BLSA's 19%, the recall arm rests on too few analytes and we
-must either adopt a species-set standard for lipids (previously considered and declined), change
-partner, or narrow the claim. Knowing this before building is worth more than building fast.
+The panel itself was captcha-walled: five automated routes failed (PMC `bin/` captcha, the OA
+service's ftp path 404 over https, plain ftp refused, an empty Europe PMC `supplementaryFiles`
+bundle, and a 404 from the S3 open-data `author_manuscript` mirror). It was retrieved by hand from
+PMC to `data/NIHMS2038904-supplement-2.xlsx`, which is **gitignored**: the file is CC BY-NC-ND and
+we do not redistribute it. Its sha256 is pinned in `config.py` and verified fail-loud on load, the
+same posture the harness takes for other externally-sourced tables.
 
-LLFS acquisition status: available in principle (PMC11656345, open access) but not machine-fetchable
-from this host. Five automated routes failed: the PMC `bin/` path returned a captcha page, the OA
-service's advertised ftp path 404s over https, plain ftp is refused, the Europe PMC
-`supplementaryFiles` bundle is empty for this deposit, and the S3 open-data
-`author_manuscript` mirror 404s. Practical resolutions, in order of speed:
-a browser download, the request already outstanding to Monti's group, or ScienceDirect via the DOI.
-
-Subsequent steps are ordinary and depend on that gate:
+Subsequent steps:
 
 2. Panel loaders plus offline tests, both panels SHA-pinned.
 3. Arm B for Arivale, with the reproduction guard against 615.
@@ -237,8 +262,10 @@ Subsequent steps are ordinary and depend on that gate:
 
 | Risk | Mitigation |
 |---|---|
-| LLFS panel unobtainable | BLSA is a fallback with a published CC BY list, at the cost of a 93-analyte adjudicable ceiling. Decision point, not a silent substitution. |
-| LLFS adjudicable subset too small | Sized at step 1, before any code is written. |
+| ~~LLFS panel unobtainable~~ | **Retired 2026-08-04**: retrieved by hand and SHA-pinned in `data/`. |
+| ~~LLFS adjudicable subset too small~~ | **Retired 2026-08-04**: 111 of 141 adjudicable (79%). See section 3.5. |
+| Sum-composition classifier over-flags fully specified species | It currently flags any chain notation, so `ACar 10:0` and `LPC 16:0/0:0` are wrongly excluded. This makes 111 a floor, so it cannot inflate a result, but refining it during implementation is a tracked task. |
+| Our arm B reproduces 141, not their 163 | Pinned and reported, never silently absorbed. Their two-pass RefMet fallback is the leading hypothesis for the gap and is testable. |
 | RefMet name service unavailable or rate-limited | `competitors/base.py` already caches, rate-limits, retries, and fails loud rather than scoring an outage as 0% coverage. |
 | Arm M+ID inherits the isomer collisions | This is a result, not a failure. Report it either way. |
 | Reference linkage incompleteness read as precision error | Enforced by the `unadjudicable` bucket and stated in the results text. |

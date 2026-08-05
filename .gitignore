@@ -58,3 +58,6 @@ cache/
 
 # Serena AI tool
 .serena/
+
+# LLFS panel: CC BY-NC-ND, fetched by hand from PMC11656345. SHA-pinned in config, not redistributed.
+data/NIHMS2038904-supplement-2.xlsx
