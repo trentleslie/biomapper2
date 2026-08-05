@@ -113,6 +113,135 @@ def test_kg_provenance_reads_env(monkeypatch):
     assert prov["chebi_release"] == "ChEBI-238"
 
 
+# --------------------------------------------------------------------------------------------------
+# Live provenance: the graph self-reports its build, so an unattended run records a real snapshot
+# instead of the sentinel. This is the fix for cron runs, which supply no workflow inputs at all.
+# --------------------------------------------------------------------------------------------------
+_METAGRAPH = {
+    "graph": "kraken",
+    "version": "2.0.1",
+    "summary": {
+        "total_nodes": 14683250,
+        "total_edges": 92233909,
+        "unique_node_categories": 59,
+        "unique_node_prefixes": 194,
+        "unique_edge_predicates": 100,
+        "unique_meta_doubles": 1887,
+        "unique_meta_triples": 9763,
+    },
+    "node_prefixes": {"CHEBI": 202220, "INCHIKEY": 3233178},
+}
+
+
+def _fake_get(payload, *, ok=True, status=200):
+    class _Resp:
+        def __init__(self, url):
+            self.url = url
+            self.ok = ok
+            self.status_code = status
+
+        def json(self):
+            return payload if "metagraph" in self.url else {"status": "healthy"}
+
+        @property
+        def text(self):
+            return "error body"
+
+    return lambda url, timeout=None: _Resp(url)
+
+
+def test_kg_provenance_derives_snapshot_from_the_graph_itself(monkeypatch):
+    """No operator input: the snapshot comes from /metagraph, not a hand-typed label."""
+    monkeypatch.delenv("KG_SNAPSHOT", raising=False)
+    monkeypatch.delenv("CHEBI_RELEASE", raising=False)
+    import requests
+
+    monkeypatch.setattr(requests, "get", _fake_get(_METAGRAPH))
+
+    prov = runner_mod.kg_provenance(probe_live=True)
+
+    assert prov["kg_snapshot"] != runner_mod.UNRECORDED  # the whole point: cron runs record something
+    assert "kraken" in prov["kg_snapshot"] and "2.0.1" in prov["kg_snapshot"]
+    mg = prov["kg_metagraph"]
+    assert mg["graph"] == "kraken" and mg["version"] == "2.0.1"
+    # the fingerprint is what distinguishes two builds both calling themselves 2.0.1
+    assert mg["summary"]["total_nodes"] == 14683250
+    assert mg["summary"]["total_edges"] == 92233909
+    # /metagraph carries no ChEBI release, so the CHEBI node count stands in as its fingerprint
+    assert prov["chebi_node_count"] == 202220
+
+
+def test_operator_supplied_snapshot_still_overrides_the_graph(monkeypatch):
+    monkeypatch.setenv("KG_SNAPSHOT", "hand-pinned-label")
+    import requests
+
+    monkeypatch.setattr(requests, "get", _fake_get(_METAGRAPH))
+    prov = runner_mod.kg_provenance(probe_live=True)
+    assert prov["kg_snapshot"] == "hand-pinned-label"
+    assert prov["kg_metagraph"]["version"] == "2.0.1"  # still recorded alongside, never discarded
+
+
+def test_kg_provenance_survives_an_unreachable_metagraph(monkeypatch):
+    """Provenance is best-effort: a probe failure must never abort a benchmark run."""
+    monkeypatch.delenv("KG_SNAPSHOT", raising=False)
+    import requests
+
+    def _boom(url, timeout=None):
+        raise ConnectionError("no route to host")
+
+    monkeypatch.setattr(requests, "get", _boom)
+    prov = runner_mod.kg_provenance(probe_live=True)
+    assert prov["kg_snapshot"] == runner_mod.UNRECORDED  # falls back loudly, does not invent a value
+    assert "error" in prov["kg_metagraph"]
+
+
+def test_metagraph_is_fetched_once_per_process(monkeypatch):
+    """A 10-dataset suite must not pay the probe timeout ten times over."""
+    monkeypatch.setattr(runner_mod, "_METAGRAPH_CACHE", None)
+    calls = []
+    import requests
+
+    def _counting_get(url, timeout=None):
+        calls.append(url)
+        return _fake_get(_METAGRAPH)(url, timeout)
+
+    monkeypatch.setattr(requests, "get", _counting_get)
+
+    for _ in range(3):
+        runner_mod._fetch_metagraph()
+    assert len([u for u in calls if "metagraph" in u]) == 1  # cached after the first
+
+
+def test_metagraph_refresh_bypasses_the_cache(monkeypatch):
+    """The end-of-suite drift check needs a genuinely fresh read, not the cached one."""
+    monkeypatch.setattr(runner_mod, "_METAGRAPH_CACHE", None)
+    calls = []
+    import requests
+
+    def _counting_get(url, timeout=None):
+        calls.append(url)
+        return _fake_get(_METAGRAPH)(url, timeout)
+
+    monkeypatch.setattr(requests, "get", _counting_get)
+    runner_mod._fetch_metagraph()
+    runner_mod._fetch_metagraph(refresh=True)
+    assert len([u for u in calls if "metagraph" in u]) == 2
+
+
+def test_kg_provenance_makes_no_network_call_by_default(monkeypatch):
+    """Manifest construction stays pure so the offline unit suite never touches the network."""
+    import requests
+
+    def _forbidden(url, timeout=None):
+        raise AssertionError(f"kg_provenance() hit the network by default: {url}")
+
+    monkeypatch.setattr(requests, "get", _forbidden)
+    monkeypatch.delenv("KG_SNAPSHOT", raising=False)
+    prov = runner_mod.kg_provenance()
+    assert prov["kg_snapshot"] == runner_mod.UNRECORDED
+    assert "kg_metagraph" not in prov
+
+
 def test_build_manifest_includes_kg_provenance(monkeypatch, tmp_path):
     monkeypatch.setenv("KG_SNAPSHOT", "snap-X")
     monkeypatch.setenv("CHEBI_RELEASE", "ChEBI-999")

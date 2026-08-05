@@ -12,6 +12,22 @@ import pytest
 from studies.external_benchmarks.config import HAJJAR
 
 
+@pytest.fixture(autouse=True)
+def _reset_metagraph_cache():
+    """Clear the process-global metagraph memo between tests.
+
+    ``runner._fetch_metagraph`` caches for the life of the process so a 10-dataset suite pays the
+    probe once rather than once per dataset. That cache is shared state: without this reset a test
+    that primed it with a fake build would silently satisfy a later test expecting a probe failure,
+    making results depend on test ORDER.
+    """
+    from studies.external_benchmarks import runner as _runner
+
+    _runner._METAGRAPH_CACHE = None
+    yield
+    _runner._METAGRAPH_CACHE = None
+
+
 @pytest.fixture
 def hajjar_config():
     return HAJJAR
