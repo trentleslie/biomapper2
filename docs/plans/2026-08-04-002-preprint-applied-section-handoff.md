@@ -106,6 +106,33 @@ NECS sits on a vintage carrying the 2019-era errors.
 `xylose` is the exception and the one standing defect worth reporting upstream: wrong in all three
 Metabolon files, correct in Broad.
 
+### The vintage is unrecorded but RECOVERABLE, which is the practical contribution
+
+There is no version field anywhere. Metabolon's deliverable schema has `CHEM_ID`, `LIB_ID` and
+`CHRO_LIB_ENTRY_ID`, but `LIB_ID` takes only 4 distinct values across 1,546 rows (the four
+chromatography methods, not a release) and `CHRO_LIB_ENTRY_ID` is per-compound. Monti's paper records
+no annotation version or delivery date. So no published study can state which annotation it inherited.
+
+The differences between vintages are themselves a signature, so the vintage can be recovered after
+the fact. Matching NECS's 786 gold InChIKeys against dated reference panels, over **all** shared
+compounds rather than the 8 known defects:
+
+| Reference panel | shared | agreement |
+|---|---|---|
+| **`2019_Metabolon_Metadata.csv`** | 650 | **100.0%** (0 disagreements) |
+| `LEOCC_Metabolon_Annotations.csv` | 704 | 98.6% |
+| `Metabolon_Annotations_Serum_hmdbformatted.csv` | 704 | 98.6% |
+| `Broad_2022Aug_annotations.csv` | 79 | 97.5% |
+
+**NECS was delivered the 2019 vintage.** Determined with no version field, no vendor cooperation, and
+no input from the authors, using only public supplementary data.
+
+This is the most actionable thing in the paper: a published cohort study's annotation vintage, and
+therefore the specific errors it inherited, is recoverable from its own supplement. Recommend it as
+a routine check, and recommend that vendors and journals record the vintage so it does not have to be.
+
+Script: `scripts/fingerprint_annotation_vintage.py`.
+
 ### The compound-level replication is the strongest evidence, stronger than the rate
 
 **8 of the 13 connectivity disagreements found in metLinkR's supplementary input panels are the same
