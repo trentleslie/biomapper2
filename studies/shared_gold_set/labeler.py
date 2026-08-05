@@ -16,6 +16,34 @@ picks the connectivity-matching node or defers to a human:
 This module is pure (no I/O); the live resolution lives in ``build_gold_set.py`` and
 reuses :class:`biomapper2.core.structure_resolver.StructureResolver` (Phase 1b) rather
 than reimplementing the layered lookup.
+
+Deliberate divergence from the system under test (D2, 2026-08-05)
+----------------------------------------------------------------
+``StructureResolver.connectivity_match`` now adjudicates "same molecule" by **set
+intersection** over *all* KG-asserted InChIKey first-blocks (``inchikey_blocks``). This
+labeler deliberately does **not** follow it: ``build_gold_set.py`` populates
+:attr:`Candidate.block` via the singular ``inchikey_block`` (``keys[0]``) and
+:func:`adjudicate` compares by equality. The grader is therefore **stricter** than the
+system it grades. That is intentional, for two reasons:
+
+1. **Non-circularity is this module's whole premise** (see above). Adopting the system's
+   own equivalence relation would make the gold labels agree with the resolver *by
+   construction* on exactly the multi-valued cases D2 changed — the eval would credit the
+   change it is supposed to measure independently.
+2. **Strictness here can only defer, never mislabel.** The query block comes from a name
+   lookup (MW/PubChem) and is single-valued by construction; only the candidate side is
+   multi-valued. So a gold match sitting at a non-first ``INCHIKEY`` position yields
+   ``no_candidate_matches_query`` -> ``EXPERT``, i.e. a human adjudicates it. It cannot
+   produce a wrong auto-label.
+
+**Known cost, stated rather than hidden:** this biases the auto-labeled population away
+from multi-InChIKey compounds (salts, conjugate acid/base pairs, stereo sets), which are
+precisely the class D2 affects. The pinned gold set at ``results/20260713T115754Z/`` was
+built under these semantics and is NOT invalidated by D2 — but any accuracy claim drawn
+from it should note that the auto-labeled slice under-represents that class, and the
+expert residual over-represents it. Re-running the builder under intersection semantics to
+quantify the shift is filed as a follow-up; it is out of scope here because it would
+regenerate a pinned artifact that downstream tier1/ablation/tbench tracks consume.
 """
 
 from __future__ import annotations

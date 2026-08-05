@@ -104,9 +104,24 @@ def test_single_node_refmet_emits_no_warning(caplog):
 
 
 def test_agreement_check_uses_the_deterministic_pick():
-    """`refmet_nodes[0] == majority` short-circuits; with >1 node that test must also be order-free."""
+    """Agreement short-circuits when the majority is the lexicographically-first RefMet node."""
     kg = {"CHEBI:refmet_a": ["a", "b"], "CHEBI:refmet_b": ["RM:2"]}
     r = _resolver(False)
     structure_resolver = cast(MagicMock, r.structure_resolver)
     assert r._choose_best_kg_id(kg, MULTI_ASSIGNED_A, "biolink:SmallMolecule") == ("CHEBI:refmet_a", None)
+    structure_resolver.connectivity_match.assert_not_called()
+
+
+def test_agreement_is_membership_not_first_element_equality():
+    """RefMet agrees if the majority is ANY of its nodes, not merely its first.
+
+    The bug this pins: with `refmet_nodes[0] == majority`, a RefMet vote covering both the majority
+    node and another node reads as *disagreement*. The resolver then overrides the majority with the
+    lexicographically-first RefMet node and flags a `divergent_refmet` that never happened. Here the
+    majority is `CHEBI:refmet_b` (second after sorting), so the old check fell through.
+    """
+    kg = {"CHEBI:refmet_b": ["a", "b"], "CHEBI:refmet_a": ["RM:1"]}
+    r = _resolver(False)
+    structure_resolver = cast(MagicMock, r.structure_resolver)
+    assert r._choose_best_kg_id(kg, MULTI_ASSIGNED_A, "biolink:SmallMolecule") == ("CHEBI:refmet_b", None)
     structure_resolver.connectivity_match.assert_not_called()

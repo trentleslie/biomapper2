@@ -140,7 +140,12 @@ class Resolver:
                 refmet_nodes,
                 refmet_nodes[0],
             )
-        if not refmet_nodes or refmet_nodes[0] == majority:
+        # Agreement is membership, not first-element equality. When RefMet votes for several nodes and
+        # one of them IS the majority, RefMet agrees — testing only refmet_nodes[0] would miss that,
+        # override the majority with a different RefMet node, and emit a spurious 'divergent_refmet'.
+        # Unreachable on current data (0 of 8,814 baseline rows have a multi-node RefMet vote), but the
+        # deterministic sort above exists precisely to make that case well-defined, so it must be correct.
+        if not refmet_nodes or majority in refmet_nodes:
             return majority, None  # RefMet had no say, or already agrees
 
         refmet_node = refmet_nodes[0]
