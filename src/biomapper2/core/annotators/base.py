@@ -37,6 +37,7 @@ class BaseAnnotator(ABC):  # Inherit from ABC
         prefixes: list[str] | None = None,
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
+        accepted_categories: set[str] | None = None,
         cache: dict | None = None,
     ) -> AssignedIDsDict:
         """
@@ -53,6 +54,11 @@ class BaseAnnotator(ABC):  # Inherit from ABC
             preferred_prefixes: When set (the engine resolves it for non-gene categories with a configured
                 canonical-namespace policy), prefer the candidate in that namespace set. Honored only by
                 annotators that re-rank (hybrid search); others accept and ignore it.
+            accepted_categories: When set (the engine resolves it for categories with a configured
+                acceptance root), the committed node's Biolink ``categories`` must intersect this set or
+                the annotator refuses rather than committing an off-category node. A correctness guard,
+                not a preference: it is independent of prefer_canonical/prefer_human, and None means
+                unfiltered. Honored only by annotators that filter candidates; others accept and ignore it.
             cache: Optional pre-fetched results from bulk API call
 
         Returns:
@@ -69,6 +75,7 @@ class BaseAnnotator(ABC):  # Inherit from ABC
         prefixes: list[str] | None = None,
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
+        accepted_categories: set[str] | None = None,
     ) -> pd.Series:  # Series of AssignedIdsDicts
         """
         Get annotations for multiple entities with bulk API call.
@@ -80,6 +87,7 @@ class BaseAnnotator(ABC):  # Inherit from ABC
             prefixes: Allowed (standardized) curie prefixes to map to (e.g., 'CHEBI', 'MONDO')
             prefer_human: See get_annotations. Accepted by all annotators; honored where applicable.
             preferred_prefixes: See get_annotations. Accepted by all annotators; honored where applicable.
+            accepted_categories: See get_annotations. Accepted by all annotators; honored where applicable.
 
         Returns:
             Column (Series) of annotation results (same index as input)

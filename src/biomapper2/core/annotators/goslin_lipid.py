@@ -50,6 +50,7 @@ class GoslinLipidAnnotator(BaseAnnotator):
         prefixes: list[str] | None = None,
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
+        accepted_categories: set[str] | None = None,
         cache: dict | None = None,
     ) -> AssignedIDsDict:
         """Implements BaseAnnotator.get_annotations. Returns ``{}`` for non-lipids (fail-soft)."""
@@ -71,6 +72,7 @@ class GoslinLipidAnnotator(BaseAnnotator):
             prefixes,
             prefer_human=prefer_human,
             preferred_prefixes=preferred_prefixes,
+            accepted_categories=accepted_categories,
         )
         inner: dict[str, dict[str, dict[str, Any]]] = dict(bound.get(self._binder.slug, {}))
 
@@ -98,6 +100,7 @@ class GoslinLipidAnnotator(BaseAnnotator):
         prefixes: list[str] | None = None,
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
+        accepted_categories: set[str] | None = None,
     ) -> pd.Series:
         """Implements BaseAnnotator.get_annotations_bulk (rowwise; the binder handles its own cache)."""
         col = entities.apply(
@@ -108,6 +111,7 @@ class GoslinLipidAnnotator(BaseAnnotator):
             prefixes=prefixes,
             prefer_human=prefer_human,
             preferred_prefixes=preferred_prefixes,
+            accepted_categories=accepted_categories,
         )
         return cast(pd.Series, col)
 

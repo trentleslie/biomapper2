@@ -77,3 +77,25 @@ CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
     "biolink:SmallMolecule": {"CHEBI", "HMDB", "RM"},
     "biolink:Disease": {"MONDO"},
 }
+
+# Per-category Biolink acceptance root for the category *validator* (see
+# core/annotators/kestrel_hybrid.py:_is_on_category). Hybrid search ranks across categories as well as
+# namespaces, so a metabolite query can commit a node that is not a molecule at all — measured over the
+# pinned baseline, 1,148 of 12,605 metabolite-arm commits (9.1%) carried no chemical category, led by
+# 692 biolink:PhenotypicFeature (EFO "…measurement" nodes) and 362 Protein/Gene.
+#
+# Semantics, and note the two sides are expanded *separately*:
+#   - The KEY is expanded via get_descendants so subcategories of a configured job category inherit the
+#     same policy (mirrors CATEGORY_PREFERRED_NAMESPACES).
+#   - The VALUE is the acceptance ROOT and is expanded via get_descendants on its own. It is deliberately
+#     one level up from the key: descendants('biolink:ChemicalEntity') is 12 categories, so a legitimately
+#     broader typing (ChemicalEntity, MolecularMixture, Drug) survives while Protein/Polypeptide/
+#     PhenotypicFeature/Pathway/MolecularActivity do not.
+#
+# Gene/protein are intentionally absent: 93.8% of HGNC commits are off-category relative to any chemical
+# root and the HGNC baseline is 0/4476 suspect, so the gene path must stay unfiltered. Any category with
+# no entry here is likewise unfiltered — including the biolink:NamedThing that standardize_entity_type
+# falls back to for an unrecognized entity type.
+CATEGORY_ACCEPTED_ROOTS: dict[str, str] = {
+    "biolink:SmallMolecule": "biolink:ChemicalEntity",
+}

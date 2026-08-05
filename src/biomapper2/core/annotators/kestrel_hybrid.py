@@ -18,6 +18,10 @@ from .base import BaseAnnotator
 # search hit. The `resolved_via` provenance marker is the authoritative signal, not this score.
 _FALLBACK_SCORE = 1.0
 
+# Biolink types that assert nothing useful about a node. A node carrying only these is a KG typing gap,
+# not an off-category claim, so the category validator lets it through (see `_is_on_category`).
+_TOP_OF_HIERARCHY_SENTINELS = frozenset({"biolink:NamedThing", "biolink:Entity"})
+
 
 class KestrelHybridSearchAnnotator(BaseAnnotator):
 
@@ -35,6 +39,7 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
         prefixes: list[str] | None = None,
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
+        accepted_categories: set[str] | None = None,
         cache: dict | None = None,
     ) -> AssignedIDsDict:
         """Implements BaseAnnotator.get_annotations.
@@ -46,6 +51,10 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
           candidate that matches the query, falling back to the top-scored canonical or — on an empty
           canonical pool — the overall top-scored row (see ``_select_canonical``).
         With neither active, the legacy top-1 behavior is kept.
+
+        ``accepted_categories`` is orthogonal to both: a *validator* applied to the single node the
+        selectors committed (see ``_is_on_category``). It never touches the candidate pool, so no
+        selector's behavior changes and no vacancy is created for a runner-up to fill.
         """
 
         # Extract the value to search
@@ -82,6 +91,19 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
                     # fallback to the top-scored non-canonical row).
                     chosen = {**chosen, "resolved_via": "canonical_preference"}
 
+            # Category validation at the single commit point. Applied AFTER selection, deliberately: a
+            # pool filter would promote the runner-up into the vacancy, which on live data substitutes a
+            # different still-wrong node 18/45 times — and a wrong chemical is harder to audit than a node
+            # that announces itself as not-a-molecule. Refuse instead; this can only turn wrong->refuse.
+            if chosen is not None and not self._is_on_category(chosen, accepted_categories):
+                logging.info(
+                    "off_category_refusal: term=%r node=%s categories=%s",
+                    search_term,
+                    chosen.get("id"),
+                    chosen.get("categories"),
+                )
+                chosen = None
+
             if chosen is not None:
                 node_id = chosen["id"]
                 score = chosen["score"]
@@ -104,6 +126,7 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
         prefixes: list[str] | None = None,
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
+        accepted_categories: set[str] | None = None,
     ) -> pd.Series:  # Series of AssignedIDsDicts
         """Implements BaseAnnotator.get_annotations_bulk"""
 
@@ -117,8 +140,9 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
         results = self._kestrel_hybrid_search(search_terms, category, prefixes, limit=limit)
 
         # Annotate each entity using the results from the bulk request. The internal re-dispatch MUST
-        # forward BOTH prefer_human and preferred_prefixes, otherwise the bulk path would silently use the
-        # get_annotations defaults (a silent no-op for the canonical re-rank on dataset jobs).
+        # forward prefer_human, preferred_prefixes AND accepted_categories, otherwise the bulk path would
+        # silently use the get_annotations defaults (a silent no-op on dataset jobs — which is every
+        # benchmark run — for the canonical re-rank and for the category guard alike).
         assigned_ids_col = entities.apply(
             self.get_annotations,
             axis=1,
@@ -128,6 +152,7 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
             prefixes=prefixes,
             prefer_human=prefer_human,
             preferred_prefixes=preferred_prefixes,
+            accepted_categories=accepted_categories,
         )
 
         return cast(pd.Series, assigned_ids_col)
@@ -204,6 +229,36 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
         exact = [r for r in pool if KestrelHybridSearchAnnotator._symbol_matches(r, search_term)]
         candidates = exact if exact else pool
         return max(candidates, key=lambda r: r.get("score", 0)), True
+
+    @staticmethod
+    def _is_on_category(row: dict, accepted: set[str] | None) -> bool:
+        """True if the committed node's Biolink type is compatible with the queried category.
+
+        **This is a CATEGORY check, never a NAMESPACE check.** Writing it as "the committed node must be
+        in a canonical namespace" looks nearly identical in a diff and would destroy 294 legitimate
+        non-canonical chemical commits (UNII 97, MESH 83, PUBCHEM.COMPOUND 52, KEGG.GLYCAN 30, ...),
+        including plainly-correct ones such as ``S-adenosylhomocysteine -> UNII:8K31Q2S66S``. Namespace
+        preference is ``_select_canonical``'s job and stays there.
+
+        Failure-open in two shapes, because an absent type assertion is not a wrong type assertion:
+        - no ``categories`` at all (missing, None, or empty), and
+        - a *pure* top-of-hierarchy sentinel. Across 1,200 live candidate rows zero had empty/missing
+          categories — the empty guard alone would be dead code — but eight carried
+          ``['biolink:NamedThing']``, including ``OBO:NCIT_C103149`` "S-Adenosylhomocysteine" top-scored
+          at 4.889, a legitimate metabolite. ``biolink:NamedThing`` is not among the 12 descendants of
+          ``biolink:ChemicalEntity``, so without this clause the guard would drop exactly the
+          typing-gap case it exists to protect. "Pure" matters: a sentinel alongside a real off-category
+          type (``['biolink:NamedThing', 'biolink:Pathway']``) IS a type assertion and is judged normally.
+
+        ``accepted=None`` disables the guard entirely — the byte-for-byte guarantee for the gene path
+        and for every category with no configured acceptance root.
+        """
+        if accepted is None:
+            return True
+        categories = set(row.get("categories") or [])
+        if not categories or categories <= _TOP_OF_HIERARCHY_SENTINELS:
+            return True
+        return bool(categories & accepted)
 
     @staticmethod
     def _symbol_matches(row: dict, search_term: str) -> bool:
