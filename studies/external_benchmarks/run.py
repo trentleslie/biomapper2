@@ -413,9 +413,7 @@ def orchestrate_metlinkr(
         raise RuntimeError(f"{config.key}: no target vocab produced a result (mapper failed: {errs!r}).")
     # dtype=str + keep-NA-empty so bare numeric curator PubChem ids are not coerced to float
     # (``159663`` -> ``159663.0``) and blanks stay "" — both would break structural resolution.
-    mapped_dfs = [
-        pd.read_csv(runs[v].output_tsv, sep="\t", dtype=str, keep_default_na=False) for v in ok_vocabs
-    ]
+    mapped_dfs = [pd.read_csv(runs[v].output_tsv, sep="\t", dtype=str, keep_default_na=False) for v in ok_vocabs]
     merged_df = merge_vocab_runs(mapped_dfs, config)
 
     oracle = KGStructureOracle(StructureResolver(mapper.linker), mapper.linker)
@@ -435,9 +433,7 @@ def orchestrate_metlinkr(
     (out_dir / "metlinkr_results.json").write_text(json.dumps(result, indent=2))
 
     report_path = out_dir / "metlinkr_report.md"
-    assemble_metlinkr_report(
-        result=result, card=bundle.card, competitors=METLINKR_COMPETITORS, out_path=report_path
-    )
+    assemble_metlinkr_report(result=result, card=bundle.card, competitors=METLINKR_COMPETITORS, out_path=report_path)
     return {"out_dir": str(out_dir), "report": str(report_path), "result": result}
 
 
@@ -632,8 +628,12 @@ def orchestrate_lmsd(
         resolvability = capability_resolvability(result, regime="shorthand")
         (out_dir / "capability_regression.json").write_text(
             json.dumps(
-                {"role": LMSD.role, "regime": "shorthand", "resolvability": resolvability,
-                 "regression_floor": LMSD.regression_floor},
+                {
+                    "role": LMSD.role,
+                    "regime": "shorthand",
+                    "resolvability": resolvability,
+                    "regression_floor": LMSD.regression_floor,
+                },
                 indent=2,
             )
         )
@@ -964,9 +964,7 @@ def orchestrate_pham(
     bundle.card["stratified_subsample"] = subsample_meta
     (out_dir / "dataset_card.json").write_text(json.dumps(bundle.card, indent=2))
 
-    runs = run_all(
-        mapper, scored_df, config, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root
-    )
+    runs = run_all(mapper, scored_df, config, out_dir, dataset_sha=bundle.card["source_sha256"], repo_root=repo_root)
     primary = config.target_vocabs[0]
     vr = runs.get(primary)
     if vr is None or not vr.ok or not vr.output_tsv:
@@ -1005,8 +1003,13 @@ def orchestrate_pham(
                 name_to_blocks[str(r.get(config.name_column))] = blocks
         crosscheck = fn(name_to_blocks)
         (out_dir / "pubchem_crosscheck.json").write_text(
-            json.dumps({k: {kk: sorted(vv) if isinstance(vv, set) else vv for kk, vv in v.items()}
-                        for k, v in crosscheck.items()}, indent=2)
+            json.dumps(
+                {
+                    k: {kk: sorted(vv) if isinstance(vv, set) else vv for kk, vv in v.items()}
+                    for k, v in crosscheck.items()
+                },
+                indent=2,
+            )
         )
         crosscheck_summary = summarize_pubchem_crosscheck(crosscheck)
         (out_dir / "pubchem_crosscheck_summary.json").write_text(json.dumps(crosscheck_summary, indent=2))
@@ -1308,9 +1311,7 @@ def orchestrate_metabench(
             # known_source_gap is set for the KEGG-source direction (documented gap): see
             # metabench_adapter.provided_config_for_subgroup.
             pid = metabench_adapter.provided_config_for_subgroup(sub, config)
-            run = run_provided_id(
-                mapper, sub.input_df, pid, sub_dir, dataset_sha=dataset_sha, repo_root=repo_root
-            )
+            run = run_provided_id(mapper, sub.input_df, pid, sub_dir, dataset_sha=dataset_sha, repo_root=repo_root)
             output_tsv = run.output_tsv
         else:
             # Name-input mode: the metabolite name is annotated; the target id is held out. Reuse the
@@ -1327,9 +1328,7 @@ def orchestrate_metabench(
                 source_url=config.source_url,
                 license=config.license,
             )
-            vr = run_vocab(
-                mapper, sub.input_df, cfg, sub.vocab, sub_dir, dataset_sha=dataset_sha, repo_root=repo_root
-            )
+            vr = run_vocab(mapper, sub.input_df, cfg, sub.vocab, sub_dir, dataset_sha=dataset_sha, repo_root=repo_root)
             output_tsv = vr.output_tsv
         if not output_tsv:
             raise RuntimeError(f"{sub.key}: mapper produced no output — refusing to score a partial MetaBench run.")
@@ -1608,6 +1607,11 @@ def run_suite(
     suite_dir = Path(out_dir)
     suite_dir.mkdir(parents=True, exist_ok=True)
 
+    # Pin the backend BEFORE any dataset runs. Sampling after the fact would attribute every result
+    # to whatever build happens to be serving at the end, which for a long suite is not necessarily
+    # the build that produced the earlier numbers.
+    pins = _suite_pins(probe_live=probe_live)
+
     results: list[dict[str, Any]] = []
     for key in datasets:
         runner = runners.get(key)
@@ -1628,15 +1632,28 @@ def run_suite(
         if key not in datasets:
             results.append({"dataset": key, "status": "skipped", "reason": reason})
 
-    manifest = {
+    manifest: dict[str, Any] = {
         "suite_out_dir": str(suite_dir),
         "created": _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
-        "pins": _suite_pins(probe_live=probe_live),
+        "pins": pins,
         "datasets": results,
         "n_ok": sum(1 for r in results if r["status"] == "ok"),
         "n_failed": sum(1 for r in results if r["status"] == "failed"),
         "n_skipped": sum(1 for r in results if r["status"] == "skipped"),
     }
+
+    # Re-read the build now that the datasets are done. If it moved, the pins above no longer
+    # describe every result, and a reader has to know that before trusting the suite as one
+    # coherent measurement. Silence here would be the failure mode this PR exists to remove.
+    if probe_live:
+        from . import runner as _runner
+
+        before = (pins.get("kg_metagraph") or {}).get("version"), (pins.get("kg_metagraph") or {}).get("summary")
+        end_mg = _runner._fetch_metagraph(refresh=True)
+        after = end_mg.get("version"), end_mg.get("summary")
+        manifest["kg_stable_during_run"] = before == after
+        if before != after:
+            manifest["kg_metagraph_at_end"] = end_mg
     (suite_dir / "suite_manifest.json").write_text(json.dumps(manifest, indent=2))
     return {"out_dir": str(suite_dir), "manifest": manifest, "results": results}
 

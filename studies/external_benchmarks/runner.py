@@ -77,12 +77,33 @@ def _git_commit(repo_root: Path) -> str:
 UNRECORDED = "unrecorded"
 
 
-def _fetch_metagraph() -> dict[str, Any]:
+_METAGRAPH_CACHE: dict[str, Any] | None = None
+
+
+def _fetch_metagraph(*, refresh: bool = False) -> dict[str, Any]:
     """GET ``/metagraph`` — the graph's own account of which build is being served.
 
     Best-effort by design: a provenance probe must never abort a benchmark run, so a failure is
     RECORDED as an error rather than raised, and the caller falls back to the sentinel.
+
+    Memoized for the life of the process. A suite calls this once per dataset, and the served build
+    does not change from one dataset to the next in the normal case, so without caching an
+    unreachable KG would cost the timeout on every dataset and add minutes before the suite could
+    finalize its artifacts. Failures are cached too: within one run an unreachable KG is unlikely to
+    heal, and retrying it per dataset is exactly the cost being avoided.
+
+    ``refresh`` forces a live re-read, for the end-of-suite check that the build did not move
+    underneath the run.
     """
+    global _METAGRAPH_CACHE
+    if _METAGRAPH_CACHE is not None and not refresh:
+        return _METAGRAPH_CACHE
+    result = _fetch_metagraph_uncached()
+    _METAGRAPH_CACHE = result
+    return result
+
+
+def _fetch_metagraph_uncached() -> dict[str, Any]:
     try:
         import requests
 

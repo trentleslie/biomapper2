@@ -195,6 +195,39 @@ def test_kg_provenance_survives_an_unreachable_metagraph(monkeypatch):
     assert "error" in prov["kg_metagraph"]
 
 
+def test_metagraph_is_fetched_once_per_process(monkeypatch):
+    """A 10-dataset suite must not pay the probe timeout ten times over."""
+    monkeypatch.setattr(runner_mod, "_METAGRAPH_CACHE", None)
+    calls = []
+    import requests
+
+    def _counting_get(url, timeout=None):
+        calls.append(url)
+        return _fake_get(_METAGRAPH)(url, timeout)
+
+    monkeypatch.setattr(requests, "get", _counting_get)
+
+    for _ in range(3):
+        runner_mod._fetch_metagraph()
+    assert len([u for u in calls if "metagraph" in u]) == 1  # cached after the first
+
+
+def test_metagraph_refresh_bypasses_the_cache(monkeypatch):
+    """The end-of-suite drift check needs a genuinely fresh read, not the cached one."""
+    monkeypatch.setattr(runner_mod, "_METAGRAPH_CACHE", None)
+    calls = []
+    import requests
+
+    def _counting_get(url, timeout=None):
+        calls.append(url)
+        return _fake_get(_METAGRAPH)(url, timeout)
+
+    monkeypatch.setattr(requests, "get", _counting_get)
+    runner_mod._fetch_metagraph()
+    runner_mod._fetch_metagraph(refresh=True)
+    assert len([u for u in calls if "metagraph" in u]) == 2
+
+
 def test_kg_provenance_makes_no_network_call_by_default(monkeypatch):
     """Manifest construction stays pure so the offline unit suite never touches the network."""
     import requests

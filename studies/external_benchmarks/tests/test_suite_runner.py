@@ -185,7 +185,11 @@ def test_suite_pins_record_the_graph_build_on_an_unattended_run(monkeypatch, tmp
     monkeypatch.setattr(
         runner_mod,
         "_fetch_metagraph",
-        lambda: {"graph": "kraken", "version": "2.0.1", "summary": {"total_nodes": 7, "total_edges": 9}},
+        lambda refresh=False: {
+            "graph": "kraken",
+            "version": "2.0.1",
+            "summary": {"total_nodes": 7, "total_edges": 9},
+        },
     )
     monkeypatch.setattr(runner_mod, "KESTREL_API_URL", "http://kg.invalid/api")
 
@@ -198,6 +202,53 @@ def test_suite_pins_record_the_graph_build_on_an_unattended_run(monkeypatch, tmp
     pins = result["manifest"]["pins"]
     assert pins["kg_snapshot"] == "kraken 2.0.1 (7n/9e)"  # derived from the graph, not typed by hand
     assert pins["kg_metagraph"]["version"] == "2.0.1"
+
+
+def test_suite_flags_a_kg_that_moved_mid_run(monkeypatch, tmp_path):
+    """Pins are sampled BEFORE the datasets run; a redeploy mid-suite must not be attributed silently."""
+    from studies.external_benchmarks import runner as runner_mod
+
+    builds = [
+        {"graph": "kraken", "version": "2.0.1", "summary": {"total_nodes": 7, "total_edges": 9}},
+        {"graph": "kraken", "version": "2.0.2", "summary": {"total_nodes": 8, "total_edges": 9}},
+    ]
+    seen = {"n": 0}
+
+    def _shifting(refresh=False):
+        i = min(seen["n"], len(builds) - 1)
+        seen["n"] += 1
+        return builds[i]
+
+    monkeypatch.delenv("KG_SNAPSHOT", raising=False)
+    monkeypatch.setattr(runner_mod, "_fetch_metagraph", _shifting)
+
+    result = run_mod.run_suite(
+        out_dir=tmp_path,
+        datasets=["alpha"],
+        runners={"alpha": _fake_runner("alpha")},
+        run_gate_first=False,
+    )
+    m = result["manifest"]
+    assert m["pins"]["kg_metagraph"]["version"] == "2.0.1"  # pinned to the build that ran the datasets
+    assert m["kg_stable_during_run"] is False
+    assert m["kg_metagraph_at_end"]["version"] == "2.0.2"
+
+
+def test_suite_reports_a_stable_kg_when_the_build_did_not_move(monkeypatch, tmp_path):
+    from studies.external_benchmarks import runner as runner_mod
+
+    build = {"graph": "kraken", "version": "2.0.1", "summary": {"total_nodes": 7, "total_edges": 9}}
+    monkeypatch.delenv("KG_SNAPSHOT", raising=False)
+    monkeypatch.setattr(runner_mod, "_fetch_metagraph", lambda refresh=False: build)
+
+    result = run_mod.run_suite(
+        out_dir=tmp_path,
+        datasets=["alpha"],
+        runners={"alpha": _fake_runner("alpha")},
+        run_gate_first=False,
+    )
+    assert result["manifest"]["kg_stable_during_run"] is True
+    assert "kg_metagraph_at_end" not in result["manifest"]  # only recorded when it actually moved
 
 
 # --------------------------------------------------------------------------------------------------
