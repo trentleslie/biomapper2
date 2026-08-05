@@ -1,7 +1,7 @@
 ---
 title: "feat: Cross-cohort metabolomics harmonization benchmark (NECS/Arivale, NECS/LLFS)"
 type: feat
-status: active
+status: blocked-on-gate
 date: 2026-08-04
 origin: docs/superpowers/specs/2026-08-04-cross-cohort-harmonization-benchmark-design.md
 reviewed: 2026-08-04
@@ -260,7 +260,17 @@ under test.
 
 ## Implementation Units
 
-- [ ] **Unit 0: Sizing gate for the precision pair**
+- [x] **Unit 0: Sizing gate for the precision pair. RAN 2026-08-04. RESULT: STOP.**
+
+> **The precision claim is withdrawn.** Adjudicating the 11 name-match conflicts through an
+> independent third path (PubChem name lookup, used by neither side of the original comparison)
+> found **9 of 11 are NECS gold defects, not baseline errors**. Arm B's real error rate is 1 in 562
+> verifiable pairs (99.8%), leaving no measurable headroom and a single discordant pair, which no
+> test can use. Full result and the defect table:
+> `~/external_benchmark_runs/cohort_panels_20260804/UNIT0_GATE_RESULT.md`.
+>
+> **Units 1 through 7 are on hold pending a decision on the restaged claim.** The gate worked: seven
+> units were not built on a claim that does not exist.
 
 **Goal:** Establish, before any code is written, that the hardened adjudicable subset for NECS/Arivale
 is large enough to support a precision claim.
