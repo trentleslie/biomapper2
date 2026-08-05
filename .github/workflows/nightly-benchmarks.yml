@@ -45,8 +45,14 @@ jobs:
         with:
           python-version: '3.12'
 
+      # Use the official pinned action rather than piping astral.sh/uv/install.sh straight into sh:
+      # this job holds whatever KESTREL_* credentials are configured, so an unpinned remote installer
+      # is an avoidable supply-chain exposure. NOTE: .github/workflows/ci.yml still uses the curl|sh
+      # form and deserves the same treatment in its own pass.
       - name: Install uv
-        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+        uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.12.1'  # pinned: this run's numbers should be attributable to a known toolchain
 
       - name: Install dependencies
         run: uv sync --all-groups

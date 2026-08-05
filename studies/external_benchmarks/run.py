@@ -1491,10 +1491,23 @@ def orchestrate_nlmgene(
     }
 
 
-# The self-sourcing benchmarks (pinned default source, runnable unattended). Datasets that require a
-# hand-passed --source (refmet/lmsd/srm1950/pham/provided-id/hajjar) are intentionally excluded from
-# the default suite and reported as skipped by the CLI, never silently dropped.
+# The self-sourcing benchmarks (pinned default source, runnable unattended).
 SUITE_DATASETS: list[str] = ["metabench", "necs", "hgnc", "metaboliteannotator", "metlinkr"]
+
+# Everything else the CLI can run, with the reason it is NOT in the unattended suite. These are
+# written into the manifest as status="skipped", so a reader can tell a deliberate exclusion from a
+# dataset that fell out of the registry by accident — the two look identical if skips are simply
+# omitted. Keep this exhaustive: every CLI dataset belongs in exactly one of these two lists.
+SUITE_SKIPPED: dict[str, str] = {
+    "provided-id": "requires a hand-passed --source",
+    "refmet": "requires a hand-passed --source",
+    "lmsd": "requires a hand-passed --source",
+    "swisslipids": "requires a hand-passed --source",
+    "srm1950": "requires a hand-passed --source",
+    "pham": "requires a hand-passed --source",
+    "hajjar": "requires a hand-passed --supplement",
+    "nlmgene": "self-sourcing, but not yet wired into the suite registry",
+}
 
 
 def _suite_runners() -> dict[str, Any]:
@@ -1566,6 +1579,12 @@ def run_suite(
         except Exception as exc:  # noqa: BLE001 — a single failing benchmark must not abort the suite
             results.append({"dataset": key, "status": "failed", "error": f"{type(exc).__name__}: {exc}"})
 
+    # Record the deliberately-excluded datasets so the manifest covers every CLI dataset. A key that
+    # was explicitly requested above is already accounted for and must not be double-listed.
+    for key, reason in SUITE_SKIPPED.items():
+        if key not in datasets:
+            results.append({"dataset": key, "status": "skipped", "reason": reason})
+
     manifest = {
         "suite_out_dir": str(suite_dir),
         "created": _dt.datetime.now(_dt.timezone.utc).strftime("%Y%m%dT%H%M%SZ"),
@@ -1573,6 +1592,7 @@ def run_suite(
         "datasets": results,
         "n_ok": sum(1 for r in results if r["status"] == "ok"),
         "n_failed": sum(1 for r in results if r["status"] == "failed"),
+        "n_skipped": sum(1 for r in results if r["status"] == "skipped"),
     }
     (suite_dir / "suite_manifest.json").write_text(json.dumps(manifest, indent=2))
     return {"out_dir": str(suite_dir), "manifest": manifest, "results": results}
@@ -1750,10 +1770,19 @@ def main() -> None:
         out = Path(args.out) if args.out else None
         result = run_suite(out_dir=out, run_gate_first=not args.no_gate)
         m = result["manifest"]
-        print(f"Saved benchmark suite to {result['out_dir']} ({m['n_ok']} ok, {m['n_failed']} failed).")
+        print(
+            f"Saved benchmark suite to {result['out_dir']} "
+            f"({m['n_ok']} ok, {m['n_failed']} failed, {m.get('n_skipped', 0)} skipped)."
+        )
         for d in m["datasets"]:
             if d["status"] != "ok":
                 print(f"  - {d['dataset']}: {d['status']}" + (f" ({d.get('error', d.get('reason', ''))})"))
+        # Exit non-zero on a failed benchmark so the nightly can actually go red. run_suite swallows
+        # per-dataset exceptions to keep the manifest complete, which otherwise leaves a fully broken
+        # suite indistinguishable from a green one. The workflow's upload step is `if: always()`, so
+        # the manifest and partial results are still preserved. A deliberate skip is NOT a failure.
+        if m["n_failed"]:
+            raise SystemExit(1)
         return
 
     if args.command == "provided-id":
