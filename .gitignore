@@ -52,6 +52,10 @@ data/**/*.json
 !studies/northstar_e2e/data/suhre2010_canonical.csv
 !studies/northstar_e2e/data/kegg_compound_pathway.tsv
 
+# Analysis artifacts that back numbers asserted in source comments. These MUST stay tracked --
+# a blanket *.json ignore is exactly how a number ends up cited with no artifact behind it.
+!studies/analysis/results/*.json
+
 # Other app-specific items
 cache/
 .env

@@ -1,0 +1,467 @@
+{
+  "analysis": "off_category_audit",
+  "generated_utc": "2026-08-05T23:21:22.409171+00:00",
+  "regenerates": "the off-category numbers asserted in src/biomapper2/config.py (CATEGORY_ACCEPTED_ROOTS docstring)",
+  "pinned_input": {
+    "suite_dir": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z",
+    "suite_created": "20260805T044414Z",
+    "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)",
+    "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+    "biolink_version": "4.2.5",
+    "backend": "https://kestrel.krakenkg.com/api",
+    "chebi_node_count": 202220,
+    "kg_stable_during_run": true,
+    "n_manifests_checked": 21,
+    "manifest_agreement": {
+      "biolink_version": [
+        "4.2.5"
+      ],
+      "git_sha": [
+        "d05956459ece9dffbc737250df98d2119c2eb0e6"
+      ],
+      "kg_snapshot": [
+        "kraken 2.0.1 (14683250n/92233909e)",
+        "unrecorded"
+      ]
+    }
+  },
+  "definition": {
+    "off_category": "non-null chosen_kg_id AND node.categories has empty intersection with descendants(biolink:ChemicalEntity)",
+    "failure_open": "empty/missing categories, or a pure top-of-hierarchy sentinel (['biolink:Entity', 'biolink:NamedThing']), counted as ON-category",
+    "acceptance_root": "biolink:ChemicalEntity",
+    "acceptance_set": [
+      "biolink:ChemicalEntity",
+      "biolink:ChemicalMixture",
+      "biolink:ComplexMolecularMixture",
+      "biolink:Drug",
+      "biolink:EnvironmentalFoodContaminant",
+      "biolink:Food",
+      "biolink:FoodAdditive",
+      "biolink:MolecularEntity",
+      "biolink:MolecularMixture",
+      "biolink:NucleicAcidEntity",
+      "biolink:ProcessedMaterial",
+      "biolink:SmallMolecule"
+    ],
+    "acceptance_set_size": 12,
+    "biolink_toolkit_source": "biomapper2.biolink_client.BiolinkClient.get_descendants",
+    "population_note": "one row per (input row, target vocabulary); metlinkr contributes 5 target-vocab files carrying identical resolutions, so its commits are 5x-weighted"
+  },
+  "per_dataset": {
+    "metlinkr": {
+      "arm": "metabolite",
+      "n_files": 5,
+      "n_rows_with_commit": 7060,
+      "n_off_category": 1070,
+      "pct_off_category": 15.16,
+      "n_failure_open": 10
+    },
+    "necs": {
+      "arm": "metabolite",
+      "n_files": 1,
+      "n_rows_with_commit": 1488,
+      "n_off_category": 65,
+      "pct_off_category": 4.37,
+      "n_failure_open": 0
+    },
+    "refmet": {
+      "arm": "metabolite",
+      "n_files": 1,
+      "n_rows_with_commit": 1500,
+      "n_off_category": 0,
+      "pct_off_category": 0.0,
+      "n_failure_open": 0
+    },
+    "srm1950": {
+      "arm": "metabolite",
+      "n_files": 1,
+      "n_rows_with_commit": 1058,
+      "n_off_category": 3,
+      "pct_off_category": 0.28,
+      "n_failure_open": 0
+    },
+    "lmsd": {
+      "arm": "metabolite",
+      "n_files": 1,
+      "n_rows_with_commit": 1499,
+      "n_off_category": 0,
+      "pct_off_category": 0.0,
+      "n_failure_open": 0
+    },
+    "hgnc": {
+      "arm": "gene_control",
+      "n_files": 3,
+      "n_rows_with_commit": 4476,
+      "n_off_category": 4197,
+      "pct_off_category": 93.77,
+      "n_failure_open": 0
+    }
+  },
+  "per_file": {
+    "metlinkr/metlinkr-comets_CHEBI_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1412,
+      "n_off_category": 214,
+      "pct_off_category": 15.16,
+      "n_failure_open": 2
+    },
+    "metlinkr/metlinkr-comets_HMDB_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1412,
+      "n_off_category": 214,
+      "pct_off_category": 15.16,
+      "n_failure_open": 2
+    },
+    "metlinkr/metlinkr-comets_KEGG_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1412,
+      "n_off_category": 214,
+      "pct_off_category": 15.16,
+      "n_failure_open": 2
+    },
+    "metlinkr/metlinkr-comets_PUBCHEM_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1412,
+      "n_off_category": 214,
+      "pct_off_category": 15.16,
+      "n_failure_open": 2
+    },
+    "metlinkr/metlinkr-comets_REFMET_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1412,
+      "n_off_category": 214,
+      "pct_off_category": 15.16,
+      "n_failure_open": 2
+    },
+    "necs/necs-metabolon_CHEBI_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1488,
+      "n_off_category": 65,
+      "pct_off_category": 4.37,
+      "n_failure_open": 0
+    },
+    "refmet/refmet_CHEBI_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1500,
+      "n_off_category": 0,
+      "pct_off_category": 0.0,
+      "n_failure_open": 0
+    },
+    "srm1950/srm1950_CHEBI_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1058,
+      "n_off_category": 3,
+      "pct_off_category": 0.28,
+      "n_failure_open": 0
+    },
+    "lmsd/lmsd_CHEBI_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1499,
+      "n_off_category": 0,
+      "pct_off_category": 0.0,
+      "n_failure_open": 0
+    },
+    "hgnc/hgnc-complete-set_ENSEMBL_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1492,
+      "n_off_category": 1399,
+      "pct_off_category": 93.77,
+      "n_failure_open": 0
+    },
+    "hgnc/hgnc-complete-set_NCBIGene_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1492,
+      "n_off_category": 1399,
+      "pct_off_category": 93.77,
+      "n_failure_open": 0
+    },
+    "hgnc/hgnc-complete-set_UniProtKB_MAPPED_d_mapped.tsv": {
+      "n_rows_with_commit": 1492,
+      "n_off_category": 1399,
+      "pct_off_category": 93.77,
+      "n_failure_open": 0
+    }
+  },
+  "metabolite_total": {
+    "datasets": [
+      "metlinkr",
+      "necs",
+      "refmet",
+      "srm1950",
+      "lmsd"
+    ],
+    "n_rows_with_commit": 12605,
+    "n_off_category": 1138,
+    "pct_off_category": 9.03,
+    "n_failure_open": 10,
+    "n_off_category_refused_by_validator": 1138,
+    "n_no_chemical_category_incl_failure_open": 1148,
+    "pct_no_chemical_category_incl_failure_open": 9.11
+  },
+  "gene_control": {
+    "datasets": [
+      "hgnc"
+    ],
+    "n_rows_with_commit": 4476,
+    "n_off_category": 4197,
+    "n_failure_open": 0
+  },
+  "off_category_composition_by_category": {
+    "biolink:PhenotypicFeature": 692,
+    "biolink:Protein": 362,
+    "biolink:Gene": 209,
+    "biolink:InformationContentEntity": 35,
+    "biolink:CellLine": 10,
+    "biolink:OrganismTaxon": 10,
+    "biolink:BiologicalEntity": 6,
+    "biolink:AnatomicalEntity": 5,
+    "biolink:Phenomenon": 5,
+    "biolink:DiseaseOrPhenotypicFeature": 5,
+    "biolink:ClinicalAttribute": 1
+  },
+  "off_category_composition_by_category_set": {
+    "biolink:PhenotypicFeature": 692,
+    "biolink:Gene|biolink:Protein": 202,
+    "biolink:Protein": 160,
+    "biolink:InformationContentEntity": 35,
+    "biolink:CellLine": 10,
+    "biolink:OrganismTaxon": 10,
+    "biolink:Gene": 7,
+    "biolink:BiologicalEntity": 6,
+    "biolink:AnatomicalEntity": 5,
+    "biolink:Phenomenon": 5,
+    "biolink:DiseaseOrPhenotypicFeature": 5,
+    "biolink:ClinicalAttribute": 1
+  },
+  "protein_gene_refusal_cost": {
+    "population": "protein/gene-typed off-category commits",
+    "definition": "adjudicated by gold InChIKey first block IN the SET of the committed node's InChIKey first blocks, falling back to gold database identifier IN the node's equivalent_ids",
+    "n_population": 369,
+    "counts": {
+      "UNRESOLVABLE": 367,
+      "WRONG_AND_REFUSED": 2
+    },
+    "pct_of_population": {
+      "UNRESOLVABLE": 99.46,
+      "WRONG_AND_REFUSED": 0.54
+    },
+    "pct_of_adjudicable": {
+      "CORRECT_BUT_REFUSED": 0.0,
+      "WRONG_AND_REFUSED": 100.0
+    },
+    "n_adjudicable": 2,
+    "gold_source_counts": {
+      "none": 367,
+      "gold_database_id": 2
+    },
+    "unresolvable_reasons": {
+      "node_carries_no_chemical_identifier": 367
+    },
+    "refusal_provably_costless": {
+      "n": 369,
+      "pct_of_population": 100.0,
+      "note": "WRONG_AND_REFUSED plus rows whose committed node carries no chemical identifier in any namespace (so it cannot be the right compound under a wrong type)"
+    },
+    "by_category": {
+      "biolink:Gene": {
+        "UNRESOLVABLE": 207,
+        "WRONG_AND_REFUSED": 2
+      },
+      "biolink:Protein": {
+        "UNRESOLVABLE": 360,
+        "WRONG_AND_REFUSED": 2
+      }
+    },
+    "by_dataset": {
+      "metlinkr": {
+        "UNRESOLVABLE": 365
+      },
+      "necs": {
+        "WRONG_AND_REFUSED": 1,
+        "UNRESOLVABLE": 2
+      },
+      "srm1950": {
+        "WRONG_AND_REFUSED": 1
+      }
+    },
+    "examples_correct_but_refused": []
+  },
+  "all_off_category_refusal_cost": {
+    "population": "all off-category commits, metabolite arm",
+    "definition": "adjudicated by gold InChIKey first block IN the SET of the committed node's InChIKey first blocks, falling back to gold database identifier IN the node's equivalent_ids",
+    "n_population": 1138,
+    "counts": {
+      "UNRESOLVABLE": 1006,
+      "WRONG_AND_REFUSED": 132
+    },
+    "pct_of_population": {
+      "UNRESOLVABLE": 88.4,
+      "WRONG_AND_REFUSED": 11.6
+    },
+    "pct_of_adjudicable": {
+      "CORRECT_BUT_REFUSED": 0.0,
+      "WRONG_AND_REFUSED": 100.0
+    },
+    "n_adjudicable": 132,
+    "gold_source_counts": {
+      "none": 1006,
+      "gold_database_id": 132
+    },
+    "unresolvable_reasons": {
+      "node_carries_no_chemical_identifier": 1001,
+      "row_has_no_gold_structure_or_id": 5
+    },
+    "refusal_provably_costless": {
+      "n": 1133,
+      "pct_of_population": 99.56,
+      "note": "WRONG_AND_REFUSED plus rows whose committed node carries no chemical identifier in any namespace (so it cannot be the right compound under a wrong type)"
+    },
+    "by_category": {
+      "biolink:AnatomicalEntity": {
+        "UNRESOLVABLE": 5
+      },
+      "biolink:BiologicalEntity": {
+        "UNRESOLVABLE": 5,
+        "WRONG_AND_REFUSED": 1
+      },
+      "biolink:CellLine": {
+        "UNRESOLVABLE": 10
+      },
+      "biolink:ClinicalAttribute": {
+        "WRONG_AND_REFUSED": 1
+      },
+      "biolink:DiseaseOrPhenotypicFeature": {
+        "UNRESOLVABLE": 5
+      },
+      "biolink:Gene": {
+        "UNRESOLVABLE": 207,
+        "WRONG_AND_REFUSED": 2
+      },
+      "biolink:InformationContentEntity": {
+        "UNRESOLVABLE": 35
+      },
+      "biolink:OrganismTaxon": {
+        "UNRESOLVABLE": 10
+      },
+      "biolink:Phenomenon": {
+        "UNRESOLVABLE": 5
+      },
+      "biolink:PhenotypicFeature": {
+        "UNRESOLVABLE": 564,
+        "WRONG_AND_REFUSED": 128
+      },
+      "biolink:Protein": {
+        "UNRESOLVABLE": 360,
+        "WRONG_AND_REFUSED": 2
+      }
+    },
+    "by_dataset": {
+      "metlinkr": {
+        "UNRESOLVABLE": 970,
+        "WRONG_AND_REFUSED": 100
+      },
+      "necs": {
+        "WRONG_AND_REFUSED": 29,
+        "UNRESOLVABLE": 36
+      },
+      "srm1950": {
+        "WRONG_AND_REFUSED": 3
+      }
+    },
+    "examples_correct_but_refused": []
+  },
+  "adjudicator_positive_control": {
+    "population": "ON-category commits, metabolite arm (positive control)",
+    "definition": "adjudicated by gold InChIKey first block IN the SET of the committed node's InChIKey first blocks, falling back to gold database identifier IN the node's equivalent_ids",
+    "n_population": 11467,
+    "counts": {
+      "UNRESOLVABLE": 2974,
+      "CORRECT_BUT_REFUSED": 4434,
+      "WRONG_AND_REFUSED": 4059
+    },
+    "pct_of_population": {
+      "UNRESOLVABLE": 25.94,
+      "CORRECT_BUT_REFUSED": 38.67,
+      "WRONG_AND_REFUSED": 35.4
+    },
+    "pct_of_adjudicable": {
+      "CORRECT_BUT_REFUSED": 52.21,
+      "WRONG_AND_REFUSED": 47.79
+    },
+    "n_adjudicable": 8493,
+    "gold_source_counts": {
+      "none": 2974,
+      "gold_database_id": 5463,
+      "inchikey_first_block": 3030
+    },
+    "unresolvable_reasons": {
+      "row_has_no_gold_structure_or_id": 2782,
+      "node_carries_no_chemical_identifier": 187,
+      "gold_present_but_node_not_comparable": 5
+    },
+    "refusal_provably_costless": {
+      "n": 8680,
+      "pct_of_population": 75.7,
+      "note": "WRONG_AND_REFUSED plus rows whose committed node carries no chemical identifier in any namespace (so it cannot be the right compound under a wrong type)"
+    },
+    "by_category": {
+      "biolink:ChemicalEntity": {
+        "UNRESOLVABLE": 302,
+        "WRONG_AND_REFUSED": 63,
+        "CORRECT_BUT_REFUSED": 2
+      },
+      "biolink:Drug": {
+        "UNRESOLVABLE": 402,
+        "WRONG_AND_REFUSED": 807,
+        "CORRECT_BUT_REFUSED": 787
+      },
+      "biolink:MolecularEntity": {
+        "UNRESOLVABLE": 10
+      },
+      "biolink:MolecularMixture": {
+        "UNRESOLVABLE": 6,
+        "WRONG_AND_REFUSED": 8,
+        "CORRECT_BUT_REFUSED": 2
+      },
+      "biolink:NamedThing": {
+        "UNRESOLVABLE": 10
+      },
+      "biolink:NucleicAcidEntity": {
+        "CORRECT_BUT_REFUSED": 32,
+        "WRONG_AND_REFUSED": 20,
+        "UNRESOLVABLE": 25
+      },
+      "biolink:OrganismTaxon": {
+        "WRONG_AND_REFUSED": 11
+      },
+      "biolink:Protein": {
+        "CORRECT_BUT_REFUSED": 9,
+        "UNRESOLVABLE": 15,
+        "WRONG_AND_REFUSED": 22
+      },
+      "biolink:SmallMolecule": {
+        "UNRESOLVABLE": 2635,
+        "CORRECT_BUT_REFUSED": 4432,
+        "WRONG_AND_REFUSED": 3987
+      }
+    },
+    "by_dataset": {
+      "lmsd": {
+        "WRONG_AND_REFUSED": 1285,
+        "CORRECT_BUT_REFUSED": 214
+      },
+      "metlinkr": {
+        "UNRESOLVABLE": 2515,
+        "CORRECT_BUT_REFUSED": 1795,
+        "WRONG_AND_REFUSED": 1680
+      },
+      "necs": {
+        "CORRECT_BUT_REFUSED": 716,
+        "WRONG_AND_REFUSED": 248,
+        "UNRESOLVABLE": 459
+      },
+      "refmet": {
+        "CORRECT_BUT_REFUSED": 1327,
+        "WRONG_AND_REFUSED": 173
+      },
+      "srm1950": {
+        "CORRECT_BUT_REFUSED": 382,
+        "WRONG_AND_REFUSED": 673
+      }
+    },
+    "verdict_label_note": "these rows were NOT refused; read CORRECT_BUT_REFUSED here as simply 'gold agrees with the committed node'. The point of this block is only that the adjudicator can return that verdict."
+  },
+  "nodes_absent_from_get_nodes": {
+    "n_distinct": 0,
+    "curies": []
+  }
+}

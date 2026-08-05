@@ -82,7 +82,16 @@ CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
 # core/annotators/kestrel_hybrid.py:_is_on_category). Hybrid search ranks across categories as well as
 # namespaces, so a metabolite query can commit a node that is not a molecule at all — measured over the
 # pinned baseline, 1,148 of 12,605 metabolite-arm commits (9.1%) carried no chemical category, led by
-# 692 biolink:PhenotypicFeature (EFO "…measurement" nodes) and 362 Protein/Gene.
+# 692 biolink:PhenotypicFeature (EFO "…measurement" nodes) and 362 Protein/Gene. Of that 1,148, the
+# validator refuses 1,138 — the other 10 are pure-NamedThing typing gaps that fail open below.
+#
+# These numbers are not an assertion: regenerate them with `studies/analysis/off_category_audit.py`
+# (artifact: studies/analysis/results/off_category_audit_suite_20260805T033340Z.json). That audit also
+# measures what the guard *costs*: of the 1,138 refusals, 0 were the right compound under a wrong type
+# (132 adjudicable, all wrong; 1,001 committed to nodes carrying no chemical identifier in any
+# namespace). The peptide-metabolite worry — glutathione/carnosine/gamma-glutamyl-X being the right
+# molecule typed as a Protein — does not materialize here: every such name in the suite committed to a
+# biolink:SmallMolecule node and is never seen by this guard.
 #
 # Semantics, and note the two sides are expanded *separately*:
 #   - The KEY is expanded via get_descendants so subcategories of a configured job category inherit the
