@@ -3,6 +3,11 @@ name: Nightly Benchmarks
 # The external-benchmark suite makes live Kraken calls ($ / minutes), so it runs on a schedule and
 # on-demand ONLY — never per-PR. It drives every self-sourcing benchmark into one timestamped suite
 # dir and uploads the pinned manifest so the preprint's numbers are reproducible as code/Kraken move.
+#
+# DEPLOYMENT NOTE: GitHub only honours `schedule:` and `workflow_dispatch:` for the copy of this file
+# on the repository's DEFAULT branch. Merging it to a non-default branch (e.g. `dev`) installs the
+# file but the nightly will never fire and no "Run workflow" button appears. This must reach the
+# default branch of whichever repo is meant to run it (org default = `main`).
 on:
   schedule:
     - cron: '0 8 * * *'  # 08:00 UTC nightly (~00:00-01:00 PT)
