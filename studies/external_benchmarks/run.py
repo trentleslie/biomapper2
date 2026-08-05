@@ -1491,22 +1491,34 @@ def orchestrate_nlmgene(
     }
 
 
-# The self-sourcing benchmarks (pinned default source, runnable unattended).
-SUITE_DATASETS: list[str] = ["metabench", "necs", "hgnc", "metaboliteannotator", "metlinkr"]
+# The benchmarks the suite runs unattended. Every one of these has a pinned source the runner can
+# reach on its own: either a ``source_url`` in config, or (nlmgene) a pinned FTP corpus fetch.
+SUITE_DATASETS: list[str] = [
+    "metabench",
+    "necs",
+    "hgnc",
+    "metaboliteannotator",
+    "metlinkr",
+    "nlmgene",
+    "refmet",
+    "srm1950",
+    "lmsd",
+    "swisslipids",
+]
 
 # Everything else the CLI can run, with the reason it is NOT in the unattended suite. These are
 # written into the manifest as status="skipped", so a reader can tell a deliberate exclusion from a
 # dataset that fell out of the registry by accident — the two look identical if skips are simply
 # omitted. Keep this exhaustive: every CLI dataset belongs in exactly one of these two lists.
+#
+# What remains here is genuinely un-sourceable, not merely unwired: pham's "source" is a MetaNetX FTP
+# path that has to be reconstructed into a table by hand, hajjar's config source_url is empty (the
+# supplement is passed in), and provided-id is a dataset FAMILY selected by --dataset whose backbones
+# are multi-hundred-MB bulk downloads. Wiring any of these means pinning a real artifact first.
 SUITE_SKIPPED: dict[str, str] = {
-    "provided-id": "requires a hand-passed --source",
-    "refmet": "requires a hand-passed --source",
-    "lmsd": "requires a hand-passed --source",
-    "swisslipids": "requires a hand-passed --source",
-    "srm1950": "requires a hand-passed --source",
-    "pham": "requires a hand-passed --source",
-    "hajjar": "requires a hand-passed --supplement",
-    "nlmgene": "self-sourcing, but not yet wired into the suite registry",
+    "provided-id": "a --dataset family over bulk backbones; needs a pinned artifact, not a URL",
+    "pham": "source is a MetaNetX FTP path requiring hand reconstruction, not a fetchable file",
+    "hajjar": "no pinned source_url; the supplement is hand-passed via --supplement",
 }
 
 
@@ -1517,7 +1529,7 @@ def _suite_runners() -> dict[str, Any]:
     per-dataset subcommand uses), so ``all`` runs unattended with no --source. Injectable into
     run_suite, so this real wiring stays out of the offline aggregation tests.
     """
-    from .config import HGNC, METABENCH, NAME_HIT_REGISTRY, NECS
+    from .config import HGNC, LMSD, METABENCH, NAME_HIT_REGISTRY, NECS, NLMGENE, REFMET, SRM1950, SWISSLIPIDS
 
     def _metabench(out_dir, run_gate_first):
         return orchestrate_metabench(source=METABENCH.source_url, out_dir=out_dir, run_gate_first=run_gate_first)
@@ -1535,12 +1547,39 @@ def _suite_runners() -> dict[str, Any]:
     def _metlinkr(out_dir, run_gate_first):
         return orchestrate_metlinkr(source="fetch", out_dir=out_dir, run_gate_first=run_gate_first)
 
+    def _nlmgene(out_dir, run_gate_first):
+        # No source_url to hand through: the corpus is fetched from the pinned FTP, same as the
+        # subcommand does when --source is omitted.
+        from .adapters.nlmgene import fetch_corpus
+
+        return orchestrate_nlmgene(source=fetch_corpus(NLMGENE), out_dir=out_dir, run_gate_first=run_gate_first)
+
+    # refmet/srm1950/lmsd/swisslipids take the pinned URL string directly: the adapters stream (or,
+    # for srm1950, fetch) it, so the suite needs no local file even though the subcommands make
+    # --source required.
+    def _refmet(out_dir, run_gate_first):
+        return orchestrate_refmet(source=REFMET.source_url, out_dir=out_dir, run_gate_first=run_gate_first)
+
+    def _srm1950(out_dir, run_gate_first):
+        return orchestrate_srm1950(source=SRM1950.source_url, out_dir=out_dir, run_gate_first=run_gate_first)
+
+    def _lmsd(out_dir, run_gate_first):
+        return orchestrate_lmsd(source=LMSD.source_url, out_dir=out_dir, run_gate_first=run_gate_first)
+
+    def _swisslipids(out_dir, run_gate_first):
+        return orchestrate_swisslipids(source=SWISSLIPIDS.source_url, out_dir=out_dir, run_gate_first=run_gate_first)
+
     return {
         "metabench": _metabench,
         "necs": _necs,
         "hgnc": _hgnc,
         "metaboliteannotator": _metaboliteannotator,
         "metlinkr": _metlinkr,
+        "nlmgene": _nlmgene,
+        "refmet": _refmet,
+        "srm1950": _srm1950,
+        "lmsd": _lmsd,
+        "swisslipids": _swisslipids,
     }
 
 
@@ -1554,7 +1593,7 @@ def run_suite(
     """Drive every self-sourcing benchmark into ONE timestamped suite dir + an aggregate manifest.
 
     One bad benchmark never aborts the run: a runner that raises is recorded ``status="failed"`` and
-    the suite continues, so a nightly provenance run always produces a complete manifest of what
+    the suite continues, so a scheduled provenance run always produces a complete manifest of what
     passed and what broke. ``runners`` defaults to the CLI wiring and is injectable for offline tests.
     """
     runners = _suite_runners() if runners is None else runners
@@ -1739,7 +1778,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # ``all``: drive every self-sourcing benchmark (pinned default source, no --source needed) into
     # ONE timestamped suite dir with an aggregate manifest. Datasets that require a hand-passed
-    # --source are reported as skipped, never silently dropped. This is the nightly-CI entrypoint.
+    # --source are reported as skipped, never silently dropped. This is the scheduled-CI entrypoint.
     al = sub.add_parser("all", help="run the whole self-sourcing benchmark suite into one timestamped dir")
     al.add_argument("--out", default=None, help="override suite output dir (default: timestamped runs/suite_*/)")
     al.add_argument("--no-gate", action="store_true", help="skip the Phase-0 gate on every dataset (NOT recommended)")
@@ -1777,7 +1816,7 @@ def main() -> None:
         for d in m["datasets"]:
             if d["status"] != "ok":
                 print(f"  - {d['dataset']}: {d['status']}" + (f" ({d.get('error', d.get('reason', ''))})"))
-        # Exit non-zero on a failed benchmark so the nightly can actually go red. run_suite swallows
+        # Exit non-zero on a failed benchmark so the scheduled run can actually go red. run_suite swallows
         # per-dataset exceptions to keep the manifest complete, which otherwise leaves a fully broken
         # suite indistinguishable from a green one. The workflow's upload step is `if: always()`, so
         # the manifest and partial results are still preserved. A deliberate skip is NOT a failure.

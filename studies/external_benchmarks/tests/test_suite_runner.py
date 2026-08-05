@@ -2,8 +2,9 @@
 timestamped suite dir with an aggregate manifest (backend pin + per-dataset status), so the
 preprint's numbers re-run in one invocation as the code/Kraken backend evolve.
 
-The suite is designed for unattended (nightly-CI) runs: only datasets with a pinned default source
-run by default; datasets that require a hand-passed ``--source`` are reported as skipped, never
+The suite is designed for unattended (scheduled-CI) runs: a dataset qualifies when the runner can
+reach its source on its own, whether that is a pinned ``source_url`` or a pinned corpus fetch. The
+few whose sources are not fetchable artifacts are reported as skipped with the reason, never
 silently dropped. ``run_suite`` takes an injectable ``runners`` map so the aggregation logic is
 tested offline without touching the live KG backend.
 """
@@ -100,7 +101,7 @@ def test_explicitly_requested_dataset_is_not_also_reported_skipped(tmp_path):
 
 
 # --------------------------------------------------------------------------------------------------
-# Exit status: a nightly that cannot go red is useless — a failed benchmark must fail the process.
+# Exit status: a scheduled run that cannot go red is useless — a failed benchmark must fail the process.
 # --------------------------------------------------------------------------------------------------
 def _stub_suite(monkeypatch, tmp_path, *, n_ok, n_failed, datasets):
     def _fake_suite(**kwargs):
@@ -136,7 +137,7 @@ def test_main_all_exits_zero_when_only_skips(monkeypatch, tmp_path):
         tmp_path,
         n_ok=1,
         n_failed=0,
-        datasets=[{"dataset": "refmet", "status": "skipped", "reason": "requires a hand-passed --source"}],
+        datasets=[{"dataset": "pham", "status": "skipped", "reason": "source requires hand reconstruction"}],
     )
     run_mod.main()  # a deliberate skip is not a failure
 
@@ -180,6 +181,53 @@ def test_suite_runner_routes_necs_to_orchestrator_with_pinned_source(monkeypatch
     run_mod._suite_runners()["necs"](out_dir=tmp_path, run_gate_first=False)
     assert calls["source"] == NECS.source_url  # default = pinned Metabolon supplement URL
     assert calls["run_gate_first"] is False
+
+
+@pytest.mark.parametrize(
+    "key, orchestrator, config_name",
+    [
+        ("refmet", "orchestrate_refmet", "REFMET"),
+        ("srm1950", "orchestrate_srm1950", "SRM1950"),
+        ("lmsd", "orchestrate_lmsd", "LMSD"),
+        ("swisslipids", "orchestrate_swisslipids", "SWISSLIPIDS"),
+    ],
+)
+def test_streamed_datasets_route_to_orchestrator_with_pinned_url(monkeypatch, tmp_path, key, orchestrator, config_name):
+    """These four accept the URL string directly and stream it, so the suite needs no local file."""
+    import studies.external_benchmarks.config as cfg_mod
+
+    calls: dict = {}
+
+    def _fake(**kwargs):
+        calls.update(kwargs)
+        return {"out_dir": str(tmp_path), "report": "r.md"}
+
+    monkeypatch.setattr(run_mod, orchestrator, _fake)
+    run_mod._suite_runners()[key](out_dir=tmp_path, run_gate_first=False)
+    assert calls["source"] == getattr(cfg_mod, config_name).source_url
+    assert calls["run_gate_first"] is False
+
+
+def test_nlmgene_routes_through_the_pinned_ftp_corpus_fetch(monkeypatch, tmp_path):
+    """nlmgene has no source_url to pass through: the corpus arrives via fetch_corpus()."""
+    import studies.external_benchmarks.adapters.nlmgene as nlmgene_adapter
+
+    calls: dict = {}
+    # The closure re-imports fetch_corpus at call time, so patching the module attribute takes effect.
+    monkeypatch.setattr(nlmgene_adapter, "fetch_corpus", lambda config: [("PMID1", "<xml/>")])
+
+    def _fake(**kwargs):
+        calls.update(kwargs)
+        return {"out_dir": str(tmp_path), "report": "r.md"}
+
+    monkeypatch.setattr(run_mod, "orchestrate_nlmgene", _fake)
+    run_mod._suite_runners()["nlmgene"](out_dir=tmp_path, run_gate_first=False)
+    assert list(calls["source"]) == [("PMID1", "<xml/>")]
+
+
+def test_only_genuinely_unsourceable_datasets_remain_skipped():
+    """pham/hajjar/provided-id have no fetchable pinned source; everything else should now run."""
+    assert set(run_mod.SUITE_SKIPPED) == {"provided-id", "pham", "hajjar"}
 
 
 def test_main_all_dispatches_to_run_suite_respecting_no_gate(monkeypatch, tmp_path, capsys):
