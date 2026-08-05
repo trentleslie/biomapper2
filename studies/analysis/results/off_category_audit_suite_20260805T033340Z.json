@@ -1,7 +1,12 @@
 {
   "analysis": "off_category_audit",
-  "generated_utc": "2026-08-05T23:21:22.409171+00:00",
-  "regenerates": "the off-category numbers asserted in src/biomapper2/config.py (CATEGORY_ACCEPTED_ROOTS docstring)",
+  "generated_utc": "2026-08-05T23:55:51.955442+00:00",
+  "regenerates": [
+    "src/biomapper2/config.py (CATEGORY_ACCEPTED_ROOTS docstring: off-category rate, composition, hgnc control)",
+    "src/biomapper2/core/annotators/kestrel_hybrid.py (_is_on_category docstring: namespace-whitelist cost, failure-open candidate counts)",
+    "tests/test_kestrel_hybrid_category.py (module and test docstrings)",
+    "src/biomapper2/core/resolver.py + tests/test_resolver_source_weighting.py (RefMet multi-node rate behind the D4 determinism fix)"
+  ],
   "pinned_input": {
     "suite_dir": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z",
     "suite_created": "20260805T044414Z",
@@ -46,6 +51,72 @@
     "acceptance_set_size": 12,
     "biolink_toolkit_source": "biomapper2.biolink_client.BiolinkClient.get_descendants",
     "population_note": "one row per (input row, target vocabulary); metlinkr contributes 5 target-vocab files carrying identical resolutions, so its commits are 5x-weighted"
+  },
+  "namespace_whitelist_cost": {
+    "scope": "metabolite arm, ON-category commits only (the rows the shipped guard keeps)",
+    "canonical_namespaces": [
+      "CHEBI",
+      "HMDB",
+      "RM"
+    ],
+    "n_on_category": 11467,
+    "whitelist_cost_all_namespaces": 577,
+    "whitelist_cost_excluding_LM_and_UMLS": 284,
+    "by_namespace": {
+      "LM": 195,
+      "UMLS": 98,
+      "UNII": 97,
+      "MESH": 77,
+      "PUBCHEM.COMPOUND": 52,
+      "KEGG.GLYCAN": 30,
+      "CHEMBL.COMPOUND": 10,
+      "KEGG.COMPOUND": 7,
+      "CHV": 5,
+      "NCIT": 5,
+      "ttd.target": 1
+    },
+    "headline": "a namespace whitelist would additionally destroy 577 on-category metabolite-arm commits that the category check keeps"
+  },
+  "failure_open_candidate_scan": {
+    "scope": "live /hybrid-search candidate rows for the 120 lexicographically-first metabolite-arm input names, limit=20",
+    "n_names_queried": 120,
+    "n_candidate_rows": 2400,
+    "n_empty_or_missing_categories": 0,
+    "n_pure_top_of_hierarchy_sentinel": 3,
+    "sentinel_examples": [
+      {
+        "id": "UNII:ZCA74223SV",
+        "name": ".ALPHA.-CALACORENE, (+)-",
+        "categories": [
+          "biolink:NamedThing"
+        ],
+        "score": 0.6977970004081726
+      },
+      {
+        "id": "CHV:0000035286",
+        "name": "obtuse",
+        "categories": [
+          "biolink:NamedThing"
+        ],
+        "score": 0.6273149847984314
+      },
+      {
+        "id": "PDQ:CDR0000043376",
+        "name": "GPA",
+        "categories": [
+          "biolink:NamedThing"
+        ],
+        "score": 0.6157403588294983
+      }
+    ],
+    "interpretation": "the empty/missing clause is dead code if n_empty_or_missing_categories is 0; the pure-sentinel clause is what actually fires, and it is what keeps legitimately-typed-but-underspecified metabolite nodes from being refused"
+  },
+  "refmet_multi_node_rate": {
+    "scope": "metabolite arm, rows carrying a 'metabolomics-workbench' vote",
+    "n_rows_with_refmet_vote": 8814,
+    "n_rows_refmet_contributed_multiple_nodes": 0,
+    "examples": [],
+    "interpretation": "zero here means the deterministic sort and the membership agreement test are provable no-ops on this suite -- correctness hardening for a case that does not occur yet, which is why they cannot contaminate the A/B"
   },
   "per_dataset": {
     "metlinkr": {
@@ -365,32 +436,32 @@
     "n_population": 11467,
     "counts": {
       "UNRESOLVABLE": 2974,
-      "CORRECT_BUT_REFUSED": 4434,
-      "WRONG_AND_REFUSED": 4059
+      "CORRECT_BUT_REFUSED": 4762,
+      "WRONG_AND_REFUSED": 3731
     },
     "pct_of_population": {
       "UNRESOLVABLE": 25.94,
-      "CORRECT_BUT_REFUSED": 38.67,
-      "WRONG_AND_REFUSED": 35.4
+      "CORRECT_BUT_REFUSED": 41.53,
+      "WRONG_AND_REFUSED": 32.54
     },
     "pct_of_adjudicable": {
-      "CORRECT_BUT_REFUSED": 52.21,
-      "WRONG_AND_REFUSED": 47.79
+      "CORRECT_BUT_REFUSED": 56.07,
+      "WRONG_AND_REFUSED": 43.93
     },
     "n_adjudicable": 8493,
     "gold_source_counts": {
       "none": 2974,
-      "gold_database_id": 5463,
-      "inchikey_first_block": 3030
+      "gold_database_id": 5364,
+      "inchikey_first_block": 3129
     },
     "unresolvable_reasons": {
-      "row_has_no_gold_structure_or_id": 2782,
-      "node_carries_no_chemical_identifier": 187,
+      "row_has_no_gold_structure_or_id": 2787,
+      "node_carries_no_chemical_identifier": 182,
       "gold_present_but_node_not_comparable": 5
     },
     "refusal_provably_costless": {
-      "n": 8680,
-      "pct_of_population": 75.7,
+      "n": 8675,
+      "pct_of_population": 75.65,
       "note": "WRONG_AND_REFUSED plus rows whose committed node carries no chemical identifier in any namespace (so it cannot be the right compound under a wrong type)"
     },
     "by_category": {
@@ -401,8 +472,8 @@
       },
       "biolink:Drug": {
         "UNRESOLVABLE": 402,
-        "WRONG_AND_REFUSED": 807,
-        "CORRECT_BUT_REFUSED": 787
+        "WRONG_AND_REFUSED": 483,
+        "CORRECT_BUT_REFUSED": 1111
       },
       "biolink:MolecularEntity": {
         "UNRESOLVABLE": 10
@@ -416,46 +487,47 @@
         "UNRESOLVABLE": 10
       },
       "biolink:NucleicAcidEntity": {
-        "CORRECT_BUT_REFUSED": 32,
-        "WRONG_AND_REFUSED": 20,
-        "UNRESOLVABLE": 25
+        "CORRECT_BUT_REFUSED": 37,
+        "UNRESOLVABLE": 25,
+        "WRONG_AND_REFUSED": 15
       },
       "biolink:OrganismTaxon": {
-        "WRONG_AND_REFUSED": 11
+        "CORRECT_BUT_REFUSED": 6,
+        "WRONG_AND_REFUSED": 5
       },
       "biolink:Protein": {
-        "CORRECT_BUT_REFUSED": 9,
+        "CORRECT_BUT_REFUSED": 21,
         "UNRESOLVABLE": 15,
-        "WRONG_AND_REFUSED": 22
+        "WRONG_AND_REFUSED": 10
       },
       "biolink:SmallMolecule": {
         "UNRESOLVABLE": 2635,
-        "CORRECT_BUT_REFUSED": 4432,
-        "WRONG_AND_REFUSED": 3987
+        "CORRECT_BUT_REFUSED": 4760,
+        "WRONG_AND_REFUSED": 3659
       }
     },
     "by_dataset": {
       "lmsd": {
-        "WRONG_AND_REFUSED": 1285,
-        "CORRECT_BUT_REFUSED": 214
+        "WRONG_AND_REFUSED": 1284,
+        "CORRECT_BUT_REFUSED": 215
       },
       "metlinkr": {
         "UNRESOLVABLE": 2515,
-        "CORRECT_BUT_REFUSED": 1795,
-        "WRONG_AND_REFUSED": 1680
+        "CORRECT_BUT_REFUSED": 2020,
+        "WRONG_AND_REFUSED": 1455
       },
       "necs": {
-        "CORRECT_BUT_REFUSED": 716,
-        "WRONG_AND_REFUSED": 248,
+        "CORRECT_BUT_REFUSED": 766,
+        "WRONG_AND_REFUSED": 198,
         "UNRESOLVABLE": 459
       },
       "refmet": {
-        "CORRECT_BUT_REFUSED": 1327,
-        "WRONG_AND_REFUSED": 173
+        "CORRECT_BUT_REFUSED": 1341,
+        "WRONG_AND_REFUSED": 159
       },
       "srm1950": {
-        "CORRECT_BUT_REFUSED": 382,
-        "WRONG_AND_REFUSED": 673
+        "CORRECT_BUT_REFUSED": 420,
+        "WRONG_AND_REFUSED": 635
       }
     },
     "verdict_label_note": "these rows were NOT refused; read CORRECT_BUT_REFUSED here as simply 'gold agrees with the committed node'. The point of this block is only that the adjudicator can return that verdict."

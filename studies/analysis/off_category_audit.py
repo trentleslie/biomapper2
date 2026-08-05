@@ -59,6 +59,7 @@ Results are written by default (never behind a flag); ``--out`` is an override.
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import logging
 import socket
@@ -80,7 +81,13 @@ from biomapper2.biolink_client import BiolinkClient  # noqa: E402
 
 DEFAULT_SUITE_DIR = Path("~/benchmark-runs/suite_20260805T033340Z").expanduser()
 DEFAULT_RESULTS_DIR = REPO_ROOT / "studies" / "analysis" / "results"
-DEFAULT_CACHE_PATH = REPO_ROOT / "cache" / "off_category_audit_nodes.json"
+# Cache filename encodes the fetch shape. `truncate_long_fields` was briefly True, which caps
+# equivalent_ids at 50 entries; both node_has_chemical_identifier() and inchikey_blocks() read that
+# field, so a truncated cache biases every verdict toward "no chemical identifier" -- i.e. toward
+# flattering the change. Renaming the file on a shape change makes a stale cache impossible to
+# silently reuse. (Verified not material at the time of the switch: 0 of the off-category rows were
+# truncated. The assertion in fetch_nodes now enforces that rather than trusting it.)
+DEFAULT_CACHE_PATH = REPO_ROOT / "cache" / "off_category_audit_nodes_untruncated.json"
 
 KESTREL_GET_NODES_URL = "https://kestrel.krakenkg.com/api/get-nodes"
 GET_NODES_BATCH = 200
@@ -171,6 +178,21 @@ CHEMICAL_IDENTIFIER_PREFIXES = frozenset(
 
 MAX_EXAMPLES = 25
 
+# Canonical metabolite namespaces -- mirrors CATEGORY_PREFERRED_NAMESPACES["biolink:SmallMolecule"]
+# in config.py. Used ONLY to price the namespace-whitelist mis-implementation, never as a guard.
+CANONICAL_NAMESPACES = frozenset({"CHEBI", "HMDB", "RM"})
+
+# Annotator slug whose multi-node vote D4 makes deterministic. Mirrors core/resolver.REFMET_ANNOTATOR.
+REFMET_ANNOTATOR = "metabolomics-workbench"
+
+# Candidate-row scan (the failure-open measurement). Deterministic sample size and the production
+# search limit, so the emitted counts are reproducible rather than "we looked at about 1,200 rows".
+HYBRID_SCAN_NAMES = 120
+HYBRID_SCAN_LIMIT = 20
+KESTREL_HYBRID_SEARCH_URL = "https://kestrel.krakenkg.com/api/hybrid-search"
+HYBRID_SEARCH_BATCH = 40
+HYBRID_SCAN_CATEGORY = "biolink:SmallMolecule"
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("off_category_audit")
 
@@ -199,7 +221,10 @@ def fetch_nodes(curies: list[str], cache_path: Path, *, offline: bool = False) -
             batch = missing[start : start + GET_NODES_BATCH]
             resp = session.post(
                 KESTREL_GET_NODES_URL,
-                json={"curies": batch, "slim": False, "truncate_long_fields": True},
+                # Must match production Linker.get_node_records (core/linker.py), which sends False.
+                # Truncation caps equivalent_ids at 50 (CHEBI:101278 has 628), and this audit reads
+                # that field to decide both structural agreement and "carries no chemical identifier".
+                json={"curies": batch, "slim": False, "truncate_long_fields": False},
                 timeout=GET_NODES_TIMEOUT_S,
             )
             resp.raise_for_status()
@@ -213,6 +238,48 @@ def fetch_nodes(curies: list[str], cache_path: Path, *, offline: bool = False) -
         log.info("cache now holds %d nodes", len(cache))
 
     return {c: cache.get(c) or {} for c in curies}
+
+
+def fetch_hybrid_candidates(
+    names: list[str], cache_path: Path, *, offline: bool = False, limit: int = HYBRID_SCAN_LIMIT
+) -> list[dict]:
+    """Return the flattened candidate rows /hybrid-search yields for ``names``.
+
+    Cached beside the node cache under a key that encodes the limit and category, so changing
+    either cannot silently reuse rows fetched under the old shape.
+    """
+    scan_cache_path = cache_path.with_name(cache_path.stem + f"_hybrid_l{limit}.json")
+    cache: dict[str, Any] = {}
+    if scan_cache_path.exists():
+        cache = json.loads(scan_cache_path.read_text())
+
+    missing = sorted(n for n in names if n not in cache)
+    if missing and offline:
+        raise RuntimeError(f"--offline set but {len(missing)} names are not in {scan_cache_path}")
+    if missing:
+        _force_ipv4()
+        session = requests.Session()
+        for start in range(0, len(missing), HYBRID_SEARCH_BATCH):
+            batch = missing[start : start + HYBRID_SEARCH_BATCH]
+            resp = session.post(
+                KESTREL_HYBRID_SEARCH_URL,
+                json={
+                    "search_text": batch,
+                    "limit": limit,
+                    "category_filter": HYBRID_SCAN_CATEGORY,
+                    "prefix_filter": None,
+                },
+                timeout=GET_NODES_TIMEOUT_S,
+            )
+            resp.raise_for_status()
+            payload = resp.json()
+            for name in batch:
+                cache[name] = payload.get(name) or []
+            log.info("hybrid-search %d/%d", min(start + HYBRID_SEARCH_BATCH, len(missing)), len(missing))
+        scan_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        scan_cache_path.write_text(json.dumps(cache, sort_keys=True))
+
+    return [row for name in names for row in (cache.get(name) or [])]
 
 
 # --------------------------------------------------------------------------------------
@@ -316,6 +383,19 @@ def inchikey_blocks(node: dict) -> set[str]:
     return {first_block(k) for k in raw if first_block(k)}
 
 
+def _is_truncated(node: dict) -> bool:
+    """True if the node's ``equivalent_ids`` was capped by ``truncate_long_fields``.
+
+    Kestrel reports the true size in ``equivalent_ids_count``, so a shorter list than the count is
+    a truncated record. Detecting it by count (rather than by a magic 50) survives a cap change.
+    """
+    equivalents = node.get("equivalent_ids")
+    count = node.get("equivalent_ids_count")
+    if not isinstance(equivalents, list) or not isinstance(count, int):
+        return False
+    return len(equivalents) < count
+
+
 def node_equivalent_curies(node: dict) -> set[str]:
     """Normalized ``PREFIX:local`` set from ``equivalent_ids`` (list or ``{PREFIX: [ids]}``)."""
     equivalents = node.get("equivalent_ids") or []
@@ -376,6 +456,124 @@ def first_block(inchikey: str | None) -> str | None:
 # --------------------------------------------------------------------------------------
 # Core audit
 # --------------------------------------------------------------------------------------
+def namespace_composition(on_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """What a NAMESPACE whitelist would cost, at ONE explicitly stated scope.
+
+    ``_is_on_category`` is a category check. The tempting mis-implementation is a namespace
+    whitelist ("the committed node must be CHEBI/HMDB/RM"), which looks nearly identical in a diff.
+    This measures the difference: on-category commits (i.e. ones the shipped guard KEEPS) whose
+    namespace falls outside the canonical set, which a whitelist would additionally destroy.
+
+    Scope is fixed and stated: **metabolite arm, on-category commits only**. An earlier comment
+    itemized these counts while mixing the metabolite-arm scope with a 10-dataset scope, which is
+    why its total reconciled against neither. Everything here derives from one population.
+    """
+    outside = [r for r in on_rows if r["namespace"].upper() not in CANONICAL_NAMESPACES]
+    by_ns = Counter(r["namespace"] for r in outside)
+    # LM and UMLS are called out separately because they dominate the tail and an earlier draft
+    # excluded them without saying so; both variants are emitted so no reader has to guess.
+    non_lm_umls = [r for r in outside if r["namespace"].upper() not in {"LM", "UMLS"}]
+    return {
+        "scope": "metabolite arm, ON-category commits only (the rows the shipped guard keeps)",
+        "canonical_namespaces": sorted(CANONICAL_NAMESPACES),
+        "n_on_category": len(on_rows),
+        "whitelist_cost_all_namespaces": len(outside),
+        "whitelist_cost_excluding_LM_and_UMLS": len(non_lm_umls),
+        "by_namespace": dict(by_ns.most_common()),
+        "headline": (
+            f"a namespace whitelist would additionally destroy {len(outside)} on-category "
+            f"metabolite-arm commits that the category check keeps"
+        ),
+    }
+
+
+def candidate_category_scan(
+    suite_dir: Path, cache_path: Path, *, offline: bool = False, limit: int = HYBRID_SCAN_LIMIT
+) -> dict[str, Any]:
+    """Measure the failure-open population over live hybrid-search CANDIDATE rows.
+
+    Distinct from the rest of this module, which scans *committed* nodes. The failure-open clause in
+    ``_is_on_category`` is justified by how often a candidate row arrives with no usable type, so it
+    has to be measured on candidates. Sample is deterministic: the lexicographically-first
+    ``HYBRID_SCAN_NAMES`` input names of the metabolite arm, queried at the production limit.
+    """
+    names: set[str] = set()
+    for dataset in METABOLITE_DATASETS:
+        for _, df in load_dataset_frames(suite_dir, dataset):
+            col = pick_name_column(df)
+            if col:
+                names |= {str(x) for x in df[col].dropna().unique()}
+    sample = sorted(names)[:HYBRID_SCAN_NAMES]
+
+    rows = fetch_hybrid_candidates(sample, cache_path, offline=offline, limit=limit)
+    empty = [r for r in rows if not node_categories(r)]
+    pure_sentinel = [r for r in rows if node_categories(r) and set(node_categories(r)) <= TOP_OF_HIERARCHY_SENTINELS]
+    return {
+        "scope": (
+            f"live /hybrid-search candidate rows for the {len(sample)} lexicographically-first "
+            f"metabolite-arm input names, limit={limit}"
+        ),
+        "n_names_queried": len(sample),
+        "n_candidate_rows": len(rows),
+        "n_empty_or_missing_categories": len(empty),
+        "n_pure_top_of_hierarchy_sentinel": len(pure_sentinel),
+        "sentinel_examples": [
+            {"id": r.get("id"), "name": r.get("name"), "categories": node_categories(r), "score": r.get("score")}
+            for r in pure_sentinel[:MAX_EXAMPLES]
+        ],
+        "interpretation": (
+            "the empty/missing clause is dead code if n_empty_or_missing_categories is 0; the "
+            "pure-sentinel clause is what actually fires, and it is what keeps legitimately-typed-"
+            "but-underspecified metabolite nodes from being refused"
+        ),
+    }
+
+
+def refmet_multi_node_rate(suite_dir: Path) -> dict[str, Any]:
+    """How often the RefMet annotator contributes >1 KG node (backs D4's determinism claim).
+
+    ``Resolver._choose_best_kg_id`` sorts the RefMet nodes before picking, and tests the majority for
+    *membership* rather than equality with the first. Both only matter when RefMet votes for more than
+    one node. That rate is asserted in ``core/resolver.py`` and in
+    ``tests/test_resolver_source_weighting.py``, so it is derived here rather than by a one-off shell
+    command -- the same standard the off-category numbers are held to. No network access.
+    """
+    rows_with_vote = 0
+    rows_multi = 0
+    examples: list[dict[str, Any]] = []
+    for dataset in METABOLITE_DATASETS:
+        for filename, df in load_dataset_frames(suite_dir, dataset):
+            if "kg_ids_assigned" not in df.columns:
+                continue
+            for _, row in df.iterrows():
+                raw = row.get("kg_ids_assigned")
+                if not isinstance(raw, str) or not raw.strip():
+                    continue
+                try:
+                    assigned = ast.literal_eval(raw)
+                except (ValueError, SyntaxError):
+                    continue
+                refmet = (assigned or {}).get(REFMET_ANNOTATOR) or {}
+                if not refmet:
+                    continue
+                rows_with_vote += 1
+                if len(refmet) > 1:
+                    rows_multi += 1
+                    if len(examples) < MAX_EXAMPLES:
+                        examples.append({"dataset": dataset, "file": filename, "refmet_nodes": sorted(refmet)})
+    return {
+        "scope": f"metabolite arm, rows carrying a '{REFMET_ANNOTATOR}' vote",
+        "n_rows_with_refmet_vote": rows_with_vote,
+        "n_rows_refmet_contributed_multiple_nodes": rows_multi,
+        "examples": examples,
+        "interpretation": (
+            "zero here means the deterministic sort and the membership agreement test are provable "
+            "no-ops on this suite -- correctness hardening for a case that does not occur yet, which "
+            "is why they cannot contaminate the A/B"
+        ),
+    }
+
+
 def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[str, Any]:
     client = BiolinkClient()
     accepted = frozenset(client.get_descendants(ACCEPTANCE_ROOT))
@@ -458,6 +656,20 @@ def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[s
     metab_off = sum(per_dataset[d]["n_off_category"] for d in METABOLITE_DATASETS)
     metab_open = sum(per_dataset[d]["n_failure_open"] for d in METABOLITE_DATASETS)
 
+    # Truncation guard. equivalent_ids is the basis for both structural agreement and the
+    # "carries no chemical identifier" verdict, so a truncated record would bias every refusal
+    # toward "provably costless". fetch_nodes now sends truncate_long_fields=False; assert the
+    # records actually reflect that rather than trusting the flag round-tripped.
+    truncated = sorted(
+        {r["chosen_kg_id"] for r in (off_rows + on_rows) if _is_truncated(nodes.get(r["chosen_kg_id"]) or {})}
+    )
+    if truncated:
+        raise AssertionError(
+            f"{len(truncated)} adjudicated nodes have truncated equivalent_ids "
+            f"(e.g. {truncated[:3]}); refetch with truncate_long_fields=False -- "
+            "a truncated record silently flatters the refusal-cost verdict"
+        )
+
     pg_rows = [r for r in off_rows if set(r["categories"]) & PROTEIN_GENE_CATEGORIES]
     refusal_cost = adjudicate(pg_rows, "protein/gene-typed off-category commits")
     all_refusal_cost = adjudicate(off_rows, "all off-category commits, metabolite arm")
@@ -475,9 +687,19 @@ def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[s
     return {
         "analysis": "off_category_audit",
         "generated_utc": datetime.now(UTC).isoformat(),
-        "regenerates": (
-            "the off-category numbers asserted in src/biomapper2/config.py (CATEGORY_ACCEPTED_ROOTS docstring)"
-        ),
+        # Every file whose measured numbers this script backs. If a number appears in a comment
+        # anywhere in the resolver-correctness change and is not derivable from this artifact, that
+        # is the bug -- the first review round fixed only config.py and left kestrel_hybrid.py's
+        # figures comment-only, which is the same defect one file over.
+        "regenerates": [
+            "src/biomapper2/config.py (CATEGORY_ACCEPTED_ROOTS docstring: off-category rate, "
+            "composition, hgnc control)",
+            "src/biomapper2/core/annotators/kestrel_hybrid.py (_is_on_category docstring: "
+            "namespace-whitelist cost, failure-open candidate counts)",
+            "tests/test_kestrel_hybrid_category.py (module and test docstrings)",
+            "src/biomapper2/core/resolver.py + tests/test_resolver_source_weighting.py "
+            "(RefMet multi-node rate behind the D4 determinism fix)",
+        ],
         "pinned_input": read_suite_pins(suite_dir),
         "definition": {
             "off_category": (
@@ -496,6 +718,12 @@ def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[s
                 "files carrying identical resolutions, so its commits are 5x-weighted"
             ),
         },
+        # Prices the namespace-whitelist mis-implementation that _is_on_category warns against.
+        "namespace_whitelist_cost": namespace_composition(on_rows),
+        # Backs the failure-open clause's candidate-row counts.
+        "failure_open_candidate_scan": candidate_category_scan(suite_dir, cache_path, offline=offline),
+        # Backs D4's determinism claim in core/resolver.py and test_resolver_source_weighting.py.
+        "refmet_multi_node_rate": refmet_multi_node_rate(suite_dir),
         "per_dataset": per_dataset,
         "per_file": per_file,
         "metabolite_total": {
@@ -547,6 +775,7 @@ def build_adjudication_row(
         "file": filename,
         "input_name": (row.get(name_col) if name_col else None),
         "chosen_kg_id": curie,
+        "namespace": curie.split(":", 1)[0],
         "node_name": node.get("name"),
         "categories": node_categories(node),
         "gold_inchikey": (row.get(gold_col) if gold_col else None),

@@ -11,16 +11,12 @@ from ...config import (
 )
 from ...utils import AssignedIDsDict, kestrel_request, text_is_not_empty
 from ..gene_symbol_resolver import GeneSymbolResolver
-from .base import BaseAnnotator
+from .base import BaseAnnotator, is_on_category
 
 # Score assigned to a node recovered by the deterministic symbol fallback. Modest and fixed: the result
 # is a verified identity match, but it bypassed competitive search, so it must not be reported as a top
 # search hit. The `resolved_via` provenance marker is the authoritative signal, not this score.
 _FALLBACK_SCORE = 1.0
-
-# Biolink types that assert nothing useful about a node. A node carrying only these is a KG typing gap,
-# not an off-category claim, so the category validator lets it through (see `_is_on_category`).
-_TOP_OF_HIERARCHY_SENTINELS = frozenset({"biolink:NamedThing", "biolink:Entity"})
 
 
 class KestrelHybridSearchAnnotator(BaseAnnotator):
@@ -92,9 +88,11 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
                     chosen = {**chosen, "resolved_via": "canonical_preference"}
 
             # Category validation at the single commit point. Applied AFTER selection, deliberately: a
-            # pool filter would promote the runner-up into the vacancy, which on live data substitutes a
-            # different still-wrong node 18/45 times — and a wrong chemical is harder to audit than a node
-            # that announces itself as not-a-molecule. Refuse instead; this can only turn wrong->refuse.
+            # pool filter would promote the runner-up into the vacancy, and that cannot recover a right
+            # answer (`_select_canonical` already preferred the canonical rows, so a promotion only
+            # happens when none were there). It only substitutes a different wrong node that now passes
+            # the type test — harder to audit than one announcing itself as not-a-molecule. Refuse
+            # instead; this can only turn wrong->refuse. See `_is_on_category`.
             if chosen is not None and not self._is_on_category(chosen, accepted_categories):
                 logging.info(
                     "off_category_refusal: term=%r node=%s categories=%s",
@@ -232,33 +230,13 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
 
     @staticmethod
     def _is_on_category(row: dict, accepted: set[str] | None) -> bool:
-        """True if the committed node's Biolink type is compatible with the queried category.
+        """Delegates to :func:`base.is_on_category`.
 
-        **This is a CATEGORY check, never a NAMESPACE check.** Writing it as "the committed node must be
-        in a canonical namespace" looks nearly identical in a diff and would destroy 294 legitimate
-        non-canonical chemical commits (UNII 97, MESH 83, PUBCHEM.COMPOUND 52, KEGG.GLYCAN 30, ...),
-        including plainly-correct ones such as ``S-adenosylhomocysteine -> UNII:8K31Q2S66S``. Namespace
-        preference is ``_select_canonical``'s job and stays there.
-
-        Failure-open in two shapes, because an absent type assertion is not a wrong type assertion:
-        - no ``categories`` at all (missing, None, or empty), and
-        - a *pure* top-of-hierarchy sentinel. Across 1,200 live candidate rows zero had empty/missing
-          categories — the empty guard alone would be dead code — but eight carried
-          ``['biolink:NamedThing']``, including ``OBO:NCIT_C103149`` "S-Adenosylhomocysteine" top-scored
-          at 4.889, a legitimate metabolite. ``biolink:NamedThing`` is not among the 12 descendants of
-          ``biolink:ChemicalEntity``, so without this clause the guard would drop exactly the
-          typing-gap case it exists to protect. "Pure" matters: a sentinel alongside a real off-category
-          type (``['biolink:NamedThing', 'biolink:Pathway']``) IS a type assertion and is judged normally.
-
-        ``accepted=None`` disables the guard entirely — the byte-for-byte guarantee for the gene path
-        and for every category with no configured acceptance root.
+        Kept as a name on this class because it is the annotator most reached for, but the
+        implementation is shared: kestrel-text and kestrel-vector apply the SAME predicate at
+        their own commit points, so a caller cannot bypass the guard by naming an annotator.
         """
-        if accepted is None:
-            return True
-        categories = set(row.get("categories") or [])
-        if not categories or categories <= _TOP_OF_HIERARCHY_SENTINELS:
-            return True
-        return bool(categories & accepted)
+        return is_on_category(row, accepted)
 
     @staticmethod
     def _symbol_matches(row: dict, search_term: str) -> bool:

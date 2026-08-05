@@ -1,16 +1,21 @@
 """Tests for the Biolink-category validator on the committed node (accepted_categories path).
 
 The guard is a **validator applied to the single committed node**, not a filter on the candidate
-pool: a pool filter promotes the next-best row into the vacancy, and a live simulation on 45 sampled
-off-category commits showed that promotion produces a *different still-wrong* node 18/45 times — one
-that is harder to audit than what it replaced (``EFO:...measurement`` announces itself as
-not-a-molecule; ``PUBCHEM.COMPOUND:131755421``, a triacylglycerol substituted for a plasmalogen,
-does not). The validator can therefore only convert wrong->refuse, never wrong->right, which is the
-deliberately accepted cost.
+pool. Filtering the pool and promoting the best survivor cannot turn a wrong answer into a right one:
+``_select_canonical`` already prefers CHEBI/HMDB/RM, so a promotion can only occur when no canonical
+node was in the pool at all — otherwise it would be promoting a node the selector had already
+declined. What promotion does produce is a *different* wrong node that now passes the type test and
+is harder to audit than what it replaced (``EFO:...measurement`` announces itself as not-a-molecule;
+a substituted triacylglycerol does not). The validator can therefore only convert wrong->refuse,
+never wrong->right, which is the deliberately accepted cost.
 
 **The guard is on CATEGORY, never on NAMESPACE.** Writing it as "the committed node must be in a
-canonical namespace" would destroy 294 legitimate non-canonical chemical commits (UNII 97, MESH 83,
-PUBCHEM.COMPOUND 52, KEGG.GLYCAN 30, ...). Namespace preference is ``_select_canonical``'s job.
+canonical namespace" would additionally destroy 577 on-category metabolite-arm commits this check
+keeps (LM 195, UMLS 98, UNII 97, MESH 77, PUBCHEM.COMPOUND 52, KEGG.GLYCAN 30, ...). Namespace
+preference is ``_select_canonical``'s job.
+
+Every measured figure in this file regenerates from ``studies/analysis/off_category_audit.py``
+over the pinned suite; none of them are asserted from memory.
 
 Fixture rows are live-verified shapes from KRAKEN 2.0.1, not invented ones. Every test passes
 ``prefer_human=False`` explicitly: ``get_annotations`` defaults it to True, and at ``:69`` a
@@ -21,8 +26,11 @@ from typing import Any
 from unittest.mock import patch
 
 import pandas as pd
+import pytest
 
 from biomapper2.core.annotators.kestrel_hybrid import KestrelHybridSearchAnnotator
+from biomapper2.core.annotators.kestrel_text import KestrelTextSearchAnnotator
+from biomapper2.core.annotators.kestrel_vector import KestrelVectorSearchAnnotator
 
 MET = {"CHEBI", "HMDB", "RM"}
 
@@ -102,9 +110,9 @@ class TestIsOnCategory:
     def test_failure_open_on_top_of_hierarchy_sentinel(self):
         """``biolink:NamedThing`` is a typing gap, not an off-category assertion.
 
-        Across 1,200 live candidate rows *zero* had empty/missing categories, so the empty guard alone
-        would have been dead code. Eight carried ``['biolink:NamedThing']`` — including
-        ``OBO:NCIT_C103149`` "S-Adenosylhomocysteine" top-scored at 4.889, a legitimate metabolite.
+        Over 2,400 live candidate rows *zero* had empty/missing categories, so the empty clause alone
+        would have been dead code. Three carried ``['biolink:NamedThing']`` (e.g. ``UNII:ZCA74223SV``
+        ".ALPHA.-CALACORENE, (+)-") — a typing gap, not a claim the node is not a chemical.
         """
         assert KestrelHybridSearchAnnotator._is_on_category(NAMEDTHING_SENTINEL, CHEMICAL) is True
         assert KestrelHybridSearchAnnotator._is_on_category(_row("X:1", 1.0, "n", ["biolink:Entity"]), CHEMICAL) is True
@@ -161,8 +169,8 @@ class TestValidatorAtCommitPoint:
         """A non-canonical namespace with a chemical category must survive.
 
         ``UNII:LYJ3482CB6`` is not in {CHEBI, HMDB, RM} but is typed ``biolink:ChemicalEntity``. A
-        namespace whitelist would destroy 294 legitimate commits like ``S-adenosylhomocysteine ->
-        UNII:8K31Q2S66S``; all 26 of refmet's UNII/PUBCHEM commits are category-clean.
+        namespace whitelist would additionally destroy 577 on-category commits like
+        ``S-adenosylhomocysteine -> UNII:8K31Q2S66S``.
         """
         annotations = _annotate([UNII_CHEMICAL_ENTITY, GO_ACTIVITY], "some chemical", accepted_categories=CHEMICAL)
         assert "LYJ3482CB6" in annotations.get("UNII", {})
@@ -224,10 +232,11 @@ class TestBulkThreading:
 
 class TestGenePathUnaffected:
     def test_gene_path_is_byte_for_byte_unchanged(self):
-        """HGNC baseline is 0/4476 and gene/protein is intentionally absent from the acceptance map.
+        """Gene/protein is intentionally absent from the acceptance map.
 
-        93.8% of HGNC commits are "off-category" relative to the chemical root — the clean positive
-        control proving the gene path must never receive an acceptance set.
+        4,197 of 4,476 hgnc commits (93.8%) are "off-category" relative to the chemical root — the
+        clean positive control proving the gene path must never receive an acceptance set. Figure
+        regenerates from ``studies/analysis/off_category_audit.py`` (per_dataset.hgnc).
         """
         ann = KestrelHybridSearchAnnotator()
         gene_row = {"id": "NCBIGene:7132", "score": 4.0, "name": "TNFRSF1A", "prefixes": ["HGNC"], "synonyms": []}
@@ -235,3 +244,42 @@ class TestGenePathUnaffected:
             {"name": "TNFRSF1A"}, "name", "biolink:Gene", prefer_human=True, cache={"TNFRSF1A": [gene_row]}
         )[ann.slug]
         assert "7132" in annotations.get("NCBIGene", {})
+
+
+class TestGuardCannotBeBypassedByNamingAnAnnotator:
+    """`annotators` is API-exposed, so text/vector must enforce the SAME contract as hybrid.
+
+    Before this, both documented `accepted_categories` as "not applicable" and committed
+    `term_results[0]` unconditionally -- so `annotators=['kestrel-vector-search']` would commit a
+    Protein for a small-molecule query that the default annotator set refuses. Live example:
+    /vector-search for "kynurenine" under category_filter=biolink:SmallMolecule returns
+    UMLS:C0022818 typed ['biolink:Protein'] as its top hit.
+    """
+
+    @pytest.mark.parametrize("annotator_cls", [KestrelTextSearchAnnotator, KestrelVectorSearchAnnotator])
+    def test_off_category_top_hit_is_refused(self, annotator_cls):
+        ann = annotator_cls()
+        out = ann.get_annotations(
+            {"name": "carnosine"}, "name", "biolink:SmallMolecule",
+            accepted_categories=CHEMICAL, cache={"carnosine": [UMLS_PROTEIN]},
+        )
+        assert out[ann.slug] == {}, "an off-category top hit must be refused, not committed"
+
+    @pytest.mark.parametrize("annotator_cls", [KestrelTextSearchAnnotator, KestrelVectorSearchAnnotator])
+    def test_on_category_top_hit_still_commits(self, annotator_cls):
+        ann = annotator_cls()
+        out = ann.get_annotations(
+            {"name": "some chemical"}, "name", "biolink:SmallMolecule",
+            accepted_categories=CHEMICAL, cache={"some chemical": [UNII_CHEMICAL_ENTITY]},
+        )
+        assert "LYJ3482CB6" in out[ann.slug].get("UNII", {})
+
+    @pytest.mark.parametrize("annotator_cls", [KestrelTextSearchAnnotator, KestrelVectorSearchAnnotator])
+    def test_no_acceptance_set_is_byte_for_byte_unchanged(self, annotator_cls):
+        """The gene path and every unconfigured category must be untouched."""
+        ann = annotator_cls()
+        out = ann.get_annotations(
+            {"name": "carnosine"}, "name", "biolink:SmallMolecule",
+            accepted_categories=None, cache={"carnosine": [UMLS_PROTEIN]},
+        )
+        assert "C0639060" in out[ann.slug].get("UMLS", {})

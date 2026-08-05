@@ -4,7 +4,7 @@
 - KG snapshot: `kraken 2.0.1 (14683250n/92233909e)` (kg_stable_during_run=True)
 - biomapper2 git_sha: `d05956459ece9dffbc737250df98d2119c2eb0e6` | Biolink `4.2.5`
 - Acceptance set: 12 descendants of `biolink:ChemicalEntity`
-- Generated: 2026-08-05T23:21:22.409171+00:00
+- Generated: 2026-08-05T23:55:51.955442+00:00
 
 ### Per dataset
 
@@ -94,25 +94,25 @@ Unresolvable breakdown: {'node_carries_no_chemical_identifier': 1001, 'row_has_n
 
 | verdict | rows | % of population | % of adjudicable |
 |---|---:|---:|---:|
-| CORRECT_BUT_REFUSED | 4,434 | 38.67% | 52.21% |
-| WRONG_AND_REFUSED | 4,059 | 35.4% | 47.79% |
+| CORRECT_BUT_REFUSED | 4,762 | 41.53% | 56.07% |
+| WRONG_AND_REFUSED | 3,731 | 32.54% | 43.93% |
 | UNRESOLVABLE | 2,974 | 25.94% | - |
 
-Gold instrument used: {'none': 2974, 'gold_database_id': 5463, 'inchikey_first_block': 3030}
+Gold instrument used: {'none': 2974, 'gold_database_id': 5364, 'inchikey_first_block': 3129}
 
-Unresolvable breakdown: {'row_has_no_gold_structure_or_id': 2782, 'node_carries_no_chemical_identifier': 187, 'gold_present_but_node_not_comparable': 5}
+Unresolvable breakdown: {'row_has_no_gold_structure_or_id': 2787, 'node_carries_no_chemical_identifier': 182, 'gold_present_but_node_not_comparable': 5}
 
 _these rows were NOT refused; read CORRECT_BUT_REFUSED here as simply 'gold agrees with the committed node'. The point of this block is only that the adjudicator can return that verdict._
 
 | category | CORRECT_BUT_REFUSED | WRONG_AND_REFUSED | UNRESOLVABLE |
 |---|---:|---:|---:|
 | `biolink:ChemicalEntity` | 2 | 63 | 302 |
-| `biolink:Drug` | 787 | 807 | 402 |
+| `biolink:Drug` | 1,111 | 483 | 402 |
 | `biolink:MolecularEntity` | 0 | 0 | 10 |
 | `biolink:MolecularMixture` | 2 | 8 | 6 |
 | `biolink:NamedThing` | 0 | 0 | 10 |
-| `biolink:NucleicAcidEntity` | 32 | 20 | 25 |
-| `biolink:OrganismTaxon` | 0 | 11 | 0 |
-| `biolink:Protein` | 9 | 22 | 15 |
-| `biolink:SmallMolecule` | 4,432 | 3,987 | 2,635 |
+| `biolink:NucleicAcidEntity` | 37 | 15 | 25 |
+| `biolink:OrganismTaxon` | 6 | 5 | 0 |
+| `biolink:Protein` | 21 | 10 | 15 |
+| `biolink:SmallMolecule` | 4,760 | 3,659 | 2,635 |
 

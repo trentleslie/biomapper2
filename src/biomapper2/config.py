@@ -82,8 +82,9 @@ CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
 # core/annotators/kestrel_hybrid.py:_is_on_category). Hybrid search ranks across categories as well as
 # namespaces, so a metabolite query can commit a node that is not a molecule at all — measured over the
 # pinned baseline, 1,148 of 12,605 metabolite-arm commits (9.1%) carried no chemical category, led by
-# 692 biolink:PhenotypicFeature (EFO "…measurement" nodes) and 362 Protein/Gene. Of that 1,148, the
-# validator refuses 1,138 — the other 10 are pure-NamedThing typing gaps that fail open below.
+# 692 biolink:PhenotypicFeature (EFO "…measurement" nodes) and 369 typed Protein and/or Gene
+# (362 Protein, 209 Gene, 202 both). Of that 1,148, the validator refuses 1,138 — the other 10 are
+# pure-NamedThing typing gaps that fail open below.
 #
 # These numbers are not an assertion: regenerate them with `studies/analysis/off_category_audit.py`
 # (artifact: studies/analysis/results/off_category_audit_suite_20260805T033340Z.json). That audit also
@@ -101,8 +102,8 @@ CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
 #     broader typing (ChemicalEntity, MolecularMixture, Drug) survives while Protein/Polypeptide/
 #     PhenotypicFeature/Pathway/MolecularActivity do not.
 #
-# Gene/protein are intentionally absent: 93.8% of HGNC commits are off-category relative to any chemical
-# root and the HGNC baseline is 0/4476 suspect, so the gene path must stay unfiltered. Any category with
+# Gene/protein are intentionally absent: 4,197 of 4,476 hgnc commits (93.8%) are off-category relative
+# to the chemical root (artifact field per_dataset.hgnc), so the gene path must stay unfiltered. Any category with
 # no entry here is likewise unfiltered — including the biolink:NamedThing that standardize_entity_type
 # falls back to for an unrecognized entity type.
 CATEGORY_ACCEPTED_ROOTS: dict[str, str] = {

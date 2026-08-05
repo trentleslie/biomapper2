@@ -128,7 +128,8 @@ class Resolver:
 
         # Deterministic pick. RefMet contributing >1 node is itself a signal, so the choice must not
         # ride on dict insertion order (which follows API response order). Provable no-op on today's
-        # data: of 8,814 baseline rows carrying a RefMet vote, 0 contributed more than one node. Note
+        # data: of 8,814 baseline rows carrying a RefMet vote, 0 contributed more than one node
+        # (regenerate: studies/analysis/off_category_audit.py -> refmet_multi_node_rate). Note
         # this is a *determinism* fix, not a correctness one — lexicographic order is still chemically
         # arbitrary, so warn to surface the case if it ever appears and needs a real tiebreak rule.
         refmet_nodes = sorted(kg_ids_assigned.get(REFMET_ANNOTATOR, {}))
