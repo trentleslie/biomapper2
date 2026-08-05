@@ -26,15 +26,48 @@ matters, because the second reversal is what licenses the strongest claim in the
 
 ## 1. The headline claim
 
-> Curated metabolite annotation tables assign structurally wrong identifiers at roughly 1% of
-> entries. The errors are well-formed, invisible to standard validation, and propagate identically
-> into every cohort inheriting the annotation. Detecting them requires two independent measurements
-> of the same entity plus a third adjudicator, which is apparatus that standard entity-resolution
-> benchmarking does not have and cross-cohort harmonization supplies for free.
+**Read section 1b before writing anything. The obvious version of this claim is prior art.**
 
-Everything below supports that sentence. Note what it is *not*: it is not a claim that BioMapper
-outperforms anything. The paper's applied contribution should not depend on the sign of any
-head-to-head delta, because every head-to-head we attempted came back null or unmeasurable.
+> Commercial metabolomics annotation deliverables carry structurally wrong identifiers at a rate
+> consistent with what is already published for public databases, but unlike public resources they
+> **drift between vintages**, and a cohort study permanently inherits whichever vintage it was
+> delivered. Because benchmark ground truth is built from that snapshot, a measurable share of what
+> any benchmark reports as resolver error is ground-truth error instead. Detecting this requires two
+> independent measurements of the same entity plus a third adjudicator, which standard
+> entity-resolution benchmarking does not have and cross-cohort harmonization supplies for free.
+
+Note what it is *not*: it is not a claim that BioMapper outperforms anything. The paper's applied
+contribution should not depend on the sign of any head-to-head delta, because every head-to-head we
+attempted came back null or unmeasurable.
+
+## 1b. PRIOR ART: do not claim novelty on the error rate
+
+The general finding was published in 2014 and we independently rediscovered it.
+
+- **Akhondi et al. 2014, "On InChI and evaluating the quality of cross-reference links" (PMC4005828).**
+  Manually curated cross-references between ChEBI, DrugBank, PDBeChem, HMDB and NPC show
+  **connectivity-level inconsistency of 0.59% to 3.25%**. They use the same connectivity-versus-
+  stereochemistry decomposition and reach the same conclusion: raw disagreement is dominated by
+  stereochemistry, connectivity-level runs about 1 to 3%.
+- **Metabolomics 2026;22:28 (PMC12923498), "Metabolite names and identifiers: how far are we from
+  interoperability?"** HMDB to ChEBI 4% mismatch, HMDB to PubChem 1.7%, HMDB to KNApSAcK 65%. Also
+  splits molecular skeleton from stereochemistry. Tested six conversion tools at three timepoints.
+
+**Our measured 0.92% to 1.66% sits inside Akhondi's published range.** Cite both papers, present our
+rate as *consistent with* the literature, and do not present it as a discovery.
+
+What those papers explicitly do **not** cover, and what is therefore ours to claim:
+
+1. **Commercial vendor deliverables.** The 2026 paper states it evaluates only public databases and
+   open-source tools, with no evaluation of Metabolon, Biocrates, or other commercial platforms. The
+   annotation table a cohort actually scores against is a vendor deliverable, not HMDB.
+2. **Vintage drift, which points opposite to the public-resource result.** The 2026 paper tested its
+   tools in April 2024, July 2024 and August 2025 and found results "strictly identical." Metabolon
+   deliverables are not stable: **all 8 replicated wrong values sit in the 2019 annotation file, and
+   later Metabolon releases carry the correct value for 6 of the 8.** Metabolon documents that it
+   continually updates annotations while holding the chemical ID stable, so a study inherits whichever
+   vintage it was delivered and nothing records which.
+3. **Downstream contamination of benchmark ground truth**, quantified. See section 4.
 
 ---
 
@@ -52,6 +85,26 @@ first blocks, meaning different molecules, not different stereochemistry or char
 
 Report the range (**roughly 0.9% to 1.7%**), not a point estimate. The Wilson intervals are wide
 (NECS 9/562 is [0.84%, 3.02%]) and the four designs are not measuring exactly the same population.
+
+### The vintage direction, which is the part that is actually new
+
+For the 8 compounds replicated across metLinkR's supplementary panels, the wrong value is **entirely
+concentrated in the 2019 Metabolon annotation file**:
+
+| Panel | correct | wrong |
+|---|---|---|
+| `2019_Metabolon_Metadata.csv` | 0 | **8** |
+| `LEOCC_Metabolon_Annotations.csv` | 6 | 1 |
+| `Metabolon_Annotations_Serum_hmdbformatted.csv` | 6 | 1 |
+| `Broad_2022Aug_annotations.csv` | 2 | 0 |
+
+So the vendor **corrects** these over time. The claim is therefore **not** that Metabolon annotations
+are unreliable at 1%. It is that **annotation vintage determines a study's error rate, studies are
+scored against whatever snapshot they were delivered, and that snapshot is not recorded anywhere.**
+NECS sits on a vintage carrying the 2019-era errors.
+
+`xylose` is the exception and the one standing defect worth reporting upstream: wrong in all three
+Metabolon files, correct in Broad.
 
 ### The compound-level replication is the strongest evidence, stronger than the rate
 
@@ -181,11 +234,18 @@ lead with it.
 
 ## 7. Scope limits: do not overclaim
 
-- **Do not say "curated databases are 1% wrong."** Say: measured across four comparisons spanning
-  cohort panels from Metabolon, Broad, and the COMETS consortium, connectivity-level disagreement runs
-  roughly 0.9% to 1.7%. Most of the evidence concerns the **Metabolon annotation lineage**, which is
-  widely inherited; the Broad-vs-Metabolon comparison shows it is not unique to one vendor but does
-  not by itself say which side is wrong.
+- **Do not claim the error rate as a discovery.** It is prior art (Akhondi et al. 2014, 0.59% to
+  3.25% connectivity-level; Metabolomics 2026;22:28). Cite both, present our 0.9% to 1.7% as
+  consistent with them, and claim novelty only on the vendor-deliverable setting, the vintage drift,
+  and the benchmark-contamination consequence. See section 1b.
+- **Do not say "Metabolon annotations are 1% wrong."** The wrong values are concentrated in the 2019
+  vintage and later releases fix most of them. The correct statement is about vintage drift and the
+  absence of any provenance record of which snapshot a study used.
+- **Do not say "curated databases are 1% wrong"** as a general claim either. Say: measured across
+  four comparisons spanning cohort panels from Metabolon, Broad, and the COMETS consortium,
+  connectivity-level disagreement runs roughly 0.9% to 1.7%, consistent with published rates. The
+  Broad-vs-Metabolon comparison shows the phenomenon is not unique to one vendor but does not by
+  itself say which side is wrong.
 - **Do not report raw disagreement rates.** They are dominated by artifacts. Cross-vendor raw
   disagreement is 28.6%, but almost all of it is stereo-specification depth (`lactate` as
   `JVTAAEKCZFNVCJ-REOHCLBH` versus `JVTAAEKCZFNVCJ-UHFFFAOY`: same connectivity, one curator
@@ -207,6 +267,8 @@ Everything is reproducible from public sources.
 | Source | Use | License |
 |---|---|---|
 | Monti et al. 2026, GeroScience, doi 10.1007/s11357-026-02174-2 | NECS panel, the methods reproduced | published supplement |
+| **Akhondi et al. 2014, PMC4005828** | **prior art on the error rate; cite, do not rediscover** | open access |
+| **Metabolomics 2026;22:28, PMC12923498, doi 10.1007/s11306-026-02404-w** | **prior art; public-database mismatch rates and tool stability** | open access |
 | Watanabe et al. 2023, Nat Med 29:996-1008, PMC10115644, Supp Data 2 | Arivale panel, 766 metabolites | **CC BY** |
 | Sebastiani et al. 2024, Cell Rep 43:114913, PMC11656345, supplement 2 | LLFS panel, 408 metabolites | CC BY-NC-ND, not redistributed |
 | Patt et al. 2025 metLinkR SI, PMC12053952, `pr4c01051_si_001.zip` | raw input annotation panels, the cross-vendor replication | see repo config |
