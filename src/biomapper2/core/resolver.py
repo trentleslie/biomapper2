@@ -126,7 +126,20 @@ class Resolver:
         if not (kg_ids_assigned and category and self._is_small_molecule(category)):
             return majority, None
 
-        refmet_nodes = list(kg_ids_assigned.get(REFMET_ANNOTATOR, {}))
+        # Deterministic pick. RefMet contributing >1 node is itself a signal, so the choice must not
+        # ride on dict insertion order (which follows API response order). Provable no-op on today's
+        # data: of 8,814 baseline rows carrying a RefMet vote, 0 contributed more than one node. Note
+        # this is a *determinism* fix, not a correctness one — lexicographic order is still chemically
+        # arbitrary, so warn to surface the case if it ever appears and needs a real tiebreak rule.
+        refmet_nodes = sorted(kg_ids_assigned.get(REFMET_ANNOTATOR, {}))
+        if len(refmet_nodes) > 1:
+            logging.warning(
+                "RefMet contributed %d KG nodes (%s); picking %s lexicographically — "
+                "no chemical tiebreak rule exists for this case",
+                len(refmet_nodes),
+                refmet_nodes,
+                refmet_nodes[0],
+            )
         if not refmet_nodes or refmet_nodes[0] == majority:
             return majority, None  # RefMet had no say, or already agrees
 

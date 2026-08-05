@@ -31,14 +31,25 @@ class StructureResolver:
         self._name_cache: dict[str, str | None] = {}  # inchikey block by node name (per process)
 
     def connectivity_match(self, node_a: str, node_b: str) -> bool | None:
-        """True if both nodes resolve to the same first InChIKey block, False if they
-        resolve and differ, None if either is unresolvable across all layers."""
+        """True if the nodes share ANY InChIKey first block, False if both resolve and share none,
+        None if either is unresolvable across all layers.
+
+        Set intersection, not equality against ``keys[0]``: a KG node's INCHIKEY list is multi-valued
+        (neutral parent, conjugate anion, salt, stereoisomers) and its ordering is arbitrary, so
+        comparing one arbitrary representation to another reports a false structural conflict when the
+        shared block simply sits at a different index. This is the same artifact PR #36 fixed in the
+        Hajjar scorer (the gold key sat at position 2-4 in 12 of 19 apparent misses).
+
+        Loosening is one-directional and bounded: two nodes that share no block at all still return
+        False, and ``inchikey_blocks`` keeps the MW/PubChem name fallback, so this cannot inflate
+        ``conflict_no_structure``.
+        """
         records = self.linker.get_node_records([node_a, node_b])
-        block_a = self.inchikey_block(node_a, (records.get(node_a) or {}).get("name"), records)
-        block_b = self.inchikey_block(node_b, (records.get(node_b) or {}).get("name"), records)
-        if block_a is None or block_b is None:
+        blocks_a = self.inchikey_blocks(node_a, (records.get(node_a) or {}).get("name"), records)
+        blocks_b = self.inchikey_blocks(node_b, (records.get(node_b) or {}).get("name"), records)
+        if not blocks_a or not blocks_b:
             return None
-        return block_a == block_b
+        return bool(blocks_a & blocks_b)
 
     def inchikey_block(self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None) -> str | None:
         """First InChIKey block for a node: KG record -> MW by name -> PubChem by name."""

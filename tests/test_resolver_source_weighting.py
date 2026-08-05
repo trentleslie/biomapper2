@@ -65,3 +65,63 @@ def test_resolve_series_carries_review_field():
     assert isinstance(out, pd.Series)  # single entity -> Series (narrows type for the asserts below)
     assert out["chosen_kg_id"] == "CHEBI:refmet"
     assert out["chosen_kg_id_review"] == "divergent_refmet"
+
+
+# --------------------------- Deterministic RefMet pick (D4) ---------------------------
+# RefMet contributing >1 KG node is itself a signal, so the pick must not depend on dict insertion
+# order (which follows API response order). Counted over the pinned baseline: 8,814 rows carry a
+# metabolomics-workbench vote and 0 contributed more than one node, so this is a provable no-op on
+# every A/B row — reproducibility hardening, not a behaviour change. It is a *determinism* fix, not a
+# correctness one: lexicographic order is still chemically arbitrary, hence the warning.
+
+MULTI_ASSIGNED_A = {"metabolomics-workbench": {"CHEBI:refmet_b": ["RM:2"], "CHEBI:refmet_a": ["RM:1"]}}
+MULTI_ASSIGNED_B = {"metabolomics-workbench": {"CHEBI:refmet_a": ["RM:1"], "CHEBI:refmet_b": ["RM:2"]}}
+
+
+def test_multi_node_refmet_pick_is_order_independent():
+    """Two insertion orders of the same RefMet node set must resolve to the same node."""
+    kg = {"CHEBI:bmp": ["a", "b"], "CHEBI:refmet_a": ["RM:1"], "CHEBI:refmet_b": ["RM:2"]}
+    first = _resolver(True)._choose_best_kg_id(kg, MULTI_ASSIGNED_A, "biolink:SmallMolecule")
+    second = _resolver(True)._choose_best_kg_id(kg, MULTI_ASSIGNED_B, "biolink:SmallMolecule")
+    assert first == second == ("CHEBI:refmet_a", None)
+
+
+def test_multi_node_refmet_is_warned_so_it_can_be_surfaced():
+    """The multi-node case does not occur in today's data; if it appears it needs a real tiebreak rule."""
+    import logging
+
+    kg = {"CHEBI:bmp": ["a", "b"], "CHEBI:refmet_a": ["RM:1"], "CHEBI:refmet_b": ["RM:2"]}
+    logger = logging.getLogger()
+    records = []
+    handler = logging.Handler()
+    handler.emit = records.append  # type: ignore[method-assign]
+    logger.addHandler(handler)
+    try:
+        _resolver(True)._choose_best_kg_id(kg, MULTI_ASSIGNED_A, "biolink:SmallMolecule")
+    finally:
+        logger.removeHandler(handler)
+    assert any(r.levelno >= logging.WARNING for r in records)
+
+
+def test_single_node_refmet_emits_no_warning():
+    """The common case (1 node) must stay silent — no new log noise on 8,814 baseline rows."""
+    import logging
+
+    logger = logging.getLogger()
+    records = []
+    handler = logging.Handler()
+    handler.emit = records.append  # type: ignore[method-assign]
+    logger.addHandler(handler)
+    try:
+        _resolver(True)._choose_best_kg_id(KG_IDS, ASSIGNED, "biolink:SmallMolecule")
+    finally:
+        logger.removeHandler(handler)
+    assert not [r for r in records if r.levelno >= logging.WARNING]
+
+
+def test_agreement_check_uses_the_deterministic_pick():
+    """`refmet_nodes[0] == majority` short-circuits; with >1 node that test must also be order-free."""
+    kg = {"CHEBI:refmet_a": ["a", "b"], "CHEBI:refmet_b": ["RM:2"]}
+    r = _resolver(False)
+    assert r._choose_best_kg_id(kg, MULTI_ASSIGNED_A, "biolink:SmallMolecule") == ("CHEBI:refmet_a", None)
+    r.structure_resolver.connectivity_match.assert_not_called()
