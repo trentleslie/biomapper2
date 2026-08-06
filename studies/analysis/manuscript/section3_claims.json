@@ -1,12 +1,13 @@
 {
   "inventory": "section 3 numeric claims",
-  "source": "studies/external_benchmarks/manuscript/section3_source.md",
+  "source": "studies/analysis/manuscript/section3_source.md",
   "artifacts": [
     "confidence_intervals",
     "off_category_audit",
     "tier3_determinism",
     "northstar_ms1",
-    "published_external"
+    "published_external",
+    "competitor_headtohead"
   ],
   "claims": [
     {
@@ -669,6 +670,126 @@
       "field": "pct_off_category",
       "blocked_by": null,
       "note": "quote the DEDUPLICATED rate; the file-weighted one multiplies a dataset by the number of target-vocabulary files it ships"
+    },
+    {
+      "id": "headtohead.biodbnet.ensembl",
+      "manuscript_value": 0.791,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet Ensembl"
+    },
+    {
+      "id": "headtohead.biodbnet.ncbigene",
+      "manuscript_value": 0.999,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet NCBI Gene"
+    },
+    {
+      "id": "headtohead.biodbnet.uniprot",
+      "manuscript_value": 0.995,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet UniProtKB"
+    },
+    {
+      "id": "headtohead.biodbnet.union",
+      "manuscript_value": 0.986,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet union"
+    },
+    {
+      "id": "headtohead.gconvert.ensembl",
+      "manuscript_value": 0.96,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert Ensembl"
+    },
+    {
+      "id": "headtohead.gconvert.ncbigene",
+      "manuscript_value": 0.55,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert NCBI Gene"
+    },
+    {
+      "id": "headtohead.gconvert.uniprot",
+      "manuscript_value": 0.956,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert UniProtKB"
+    },
+    {
+      "id": "headtohead.gconvert.union",
+      "manuscript_value": 0.904,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert union"
+    },
+    {
+      "id": "headtohead.uniprot_idmapping.uniprot",
+      "manuscript_value": 0.937,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "UniProt ID-mapping UniProtKB"
+    },
+    {
+      "id": "headtohead.uniprot_idmapping.union",
+      "manuscript_value": 0.398,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "UniProt ID-mapping union"
+    },
+    {
+      "id": "headtohead.gconvert.uniprot_precorrection",
+      "manuscript_value": 0.0,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert UniProtKB before the separator fix"
+    },
+    {
+      "id": "headtohead.biodbnet.uniprot_precorrection",
+      "manuscript_value": 0.061,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet UniProtKB before the separator fix"
     }
   ],
   "not_a_measurement": {
@@ -678,6 +799,11 @@
     "2025": "a citation year",
     "2026": "a citation year",
     "2510.14944": "a preprint identifier",
-    "100": "the size of the curated calibration set, stated as a structural fact"
+    "100": "the size of the curated calibration set, stated as a structural fact",
+    "4.5": "the MetaNetX release number",
+    "4.6": "the Sonnet model version",
+    "4.8": "the Opus model version",
+    "6.0": "the MetaboAnalyst version",
+    "409": "an arithmetic illustration, not a result: the nearest attainable numerator to the published baseline rate on 1,000 items, cited to show that rate implies a different denominator"
   }
 }

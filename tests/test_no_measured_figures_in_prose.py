@@ -64,21 +64,22 @@ GUARDED_FILES = (
     # Deliberately NOT guarded: studies/external_benchmarks/config.py, which carries an external
     # baseline in a comment that is explicitly flagged needs-verification alongside a null registry
     # value. Guarding it would turn the suite red for a comment doing exactly the right thing.
-    # Also not guarded: build_section3_claims.py, whose CODE is a list of manuscript values -- the
-    # guard scans prose, not code, but the file's whole purpose is to hold those values.
-    # ``stats.py`` / ``confidence_report.py`` and their tests live under ``studies/analysis`` and
-    # top-level ``tests`` on purpose. Those are trees the certificate axis's globbed guard covers by
-    # default, so these four stay guarded when that rewrite replaces this hand-maintained list.
-    # Listing them here as well is redundant today and harmless; the placement is what survives.
+    # build_section3_claims.py IS guarded: the guard scans prose, not code, and the manuscript
+    # values it holds live in code where values belong.
+    #
+    # Every evidence-base file now sits under ``studies/analysis`` or top-level ``tests`` on
+    # purpose -- trees the certificate axis's globbed guard covers by default -- so all of them stay
+    # guarded when that rewrite replaces this hand-maintained list. Listing them here as well is
+    # redundant today and harmless. Placement survives a guard rewrite; a list entry does not.
     "studies/analysis/stats.py",
     "studies/analysis/confidence_report.py",
     "tests/test_stats.py",
     "tests/test_confidence_report.py",
-    # Still in the benchmarks tree, and therefore still list-dependent. See PLACEMENT-DEBT below.
-    "studies/external_benchmarks/reconcile_section3.py",
-    "studies/external_benchmarks/request_timeout.py",
-    "studies/external_benchmarks/tests/test_reconcile_section3.py",
-    "studies/external_benchmarks/tests/test_row_index_gold_guard.py",
+    "studies/analysis/reconcile_section3.py",
+    "studies/analysis/request_timeout.py",
+    "studies/analysis/build_section3_claims.py",
+    "tests/test_reconcile_section3.py",
+    "tests/test_row_index_gold_guard.py",
     "src/biomapper2/utils.py",
     "tests/test_kestrel_client_hardening.py",
 )
@@ -98,13 +99,27 @@ _IDENTIFIER_PATTERNS = (
 )
 
 # Exact tokens that are structural constants or protocol facts, never measurements.
+#
+# WHAT BELONGS HERE, and why the list is not a convenience hatch. The scanner flags any 3+ digit
+# number, which necessarily catches numbers that are *named by a standard* rather than *measured by
+# a run*: HTTP status codes, Unix permission modes, port numbers, fixed tool settings. The test for
+# membership is: could this number change if the code were run against different data? If yes it is
+# a measurement and it belongs in an artifact, however inconvenient. If no -- if it is fixed by a
+# specification, a protocol, or a configuration file -- it is a name that happens to be spelled in
+# digits, and suppressing it here costs nothing.
+#
+# Do NOT add a token merely because the guard is inconvenient. Two false positives have reached this
+# list so far, and both were of the named-constant kind. A measured figure added here would silently
+# defeat the standard for that exact value, which is the one thing this file exists to prevent.
 _ALLOWED_TOKENS = frozenset(
     {
         "100",  # percentage arithmetic / "100%" of a structural set
         "200",
+        "301",
         "401",
         "404",  # HTTP status codes
         "120",  # ruff line-length
+        "0700",  # Unix permission mode on the cache directory (chmod), not a quantity
     }
 )
 

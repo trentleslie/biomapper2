@@ -78,7 +78,7 @@ def get_kestrel_api_key() -> str | None:
 # to the transport; what was missing was a DEFAULT, so the mapping-path callers that supply none had
 # no timeout at all and a wedged request could hang a run indefinitely. Sized from the successful-
 # request duration distribution recorded in
-# studies/external_benchmarks/results/request_timeout_derivation.json (field: recommended_timeout_s)
+# studies/analysis/results/request_timeout_derivation.json (field: recommended_timeout_s)
 # and asserted against it in the test suite -- a default UNDER the server's own limit is worse than
 # none, because it converts a recoverable server error into a client-side abort.
 KESTREL_REQUEST_TIMEOUT_S = 180

@@ -25,7 +25,7 @@ from pathlib import Path
 import pytest
 
 from studies.analysis import confidence_report as cr
-from studies.external_benchmarks import reconcile_section3 as rs
+from studies.analysis import reconcile_section3 as rs
 
 
 @pytest.fixture
@@ -190,7 +190,7 @@ class TestArtifactBinding:
 
 def test_the_claims_file_is_regenerated_by_its_builder():
     """The inventory is generated, not hand-edited, so the committed copy must match the builder."""
-    from studies.external_benchmarks.build_section3_claims import build
+    from studies.analysis.build_section3_claims import build
 
     assert json.loads(rs.CLAIMS_PATH.read_text()) == json.loads(json.dumps(build()))
 
@@ -203,3 +203,46 @@ def test_reconciliation_report_is_writable_next_to_the_artifact(tmp_path, claims
     out.write_text(json.dumps(result, indent=2))
     assert json.loads(out.read_text())["n_claims"] == len(claims["claims"])
     assert Path(out).exists()
+
+
+class TestTheCompletenessCheckCanFailOnTheFormatSection3Uses:
+    """Red-green controls for the classifier itself.
+
+    The completeness half of this check was live for a full review cycle while being structurally
+    incapable of seeing the number format Section 3 is mostly written in. ``_MEASUREMENT_SHAPED``
+    was inherited from the source-prose guard, which is tuned for code comments, and required three
+    digits before the decimal point; every proportion in the head-to-head table is one digit and a
+    fraction. ``unclassified_prose_numbers`` returned an empty list against a document containing
+    ten unaccounted cells, and the suite was green.
+
+    A guard that cannot fail on the format it exists to catch is not a guard. These tests make the
+    failure mode reachable, so the blind spot cannot silently return.
+    """
+
+    def test_a_decimal_proportion_with_no_claim_is_reported(self):
+        """The exact defect: a bare proportion, unaccounted, must surface."""
+        claims = {"claims": [], "not_a_measurement": {}}
+        text = "The tool reached 0.791 on the Ensembl namespace."
+        assert rs.unclassified_prose_numbers(claims, text) == ["0.791"]
+
+    def test_a_decimal_proportion_with_a_claim_is_not_reported(self):
+        """The other half: accounting for it must actually silence it.
+
+        This is what catches a regression in ``_token_forms`` rather than in the classifier. Three
+        decimal places were missing there too, so a correctly-inventoried claim still read as
+        unaccounted -- the two defects concealed each other, because nothing ever surfaced a
+        three-decimal token for the accounting side to fail on.
+        """
+        claims = {"claims": [{"manuscript_value": 0.791}], "not_a_measurement": {}}
+        text = "The tool reached 0.791 on the Ensembl namespace."
+        assert rs.unclassified_prose_numbers(claims, text) == []
+
+    def test_small_bare_integers_are_still_structural(self):
+        """The rule must not swing the other way: 'two arms' is not a measurement."""
+        claims = {"claims": [], "not_a_measurement": {}}
+        assert rs.unclassified_prose_numbers(claims, "We ran 3 arms across 2 modes.") == []
+
+    def test_the_committed_section_has_no_unaccounted_numbers(self):
+        """The live document, as an end-to-end control over the two tests above."""
+        claims = json.loads(rs.CLAIMS_PATH.read_text())
+        assert rs.unclassified_prose_numbers(claims, rs.SOURCE_PATH.read_text()) == []

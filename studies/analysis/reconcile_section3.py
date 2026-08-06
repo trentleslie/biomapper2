@@ -37,7 +37,9 @@ CLAIMS_PATH = MANUSCRIPT_DIR / "section3_claims.json"
 # The interval artifact is produced by ``studies/analysis/confidence_report.py`` and lands beside
 # the other analysis artifacts, under the ``.gitignore`` negation that keeps them committed. This
 # module reads it from there rather than from its own tree.
-RESULTS_DIR = MODULE_DIR.parent / "analysis" / "results"
+# The interval artifact is produced by ``confidence_report.py``, now a sibling module, so this is
+# simply the shared results directory rather than a hop across trees.
+RESULTS_DIR = MODULE_DIR / "results"
 
 # Relative tolerance when comparing a manuscript rate against an artifact rate. The manuscript
 # rounds; the artifact does not.
@@ -179,9 +181,21 @@ if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
 
 
-# Measurement-shaped: the same rule the source-prose guard uses. Small integers are structural
-# facts ("two groups", "four models"), not measurements.
-_MEASUREMENT_SHAPED = re.compile(r"^(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?%|\d{3,}(?:\.\d+)?)$")
+# Measurement-shaped. Small bare integers are structural facts ("two groups", "four models"), not
+# measurements, so they stay out.
+#
+# ``\d+\.\d+`` is load-bearing, and its absence was a real defect. The rule was inherited verbatim
+# from the source-prose guard, which is tuned for CODE COMMENTS -- where a measurement is normally
+# written as a count or an explicit percent. Section 3 is a RESULTS section, and its dominant format
+# is the bare decimal proportion. Requiring three digits before the decimal point meant every
+# accuracy in the head-to-head table was invisible: ``0.791`` is one digit and a fraction, so it
+# matched no branch. The completeness check reported zero omissions on a table full of them, which
+# is precisely the failure it exists to prevent.
+#
+# The lesson is not "add a branch". It is that inheriting a threshold is not the same as validating
+# it against the text it will actually scan. ``test_the_completeness_check_sees_a_decimal_proportion``
+# pins this shape specifically, so the blind spot cannot silently return.
+_MEASUREMENT_SHAPED = re.compile(r"^(?:\d{1,3}(?:,\d{3})+|\d+(?:\.\d+)?%|\d{3,}(?:\.\d+)?|\d+\.\d+)$")
 
 
 def _token_forms(value: Any) -> set[str]:
@@ -193,7 +207,11 @@ def _token_forms(value: Any) -> set[str]:
         if float(number) == as_int:
             forms.add(str(as_int))
             forms.add(f"{as_int:,}")
-        for places in (1, 2):
+        # Three places matters: the head-to-head table writes proportions as ``0.963``, so stopping
+        # at two meant a correctly-inventoried claim still read as unaccounted. This defect and the
+        # decimal blindness in ``_MEASUREMENT_SHAPED`` concealed each other -- the classifier never
+        # surfaced a three-decimal token, so nothing ever exercised the accounting side against one.
+        for places in (1, 2, 3):
             forms.add(f"{number:.{places}f}")
 
     if isinstance(value, dict):

@@ -192,7 +192,7 @@ class TestDefaultTimeout:
         aborts. The recommendation is derived from the reference run's successful-request duration
         distribution; the shipped constant must not undercut it.
         """
-        from studies.external_benchmarks.request_timeout import RECOMMENDED_TIMEOUT_S
+        from studies.analysis.request_timeout import RECOMMENDED_TIMEOUT_S
 
         assert utils.KESTREL_REQUEST_TIMEOUT_S >= RECOMMENDED_TIMEOUT_S
 
