@@ -126,7 +126,7 @@ def test_panel_b_is_stratified_by_independent_source(result: dict) -> None:
 def test_every_operating_point_carries_sparsity_control_and_tier_b_resolution_rate(result: dict) -> None:
     figure5 = result["per_dataset"][0]["figure5"]
     assert figure5["sparsity_control"]["n_absent_oracle_could_fire"] is not None
-    assert figure5["tier_b"]["n_unique_query_names"] == 9
+    assert figure5["tier_b"]["n_rows_with_tier_b_outcome"] == 9
     assert figure5["tier_b"]["resolution_rate"] == pytest.approx(5 / 9, abs=1e-4)
 
 

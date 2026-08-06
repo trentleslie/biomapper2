@@ -80,6 +80,10 @@ What it measures
 is an operator-run, supervised step; this module only reads its committed artifact, referenced by the
 fixed name ``TIER_B_SWEEP_FILENAME``, and says plainly when there isn't one.
 
+To produce that sweep, an operator re-runs the pinned suite with ``BIOMAPPER2_TIER_B_ENABLED=1``.
+The mapped TSVs then carry ``certificate_*`` columns and this script reads them directly. Nothing in
+the library, the test suite, or this module turns that flag on.
+
 Arms are never mixed. The metabolite arm (necs, refmet, srm1950, lmsd, metlinkr) is the headline;
 datasets shipping no structural gold are reported with a null oracle rather than dropped, so a
 reader can see coverage of the measurement itself. hgnc is a gene-arm dataset and carries no
@@ -367,19 +371,24 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
 
 
 def _tier_b_stats(df: pd.DataFrame) -> dict[str, Any]:
-    """Tier B's own resolution rate, emitted beside every operating point.
+    """Tier B's resolution rate over the audited rows, emitted beside every operating point.
 
     Without it a reader cannot see that corroboration was computed on whichever names the exact-name
     endpoints happened to know.
+
+    Counted PER ROW, not per unique query name: a mapped TSV is the population the figure describes,
+    and a name appearing twice contributes two operating-point rows. ``IndependentStructureLookup.
+    stats()`` counts unique names instead, because there the quantity of interest is how many lookups
+    were made. The two are deliberately different and are named so they cannot be confused.
     """
     outcomes = Counter(str(v) for v in df["_tier_b_outcome"])
-    n_names = int(len(df))
+    n_rows = int(len(df))
     n_resolved = int(outcomes.get("resolved", 0))
     return {
-        "n_unique_query_names": n_names,
+        "n_rows_with_tier_b_outcome": n_rows,
         "n_tier_b_resolved": n_resolved,
         "n_tier_b_lookup_failed": int(outcomes.get("lookup_failed", 0)),
-        "resolution_rate": round(n_resolved / n_names, 4) if n_names else None,
+        "resolution_rate": round(n_resolved / n_rows, 4) if n_rows else None,
         "outcomes": dict(sorted(outcomes.items())),
         "min_resolution_rate_floor": TIER_B_MIN_RESOLUTION_RATE,
     }

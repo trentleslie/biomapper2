@@ -275,6 +275,32 @@ def test_legacy_review_flag_survives_derivation_on_both_paths(flag: str | None, 
     assert dataset_result.loc[0, "certificate_state"] == "uncorroborated"
 
 
+def test_the_certificate_changes_no_committed_id(tmp_path) -> None:
+    """G1 / L19. The certificate is a LABEL: ``chosen_kg_id`` is emitted unchanged in every state,
+    including the ones the certificate refuses to vouch for. Zero coverage delta on this axis."""
+    for equiv in (WITH_KEY, WITHOUT_KEY, {}):
+        entity_result = _entity_path(_stub_mapper(chosen_kg_id=NODE, equiv=equiv), SMALL_MOLECULE)
+        dataset_result = _dataset_path(_stub_mapper(chosen_kg_id=NODE, equiv=equiv), SMALL_MOLECULE, tmp_path)
+        assert entity_result["chosen_kg_id"] == NODE
+        assert dataset_result.loc[0, "chosen_kg_id"] == NODE
+
+
+def test_tier_b_changes_no_committed_id_either() -> None:
+    """Even a ``contradicted`` verdict withholds nothing. Withholding stays a documented extension
+    point, not built."""
+    from biomapper2.core.certificate import TierBOutcome, TierBResult
+
+    class _Contradicting:
+        def lookup(self, name):  # noqa: ARG002
+            return TierBResult(source="pubchem", inchikey_block="ZZZZZZZZZZZZZZ", outcome=TierBOutcome.RESOLVED)
+
+    result = _entity_path(
+        _stub_mapper(chosen_kg_id=NODE, equiv=WITH_KEY, tier_b=_Contradicting()), SMALL_MOLECULE
+    )
+    assert result["resolution_certificate"]["state"] == "contradicted"
+    assert result["chosen_kg_id"] == NODE
+
+
 def test_the_emitted_certificate_is_json_serializable_on_the_entity_path() -> None:
     """The NDJSON streaming endpoint json.dumps's this dict OUTSIDE its try/except, so a dataclass
     here raises mid-stream after a 200 has already gone out."""
