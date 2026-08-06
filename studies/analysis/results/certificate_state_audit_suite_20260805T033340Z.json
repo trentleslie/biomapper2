@@ -25,6 +25,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "chemical_name",
+        "n_rows": 1488,
+        "n_rows_with_slash": 159,
+        "rate_rows": 0.1069,
+        "n_distinct_names": 1488,
+        "n_distinct_names_with_slash": 159,
+        "rate_distinct": 0.1069
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 433,
@@ -185,6 +194,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "refmet_name",
+        "n_rows": 1500,
+        "n_rows_with_slash": 438,
+        "rate_rows": 0.292,
+        "n_distinct_names": 1500,
+        "n_distinct_names_with_slash": 438,
+        "rate_distinct": 0.292
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 104,
@@ -345,6 +363,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1058,
+        "n_rows_with_slash": 116,
+        "rate_rows": 0.1096,
+        "n_distinct_names": 1058,
+        "n_distinct_names_with_slash": 116,
+        "rate_distinct": 0.1096
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 520,
@@ -481,6 +508,27 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "lipid_name",
+        "n_rows": 1499,
+        "n_rows_with_slash": 51,
+        "rate_rows": 0.034,
+        "n_distinct_names": 1258,
+        "n_distinct_names_with_slash": 51,
+        "rate_distinct": 0.0405,
+        "by_name_source_regime": {
+          "common_systematic": {
+            "n": 450,
+            "n_with_slash": 51,
+            "rate": 0.1133
+          },
+          "shorthand": {
+            "n": 1049,
+            "n_with_slash": 0,
+            "rate": 0.0
+          }
+        }
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 980,
@@ -642,6 +690,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -739,6 +796,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -836,6 +902,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -933,6 +1008,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -1030,6 +1114,15 @@
         "gold_kegg",
         "gold_pubchem"
       ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,

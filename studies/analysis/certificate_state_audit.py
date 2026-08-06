@@ -164,6 +164,64 @@ TIER_B_MIN_RESOLUTION_RATE = 0.5
 # work is that this label is currently overloaded, so it is named explicitly rather than left NaN.
 NO_FLAG = "no_flag"
 
+# Columns that may hold the per-row query NAME, in preference order. Arms disagree on the header.
+QUERY_NAME_COLUMNS = ("lipid_name", "chemical_name", "metabolite_name", "refmet_name", "symbol", "name")
+
+# Column recording which source field supplied the query, when an arm splits name regimes.
+QUERY_SOURCE_COLUMN = "query_source"
+SHORTHAND_SOURCE = "abbreviation"
+
+
+def _query_name_column(df: pd.DataFrame) -> str | None:
+    lowered = {c.lower(): c for c in df.columns}
+    return next((lowered[c] for c in QUERY_NAME_COLUMNS if c in lowered), None)
+
+
+def _slash_bearing_names(df: pd.DataFrame) -> dict[str, Any]:
+    """Share of query names containing a literal ``/``, overall and per name regime.
+
+    This exists because ``quote`` defaults to ``safe="/"``: before the fix, an unescaped slash
+    turned a name into extra URL path segments, so the lookup 404'd and the row was recorded
+    structurally unresolvable. This field is the exposure that bug had, per arm -- the population
+    whose "unresolvable" verdict was an encoding artifact rather than a fact about the compound.
+
+    The regime breakout is the part that matters for interpretation. Lipid SHORTHAND was the
+    suspected victim, since molecular-species notation writes sn-positions with a slash. Whether
+    that suspicion holds is an empirical question per arm, and conflating "this arm has slashes"
+    with "this arm's shorthand has slashes" would misattribute a capability gap to a bug or the
+    reverse. Counted over BOTH all rows and distinct names, because the lookup is memoized per
+    unique name while the arm's reported rate is per row.
+    """
+    name_col = _query_name_column(df)
+    if name_col is None:
+        return {"query_name_column": None, "note": "no recognizable query-name column"}
+    names = df[name_col].astype(str)
+    slash = names.str.contains("/", regex=False)
+    unique = df.assign(_n=names, _s=slash).drop_duplicates("_n")
+
+    out: dict[str, Any] = {
+        "query_name_column": name_col,
+        "n_rows": int(len(df)),
+        "n_rows_with_slash": int(slash.sum()),
+        "rate_rows": round(float(slash.mean()), 4) if len(df) else None,
+        "n_distinct_names": int(len(unique)),
+        "n_distinct_names_with_slash": int(unique["_s"].sum()),
+        "rate_distinct": round(float(unique["_s"].mean()), 4) if len(unique) else None,
+    }
+    if QUERY_SOURCE_COLUMN in df.columns:
+        regimes: dict[str, Any] = {}
+        source = df[QUERY_SOURCE_COLUMN].astype(str).str.strip().str.lower()
+        regime = source.map(lambda s: "shorthand" if s == SHORTHAND_SOURCE else "common_systematic")
+        for label, idx in regime.groupby(regime).groups.items():
+            sub = slash.loc[idx]
+            regimes[str(label)] = {
+                "n": int(len(sub)),
+                "n_with_slash": int(sub.sum()),
+                "rate": round(float(sub.mean()), 4) if len(sub) else None,
+            }
+        out["by_name_source_regime"] = dict(sorted(regimes.items()))
+    return out
+
 
 def _parse_mapping(raw: Any) -> dict[str, list[str]]:
     """Parse a ``kg_equivalent_ids`` cell (a repr'd dict in the TSV) into a mapping.
@@ -484,6 +542,7 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
         "gold_inchikey_column": gold_col,
         "quarantined_gold_columns": quarantined,
         "identifier_oracle_columns": sorted(usable_id_columns),
+        "slash_bearing_name_rate": _slash_bearing_names(df),
         "tier_a": {
             "counts": dict(sorted(tier_a_counts.items())),
             "structure_absent_share": (

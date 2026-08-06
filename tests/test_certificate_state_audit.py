@@ -231,7 +231,35 @@ def test_abstention_counts_uncommitted_rows(tmp_path: Path) -> None:
     assert panel_a["abstention_rate"] > baseline["abstention_rate"]
 
     # ...and none of them leaked into the precision side.
-    assert audited["figure5"]["panel_b_precision_coverage"]["n_verifiable"] == (
-        audit_dataset("necs", FIXTURE_TSV)["figure5"]["panel_b_precision_coverage"]["n_verifiable"]
+    assert (
+        audited["figure5"]["panel_b_precision_coverage"]["n_verifiable"]
+        == (audit_dataset("necs", FIXTURE_TSV)["figure5"]["panel_b_precision_coverage"]["n_verifiable"])
     )
     assert audited["certificate_state_counts"]["unavailable"] >= 3
+
+
+def test_slash_bearing_name_rate_is_emitted_and_splits_by_regime(tmp_path: Path) -> None:
+    """The field two shipped docstrings NAME must actually exist, and must separate regimes.
+
+    ``structure_resolver`` and ``tier_b`` both point a reader at ``slash_bearing_name_rate`` to
+    justify ``quote(..., safe="")``. A comment naming an artifact field that does not exist is the
+    same defect as a comment restating a stale number.
+
+    The regime split is load-bearing for interpretation, not decoration: an arm can carry plenty of
+    slashes while its SHORTHAND carries none, and reading the arm-level rate as a shorthand rate
+    would misattribute a capability gap to an encoding bug.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame["query_source"] = ["abbreviation"] * 4 + ["common_name"] * (len(frame) - 4)
+    frame["name"] = ["PG 36:2"] * 4 + ["PC 16:0/18:1"] * (len(frame) - 4)
+    arm = tmp_path / "lmsd"
+    arm.mkdir()
+    path = arm / "lmsd_MAPPED_chebi_d_mapped.tsv"
+    frame.to_csv(path, sep="\t", index=False)
+
+    field = audit_dataset("lmsd", path)["slash_bearing_name_rate"]
+    assert field["query_name_column"] == "name"
+    assert field["n_rows_with_slash"] == len(frame) - 4
+    regimes = field["by_name_source_regime"]
+    assert regimes["shorthand"]["n_with_slash"] == 0
+    assert regimes["common_systematic"]["n_with_slash"] == len(frame) - 4
