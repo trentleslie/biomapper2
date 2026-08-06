@@ -33,6 +33,17 @@ class TrivialMappingError(RuntimeError):
     """Raised when assigned mappings are zero — signals the gold-as-provided trap."""
 
 
+class EmptyDatasetError(RuntimeError):
+    """Raised when an adapter hands the runner a dataset with zero rows.
+
+    A source that yields nothing is a broken run, not a scorable zero. Without this guard the empty
+    frame travels into the mapper and surfaces much later as a confusing pandas join error
+    (``columns overlap but no suffix specified``) that names schema columns and points at the wrong
+    problem entirely — which is exactly what happened to SwissLipids on 2026-08-05, when its pinned
+    ``source_url`` began returning HTTP 200 with a zero-byte body.
+    """
+
+
 class NoProvidedMappingError(RuntimeError):
     """Raised in provided-ID mode when the provided source produced zero KG mappings.
 
@@ -232,6 +243,9 @@ def run_vocab(
     kg_prov: dict[str, Any] | None = None,
 ) -> VocabRun:
     """Run one vocab. Consumes the mapper as-is; writes manifest beside the outputs."""
+    # Also guarded here, not only in run_all, because orchestrate_metabench calls run_vocab directly.
+    # Cheap and idempotent when reached via run_all, which has already checked.
+    _assert_dataset_nonempty(input_df, config)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     output_tsv, stats = mapper.map_dataset_to_kg(
@@ -266,6 +280,26 @@ def run_vocab(
     return VocabRun(vocab=vocab, ok=True, output_tsv=str(output_tsv), stats=stats, manifest=manifest)
 
 
+def _assert_dataset_nonempty(input_df: pd.DataFrame, config: RunnableConfig) -> None:
+    """Fail fast, and name the likely culprit, when an adapter produced no rows.
+
+    Checked before the KG probe and before any mapper call so the error costs nothing and arrives
+    while the cause is still obvious. The message names the dataset, the row count, and the pinned
+    source, because an empty dataset almost always means the source stopped serving data rather than
+    that the harness broke.
+    """
+    if len(input_df) > 0:
+        return
+    source = getattr(config, "source_url", "") or ""
+    where = f" Pinned source: {source}" if source else ""
+    raise EmptyDatasetError(
+        f"{config.key}: the adapter produced 0 rows, so there is nothing to map. "
+        f"This is a broken run, not a score of zero.{where} "
+        f"Check that the source still serves data — an HTTP 200 with an empty body reads as success "
+        f"to a streaming adapter and yields exactly this."
+    )
+
+
 def run_all(
     mapper: Any,
     input_df: pd.DataFrame,
@@ -282,6 +316,7 @@ def run_all(
     correctness failure of the whole run, not a per-vocab hiccup.
     """
     vocabs = vocabs or config.target_vocabs
+    _assert_dataset_nonempty(input_df, config)
     kg_prov = kg_provenance(probe_live=True)  # read the KG build once per run, share across vocabs
     results: dict[str, VocabRun] = {}
     for vocab in vocabs:
@@ -297,7 +332,10 @@ def run_all(
                 enforce_assigned=enforce_assigned,
                 kg_prov=kg_prov,
             )
-        except TrivialMappingError:
+        except (TrivialMappingError, EmptyDatasetError):
+            # Neither is a per-vocab hiccup: both condemn the whole run. Letting the generic handler
+            # below catch them would file the failure as one vocab's error and let the others
+            # proceed, turning a loud stop into a quiet partial result.
             raise
         except Exception as exc:  # per-vocab isolation (e.g. Kestrel error)
             results[vocab] = VocabRun(vocab=vocab, ok=False, output_tsv=None, stats=None, manifest=None, error=str(exc))

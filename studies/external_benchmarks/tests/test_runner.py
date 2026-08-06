@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pandas as pd
@@ -10,6 +11,7 @@ import pytest
 
 from studies.external_benchmarks.config import HAJJAR
 from studies.external_benchmarks.runner import (
+    EmptyDatasetError,
     TrivialMappingError,
     assigned_stats_nonnull,
     run_all,
@@ -131,3 +133,89 @@ def test_per_vocab_error_isolated(tmp_path):
     assert not results["KEGG"].ok
     assert results["KEGG"].error is not None
     assert "Kestrel error" in results["KEGG"].error
+
+
+# --------------------------------------------------------------------------------------------------
+# Empty input: a source that yields no rows must fail loudly HERE, not survive into the mapper.
+#
+# Regression test for the 2026-08-05 SwissLipids failure. Its pinned source_url returned HTTP 200
+# with a zero-byte body, so the adapter produced 0 rows, the empty frame reached the mapper, and the
+# run died ~20 minutes later inside pandas with "columns overlap but no suffix specified" — an error
+# naming schema columns, which points at the wrong problem entirely.
+# --------------------------------------------------------------------------------------------------
+def _empty_input_df():
+    """Header-only frame — exactly what an adapter emits when its source returns an empty body."""
+    return pd.DataFrame({HAJJAR.name_column: [], HAJJAR.gold_chebi_column: []})
+
+
+def test_run_all_rejects_an_empty_dataset_before_calling_the_mapper(tmp_path):
+    mapper = FakeMapper()
+    with pytest.raises(EmptyDatasetError) as exc:
+        run_all(
+            mapper,
+            _empty_input_df(),
+            HAJJAR,
+            tmp_path,
+            dataset_sha="s",
+            repo_root=Path.cwd(),
+            vocabs=("CHEBI",),
+        )
+    msg = str(exc.value)
+    assert HAJJAR.key in msg  # says WHICH dataset
+    assert "0 rows" in msg  # says WHAT is wrong
+    assert mapper.calls == [], "the mapper must never be handed an empty frame"
+
+
+def test_empty_dataset_error_names_the_source_url_when_there_is_one(tmp_path):
+    """The usual culprit is a dead source URL, so the message must point at it.
+
+    Asserted on a config with a real source_url — HAJJAR's is "", and `"" in msg` is vacuously
+    true, which would make this assertion prove nothing.
+    """
+    config = replace(HAJJAR, source_url="https://example.invalid/lipids.tsv")
+    mapper = FakeMapper()
+    with pytest.raises(EmptyDatasetError) as exc:
+        run_all(
+            mapper,
+            _empty_input_df(),
+            config,
+            tmp_path,
+            dataset_sha="s",
+            repo_root=Path.cwd(),
+            vocabs=("CHEBI",),
+        )
+    assert "https://example.invalid/lipids.tsv" in str(exc.value)
+
+
+def test_run_all_still_accepts_a_single_row(tmp_path):
+    """The guard must reject empty, not merely small — a 1-row dataset is legitimate."""
+    mapper = FakeMapper()
+    results = run_all(mapper, _input_df(), HAJJAR, tmp_path, dataset_sha="s", repo_root=Path.cwd(), vocabs=("CHEBI",))
+    assert results["CHEBI"].ok
+
+
+def test_run_vocab_also_rejects_an_empty_dataset(tmp_path):
+    """orchestrate_metabench calls run_vocab directly, bypassing run_all's guard."""
+    mapper = FakeMapper()
+    with pytest.raises(EmptyDatasetError):
+        run_vocab(mapper, _empty_input_df(), HAJJAR, "CHEBI", tmp_path, dataset_sha="s", repo_root=Path.cwd())
+    assert mapper.calls == []
+
+
+def test_empty_dataset_error_is_not_swallowed_as_a_per_vocab_error(tmp_path):
+    """run_all files ordinary per-vocab exceptions as errors and continues; this must not be one.
+
+    Guards the failure mode where moving the check into run_vocab silently downgrades a
+    whole-run stop into a single vocab's recorded error while the other vocabs carry on.
+    """
+    mapper = FakeMapper()
+    with pytest.raises(EmptyDatasetError):
+        run_all(
+            mapper,
+            _empty_input_df(),
+            HAJJAR,
+            tmp_path,
+            dataset_sha="s",
+            repo_root=Path.cwd(),
+            vocabs=("CHEBI", "HMDB"),
+        )
