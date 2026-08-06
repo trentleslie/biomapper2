@@ -7,17 +7,23 @@ workType: **research** (researchMode: analysis) · Base: `dev` on personal fork 
 Ledger constraints treated as fixed: **L19** (label-only; Tier B opt-in), **L20** (nested API / flat
 TSV; certificate is source of truth; this axis owns the refusal-reason follow-up; record
 `comparison_rule`), **L21** (`structure_absent` is `unavailable`, NEVER `contradicted`; publish no
-precision gain for refusing it), **L5** (D3 tighten-only, separate PR), **L11** (category check is a
-validator on the committed node), **L13**, **L25** (srm1950 `gold_hmdb` quarantine only).
+precision gain for refusing it), **L26** (`independent_of_selection`; independence claimed only
+where it holds; curve stratified by source), **L27** (no precision delta across the `unavailable`
+boundary in Figure 5; abstention reported as a rate), **L28** (refusal-reason ships as a separate
+follow-up PR, still owned by this axis), **L29** (dispatch held until #47 merges), **L5** (D3
+tighten-only, separate PR), **L11** (category check is a validator on the committed node), **L13**,
+**L25** (srm1950 `gold_hmdb` quarantine only).
 
 Branch is rebased onto `origin/dev` @ `b3682bc`, which already contains **#46** (public-Kestrel
 default) and **#48** (zero-row fail-fast). Neither is re-fixed here.
 
 > **Revision note.** This plan was rewritten after adversarial + feasibility review. Twenty findings
 > were auto-applied (listed in "Review fixes applied"). Three were **premise** problems that a
-> reviewer cannot fix unilaterally and are carried to CP2 as decisions: Tier B's independence, how
+> reviewer cannot fix unilaterally and were carried to CP2 as decisions: Tier B's independence, how
 > Figure 5 renders `unavailable` without restating the L21-forbidden number, and the true size of
-> the refusal-reason work.
+> the refusal-reason work. All three are now decided — **L26**, **L27**, **L28** — and folded in below.
+>
+> **Status: dispatch HELD (L29) until PR #47 merges.** See "Hard dependency ordering".
 
 ---
 
@@ -44,6 +50,10 @@ dependency, not a rebase hazard, and review found the collision is **same-hunk**
 - The `.gitignore` un-ignore of `studies/analysis/results/*.json` is #47's; the JSON artifact on
   this branch is currently force-added and re-stages cleanly only after the rebase.
 - #47 also edits `tests/test_resolver_source_weighting.py` and `tests/test_structure_resolver.py`.
+
+**Dispatch is HELD on this (L29).** #47 is open, mergeable and passed Greptile 5/5; merging it is
+Trent's action. On merge: rebase this branch onto it, re-stage the JSON artifact (it is currently
+force-added and becomes legitimate under #47's `.gitignore` entry), then dispatch.
 
 ---
 
@@ -79,11 +89,11 @@ dependency, not a rebase hazard, and review found the collision is **same-hunk**
    | `node_inchikey_blocks` | `list[str]` | sorted; committed node's blocks |
    | `independent_source` | `str \| None` | `metabolomics-workbench` / `pubchem` / None |
    | `independent_inchikey_block` | `str \| None` | Tier B result for the QUERY NAME |
-   | `independent_of_selection` | `bool \| None` | see **D1** — false when the Tier B source is the same registry as the annotator that supplied the committed node |
+   | `independent_of_selection` | `bool \| None` | **L26** — false when the Tier B source is the same registry as the annotator that supplied the committed node (see item 12a) |
    | `comparison_rule` | `str` | identifier of the rule that produced the verdict (L20) |
    | `selection_conflict` | `str \| None` | `divergent_refmet` / `conflict_no_structure` / None |
    | `equivalent_ids_lookup_ok` | `bool` | see item 12 |
-   | `refusal_reason` | `str \| None` | **deferred — see D3** |
+   | `refusal_reason` | `str \| None` | **deferred to a follow-up PR (L28)**; field reserved so the schema does not change shape later |
    | `provenance` | `dict` | Tier B enabled?, cache store + hit/miss, expiry policy |
 
 8. **`state` and `selection_conflict` are different axes and must never merge.** `state` describes
@@ -101,6 +111,12 @@ dependency, not a rebase hazard, and review found the collision is **same-hunk**
    contains `hgnc` and `nlmgene` arms, and HGNC symbol resolution measures high on the batch path
    (figure: `gate.py` capability artifact — not restated here per the provenance standard). Labeling
    that population `unavailable` would be the Finding-3 confound relocated onto genes.
+
+   **Record why this state exists, not just that it does.** `not_applicable` is not defensive
+   padding: without it the certificate makes its strongest negative claim about the one population
+   it was never designed to judge. `unavailable` means "we looked for a structure and the graph has
+   none" — a meaningful statement about a metabolite and a meaningless one about a gene. Deleting
+   the state to "simplify the enum" reintroduces L21's error in a new population.
 
 10. State assignment, Tier A only (the default path): non-small-molecule → `not_applicable`;
     `structure_absent` → `unavailable`; `structure_present` → `uncorroborated`. With Tier B on,
@@ -137,6 +153,13 @@ dependency, not a rebase hazard, and review found the collision is **same-hunk**
     of NECS rows … 65.4% of LMSD). Calling it would fire an external request per absent row and
     silently reclassify some as `structure_present` from a non-KG source, changing the very
     distribution the committed audit measured.
+
+    **Do not "simplify" this back to the shared helper.** The two look interchangeable in a diff and
+    are not: `inchikey_blocks()` answers "what structure can I find for this node by any means",
+    Tier A answers "what structure does the GRAPH assert for this node". Only the second is a
+    self-certificate, and only the second is free. A future reader consolidating them would break
+    the zero-I/O guarantee (G6) and shift the state distribution without any test going red — which
+    is why G6 asserts on the StructureResolver session specifically.
 17. **Label only (L19).** `chosen_kg_id` is emitted unchanged in every state. **Zero coverage delta
     on this axis** — the PR body says so explicitly rather than borrowing #47's coverage framing.
     Withholding stays a documented extension point, not built.
@@ -172,6 +195,22 @@ dependency, not a rebase hazard, and review found the collision is **same-hunk**
 23. Config flag, default **off**. When on, resolve the QUERY NAME via MW → PubChem. Both
     `_fetch_mw_inchikey` and `_fetch_pubchem_inchikey` already take a name; today they are only ever
     called with the *node's* name as a fallback.
+
+23a. **Tier B via MW is NOT independent of the selector, and that is the whole ballgame (L26).**
+    `REFMET_ANNOTATOR = "metabolomics-workbench"` (`resolver.py:21`) is the annotator the resolver
+    source-weights *toward*; it queries MW's fuzzy `/refmet/match` with the query name to produce
+    the candidate that then wins. Tier B's first hop is MW's `/refmet/name` — **the same registry,
+    keyed on the same query name**. On any row where the committed node came from RefMet's vote,
+    Tier B asks RefMet whether RefMet was right, and a `corroborated` verdict there is circular.
+    That is exactly the population where the independence claim matters, and independence from a
+    name is the entire differentiation from UniChem (which needs a registered identifier or a
+    structure and cannot start from a name).
+
+    Resolution: keep both hops for coverage, but compute `independent_of_selection` = (the Tier B
+    source is not the registry that supplied the committed node) and **claim independence only on
+    the subset where it is true**. Figure 5 is stratified by `independent_source`. A test asserts
+    that an MW-corroborated row whose committed node came from the RefMet vote has
+    `independent_of_selection == False`.
 24. **Call them through a guarded wrapper, not directly.** The swallow-everything `try/except` lives
     only in `inchikey_block` (`structure_resolver.py:53-58`); calling the private fetchers directly
     bypasses it and a `raise_for_status()` on a 503 propagates into the mapping loop. Add throttle +
@@ -199,7 +238,17 @@ dependency, not a rebase hazard, and review found the collision is **same-hunk**
 ## Phase 5 — The Figure 5 curve
 
 29. Extend the already-committed `studies/analysis/certificate_state_audit.py` rather than adding a
-    second instrument. Curve shape is decided by **D2**.
+    second instrument. **Curve shape is fixed by L27:**
+    - **Never plot a precision delta across the `unavailable` boundary.** That delta *is* "refusing
+      `structure_absent` buys +N precision" — the L21-forbidden claim, rendered as a line, in the
+      one artifact that travels without its caveat.
+    - `unavailable` is reported as a **declared abstention rate** (a coverage statistic), not as an
+      operating point on a precision curve.
+    - The precision-coverage curve is drawn **only within the verifiable population** — the rows an
+      oracle can actually adjudicate — and is stratified by `independent_source` per L26.
+    - Two-panel form (abstention rate | precision-coverage) is the preferred presentation if the
+      floats axis returns panel budget; single-panel with the abstention rate stated in the caption
+      otherwise.
 30. One committed Tier-B sweep over the pinned suite, saved by default to a timestamped path with
     cache state and inputs pinned. The only network-touching step in the plan. The sweep artifact
     must be **committed and referenced by a fixed name** as a second audit input, or the Tier-B half
@@ -247,3 +296,7 @@ G1/G6 made evaluable · #47 reclassified as a hard functional dependency · line
 - **No fix to srm1950's `gold_hmdb`** (L25); evidence-base owns it.
 - **No change to `_select_canonical`**, no namespace whitelist, no pool filter (L11).
 - **No re-fix of #46 or #48**; no duplication of #47.
+- **No refusal-reason plumbing (L28).** It ships as a separate follow-up PR, still owned by this
+  axis. It is a per-annotator, `AssignedIDsDict`-contract-breaking change that cannot be designed
+  correctly against an unmerged #47, and bundling it would delay the one thing that makes the
+  preprint's central claim true of the code.
