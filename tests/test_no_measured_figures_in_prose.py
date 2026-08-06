@@ -50,6 +50,19 @@ GUARDED_TREES = (
     "tests",
 )
 
+# KNOWN GAP, stated rather than left to be discovered: ``studies/external_benchmarks`` is NOT
+# guarded. It is the largest body of measurement-bearing code in the repo outside this standard, and
+# it does not pass today -- run ``_violations`` over the tree to size it before adding it here.
+# Bringing it in is a real cleanup, not a one-line tree addition, and doing it by burying the tree in
+# SKIPPED entries would hollow out the meta-tests below. It is named here so the guard's coverage is
+# legible; silence would recreate the false confidence this rewrite exists to remove.
+#
+# One case in that tree wants an exemption rather than a rewrite when it happens:
+# ``studies/external_benchmarks/config.py`` restates competitor baseline figures inside a comment
+# that explicitly marks them UNVERIFIED and refuses to treat them as fact. That comment is the
+# needs-verification marker doing its job, not a drifted measurement.
+UNGUARDED_TREES_KNOWN = ("studies/external_benchmarks",)
+
 # Files outside the guarded trees that the standard still covers. Kept short on purpose: anything
 # that needs to be listed here individually is a hint the tree list is wrong.
 GUARDED_EXTRA_FILES = (
