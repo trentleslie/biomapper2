@@ -666,3 +666,48 @@ def test_the_agreement_comparison_case_folds_both_operands(tmp_path: Path) -> No
         lowered[key]["oracle_independence_control"]["agreement_rate"]
         == upper[key]["oracle_independence_control"]["agreement_rate"]
     ), "case must not change the measured agreement"
+
+
+def test_the_gold_side_case_fold_is_reached(tmp_path: Path) -> None:
+    """`_first_block`'s fold applies to the GOLD column, and no test reached it.
+
+    The round-6 case-fold test lower-cases only `certificate_independent_inchikey_block`, so it
+    exercises the independence control's fold and not this one. Dropping `.upper()` from
+    `_first_block` left the whole suite green while a lower-case gold file would score every row
+    incorrect and report precision 0.0.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame["gold_inchikey"] = frame["gold_inchikey"].map(
+        lambda v: str(v).lower() if isinstance(v, str) and v.strip() else v
+    )
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+
+    lowered = audit(tmp_path)["per_dataset"][0]
+    upper = audit(FIXTURE_SUITE)["per_dataset"][0]
+    assert lowered["structure_oracle"]["blended_precision"] == upper["structure_oracle"]["blended_precision"]
+    assert (
+        lowered["structure_oracle"]["blended_precision"] > 0
+    ), "a zero here would mean the fold is absent and every row scored incorrect"
+
+
+def test_a_derived_arm_is_refused_for_the_derivation_not_the_tier_b_floor(tmp_path: Path) -> None:
+    """The `not has_certificate` refusal passed only because a LATER gate fired.
+
+    Deleting that branch left the suite green: a derived arm has every `_tier_b_outcome` = 'off',
+    so the resolution rate is 0.0 and the floor refuses two checks later. The branch was correct
+    but unobserved -- and its message is the reason printed on all nine entries of the committed
+    artifact, i.e. the only refusal reason a reader of the .md actually sees.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame = frame.drop(columns=[c for c in frame.columns if c.startswith("certificate_")])
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+
+    figure5 = audit(tmp_path)["per_dataset"][0]["figure5"]
+    assert figure5["curve_publishable"] is False
+    reason = figure5["curve_not_publishable_reason"]
+    assert "carries no certificate_* columns" in reason
+    assert "resolution rate" not in reason, "must name the derivation, not blame the Tier B floor"

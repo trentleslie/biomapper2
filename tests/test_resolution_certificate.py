@@ -364,3 +364,62 @@ def test_provenance_records_tier_b_state_and_both_cache_stores() -> None:
     assert "structure_cache_store" in provenance
     flat = cert.to_flat_columns()
     assert flat["certificate_provenance_tier_b_enabled"] is False
+
+
+# ----------------------------------------------------------------------------------------------
+# Case folding on the SHIPPED comparison.
+#
+# The study module gained this fold twice (its `_first_block`, then both operands of its
+# independence control) while the production comparison that actually assigns
+# corroborated/contradicted folded nothing. The instrument was hardened against a defect the
+# instrument does not have; the code being measured kept it. Worse, the two disagree in the
+# direction that hides: the audit folds, so it scores a case-mismatched row as AGREEING while
+# `issue()` scored it as REFUTED -- an inverted Panel B that every gate passes.
+# ----------------------------------------------------------------------------------------------
+
+_KEY = "BSYNRYMUTXBXSQ-UHFFFAOYSA-N"
+
+
+def _case_tier_b(block: str) -> TierBResult:
+    return TierBResult(source="pubchem", inchikey_block=block, outcome=TierBOutcome.RESOLVED)
+
+
+def _issue_case(kg_key: str, tier_b_block: str):
+    return issue(
+        chosen_kg_id="CHEBI:15365",
+        is_small_molecule=True,
+        kg_equivalent_ids={"INCHIKEY": [kg_key]},
+        equivalent_ids_lookup_ok=True,
+        selection_conflict=None,
+        tier_b=_case_tier_b(tier_b_block),
+        committed_node_sources=set(),
+    )
+
+
+@pytest.mark.parametrize(
+    "kg_key,tier_b_block",
+    [
+        (_KEY, "bsynrymutxbxsq"),  # KG upper, Tier B lower
+        (_KEY.lower(), "BSYNRYMUTXBXSQ"),  # KG lower, Tier B upper
+        (_KEY.lower(), "bsynrymutxbxsq"),  # both lower
+        (_KEY, "BSYNRYMUTXBXSQ"),  # both upper (the ordinary case)
+    ],
+)
+def test_the_same_structure_corroborates_whatever_its_casing(kg_key, tier_b_block):
+    """`contradicted` asserts independent evidence REFUTES the node -- the strongest claim here.
+
+    Two spellings of one molecule must never produce it. Both operands come from sources that do
+    not constrain casing: the KG on one side, MW and PubChem on the other.
+    """
+    assert _issue_case(kg_key, tier_b_block).state is CertificateState.CORROBORATED
+
+
+def test_a_genuine_structural_disagreement_still_contradicts():
+    """Guards the guard: folding must not turn the comparison into one that cannot refuse."""
+    assert _issue_case(_KEY, "ZZZZZZZZZZZZZZ").state is CertificateState.CONTRADICTED
+
+
+def test_the_emitted_blocks_are_canonical_regardless_of_input_casing():
+    """Folded at the PRODUCER too, so the published column is canonical and not merely compared as if."""
+    certificate = _issue_case(_KEY.lower(), "bsynrymutxbxsq")
+    assert certificate.node_inchikey_blocks == ["BSYNRYMUTXBXSQ"]

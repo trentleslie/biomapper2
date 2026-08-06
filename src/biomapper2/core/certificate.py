@@ -211,7 +211,10 @@ def node_blocks_from_equivalent_ids(kg_equivalent_ids: Mapping[str, Any] | None)
     keys = kg_equivalent_ids.get(INCHIKEY_PREFIX) or []
     if isinstance(keys, str):
         keys = [keys]
-    blocks = {k.split("-")[0] for k in keys if isinstance(k, str) and k.strip()}
+    # Upper-cased at the producer so the EMITTED column is canonical, not just the comparison.
+    # InChIKey blocks are conventionally upper-case but nothing upstream enforces it: these come
+    # from the KG, and Tier B's come from two external services.
+    blocks = {k.split("-")[0].upper() for k in keys if isinstance(k, str) and k.strip()}
     return sorted(blocks)
 
 
@@ -305,8 +308,16 @@ def issue(
         structure_status = StructureStatus.STRUCTURE_PRESENT
         state = CertificateState.UNCORROBORATED
         if tier_b is not None and tier_b.outcome is TierBOutcome.RESOLVED and tier_b.inchikey_block:
+            # Fold BOTH operands at the comparison too, independently of the producers above, so
+            # a third producer cannot silently reopen this. A case mismatch here does not degrade
+            # gracefully: it emits ``contradicted``, the state asserting that independent evidence
+            # REFUTES the committed node, for two spellings of the same molecule. The study module
+            # folds (twice over), so its controls would score those rows as agreeing while this
+            # scored them as refuted -- an inverted Panel B with every gate satisfied.
             state = (
-                CertificateState.CORROBORATED if tier_b.inchikey_block in set(blocks) else CertificateState.CONTRADICTED
+                CertificateState.CORROBORATED
+                if tier_b.inchikey_block.upper() in {b.upper() for b in blocks}
+                else CertificateState.CONTRADICTED
             )
 
     # Independent-evidence fields belong ONLY to rows inside the certificate's population. A row

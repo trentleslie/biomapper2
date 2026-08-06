@@ -161,7 +161,10 @@ class IndependentStructureLookup:
             if key:
                 return TierBResult(
                     source=source,
-                    inchikey_block=key.split("-")[0],
+                    # Upper-cased here as well as at the comparison: the value goes straight
+                    # into the emitted certificate column, and an external service's casing must
+                    # not become part of the published artifact.
+                    inchikey_block=key.split("-")[0].upper(),
                     outcome=TierBOutcome.RESOLVED,
                     cache_state=cache_state,
                 )
