@@ -35,7 +35,10 @@ class LipidMapsRestEnricher:
     def enrich(self, canonical_name: str) -> dict[str, str]:
         if not canonical_name or not str(canonical_name).strip():
             return {}
-        url = _LIPIDMAPS_REST.format(name=quote(str(canonical_name).strip()))
+        # safe="" -- LIPID MAPS is path-segment addressed and lipid names are full of slashes
+        # ("PC 16:0/18:1"). The default safe="/" leaves the slash intact, which adds a path segment
+        # and silently returns nothing. Exposure per arm: artifact field ``slash_bearing_name_rate``.
+        url = _LIPIDMAPS_REST.format(name=quote(str(canonical_name).strip(), safe=""))
         try:
             resp = self._session.get(url, timeout=self._timeout)
             if getattr(resp, "status_code", None) != 200:

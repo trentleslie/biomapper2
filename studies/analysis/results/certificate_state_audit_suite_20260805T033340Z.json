@@ -34,6 +34,14 @@
         "n_distinct_names_with_slash": 159,
         "rate_distinct": 0.1069
       },
+      "spurious_independence": {
+        "n_committed": 1488,
+        "n_slash_bearing": 159,
+        "n_slash_bearing_without_refmet_vote": 63,
+        "share_of_committed": 0.0423,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 433,
@@ -119,6 +127,9 @@
           "n_rows_with_tier_b_outcome": 1488,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 718,
+          "n_tier_b_resolved_verifiable": 0,
           "resolution_rate": 0.0,
           "outcomes": {
             "off": 1488
@@ -202,6 +213,14 @@
         "n_distinct_names": 1500,
         "n_distinct_names_with_slash": 438,
         "rate_distinct": 0.292
+      },
+      "spurious_independence": {
+        "n_committed": 1500,
+        "n_slash_bearing": 438,
+        "n_slash_bearing_without_refmet_vote": 83,
+        "share_of_committed": 0.0553,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
       },
       "tier_a": {
         "counts": {
@@ -288,6 +307,9 @@
           "n_rows_with_tier_b_outcome": 1500,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 1396,
+          "n_tier_b_resolved_verifiable": 0,
           "resolution_rate": 0.0,
           "outcomes": {
             "off": 1500
@@ -372,6 +394,14 @@
         "n_distinct_names_with_slash": 116,
         "rate_distinct": 0.1096
       },
+      "spurious_independence": {
+        "n_committed": 1058,
+        "n_slash_bearing": 116,
+        "n_slash_bearing_without_refmet_vote": 54,
+        "share_of_committed": 0.051,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 520,
@@ -444,6 +474,9 @@
           "n_rows_with_tier_b_outcome": 1058,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 496,
+          "n_tier_b_resolved_verifiable": 0,
           "resolution_rate": 0.0,
           "outcomes": {
             "off": 1058
@@ -528,6 +561,14 @@
             "rate": 0.0
           }
         }
+      },
+      "spurious_independence": {
+        "n_committed": 1499,
+        "n_slash_bearing": 51,
+        "n_slash_bearing_without_refmet_vote": 50,
+        "share_of_committed": 0.0334,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
       },
       "tier_a": {
         "counts": {
@@ -614,6 +655,9 @@
           "n_rows_with_tier_b_outcome": 1499,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 519,
+          "n_tier_b_resolved_verifiable": 0,
           "resolution_rate": 0.0,
           "outcomes": {
             "off": 1499
@@ -699,6 +743,14 @@
         "n_distinct_names_with_slash": 73,
         "rate_distinct": 0.0614
       },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -745,7 +797,10 @@
           "n_rows_with_tier_b_outcome": 1412,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
-          "resolution_rate": 0.0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
           "outcomes": {
             "off": 1412
           },
@@ -805,6 +860,14 @@
         "n_distinct_names_with_slash": 73,
         "rate_distinct": 0.0614
       },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -851,7 +914,10 @@
           "n_rows_with_tier_b_outcome": 1412,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
-          "resolution_rate": 0.0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
           "outcomes": {
             "off": 1412
           },
@@ -911,6 +977,14 @@
         "n_distinct_names_with_slash": 73,
         "rate_distinct": 0.0614
       },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -957,7 +1031,10 @@
           "n_rows_with_tier_b_outcome": 1412,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
-          "resolution_rate": 0.0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
           "outcomes": {
             "off": 1412
           },
@@ -1017,6 +1094,14 @@
         "n_distinct_names_with_slash": 73,
         "rate_distinct": 0.0614
       },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -1063,7 +1148,10 @@
           "n_rows_with_tier_b_outcome": 1412,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
-          "resolution_rate": 0.0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
           "outcomes": {
             "off": 1412
           },
@@ -1123,6 +1211,14 @@
         "n_distinct_names_with_slash": 73,
         "rate_distinct": 0.0614
       },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
       "tier_a": {
         "counts": {
           "structure_absent": 448,
@@ -1169,7 +1265,10 @@
           "n_rows_with_tier_b_outcome": 1412,
           "n_tier_b_resolved": 0,
           "n_tier_b_lookup_failed": 0,
-          "resolution_rate": 0.0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
           "outcomes": {
             "off": 1412
           },

@@ -169,6 +169,10 @@ QUERY_NAME_COLUMNS = ("lipid_name", "chemical_name", "metabolite_name", "refmet_
 
 # Column recording which source field supplied the query, when an arm splits name regimes.
 QUERY_SOURCE_COLUMN = "query_source"
+# Per-annotator {annotator: {kg_id: [curies]}} — how a committed node's sources are recovered.
+ASSIGNED_COL = "kg_ids_assigned"
+# The annotator the resolver source-weights toward; the one L26's independence test names.
+DEPENDENT_ANNOTATOR = "metabolomics-workbench"
 SHORTHAND_SOURCE = "abbreviation"
 
 
@@ -180,10 +184,19 @@ def _query_name_column(df: pd.DataFrame) -> str | None:
 def _slash_bearing_names(df: pd.DataFrame) -> dict[str, Any]:
     """Share of query names containing a literal ``/``, overall and per name regime.
 
-    This exists because ``quote`` defaults to ``safe="/"``: before the fix, an unescaped slash
-    turned a name into extra URL path segments, so the lookup 404'd and the row was recorded
-    structurally unresolvable. This field is the exposure that bug had, per arm -- the population
-    whose "unresolvable" verdict was an encoding artifact rather than a fact about the compound.
+    This exists because ``quote`` defaults to ``safe="/"``: an unescaped slash turns a name into
+    extra URL path segments, so the lookup misses and the row is recorded unresolvable. This field
+    is that bug's EXPOSURE per arm -- the population whose "unresolvable" verdict may be an encoding
+    artifact rather than a fact about the compound.
+
+    **Read this as exposure, not as a fixed-bug residual.** The defect was a whole CLASS across six
+    call sites, found in two passes: ``tier_b`` (2) and ``structure_resolver`` (2) first, then the
+    default-on annotator path -- ``annotators/metabolomics_workbench.py`` and
+    ``annotators/lipidmaps_rest.py`` -- which is the consequential one, because those candidates
+    enter the vote and reach ``chosen_kg_id``. All six now pass ``safe=""``. The count here does not
+    shrink when a site is fixed; it is a property of the NAMES, so it stays the standing measure of
+    how much of each arm this class of bug can reach. Anyone adding a seventh call site should read
+    it that way.
 
     The regime breakout is the part that matters for interpretation. Lipid SHORTHAND was the
     suspected victim, since molecular-species notation writes sn-positions with a slash. Whether
@@ -221,6 +234,51 @@ def _slash_bearing_names(df: pd.DataFrame) -> dict[str, Any]:
             }
         out["by_name_source_regime"] = dict(sorted(regimes.items()))
     return out
+
+
+def _spurious_independence(df: pd.DataFrame) -> dict[str, Any]:
+    """Rows where ``independent_of_selection`` can be TRUE IN FACT BUT FALSE IN REASON.
+
+    ``_independent_of_selection`` is ``dependent_annotator not in committed_node_sources``. The
+    encoding defect on the RefMet annotator meant a slash-bearing name could not produce a vote at
+    all, so ``metabolomics-workbench`` is absent from the committed node's sources and a
+    Tier-B-via-MW verdict reports as independent -- not because RefMet was uninvolved by nature, but
+    because it was silently prevented from participating. Figure 5 Panel B stratifies on that field,
+    so the misattribution would propagate into the figure.
+
+    Counted as: committed row AND slash-bearing query name AND ``metabolomics-workbench`` absent
+    from the committed node's entry in ``kg_ids_assigned``.
+
+    **This is an UPPER BOUND, and must be reported as one.** RefMet can be legitimately absent for
+    reasons that have nothing to do with encoding -- the name is genuinely outside RefMet, or the
+    annotator did vote but for a different node. Nothing in a committed artifact separates "could
+    not ask" from "asked and got nothing", so this bounds the affected population rather than
+    measuring it. A live re-run after the fix is the only thing that resolves it exactly.
+    """
+    name_col = _query_name_column(df)
+    if name_col is None or ASSIGNED_COL not in df.columns or CHOSEN_COL not in df.columns:
+        return {"n": None, "note": "arm lacks a query-name or kg_ids_assigned column"}
+
+    committed = df[df[CHOSEN_COL].notna()]
+    slash = committed[name_col].astype(str).str.contains("/", regex=False)
+
+    def _sources(row: pd.Series) -> set[str]:
+        assigned = _parse_mapping(row.get(ASSIGNED_COL))
+        return {a for a, nodes in assigned.items() if isinstance(nodes, dict) and row[CHOSEN_COL] in nodes}
+
+    mw_absent = committed.apply(lambda r: DEPENDENT_ANNOTATOR not in _sources(r), axis=1)
+    both = slash & mw_absent
+    return {
+        "n_committed": int(len(committed)),
+        "n_slash_bearing": int(slash.sum()),
+        "n_slash_bearing_without_refmet_vote": int(both.sum()),
+        "share_of_committed": round(float(both.mean()), 4) if len(committed) else None,
+        "bound": "upper",
+        "note": (
+            "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from "
+            "'RefMet was asked and had nothing'"
+        ),
+    }
 
 
 def _parse_mapping(raw: Any) -> dict[str, list[str]]:
@@ -414,7 +472,7 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
             "points": sorted(points, key=lambda p: p["certificate_state"]),
         }
 
-    tier_b = _tier_b_stats(df)
+    tier_b = _tier_b_stats(df, verifiable)
     publishable, reason = _curve_publishable(has_certificate, tier_b)
     return {
         "panel_a_abstention": panel_a,
@@ -426,11 +484,18 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
     }
 
 
-def _tier_b_stats(df: pd.DataFrame) -> dict[str, Any]:
-    """Tier B's resolution rate over the audited rows, emitted beside every operating point.
+def _tier_b_stats(df: pd.DataFrame, verifiable: pd.DataFrame) -> dict[str, Any]:
+    """Tier B's resolution rate, emitted beside every operating point.
 
     Without it a reader cannot see that corroboration was computed on whichever names the exact-name
     endpoints happened to know.
+
+    **The GATE rate is computed over the VERIFIABLE population, not the full frame** -- the same
+    population Panel B is drawn over. An all-rows rate answers a different question than the curve it
+    gates: on an arm where most rows are ``unavailable`` or out of scope, Tier B can resolve nearly
+    every row the curve actually describes and still be refused by an all-rows rate dragged down by
+    rows the curve never plots. The all-rows rate is still reported, as ``resolution_rate_all_rows``,
+    because it is the honest measure of how much of the arm Tier B reached -- but it does not gate.
 
     Counted PER ROW, not per unique query name: a mapped TSV is the population the figure describes,
     and a name appearing twice contributes two operating-point rows. ``IndependentStructureLookup.
@@ -440,11 +505,18 @@ def _tier_b_stats(df: pd.DataFrame) -> dict[str, Any]:
     outcomes = Counter(str(v) for v in df["_tier_b_outcome"])
     n_rows = int(len(df))
     n_resolved = int(outcomes.get("resolved", 0))
+    v_outcomes = Counter(str(v) for v in verifiable["_tier_b_outcome"])
+    n_verifiable = int(len(verifiable))
+    n_v_resolved = int(v_outcomes.get("resolved", 0))
     return {
         "n_rows_with_tier_b_outcome": n_rows,
         "n_tier_b_resolved": n_resolved,
         "n_tier_b_lookup_failed": int(outcomes.get("lookup_failed", 0)),
-        "resolution_rate": round(n_resolved / n_rows, 4) if n_rows else None,
+        "resolution_rate_all_rows": round(n_resolved / n_rows, 4) if n_rows else None,
+        # The gate. Same population as Panel B, so the gate and the curve answer one question.
+        "n_verifiable": n_verifiable,
+        "n_tier_b_resolved_verifiable": n_v_resolved,
+        "resolution_rate": round(n_v_resolved / n_verifiable, 4) if n_verifiable else None,
         "outcomes": dict(sorted(outcomes.items())),
         "min_resolution_rate_floor": TIER_B_MIN_RESOLUTION_RATE,
     }
@@ -543,6 +615,7 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
         "quarantined_gold_columns": quarantined,
         "identifier_oracle_columns": sorted(usable_id_columns),
         "slash_bearing_name_rate": _slash_bearing_names(df),
+        "spurious_independence": _spurious_independence(df),
         "tier_a": {
             "counts": dict(sorted(tier_a_counts.items())),
             "structure_absent_share": (

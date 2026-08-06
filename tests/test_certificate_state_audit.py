@@ -144,7 +144,13 @@ def test_every_operating_point_carries_sparsity_control_and_tier_b_resolution_ra
     figure5 = result["per_dataset"][0]["figure5"]
     assert figure5["sparsity_control"]["n_absent_oracle_could_fire"] is not None
     assert figure5["tier_b"]["n_rows_with_tier_b_outcome"] == 9
-    assert figure5["tier_b"]["resolution_rate"] == pytest.approx(5 / 9, abs=1e-4)
+    # Two distinct rates, deliberately: the all-rows figure reports how much of the arm Tier B
+    # reached, while ``resolution_rate`` is the GATE and is scoped to the population Panel B plots.
+    assert figure5["tier_b"]["resolution_rate_all_rows"] == pytest.approx(5 / 9, abs=1e-4)
+    n_verifiable = figure5["tier_b"]["n_verifiable"]
+    assert figure5["tier_b"]["resolution_rate"] == pytest.approx(
+        figure5["tier_b"]["n_tier_b_resolved_verifiable"] / n_verifiable, abs=1e-4
+    )
 
 
 def test_the_curve_is_refused_below_the_stated_resolution_floor(tmp_path: Path) -> None:
@@ -263,3 +269,33 @@ def test_slash_bearing_name_rate_is_emitted_and_splits_by_regime(tmp_path: Path)
     regimes = field["by_name_source_regime"]
     assert regimes["shorthand"]["n_with_slash"] == 0
     assert regimes["common_systematic"]["n_with_slash"] == len(frame) - 4
+
+
+def test_curve_is_publishable_when_the_gate_is_satisfied(result: dict) -> None:
+    """POSITIVE control for ``_curve_publishable``. The other assertions are all negative.
+
+    Without this, any change that makes the gate return False unconditionally leaves the whole suite
+    green while permanently suppressing Figure 5 -- and the operator, having run the expensive
+    supervised sweep, would get ``false`` with no way to tell a correct refusal from a broken gate.
+    A gate that can only ever say no is indistinguishable from a gate that is wired shut.
+    """
+    figure5 = result["per_dataset"][0]["figure5"]
+    assert figure5["curve_publishable"] is True
+    assert figure5["curve_not_publishable_reason"] is None
+    assert figure5["tier_b"]["resolution_rate"] >= figure5["tier_b"]["min_resolution_rate_floor"]
+
+
+def test_the_tier_b_gate_uses_the_same_population_as_the_curve_it_gates(result: dict) -> None:
+    """The gate rate is over the verifiable rows -- exactly what Panel B plots.
+
+    An all-rows rate answers a different question: on an arm dominated by ``unavailable`` rows, Tier
+    B could resolve nearly every row the curve describes and still be refused by a rate dragged down
+    by rows the curve never plots. The all-rows figure is still reported, but it does not gate.
+    """
+    for dataset in result["per_dataset"]:
+        tier_b = dataset["figure5"]["tier_b"]
+        assert tier_b["n_verifiable"] == dataset["figure5"]["panel_b_precision_coverage"]["n_verifiable"]
+        assert "resolution_rate_all_rows" in tier_b, "the all-rows rate must still be reported"
+        if tier_b["n_verifiable"]:
+            expected = round(tier_b["n_tier_b_resolved_verifiable"] / tier_b["n_verifiable"], 4)
+            assert tier_b["resolution_rate"] == expected

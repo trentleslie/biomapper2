@@ -72,6 +72,9 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1488,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 718,
+    "n_tier_b_resolved_verifiable": 0,
     "resolution_rate": 0.0,
     "outcomes": {
       "off": 1488
@@ -108,6 +111,9 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1500,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 1396,
+    "n_tier_b_resolved_verifiable": 0,
     "resolution_rate": 0.0,
     "outcomes": {
       "off": 1500
@@ -144,6 +150,9 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1058,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 496,
+    "n_tier_b_resolved_verifiable": 0,
     "resolution_rate": 0.0,
     "outcomes": {
       "off": 1058
@@ -180,6 +189,9 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1499,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 519,
+    "n_tier_b_resolved_verifiable": 0,
     "resolution_rate": 0.0,
     "outcomes": {
       "off": 1499
@@ -203,7 +215,10 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1412,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
-    "resolution_rate": 0.0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 0,
+    "n_tier_b_resolved_verifiable": 0,
+    "resolution_rate": null,
     "outcomes": {
       "off": 1412
     },
@@ -226,7 +241,10 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1412,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
-    "resolution_rate": 0.0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 0,
+    "n_tier_b_resolved_verifiable": 0,
+    "resolution_rate": null,
     "outcomes": {
       "off": 1412
     },
@@ -249,7 +267,10 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1412,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
-    "resolution_rate": 0.0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 0,
+    "n_tier_b_resolved_verifiable": 0,
+    "resolution_rate": null,
     "outcomes": {
       "off": 1412
     },
@@ -272,7 +293,10 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1412,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
-    "resolution_rate": 0.0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 0,
+    "n_tier_b_resolved_verifiable": 0,
+    "resolution_rate": null,
     "outcomes": {
       "off": 1412
     },
@@ -295,7 +319,10 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
     "n_rows_with_tier_b_outcome": 1412,
     "n_tier_b_resolved": 0,
     "n_tier_b_lookup_failed": 0,
-    "resolution_rate": 0.0,
+    "resolution_rate_all_rows": 0.0,
+    "n_verifiable": 0,
+    "n_tier_b_resolved_verifiable": 0,
+    "resolution_rate": null,
     "outcomes": {
       "off": 1412
     },
