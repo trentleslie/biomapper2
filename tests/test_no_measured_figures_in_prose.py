@@ -58,20 +58,38 @@ GUARDED_FILES = (
     "tests/test_resolver_source_weighting.py",
     "tests/test_structure_resolver.py",
     "tests/test_annotation_engine_canonical.py",
+    # The evidence-base files. These exist to put measured numbers in artifacts, so a measured
+    # number restated in their own prose would be the defect they were written to remove.
+    #
+    # Deliberately NOT guarded: studies/external_benchmarks/config.py, which carries an external
+    # baseline in a comment that is explicitly flagged needs-verification alongside a null registry
+    # value. Guarding it would turn the suite red for a comment doing exactly the right thing.
+    # Also not guarded: build_section3_claims.py, whose CODE is a list of manuscript values -- the
+    # guard scans prose, not code, but the file's whole purpose is to hold those values.
+    "studies/external_benchmarks/stats.py",
+    "studies/external_benchmarks/confidence_report.py",
+    "studies/external_benchmarks/reconcile_section3.py",
+    "studies/external_benchmarks/request_timeout.py",
+    "studies/external_benchmarks/tests/test_stats.py",
+    "studies/external_benchmarks/tests/test_confidence_report.py",
+    "studies/external_benchmarks/tests/test_reconcile_section3.py",
+    "studies/external_benchmarks/tests/test_row_index_gold_guard.py",
+    "src/biomapper2/utils.py",
+    "tests/test_kestrel_client_hardening.py",
 )
 
 # Identifiers, not quantities. Stripped before scanning so a CURIE's digits are not read as a count.
 _IDENTIFIER_PATTERNS = (
-    re.compile(r"``[^`]*``"),                                   # inline code spans hold code, not prose
-    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),                       # ISO dates ("verified live 2026-06-18")
+    re.compile(r"``[^`]*``"),  # inline code spans hold code, not prose
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),  # ISO dates ("verified live 2026-06-18")
     re.compile(r"\b[A-Za-z][A-Za-z0-9._]*:[A-Za-z0-9_.\-]+"),  # CURIEs: CHEBI:16856, OBO:NCIT_C103149
-    re.compile(r"\bhttps?://\S+"),                              # URLs
-    re.compile(r"\b[A-Z]{10,}-[A-Z]{5,}-[A-Z]\b"),              # InChIKeys
-    re.compile(r"\b[0-9a-f]{7,40}\b"),                          # git SHAs
-    re.compile(r"\bv?\d+\.\d+\.\d+\b"),                         # semantic versions (biolink 4.2.5)
-    re.compile(r"\bPR #\d+\b"),                                 # PR references
-    re.compile(r"\b[a-z_]+\.py:\d+\b"),                         # file:line references
-    re.compile(r"\b:\d+\b"),                                    # bare line refs (``:229``)
+    re.compile(r"\bhttps?://\S+"),  # URLs
+    re.compile(r"\b[A-Z]{10,}-[A-Z]{5,}-[A-Z]\b"),  # InChIKeys
+    re.compile(r"\b[0-9a-f]{7,40}\b"),  # git SHAs
+    re.compile(r"\bv?\d+\.\d+\.\d+\b"),  # semantic versions (biolink 4.2.5)
+    re.compile(r"\bPR #\d+\b"),  # PR references
+    re.compile(r"\b[a-z_]+\.py:\d+\b"),  # file:line references
+    re.compile(r"\b:\d+\b"),  # bare line refs (``:229``)
 )
 
 # Exact tokens that are structural constants or protocol facts, never measurements.
