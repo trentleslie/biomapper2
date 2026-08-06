@@ -18,6 +18,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from biomapper2 import utils as _client_utils
+
 from .config import HAJJAR, HAJJAR_COMPETITORS, DatasetConfig
 
 
@@ -1618,13 +1620,36 @@ def run_suite(
         if runner is None:
             results.append({"dataset": key, "status": "skipped", "reason": "no runner registered"})
             continue
+        # Reset before EVERY dataset. The suite runs all datasets in one process, so a
+        # process-global counter without a reset makes every dataset after the first cumulative —
+        # the same shared-state bug class the metagraph memo needed an autouse fixture for.
+        _client_utils.reset_request_counters()
         try:
             r = runner(out_dir=suite_dir / key, run_gate_first=run_gate_first)
-            results.append(
-                {"dataset": key, "status": "ok", "out_dir": str(r["out_dir"]), "report": str(r.get("report", ""))}
-            )
+            record = {
+                "dataset": key,
+                "status": "ok",
+                "out_dir": str(r["out_dir"]),
+                "report": str(r.get("report", "")),
+            }
+            # An orchestrator with several arms can complete one cleanly and fail another; the
+            # dataset-level status then reads "failed" while usable results sit on disk. Carry the
+            # per-arm detail so that data is not invisible to whoever reads the manifest.
+            if r.get("arm_status") is not None:
+                record["arm_status"] = r["arm_status"]
+            record["request_counters"] = r.get("request_counters") or _client_utils.request_counter_snapshot()
+            results.append(record)
         except Exception as exc:  # noqa: BLE001 — a single failing benchmark must not abort the suite
-            results.append({"dataset": key, "status": "failed", "error": f"{type(exc).__name__}: {exc}"})
+            # A failing dataset is precisely the one whose error counts a reader wants, so the
+            # counters are recorded on this path too rather than only on the happy one.
+            results.append(
+                {
+                    "dataset": key,
+                    "status": "failed",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "request_counters": _client_utils.request_counter_snapshot(),
+                }
+            )
 
     # Record the deliberately-excluded datasets so the manifest covers every CLI dataset. A key that
     # was explicitly requested above is already accounted for and must not be double-listed.

@@ -244,10 +244,13 @@ SRM1950 = DatasetConfig(
     source_doi="10.1021/acs.analchem.4c05018",
     source_url="https://srm1950-data.wishartlab.com/metabolites.csv",
     license="SRM1950-DB data are freely available (wishartlab.com); NIST SRM 1950 certified values.",
+    # The delivery's identifier column is deliberately absent: it was a row index in accession
+    # clothing (see ``adapters.srm1950.RowIndexGoldColumnError``), so the identifier-based coverage
+    # figure computed from it was an artefact of a synthetic column, not a resolver result. Dropped
+    # rather than quarantined so it cannot be mistaken for gold by the next reader.
     gold_coverage_columns=(
         ("INCHIKEY", "gold_inchikey"),
         ("SMILES", "gold_smiles"),
-        ("HMDB", "gold_hmdb"),
     ),
 )
 
@@ -652,8 +655,7 @@ PROVIDED_ID_BACKBONE: dict[str, CurieDatasetConfig | None] = {
 # the source URL at run time and pin the SHA on the card rather than vendoring the raw bytes.
 METABENCH_DOI = "10.48550/arXiv.2510.14944"
 METABENCH_SOURCE_URL = (
-    "https://huggingface.co/datasets/LuYuxing/MetaBench/resolve/main/"
-    "Grounding%20-%20metabolite_mapping_dataset.csv"
+    "https://huggingface.co/datasets/LuYuxing/MetaBench/resolve/main/Grounding%20-%20metabolite_mapping_dataset.csv"
 )
 METABENCH_LICENSE = "Apache-2.0 (HuggingFace dataset LuYuxing/MetaBench; grounding = MetabolitesIDmapping-derived)"
 # SHA256 of the 1,000-row Grounding CSV as fetched at acquisition (2026-07-14). Recorded for
@@ -898,8 +900,17 @@ METANETX_FTP_BASE = "https://www.metanetx.org/ftp"
 
 # The 11 databases Pham et al. surveyed (ordering not load-bearing; recorded on the card for provenance).
 PHAM_DATABASES: tuple[str, ...] = (
-    "BiGG", "ChEBI", "enviPath", "HMDB", "KEGG", "LIPID MAPS", "MetaCyc", "Reactome", "SABIO-RK",
-    "SEED", "SwissLipids",
+    "BiGG",
+    "ChEBI",
+    "enviPath",
+    "HMDB",
+    "KEGG",
+    "LIPID MAPS",
+    "MetaCyc",
+    "Reactome",
+    "SABIO-RK",
+    "SEED",
+    "SwissLipids",
 )
 
 # Sentinel marking a source that must be RECONSTRUCTED from MetaNetX (no downloadable SI exists), so a
@@ -1094,9 +1105,7 @@ NEEDS_FETCHING_SENTINEL_METLINKR = "METLINKR-NEEDS-FETCHING-"
 METLINKR_DOI = "10.1021/acs.jproteome.4c01051"
 METLINKR_PMCID = "PMC12053952"
 # Canonical ACS SI URL (Cloudflare-blocked on direct bot fetch; recorded for provenance).
-METLINKR_SI_URL = (
-    "https://pubs.acs.org/doi/suppl/10.1021/acs.jproteome.4c01051/suppl_file/pr4c01051_si_003.zip"
-)
+METLINKR_SI_URL = "https://pubs.acs.org/doi/suppl/10.1021/acs.jproteome.4c01051/suppl_file/pr4c01051_si_003.zip"
 # Working live mirror: EuropePMC bundles every supplementary file (incl. both SI zips) for a PMCID.
 METLINKR_FETCH_URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC12053952/supplementaryFiles"
 # The SI zip (inside the EuropePMC bundle) that holds the curator oracle, and the file inside it.

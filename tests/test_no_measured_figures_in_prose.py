@@ -69,6 +69,11 @@ GUARDED_EXTRA_FILES = (
     "src/biomapper2/config.py",
     "src/biomapper2/mapper.py",
     "src/biomapper2/models.py",
+    # From the evidence-base axis, which guarded it by name. It is the only file that axis listed
+    # that no guarded tree covers, so dropping its hand-maintained list in favour of the glob would
+    # have silently unguarded the client-hardening prose -- the exact failure this rewrite exists
+    # to remove, reintroduced by a merge resolution.
+    "src/biomapper2/utils.py",
 )
 
 # Documented exemptions. A skip-list rather than an include-list, so the guard FAILS CLOSED: adding
@@ -117,20 +122,32 @@ GUARDED_FILES = _discover_guarded_files()
 
 # Identifiers, not quantities. Stripped before scanning so a CURIE's digits are not read as a count.
 _IDENTIFIER_PATTERNS = (
-    re.compile(r"``[^`]*``"),                                   # inline code spans hold code, not prose
-    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),                       # ISO dates ("verified live 2026-06-18")
+    re.compile(r"``[^`]*``"),  # inline code spans hold code, not prose
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),  # ISO dates ("verified live 2026-06-18")
     re.compile(r"\b[A-Za-z][A-Za-z0-9._]*:[A-Za-z0-9_.\-]+"),  # CURIEs: CHEBI:16856, OBO:NCIT_C103149
-    re.compile(r"\bhttps?://\S+"),                              # URLs
-    re.compile(r"\b[A-Z]{10,}-[A-Z]{5,}-[A-Z]\b"),              # InChIKeys
-    re.compile(r"\b[0-9a-f]{7,40}\b"),                          # git SHAs
-    re.compile(r"\bv?\d+\.\d+\.\d+\b"),                         # semantic versions (biolink 4.2.5)
-    re.compile(r"\bPR #\d+\b"),                                 # PR references
-    re.compile(r"\b[a-z_]+\.py:\d+\b"),                         # file:line references
-    re.compile(r"\b:\d+\b"),                                    # bare line refs (``:229``)
-    re.compile(r"\b0o?[0-7]{3,4}\b"),                           # Unix file modes (0700, 0644, 0o700)
+    re.compile(r"\bhttps?://\S+"),  # URLs
+    re.compile(r"\b[A-Z]{10,}-[A-Z]{5,}-[A-Z]\b"),  # InChIKeys
+    re.compile(r"\b[0-9a-f]{7,40}\b"),  # git SHAs
+    re.compile(r"\bv?\d+\.\d+\.\d+\b"),  # semantic versions (biolink 4.2.5)
+    re.compile(r"\bPR #\d+\b"),  # PR references
+    re.compile(r"\b[a-z_]+\.py:\d+\b"),  # file:line references
+    re.compile(r"\b:\d+\b"),  # bare line refs (``:229``)
+    re.compile(r"\b0o?[0-7]{3,4}\b"),  # Unix file modes (0700, 0644, 0o700)
 )
 
 # Exact tokens that are structural constants or protocol facts, never measurements.
+#
+# WHAT BELONGS HERE, and why the list is not a convenience hatch. The scanner flags any 3+ digit
+# number, which necessarily catches numbers that are *named by a standard* rather than *measured by
+# a run*: HTTP status codes, Unix permission modes, port numbers, fixed tool settings. The test for
+# membership is: could this number change if the code were run against different data? If yes it is
+# a measurement and it belongs in an artifact, however inconvenient. If no -- if it is fixed by a
+# specification, a protocol, or a configuration file -- it is a name that happens to be spelled in
+# digits, and suppressing it here costs nothing.
+#
+# Do NOT add a token merely because the guard is inconvenient. Two false positives have reached this
+# list so far, and both were of the named-constant kind. A measured figure added here would silently
+# defeat the standard for that exact value, which is the one thing this file exists to prevent.
 _ALLOWED_TOKENS = frozenset(
     {
         "100",  # percentage arithmetic / "100%" of a structural set
@@ -139,6 +156,7 @@ _ALLOWED_TOKENS = frozenset(
         "401",
         "404",  # HTTP status codes
         "120",  # ruff line-length
+        "0700",  # Unix permission mode on the cache directory (chmod), not a quantity
     }
 )
 

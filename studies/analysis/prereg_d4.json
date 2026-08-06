@@ -1,0 +1,51 @@
+{
+  "preregistration": "external-benchmark significance testing",
+  "version": 1,
+  "status": "declared",
+  "why_this_file_exists": [
+    "Three competitors across roughly seven datasets and several vocabularies is plausibly a few",
+    "dozen paired tests. Under the null, several of those clear the conventional threshold by",
+    "chance alone. Choosing the family or the correction after seeing the output is p-hacking, so",
+    "the declaration is committed BEFORE any comparison run is fired and is consumed by the",
+    "reporting code rather than applied by hand."
+  ],
+  "families": [
+    {
+      "id": "d4_competitor_headtohead",
+      "rank": "primary",
+      "description": "BioMapper against each incumbent identifier-mapping service, run on identical rows with the identical scorer.",
+      "unit_of_analysis": "one input row, keyed by the dataset's row id",
+      "pairing": "genuine: the same rows are scored by every arm, so McNemar applies",
+      "test": "mcnemar_exact",
+      "correction": "holm",
+      "correction_rationale": "The primary family controls the family-wise error rate: a single false claim that BioMapper beats a named incumbent is the costly error here, so the stricter control is the right one.",
+      "primary_comparison": "BioMapper versus the best-performing incumbent on the CURIE-backbone dataset, strict correctness flag",
+      "planned_members": [
+        "biomapper vs g:Convert",
+        "biomapper vs bioDBnet",
+        "biomapper vs UniProt ID mapping"
+      ],
+      "gated": true,
+      "gate_note": "Requires live calls to three external hosted services. Declared here; fired separately as a supervised step."
+    },
+    {
+      "id": "oracle_variant_contrasts",
+      "rank": "secondary",
+      "description": "Within one dataset, the strict correctness flag against a relaxed variant of the same flag (charge-normalized, equivalence-set) over the same rows.",
+      "unit_of_analysis": "one input row",
+      "pairing": "genuine and nested: the relaxed flag is a superset of the strict flag on the same rows, so the contrast is paired by construction and the two marginal intervals are NOT independent",
+      "test": "mcnemar_exact",
+      "correction": "benjamini_hochberg",
+      "correction_rationale": "Descriptive contrasts characterising where relaxation helps, not claims of superiority over a competitor. Controlling the false-discovery rate keeps power where a family-wise correction would spend it for no decision benefit.",
+      "primary_comparison": "strict versus equivalence-set on the reference metabolite set",
+      "gated": false,
+      "gate_note": "Computed offline from an already-committed suite directory; no calls."
+    }
+  ],
+  "rules": [
+    "Every reported p-value names its family. A p-value with no declared family is a protocol violation, not a finding.",
+    "The correction is applied within family, over every test in the family that was RUN, not only those that were reported.",
+    "Marginal intervals are not simultaneous. No claim of the form 'X exceeds Y' may be derived from two intervals failing to overlap.",
+    "Where pairing does not genuinely exist, no difference statistic is emitted and the absence is recorded with its reason."
+  ]
+}

@@ -412,9 +412,23 @@ def score_metlinkr(
             "concordance_rate": (struct_concordant / struct_scored) if struct_scored else None,
             "needs_verification": struct_needs_verification,
             "needs_verification_rows": needs_verification_rows,
-            "gold_resolution": (
-                "independent_external_pubchem_pugrest" if use_independent else "kg_shared_oracle"
+            # The per-row rows were already built above and were previously discarded at the
+            # return, leaving a scalar rate no later analysis could pair, re-score or audit.
+            "struct_per_row": struct_per_row,
+            # Present-and-empty when the resolvers exist but no row scored; absent entirely (the
+            # whole block is None) when nothing structural was computed at all. A consumer must be
+            # able to tell "measured nothing" from "did not measure".
+            "struct_per_row_covers_all_rows": len(struct_per_row) == total_rows,
+            "struct_per_row_note": (
+                "NOT sufficient on its own for a paired comparison. The per-row correctness key "
+                "here is 'concordant', a third vocabulary distinct from the 'correct' and 'hit' "
+                "keys the other scorers emit, so a cross-dataset pairing must translate rather "
+                "than assume. Rows without a prediction, without a prediction block, without a "
+                "curator id, or whose curator id the external source could not cover are skipped, "
+                "so this list is shorter than the row count whenever "
+                "struct_per_row_covers_all_rows is false. Pair on input_row_id, never on position."
             ),
+            "gold_resolution": ("independent_external_pubchem_pugrest" if use_independent else "kg_shared_oracle"),
         }
         if use_independent:
             structural["independence_note"] = (

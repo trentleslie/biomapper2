@@ -56,6 +56,16 @@ data/**/*.json
 # a blanket *.json ignore is exactly how a number ends up cited with no artifact behind it.
 !studies/analysis/results/*.json
 
+# Evidence-base artifacts. Same rule, same reason: each of these is the thing a published number
+# resolves TO, and the reconciliation check reads them from the tree. A blanket ignore here would
+# make the check silently unrunnable in a fresh clone, which is worse than it failing.
+#
+# The interval artifact and the D4 pre-registration are NOT listed here: they moved to
+# studies/analysis/ with the module that writes and reads them, where the negation above already
+# covers them. One rule, not two.
+!studies/external_benchmarks/results/*.json
+!studies/external_benchmarks/manuscript/*.json
+
 # Committed test fixtures. Same failure mode, one step earlier: the certificate audit's
 # offline-reproducibility gate reads a small anonymized mapped-row fixture, and the pinned baseline
 # it replaces lives outside the repo, so this file is the only input that gate can ever have. Under

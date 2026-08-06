@@ -336,3 +336,82 @@ def test_main_all_dispatches_to_run_suite_respecting_no_gate(monkeypatch, tmp_pa
     run_mod.main()
     assert captured["run_gate_first"] is False
     assert "suite" in capsys.readouterr().out.lower()
+
+
+# --------------------------------------------------------------------------------------------------
+# Per-dataset error / cache counters ride in the suite manifest, reset between datasets.
+# --------------------------------------------------------------------------------------------------
+def _counting_runner(name, n_requests):
+    """A runner that spends requests through the real counter, as an orchestrator would."""
+
+    def _run(out_dir, run_gate_first):
+        from biomapper2 import utils
+
+        p = Path(out_dir)
+        p.mkdir(parents=True, exist_ok=True)
+        for _ in range(n_requests):
+            utils._bump("hybrid-search", "requests")
+        return {"out_dir": str(p), "report": ""}
+
+    return _run
+
+
+def test_suite_records_per_dataset_request_counters(tmp_path):
+    runners = {"alpha": _counting_runner("alpha", 3), "beta": _counting_runner("beta", 5)}
+    result = run_mod.run_suite(
+        out_dir=tmp_path, datasets=["alpha", "beta"], runners=runners, run_gate_first=False, probe_live=False
+    )
+    by_key = {d["dataset"]: d for d in result["manifest"]["datasets"]}
+    assert by_key["alpha"]["request_counters"]["hybrid-search"]["requests"] == 3
+    assert by_key["beta"]["request_counters"]["hybrid-search"]["requests"] == 5
+
+
+def test_counters_do_not_accumulate_across_datasets_in_one_process(tmp_path):
+    """The whole suite runs in ONE process. Without a per-dataset reset every dataset after the
+    first is cumulative, so the second dataset's count would be the sum of both."""
+    runners = {"alpha": _counting_runner("alpha", 3), "beta": _counting_runner("beta", 5)}
+    result = run_mod.run_suite(
+        out_dir=tmp_path, datasets=["alpha", "beta"], runners=runners, run_gate_first=False, probe_live=False
+    )
+    by_key = {d["dataset"]: d for d in result["manifest"]["datasets"]}
+    assert by_key["beta"]["request_counters"]["hybrid-search"]["requests"] != 8
+
+
+def test_counters_are_recorded_for_a_failing_dataset_too(tmp_path):
+    """A dataset that raises is exactly the one whose error counts a reader wants."""
+
+    def _boom(out_dir, run_gate_first):
+        from biomapper2 import utils
+
+        utils._bump("hybrid-search", "terminal_5xx")
+        raise RuntimeError("no target vocab produced a result")
+
+    result = run_mod.run_suite(
+        out_dir=tmp_path,
+        datasets=["alpha"],
+        runners={"alpha": _boom},
+        run_gate_first=False,
+        probe_live=False,
+    )
+    record = result["manifest"]["datasets"][0]
+    assert record["status"] == "failed"
+    assert record["request_counters"]["hybrid-search"]["terminal_5xx"] == 1
+
+
+def test_per_arm_status_is_carried_through_when_an_orchestrator_reports_it(tmp_path):
+    """One arm of a multi-arm dataset can complete cleanly while another fails, leaving usable
+    results on disk under a dataset-level failed status. The record has to be able to say so."""
+
+    def _partial(out_dir, run_gate_first):
+        p = Path(out_dir)
+        p.mkdir(parents=True, exist_ok=True)
+        return {"out_dir": str(p), "report": "", "arm_status": {"positive": "ok", "negative": "failed"}}
+
+    result = run_mod.run_suite(
+        out_dir=tmp_path,
+        datasets=["alpha"],
+        runners={"alpha": _partial},
+        run_gate_first=False,
+        probe_live=False,
+    )
+    assert result["manifest"]["datasets"][0]["arm_status"] == {"positive": "ok", "negative": "failed"}

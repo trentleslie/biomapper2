@@ -23,7 +23,8 @@ from typing import Any
 
 import pandas as pd
 
-from biomapper2.config import BIOLINK_VERSION_DEFAULT, KESTREL_API_URL
+from biomapper2 import utils as _client_utils
+from biomapper2.config import BIOLINK_VERSION_DEFAULT, KESTREL_API_URL, KESTREL_REQUEST_TIMEOUT_S
 
 from .config import ProvidedIdDatasetConfig, RunnableConfig
 from .scorers.provided_id_scorer import assert_target_held_out
@@ -202,6 +203,7 @@ def build_manifest(
     output_tsv: str,
     repo_root: Path,
     kg_prov: dict[str, Any] | None = None,
+    request_counters: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "dataset": config.key,
@@ -216,6 +218,13 @@ def build_manifest(
         **(kg_prov if kg_prov is not None else kg_provenance()),
         "dataset_source_sha256": dataset_sha,
         "output_tsv": output_tsv,
+        # Nothing counted server errors, dropped connections or cache hits before this; the counts
+        # that circulated were read off a log by hand. Recorded per vocabulary, from the live
+        # counters, so a reader can tell a clean run from one that limped.
+        "request_counters": (
+            request_counters if request_counters is not None else _client_utils.request_counter_snapshot()
+        ),
+        "kestrel_request_timeout_s": KESTREL_REQUEST_TIMEOUT_S,
         "timestamp_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
     }
 
@@ -359,6 +368,7 @@ def build_manifest_provided(
     output_tsv: str,
     repo_root: Path,
     kg_prov: dict[str, Any] | None = None,
+    request_counters: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
         "dataset": config.key,
@@ -376,6 +386,13 @@ def build_manifest_provided(
         **(kg_prov if kg_prov is not None else kg_provenance()),
         "dataset_source_sha256": dataset_sha,
         "output_tsv": output_tsv,
+        # Nothing counted server errors, dropped connections or cache hits before this; the counts
+        # that circulated were read off a log by hand. Recorded per vocabulary, from the live
+        # counters, so a reader can tell a clean run from one that limped.
+        "request_counters": (
+            request_counters if request_counters is not None else _client_utils.request_counter_snapshot()
+        ),
+        "kestrel_request_timeout_s": KESTREL_REQUEST_TIMEOUT_S,
         "timestamp_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
     }
 
