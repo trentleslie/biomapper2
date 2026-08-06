@@ -46,18 +46,25 @@ Reported as differences rather than as two side-by-side intervals: the relaxed f
 superset of the strict one over the same rows, so their marginal intervals overlap by
 construction and reading them as independent understates the contrast.
 
-| row | contrast | b | c | difference | interval | exact p | adjusted p | family |
-|---|---|---|---|---|---|---|---|---|
-| `necs:CHEBI:overall:charge_normalized` | charge_normalized_correct minus correct | 34 | 19 | 0.01884 | [0.00095, 0.03775] | 0.0534 | 0.0748 | `oracle_variant_contrasts` |
-| `necs:CHEBI:overall:kg_equivalence_set` | kg_equivalence_set_correct minus correct | 59 | 0 | 0.07412 | [0.05790, 0.09444] | 3.47e-18 | 2.43e-17 | `oracle_variant_contrasts` |
-| `refmet:CHEBI:overall:charge_normalized` | charge_normalized_correct minus correct | 3 | 1 | 0.00133 | [-0.00194, 0.00527] | 0.625 | 0.729 | `oracle_variant_contrasts` |
-| `refmet:CHEBI:overall:kg_equivalence_set` | kg_equivalence_set_correct minus correct | 28 | 0 | 0.01867 | [0.01295, 0.02685] | 7.45e-09 | 1.74e-08 | `oracle_variant_contrasts` |
-| `srm1950:CHEBI:overall:charge_normalized` | charge_normalized_correct minus correct | 6 | 4 | 0.00203 | [-0.00507, 0.00968] | 0.754 | 0.754 | `oracle_variant_contrasts` |
-| `srm1950:CHEBI:overall:kg_equivalence_set` | kg_equivalence_set_correct minus correct | 39 | 0 | 0.03967 | [0.02916, 0.05378] | 3.64e-12 | 1.27e-11 | `oracle_variant_contrasts` |
-| `lmsd:CHEBI:overall:charge_normalized` | - | - | - | - | - | - | - | per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted |
-| `lmsd:CHEBI:overall:kg_equivalence_set` | - | - | - | - | - | - | - | per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted |
-| `lmsd:CHEBI:common_systematic:charge_normalized` | charge_normalized_correct minus correct | 7 | 0 | 0.01552 | [0.00694, 0.03169] | 0.0156 | 0.0273 | `oracle_variant_contrasts` |
-| `lmsd:CHEBI:shorthand:charge_normalized` | - | - | - | - | - | - | - | per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted |
+The interval inverts the SCORE statistic, so `score p` is its coherent partner: those
+two agree about zero by construction. `exact p` is the conservative binomial test and
+can disagree with the interval at small discordant totals -- that is a property of the
+two tests, not an inconsistency in the estimate. The multiplicity correction is applied
+to `exact p`. A row where the interval's exclusion of zero disagrees with `score p` is
+flagged, since that WOULD be incoherent.
+
+| row | contrast | b | c | difference | interval | score p | exact p | adjusted p | family |
+|---|---|---|---|---|---|---|---|---|---|
+| `necs:CHEBI:overall:charge_normalized` | charge_normalized_correct minus correct | 34 | 19 | 0.01884 | [0.00095, 0.03775] | 0.0394 | 0.0534 | 0.0748 | `oracle_variant_contrasts` |
+| `necs:CHEBI:overall:kg_equivalence_set` | kg_equivalence_set_correct minus correct | 59 | 0 | 0.07412 | [0.05790, 0.09444] | 1.58e-14 | 3.47e-18 | 2.43e-17 | `oracle_variant_contrasts` |
+| `refmet:CHEBI:overall:charge_normalized` | charge_normalized_correct minus correct | 3 | 1 | 0.00133 | [-0.00194, 0.00527] | 0.317 | 0.625 | 0.729 | `oracle_variant_contrasts` |
+| `refmet:CHEBI:overall:kg_equivalence_set` | kg_equivalence_set_correct minus correct | 28 | 0 | 0.01867 | [0.01295, 0.02685] | 1.21e-07 | 7.45e-09 | 1.74e-08 | `oracle_variant_contrasts` |
+| `srm1950:CHEBI:overall:charge_normalized` | charge_normalized_correct minus correct | 6 | 4 | 0.00203 | [-0.00507, 0.00968] | 0.527 | 0.754 | 0.754 | `oracle_variant_contrasts` |
+| `srm1950:CHEBI:overall:kg_equivalence_set` | kg_equivalence_set_correct minus correct | 39 | 0 | 0.03967 | [0.02916, 0.05378] | 4.24e-10 | 3.64e-12 | 1.27e-11 | `oracle_variant_contrasts` |
+| `lmsd:CHEBI:overall:charge_normalized` | - | - | - | - | - | - | - | - | per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted |
+| `lmsd:CHEBI:overall:kg_equivalence_set` | - | - | - | - | - | - | - | - | per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted |
+| `lmsd:CHEBI:common_systematic:charge_normalized` | charge_normalized_correct minus correct | 7 | 0 | 0.01552 | [0.00694, 0.03169] | 0.00815 | 0.0156 | 0.0273 | `oracle_variant_contrasts` |
+| `lmsd:CHEBI:shorthand:charge_normalized` | - | - | - | - | - | - | - | - | per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted |
 
 ## Datasets absent or partial
 

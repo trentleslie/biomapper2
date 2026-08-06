@@ -279,9 +279,17 @@ def build() -> dict[str, Any]:
             manuscript_value={"k": None, "n": 50000},
             kind="counts",
             artifact=ci,
-            row_id="lmsd:CHEBI:overall:strict",
-            field="coverage",
-            note="an approximate source-population size recorded on the dataset card",
+            row_id=None,
+            field=None,
+            blocked_by=(
+                "identical in shape to ``refmet.source_population``: this is a property of the LMSD "
+                "source release -- roughly how many curated lipids it holds -- not an outcome of the "
+                "benchmark run. It was bound to the interval artifact's ``coverage`` field, whose "
+                "``total`` is the 1,500-row subsample, so the check was comparing 50,000 against "
+                "1,500 and reporting agreement. It belongs on the dataset card; until a versioned "
+                "card is committed it resolves to nothing."
+            ),
+            note="approximate source-release size; belongs on the dataset card",
         ),
         # --- ambiguity ---------------------------------------------------------------------
         claim(

@@ -300,10 +300,10 @@
       },
       "kind": "counts",
       "artifact": "confidence_intervals",
-      "row_id": "lmsd:CHEBI:overall:strict",
-      "field": "coverage",
-      "blocked_by": null,
-      "note": "an approximate source-population size recorded on the dataset card"
+      "row_id": null,
+      "field": null,
+      "blocked_by": "identical in shape to ``refmet.source_population``: this is a property of the LMSD source release -- roughly how many curated lipids it holds -- not an outcome of the benchmark run. It was bound to the interval artifact's ``coverage`` field, whose ``total`` is the 1,500-row subsample, so the check was comparing 50,000 against 1,500 and reporting agreement. It belongs on the dataset card; until a versioned card is committed it resolves to nothing.",
+      "note": "approximate source-release size; belongs on the dataset card"
     },
     {
       "id": "pham.non_lipid_membership",

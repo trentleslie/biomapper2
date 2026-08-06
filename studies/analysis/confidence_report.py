@@ -941,7 +941,8 @@ def build_report(suite_dir: Path | str) -> dict[str, Any]:
         "report": "confidence_intervals",
         "suite_id": suite_id,
         "suite_dir": str(suite_dir),
-        "generated_utc": _dt.datetime.now(_dt.UTC).isoformat(),
+        # ``_dt.UTC`` is 3.11+; this project supports >=3.10 and CI runs a 3.10 leg.
+        "generated_utc": _dt.datetime.now(_dt.timezone.utc).isoformat(),
         "git_sha": pins.get("git_sha"),
         "kg_snapshot": pins.get("kg_snapshot"),
         "biolink_version": pins.get("biolink_version"),
@@ -1024,22 +1025,36 @@ def render_markdown(report: dict[str, Any]) -> str:
             "superset of the strict one over the same rows, so their marginal intervals overlap by",
             "construction and reading them as independent understates the contrast.",
             "",
-            "| row | contrast | b | c | difference | interval | exact p | adjusted p | family |",
-            "|---|---|---|---|---|---|---|---|---|",
+            "The interval inverts the SCORE statistic, so `score p` is its coherent partner: those",
+            "two agree about zero by construction. `exact p` is the conservative binomial test and",
+            "can disagree with the interval at small discordant totals -- that is a property of the",
+            "two tests, not an inconsistency in the estimate. The multiplicity correction is applied",
+            "to `exact p`. A row where the interval's exclusion of zero disagrees with `score p` is",
+            "flagged, since that WOULD be incoherent.",
+            "",
+            "| row | contrast | b | c | difference | interval | score p | exact p | adjusted p | family |",
+            "|---|---|---|---|---|---|---|---|---|---|",
         ]
         for row, diff in paired:
             if diff.get("unavailable"):
-                lines.append(f"| `{row['row_id']}` | - | - | - | - | - | - | - | {diff['unavailable']} |")
+                lines.append(f"| `{row['row_id']}` | - | - | - | - | - | - | - | - | {diff['unavailable']} |")
                 continue
             # A contrast with no discordant rows has no test statistic. Rendered as undefined
             # rather than as a large p-value, which would assert an absence the data cannot show.
             p_exact = diff["mcnemar"]["p_exact"]
+            p_score = diff["mcnemar"].get("p_score")
             p_exact_text = "undefined" if p_exact is None else f"{p_exact:.3g}"
+            p_score_text = "undefined" if p_score is None else f"{p_score:.3g}"
             p_adj_text = "undefined" if diff["p_adjusted"] is None else f"{diff['p_adjusted']:.3g}"
+            # The interval and its own p-value must agree about zero; if they ever disagree the
+            # table says so rather than leaving a reader to find it.
+            excludes_zero = diff["lower"] > 0 or diff["upper"] < 0
+            if p_score is not None and excludes_zero != (p_score < 0.05):
+                p_score_text += " ⚠"
             lines.append(
                 f"| `{row['row_id']}` | {diff['contrast']} | {diff['b']} | {diff['c']} | "
                 f"{diff['estimate']:.5f} | [{diff['lower']:.5f}, {diff['upper']:.5f}] | "
-                f"{p_exact_text} | {p_adj_text} | `{diff['family']}` |"
+                f"{p_score_text} | {p_exact_text} | {p_adj_text} | `{diff['family']}` |"
             )
 
     if report["missing_datasets"]:

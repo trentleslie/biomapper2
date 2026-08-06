@@ -595,9 +595,7 @@ def test_the_committed_reference_artifact_quotes_the_deduplicated_rate_only():
     for path in artifacts:
         text = path.read_text()
         audit = json.loads(
-            (
-                Path(cr.__file__).parent / "results" / f"off_category_audit_{_suite_id(path)}.json"
-            ).read_text()
+            (Path(cr.__file__).parent / "results" / f"off_category_audit_{_suite_id(path)}.json").read_text()
         )
         file_weighted = str(audit["metabolite_total"]["pct_off_category"])
         deduplicated = str(audit["metabolite_total_deduplicated"]["pct_off_category"])

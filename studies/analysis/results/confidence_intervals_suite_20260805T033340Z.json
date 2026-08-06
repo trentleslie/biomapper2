@@ -3,7 +3,7 @@
     "report": "confidence_intervals",
     "suite_id": "suite_20260805T033340Z",
     "suite_dir": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z",
-    "generated_utc": "2026-08-06T03:33:20.493459+00:00",
+    "generated_utc": "2026-08-06T05:48:08.657010+00:00",
     "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
     "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)",
     "biolink_version": "4.2.5",

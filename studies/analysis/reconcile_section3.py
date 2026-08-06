@@ -136,11 +136,34 @@ def _has_drifted(entry: dict[str, Any], row: dict[str, Any]) -> bool:
     if value is None:
         return False
     if isinstance(value, dict):
-        if value.get("k") is None or value.get("n") is None:
+        if value.get("n") is None:
             return False
-        if row.get("k") is None or row.get("n") is None:
+        # Resolve the comparison target from the field the claim NAMES. Reading ``row["n"]``
+        # unconditionally compared a claim naming ``coverage`` against the scored-row
+        # denominator instead of against ``coverage.total`` -- two different quantities, so a
+        # source-population claim could report agreement with a subsample size it never
+        # matched. A claim naming a field this function cannot read is drift, not agreement:
+        # it must not pass silently.
+        field = entry.get("field")
+        if field == "coverage":
+            coverage = row.get("coverage")
+            if not isinstance(coverage, dict) or coverage.get("total") is None:
+                return False  # the field is absent; that is a rename, already reported as one
+            target_n: Any = coverage["total"]
+        elif field in (None, "k,n", "n", "k", "rate"):
+            if row.get("n") is None:
+                return False  # the field is absent; that is a rename, already reported as one
+            target_n = row["n"]
+        else:
+            return True  # names a field this check cannot read: report it rather than assume
+        if int(value["n"]) != int(target_n):
+            return True
+        # A ``k``-less claim asserts only its denominator; having checked that, it is settled.
+        if value.get("k") is None:
+            return False
+        if row.get("k") is None:
             return False  # the field is absent; that is a rename, already reported as one
-        return int(value["k"]) != int(row["k"]) or int(value["n"]) != int(row["n"])
+        return int(value["k"]) != int(row["k"])
     if row.get("rate") is None:
         return True
     return abs(float(value) - float(row["rate"])) > RATE_TOLERANCE
