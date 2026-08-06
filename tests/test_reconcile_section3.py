@@ -288,6 +288,59 @@ class TestDriftIsSeparateFromRename:
         row = {"k": 255, "n": 1500, "coverage": coverage}
         assert rs._has_drifted(entry, row) is expected
 
+    @pytest.mark.parametrize(
+        "field,expected",
+        [
+            ("rate", False),  # names the field it is actually compared against
+            ("coverage", True),  # coverage.fraction is a different quantity from rate
+            ("half_width_pt", True),  # a field this check cannot read
+        ],
+    )
+    def test_a_scalar_claim_is_dispatched_on_the_field_it_names(self, artifact, field, expected):
+        """The field dispatch must cover BOTH value shapes.
+
+        It was added to the dict branch only, so every scalar claim went on being compared against
+        ``row["rate"]`` whatever field it named -- a coverage rate reporting agreement with the
+        scored-subsample accuracy. Dormant on today's claim set (all live scalar claims name
+        ``rate``) and pinned before a coverage-shaped rate claim is written.
+        """
+        row = next(
+            r
+            for r in artifact["rows"]
+            if r.get("rate") is not None
+            and isinstance(r.get("coverage"), dict)
+            and r["coverage"].get("fraction") is not None
+            and abs(r["coverage"]["fraction"] - r["rate"]) > 0.01
+        )
+        entry = {"manuscript_value": row["rate"], "field": field}
+        assert rs._has_drifted(entry, row) is expected
+
+    @pytest.mark.parametrize(
+        "manuscript_value,expected",
+        [
+            ({"k": 999999}, True),  # numerator wrong, no denominator asserted
+            ({"k": 999999, "n": None}, True),  # ... and explicitly null
+            ({"n": 999999}, True),  # denominator wrong, no numerator asserted
+            ({"k": None, "n": None}, True),  # asserts nothing: not a comparison
+        ],
+    )
+    def test_a_claim_is_checked_on_whichever_side_it_asserts(self, artifact, manuscript_value, expected):
+        """``n``-less and ``k``-less must be symmetric.
+
+        The k-less case was fixed while the n-less case still returned agreement, so a claim
+        asserting only a numerator was never compared -- a manuscript count wrong by three orders
+        of magnitude read as artifact-backed.
+        """
+        row = next(r for r in artifact["rows"] if r.get("k") is not None and r.get("n") is not None)
+        entry = {"manuscript_value": manuscript_value, "field": "k,n"}
+        assert rs._has_drifted(entry, row) is expected
+
+    def test_a_correct_single_sided_claim_still_stays_quiet(self, artifact):
+        """Guards the guard above: single-sided checking must not fire on a CORRECT claim."""
+        row = next(r for r in artifact["rows"] if r.get("k") is not None and r.get("n") is not None)
+        assert rs._has_drifted({"manuscript_value": {"k": row["k"]}, "field": "k,n"}, row) is False
+        assert rs._has_drifted({"manuscript_value": {"n": row["n"]}, "field": "k,n"}, row) is False
+
     def test_matching_a_claim_to_the_artifact_clears_its_drift(self, claims, artifact):
         """Constructed proof that drift tracks the values rather than always firing."""
         mutated = json.loads(json.dumps(artifact))

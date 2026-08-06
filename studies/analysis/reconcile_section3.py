@@ -131,54 +131,68 @@ def reconcile(claims: dict[str, Any], artifact: dict[str, Any]) -> dict[str, Any
     }
 
 
+# Sentinel: the claim names a field this check cannot read. Distinct from "the field is readable
+# and holds None", which is also drift but for a different reason.
+_UNREADABLE = object()
+
+
+def _resolve_targets(field: str | None, row: dict[str, Any]) -> dict[str, Any] | Any:
+    """Resolve the (n, k, rate) comparison targets from the field a claim NAMES.
+
+    Hoisted out of the dict branch so BOTH value shapes dispatch on ``field``. It lived inside the
+    dict branch, which left every scalar claim compared against ``row["rate"]`` whatever field it
+    named -- a coverage rate reporting agreement with the scored-subsample accuracy.
+
+    Returns ``_UNREADABLE`` when the claim names a field this function cannot resolve; the caller
+    reports that as drift rather than assuming agreement.
+    """
+    if field == "coverage":
+        coverage = row.get("coverage")
+        if not isinstance(coverage, dict):
+            return _UNREADABLE
+        return {"n": coverage.get("total"), "k": coverage.get("n_predicted"), "rate": coverage.get("fraction")}
+    if field in (None, "k,n", "n", "k", "rate"):
+        return {"n": row.get("n"), "k": row.get("k"), "rate": row.get("rate")}
+    return _UNREADABLE
+
+
 def _has_drifted(entry: dict[str, Any], row: dict[str, Any]) -> bool:
+    """True when the claim disagrees with the artifact field it names, OR cannot be compared at all.
+
+    The governing rule, and it holds on EVERY path: a claim this function cannot check is drift,
+    not agreement. Reporting ok while nothing was compared is how unbacked figures reach print --
+    the rename check cannot cover for it, since that only tests TOP-LEVEL key presence in the
+    ARTIFACT (``[k for k in field.split(",") if k not in row]``) and so sees neither a missing
+    sub-key, nor present-but-None, nor anything missing on the CLAIM side.
+    """
     value = entry.get("manuscript_value")
-    if value is None:
-        return False
-    if isinstance(value, dict):
-        if value.get("n") is None:
-            return False
-        # Resolve the comparison target from the field the claim NAMES. Reading ``row["n"]``
-        # unconditionally compared a claim naming ``coverage`` against the scored-row
-        # denominator instead of against ``coverage.total`` -- two different quantities, so a
-        # source-population claim could report agreement with a subsample size it never
-        # matched. A claim naming a field this function cannot read is drift, not agreement:
-        # it must not pass silently -- on EVERY path, matching the scalar branch below, which
-        # already returns True when ``row["rate"]`` is absent.
-        field = entry.get("field")
-        if field == "coverage":
-            coverage = row.get("coverage")
-            if not isinstance(coverage, dict) or coverage.get("total") is None:
-                # NOT caught by the rename check: that only tests TOP-LEVEL key presence
-                # (``"coverage" in row``) and never a sub-key, nor present-but-None. So this is
-                # the last chance to notice, and it must report rather than assume agreement.
-                return True
-            target_n: Any = coverage["total"]
-            # Resolve the NUMERATOR from the same field too. Falling through to ``row["k"]`` here
-            # would compare a coverage denominator against a scored-subsample numerator and report
-            # agreement on a hybrid neither field asserts.
-            target_k: Any = coverage.get("n_predicted")
-        elif field in (None, "k,n", "n", "k", "rate"):
-            if row.get("n") is None:
-                return True  # present-but-None is invisible to the rename check; report it
-            target_n = row["n"]
-            target_k = row.get("k")
-        else:
-            return True  # names a field this check cannot read: report it rather than assume
-        if int(value["n"]) != int(target_n):
-            return True
-        # A ``k``-less claim asserts only its denominator; having checked that, it is settled.
-        if value.get("k") is None:
-            return False
-        if target_k is None:
-            # Introduced by the numerator fix: before it, a k-bearing coverage claim was compared
-            # against the wrong field; after it, an absent ``n_predicted`` compared it against
-            # NOTHING. Closing one silent pass must not open another.
-            return True
-        return int(value["k"]) != int(target_k)
-    if row.get("rate") is None:
+    targets = _resolve_targets(entry.get("field"), row)
+    if targets is _UNREADABLE:
         return True
-    return abs(float(value) - float(row["rate"])) > RATE_TOLERANCE
+    if value is None:
+        # Asserts no number while naming a row and a field, so it cannot be verified and must not
+        # read as backed. Latent today (the only null-valued claim is filtered out before this).
+        return True
+    if isinstance(value, dict):
+        target_n, target_k = targets["n"], targets["k"]
+        # Each side is checked only if the claim asserts it, and an unreadable target is drift.
+        # ``n``-less and ``k``-less are symmetric: a claim asserts what it states and nothing more.
+        if value.get("n") is not None:
+            if target_n is None:
+                return True
+            if int(value["n"]) != int(target_n):
+                return True
+        if value.get("k") is not None:
+            if target_k is None:
+                return True
+            if int(value["k"]) != int(target_k):
+                return True
+        # A dict asserting neither is not a comparison; it must not read as agreement.
+        return value.get("n") is None and value.get("k") is None
+    target_rate = targets["rate"]
+    if target_rate is None:
+        return True
+    return abs(float(value) - float(target_rate)) > RATE_TOLERANCE
 
 
 # ------------------------------------------------------------------------------------------------

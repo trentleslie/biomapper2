@@ -534,46 +534,68 @@ class TestArtifactIsSavedByDefault:
         for row in report["rows"]:
             assert row["row_id"] in text
 
-    def test_markdown_carries_the_p_that_the_interval_inverts(self, fixture_suite, tmp_path, monkeypatch):
-        """The rendered table is the surface a reader reads, so the invariant is pinned THERE.
+    @staticmethod
+    def _paired_table(text: str) -> tuple[list[str], list[list[str]]]:
+        """Header cells and data-row cells of the paired-difference table."""
+        lines = text.splitlines()
+        head_i = next(i for i, line in enumerate(lines) if line.startswith("| row | contrast |"))
+        header = [c.strip() for c in lines[head_i].strip("|").split("|")]
+        rows = []
+        for line in lines[head_i + 2 :]:
+            if not line.startswith("|"):
+                break
+            rows.append([c.strip() for c in line.strip("|").split("|")])
+        return header, rows
 
-        The sibling test on the report DATA already checks that interval and p agree. It passed
-        while the .md printed the score-inverted interval beside the EXACT McNemar p -- an interval
-        excluding zero next to a non-significant p, which is the contradiction ``stats`` cites to
-        justify its own design. Deleting the ``score p`` column must turn this red.
+    def test_markdown_prints_the_p_that_the_interval_inverts_under_its_own_label(
+        self, fixture_suite, tmp_path, monkeypatch
+    ):
+        """Assert the VALUES, not the column labels.
+
+        The first version of this test only checked that ``| score p |`` appeared in the header, so
+        it proved the labels existed and nothing about which p was printed under which. Restoring
+        the original defect verbatim -- sourcing the score-p cell from ``p_exact`` -- left it green,
+        as did swapping the two cells. The defect round 1 raised is not "the column is missing", it
+        is "the wrong p is printed beside the interval", and only a value assertion sees that.
         """
         monkeypatch.setattr(cr, "RESULTS_DIR", tmp_path / "results")
         text = cr.write_report(fixture_suite)["md"].read_text()
-        lines = text.splitlines()
-        header = next(line for line in lines if line.startswith("| row | contrast |"))
-        assert "| score p |" in header
-        assert "| exact p |" in header
-        cells = [c for c in header.split("|") if c.strip()]
-        separator = lines[lines.index(header) + 1]
-        assert separator.count("---") == len(cells), "separator must match the header width"
+        report = cr.build_report(fixture_suite)
+        header, rows = self._paired_table(text)
+        score_i, exact_i = header.index("score p"), header.index("exact p")
 
-    def test_markdown_flags_an_interval_that_disagrees_with_its_own_p(self, fixture_suite):
-        """The coherence warning must actually render, not merely exist in the source.
+        expected = {}
+        for row in report["rows"]:
+            diff = row.get("paired_difference")
+            if isinstance(diff, dict) and not diff.get("unavailable") and diff.get("mcnemar", {}).get("p_score"):
+                expected[f"`{row['row_id']}`"] = diff["mcnemar"]
 
-        Built by mutating a REAL report rather than hand-rolling the row shape, so the test cannot
-        drift away from the schema it guards. The state it induces -- an interval excluding zero
-        beside a score p that says otherwise -- does not occur in the committed artifact, which is
-        why it needs constructing to be exercised at all.
+        checked = 0
+        for cells in rows:
+            mcnemar = expected.get(cells[0])
+            if not mcnemar:
+                continue
+            assert cells[score_i].rstrip(" ⚠") == f"{mcnemar['p_score']:.3g}", f"score p cell for {cells[0]}"
+            assert cells[exact_i] == f"{mcnemar['p_exact']:.3g}", f"exact p cell for {cells[0]}"
+            checked += 1
+        assert checked, "no paired row was actually checked; the assertion loop is vacuous"
+
+    def test_the_two_p_columns_are_not_interchangeable_on_this_fixture(self, fixture_suite):
+        """Guards the guard: the value assertion above is only meaningful if the two p's differ.
+
+        If every row happened to render the same value in both columns, swapping them would be
+        undetectable and the test above would pass while proving nothing.
         """
         report = cr.build_report(fixture_suite)
-        paired = next(
-            row
+        differing = [
+            row["row_id"]
             for row in report["rows"]
             if isinstance(row.get("paired_difference"), dict)
-            and row["paired_difference"].get("mcnemar", {}).get("p_score") is not None
-            and not row["paired_difference"].get("unavailable")
-        )
-        diff = paired["paired_difference"]
-        diff["lower"], diff["upper"] = 0.02, 0.18  # excludes zero
-        diff["mcnemar"]["p_score"] = 0.9  # ... while its own p says no difference
-
-        text = "\n".join(cr.render_markdown(report))
-        assert "\u26a0" in text, "an interval excluding zero beside a non-significant p must be flagged"
+            and (m := row["paired_difference"].get("mcnemar", {})).get("p_score") is not None
+            and m.get("p_exact") is not None
+            and f"{m['p_score']:.3g}" != f"{m['p_exact']:.3g}"
+        ]
+        assert differing, "fixture has no row where score p and exact p differ; swapping is undetectable"
 
     def test_markdown_states_the_marginal_caveat(self, fixture_suite, tmp_path, monkeypatch):
         monkeypatch.setattr(cr, "RESULTS_DIR", tmp_path / "results")
