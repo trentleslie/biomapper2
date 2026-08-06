@@ -19,6 +19,16 @@ if TYPE_CHECKING:
 AssignedIDsDict = dict[str, dict[str, dict[str, dict[str, Any]]]]
 
 
+def _nan_to_none(data: dict[str, Any]) -> dict[str, Any]:
+    """Coerce pandas/NumPy float ``NaN`` scalars to ``None`` in a Series-derived dict.
+
+    ``pd.Series.to_dict()`` yields ``NaN`` (a float) for empty cells, which fails the Entity's
+    ``str | None`` resolution fields (pydantic rejects a float for a string field). Only scalar
+    float NaN is converted — real values and list/dict fields pass through untouched.
+    """
+    return {k: (None if isinstance(v, float) and v != v else v) for k, v in data.items()}
+
+
 class Entity(BaseModel):
     """
     Represents a biological entity being mapped to a knowledge graph.
@@ -78,7 +88,7 @@ class Entity(BaseModel):
         import pandas as pd
 
         if isinstance(item, pd.Series):
-            data = item.to_dict()
+            data = _nan_to_none(item.to_dict())
         else:
             data = dict(item)
 
@@ -123,5 +133,5 @@ class Entity(BaseModel):
             New Entity with merged fields
         """
         current = self.to_dict()
-        current.update(series.to_dict())
+        current.update(_nan_to_none(series.to_dict()))
         return Entity(**current)

@@ -5,6 +5,7 @@ Provides logging setup and mathematical helpers for metric calculations.
 """
 
 import logging
+import time
 from collections.abc import Iterator
 from datetime import timedelta
 from typing import Any, Literal, TypeGuard
@@ -112,13 +113,25 @@ def safe_divide(numerator, denominator) -> float | None:
 
 
 def bulk_kestrel_request(
-    method: str, endpoint: str, session: requests.Session | None = None, auth_required: bool = True, **kwargs
+    method: str,
+    endpoint: str,
+    session: requests.Session | None = None,
+    auth_required: bool = True,
+    *,
+    max_retries: int = 3,
+    retry_backoff_base: float = 2.0,
+    **kwargs,
 ) -> Any:
     """
     Make a single Kestrel API request with the full payload.
 
     This is the low-level function that sends one request. For batching support,
     use kestrel_request() instead.
+
+    Transient server-side failures (HTTP 5xx) and connection/timeout errors are
+    retried with exponential backoff; client errors (4xx) are raised immediately
+    since they will not self-heal. A single Kestrel blip therefore no longer kills
+    a long batch run.
 
     Args:
         method: HTTP method ('GET' or 'POST')
@@ -127,14 +140,19 @@ def bulk_kestrel_request(
         auth_required: Whether to include the API key header. When False, the
             request is sent without authentication (e.g. for GET /categories).
             Default is True to preserve existing behavior.
+        max_retries: Number of retries on transient errors (5xx / connection /
+            timeout) before giving up. 0 disables retrying.
+        retry_backoff_base: Base for exponential backoff; the delay before retry
+            ``attempt`` (0-indexed) is ``retry_backoff_base ** attempt`` seconds.
         **kwargs: Additional arguments to pass to requests (json, params, etc.)
 
     Returns:
         JSON response from API
 
     Raises:
-        requests.exceptions.HTTPError: If API returns error status
-        requests.exceptions.RequestException: If request fails
+        requests.exceptions.HTTPError: If API returns error status (after retries
+            for 5xx; immediately for 4xx)
+        requests.exceptions.RequestException: If request fails after retries
     """
     # Sort search_text in json payload for consistent cache keys (if handling a batch)
     if "json" in kwargs and isinstance(kwargs["json"], dict):
@@ -153,16 +171,44 @@ def bulk_kestrel_request(
     if auth_required:
         headers["X-API-Key"] = get_kestrel_api_key()
 
-    try:
-        response = session.request(method, f"{KESTREL_API_URL}/{endpoint}", headers=headers, **kwargs)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.HTTPError as e:
-        logging.error(f"Kestrel API HTTP error ({endpoint}): {e}", exc_info=True)
-        raise
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Kestrel API request failed ({endpoint}): {e}", exc_info=True)
-        raise
+    url = f"{KESTREL_API_URL}/{endpoint}"
+    transient = (
+        requests.exceptions.ConnectionError,
+        requests.exceptions.Timeout,
+        requests.exceptions.ChunkedEncodingError,
+    )
+    for attempt in range(max_retries + 1):
+        try:
+            response = session.request(method, url, headers=headers, **kwargs)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.HTTPError as e:
+            status = getattr(e.response, "status_code", None)
+            # Retry only transient server errors (5xx); 4xx (auth, bad payload) won't self-heal.
+            if status is not None and 500 <= status < 600 and attempt < max_retries:
+                delay = retry_backoff_base**attempt
+                logging.warning(
+                    f"Kestrel API {status} on {endpoint} "
+                    f"(attempt {attempt + 1}/{max_retries + 1}); retrying in {delay:.1f}s"
+                )
+                time.sleep(delay)
+                continue
+            logging.error(f"Kestrel API HTTP error ({endpoint}): {e}", exc_info=True)
+            raise
+        except transient as e:
+            if attempt < max_retries:
+                delay = retry_backoff_base**attempt
+                logging.warning(
+                    f"Kestrel API transient error on {endpoint} ({type(e).__name__}) "
+                    f"(attempt {attempt + 1}/{max_retries + 1}); retrying in {delay:.1f}s"
+                )
+                time.sleep(delay)
+                continue
+            logging.error(f"Kestrel API request failed ({endpoint}): {e}", exc_info=True)
+            raise
+        except requests.exceptions.RequestException as e:
+            logging.error(f"Kestrel API request failed ({endpoint}): {e}", exc_info=True)
+            raise
 
 
 def kestrel_request(
