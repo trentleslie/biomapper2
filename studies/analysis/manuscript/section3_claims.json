@@ -23,7 +23,7 @@
     {
       "id": "metabench.overall",
       "manuscript_value": {
-        "k": 545,
+        "k": 527,
         "n": 1000
       },
       "kind": "counts",
@@ -36,7 +36,7 @@
     {
       "id": "metabench.kegg",
       "manuscript_value": {
-        "k": 302,
+        "k": 303,
         "n": 400
       },
       "kind": "counts",
@@ -49,7 +49,7 @@
     {
       "id": "metabench.hmdb",
       "manuscript_value": {
-        "k": 86,
+        "k": 69,
         "n": 400
       },
       "kind": "counts",
@@ -62,7 +62,7 @@
     {
       "id": "metabench.chebi",
       "manuscript_value": {
-        "k": 157,
+        "k": 155,
         "n": 200
       },
       "kind": "counts",
@@ -108,7 +108,7 @@
     {
       "id": "refmet.strict",
       "manuscript_value": {
-        "k": 1341,
+        "k": 1319,
         "n": 1500
       },
       "kind": "counts",
@@ -121,7 +121,7 @@
     {
       "id": "refmet.charge_normalized",
       "manuscript_value": {
-        "k": 1343,
+        "k": 1321,
         "n": 1500
       },
       "kind": "counts",
@@ -134,7 +134,7 @@
     {
       "id": "necs.strict",
       "manuscript_value": {
-        "k": 608,
+        "k": 609,
         "n": 796
       },
       "kind": "counts",
@@ -147,7 +147,7 @@
     {
       "id": "necs.charge_normalized",
       "manuscript_value": {
-        "k": 622,
+        "k": 624,
         "n": 796
       },
       "kind": "counts",
@@ -160,7 +160,7 @@
     {
       "id": "metaboliteannotator.positive",
       "manuscript_value": {
-        "k": 4096,
+        "k": 4179,
         "n": 4314
       },
       "kind": "counts",
@@ -206,7 +206,7 @@
     {
       "id": "metlinkr.curator_agreement",
       "manuscript_value": {
-        "k": 334,
+        "k": 333,
         "n": 401
       },
       "kind": "counts",
@@ -219,8 +219,8 @@
     {
       "id": "metlinkr.structural_concordance",
       "manuscript_value": {
-        "k": 549,
-        "n": 650
+        "k": 543,
+        "n": 649
       },
       "kind": "counts",
       "artifact": "confidence_intervals",
@@ -242,7 +242,7 @@
     {
       "id": "srm1950.strict",
       "manuscript_value": {
-        "k": 396,
+        "k": 411,
         "n": 983
       },
       "kind": "counts",
@@ -254,7 +254,7 @@
     },
     {
       "id": "lmsd.common_systematic.strict",
-      "manuscript_value": 0.516,
+      "manuscript_value": 0.419,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "lmsd:CHEBI:common_systematic:strict",
@@ -264,7 +264,7 @@
     },
     {
       "id": "lmsd.common_systematic.charge_normalized",
-      "manuscript_value": 0.535,
+      "manuscript_value": 0.435,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "lmsd:CHEBI:common_systematic:charge_normalized",
@@ -274,7 +274,7 @@
     },
     {
       "id": "lmsd.shorthand.strict",
-      "manuscript_value": 0.054,
+      "manuscript_value": 0.063,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "lmsd:CHEBI:shorthand:strict",
@@ -284,7 +284,7 @@
     },
     {
       "id": "lmsd.overall.strict",
-      "manuscript_value": 0.198,
+      "manuscript_value": 0.17,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "lmsd:CHEBI:overall:strict",
@@ -320,7 +320,7 @@
     },
     {
       "id": "hgnc.any_namespace",
-      "manuscript_value": 0.963,
+      "manuscript_value": 0.964,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "hgnc:ENSEMBL:any-namespace:strict",
@@ -330,7 +330,7 @@
     },
     {
       "id": "hgnc.ncbigene",
-      "manuscript_value": 0.978,
+      "manuscript_value": 0.977,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "hgnc:ENSEMBL:NCBIGene:strict",
@@ -340,7 +340,7 @@
     },
     {
       "id": "hgnc.uniprot",
-      "manuscript_value": 0.906,
+      "manuscript_value": 0.924,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "hgnc:ENSEMBL:UniProtKB:strict",
@@ -350,7 +350,7 @@
     },
     {
       "id": "hgnc.ensembl",
-      "manuscript_value": 0.767,
+      "manuscript_value": 0.791,
       "kind": "rate",
       "artifact": "confidence_intervals",
       "row_id": "hgnc:ENSEMBL:ENSEMBL:strict",
@@ -402,10 +402,10 @@
       },
       "kind": "counts",
       "artifact": "confidence_intervals",
-      "row_id": "refmet:CHEBI:overall:strict",
-      "field": "coverage",
-      "blocked_by": null,
-      "note": "structure-bearing rows out of the source release; recorded on the dataset card"
+      "row_id": null,
+      "field": null,
+      "blocked_by": "this is a property of the RefMet source release -- how many of its rows carry a curated InChIKey -- not an outcome of the benchmark run. It was bound to the interval artifact's ``coverage`` field, which counts scored rows of the 1,500-row subsample, so the check compared two unrelated quantities and reported drift. It belongs on the dataset card; until the card is committed it resolves to nothing.",
+      "note": "structure-bearing rows out of the source release; belongs on the dataset card"
     },
     {
       "id": "refmet.subsample",

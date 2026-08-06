@@ -106,12 +106,43 @@ class TestRenameDetection:
 
 
 class TestDriftIsSeparateFromRename:
-    def test_drift_against_the_reference_suite_is_reported_not_hidden(self, claims, artifact):
-        """The manuscript predates the current run, so several claims must show as needing
-        restatement. A reconciliation reporting none of them would mean it is not comparing."""
-        result = rs.reconcile(claims, artifact)
+    def test_drift_is_reported_not_hidden(self, artifact):
+        """A claim that disagrees with its artifact must be reported and must fail the check.
+
+        This used to assert that the COMMITTED manuscript drifted -- "the manuscript predates the
+        current run, so several claims must show as needing restatement." That encoded the stale
+        state as the expected state: it passed because nineteen internal-host figures were sitting
+        in the source, and it would have turned red the moment someone corrected them. A test whose
+        precondition is a defect cannot survive the defect being fixed.
+
+        Rewritten against a fixture, so it asserts the checker's behaviour rather than the
+        manuscript's condition, and keeps working once the source is clean.
+        """
+        row = next(r for r in artifact["rows"] if r.get("k") is not None)
+        drifted_claims = {
+            "claims": [
+                {
+                    "id": "fixture.drifted",
+                    "manuscript_value": {"k": row["k"] + 7, "n": row["n"]},
+                    "kind": "counts",
+                    "artifact": "confidence_intervals",
+                    "row_id": row["row_id"],
+                    "field": "k,n",
+                    "blocked_by": None,
+                    "note": "",
+                }
+            ],
+            "not_a_measurement": {},
+        }
+        result = rs.reconcile(drifted_claims, artifact)
+        assert result["drifted"], "a claim disagreeing with its artifact must be reported"
         assert result["restatement_required"] is True
-        assert result["drifted"]
+        assert result["ok"] is False, "drift must fail the check, not merely annotate it"
+
+    def test_the_committed_manuscript_does_not_drift(self, claims, artifact):
+        """The live control: every §3 figure agrees with the pinned public-backend artifact."""
+        result = rs.reconcile(claims, artifact)
+        assert result["drifted"] == [], result["drifted"]
 
     def test_a_drifted_claim_is_still_counted_as_resolved(self, claims, artifact):
         result = rs.reconcile(claims, artifact)

@@ -121,7 +121,12 @@ def reconcile(claims: dict[str, Any], artifact: dict[str, Any]) -> dict[str, Any
         "unresolved": unresolved,
         "renamed": renamed,
         "drifted": drifted,
-        "ok": not renamed,
+        # Drift is a failure, not an advisory. A drifted claim is a number in the manuscript that
+        # demonstrably disagrees with the artifact it cites -- strictly worse than an unresolved
+        # one, which at least announces that it has no backing. Reporting ``ok: true`` alongside a
+        # non-empty ``drifted`` list is how nineteen internal-host figures survived in the source
+        # while this check ran green: it computed the disagreement, then declined to act on it.
+        "ok": not renamed and not drifted,
         "restatement_required": bool(drifted),
     }
 
@@ -170,6 +175,11 @@ def main(argv: list[str] | None = None) -> int:  # pragma: no cover - thin CLI
     print(json.dumps(result, indent=2))
     if result["renamed"]:
         print(f"FAIL: {len(result['renamed'])} claim(s) name a field the artifact no longer has")
+        return 1
+    if result["drifted"]:
+        print(f"FAIL: {len(result['drifted'])} claim(s) disagree with the artifact they cite")
+        for entry in result["drifted"]:
+            print(f"  {entry['id']}: manuscript {entry['manuscript_value']} vs artifact {entry['artifact_value']}")
         return 1
     if result["unresolved"]:
         print(f"OUTSTANDING: {len(result['unresolved'])} claim(s) resolve to no committed field")

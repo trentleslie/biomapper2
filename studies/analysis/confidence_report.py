@@ -55,6 +55,7 @@ from .stats import (
 )
 
 MODULE_DIR = Path(__file__).parent
+REPO_ROOT = MODULE_DIR.parents[1]
 RESULTS_DIR = MODULE_DIR / "results"
 PREREG_PATH = MODULE_DIR / "prereg_d4.json"
 # The off-category audit writes into the same directory this module does. Kept as its own name
@@ -874,7 +875,10 @@ def _off_category_weighting(suite_id: str) -> dict[str, Any]:
     if candidate.exists():
         audit = json.loads(candidate.read_text())
         dedup = audit.get("metabolite_total_deduplicated") or {}
-        block["source_artifact"] = str(candidate)
+        # Repo-relative, never absolute. An absolute path bakes the producing machine and worktree
+        # into a committed artifact: the previous value pointed into a worktree that no longer
+        # exists, which is both unreproducible and a dangling reference for any other reader.
+        block["source_artifact"] = str(candidate.relative_to(REPO_ROOT))
         block["deduplicated"] = {
             "definition": dedup.get("definition"),
             "n_rows_with_commit": dedup.get("n_rows_with_commit"),

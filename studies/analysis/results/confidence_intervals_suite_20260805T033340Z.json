@@ -3,7 +3,7 @@
     "report": "confidence_intervals",
     "suite_id": "suite_20260805T033340Z",
     "suite_dir": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z",
-    "generated_utc": "2026-08-06T02:41:26.804298+00:00",
+    "generated_utc": "2026-08-06T03:33:20.493459+00:00",
     "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
     "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)",
     "biolink_version": "4.2.5",
@@ -1499,7 +1499,7 @@
     "quote_this": "deduplicated",
     "weighting_warning": "the file-weighted cross-dataset rate multiplies a dataset by the number of target-vocabulary files it ships, and those files carry identical resolutions. Quote the deduplicated figure below; the file-weighted one is named, not carried, so it cannot be lifted from here",
     "file_weighted_field": "metabolite_total.pct_off_category in the off-category audit artifact",
-    "source_artifact": "/home/trentleslie/worktrees/bm2-evidence-base/studies/analysis/results/off_category_audit_suite_20260805T033340Z.json",
+    "source_artifact": "studies/analysis/results/off_category_audit_suite_20260805T033340Z.json",
     "deduplicated": {
       "definition": "one representative file per metabolite dataset (first by filename), so a dataset that ships several identical target-vocab files is counted once rather than once per file",
       "n_rows_with_commit": 6957,

@@ -75,7 +75,7 @@ def build() -> dict[str, Any]:
         # --- grounding ---------------------------------------------------------------------
         claim(
             "metabench.overall",
-            manuscript_value={"k": 545, "n": 1000},
+            manuscript_value={"k": 527, "n": 1000},
             kind="counts",
             artifact=ci,
             row_id="metabench:overall:strict",
@@ -84,7 +84,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "metabench.kegg",
-            manuscript_value={"k": 302, "n": 400},
+            manuscript_value={"k": 303, "n": 400},
             kind="counts",
             artifact=ci,
             row_id="metabench:KEGG:strict",
@@ -92,7 +92,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "metabench.hmdb",
-            manuscript_value={"k": 86, "n": 400},
+            manuscript_value={"k": 69, "n": 400},
             kind="counts",
             artifact=ci,
             row_id="metabench:HMDB:strict",
@@ -100,7 +100,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "metabench.chebi",
-            manuscript_value={"k": 157, "n": 200},
+            manuscript_value={"k": 155, "n": 200},
             kind="counts",
             artifact=ci,
             row_id="metabench:CHEBI:strict",
@@ -139,7 +139,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "refmet.strict",
-            manuscript_value={"k": 1341, "n": 1500},
+            manuscript_value={"k": 1319, "n": 1500},
             kind="counts",
             artifact=ci,
             row_id="refmet:CHEBI:overall:strict",
@@ -147,7 +147,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "refmet.charge_normalized",
-            manuscript_value={"k": 1343, "n": 1500},
+            manuscript_value={"k": 1321, "n": 1500},
             kind="counts",
             artifact=ci,
             row_id="refmet:CHEBI:overall:charge_normalized",
@@ -155,7 +155,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "necs.strict",
-            manuscript_value={"k": 608, "n": 796},
+            manuscript_value={"k": 609, "n": 796},
             kind="counts",
             artifact=ci,
             row_id="necs:CHEBI:overall:strict",
@@ -163,7 +163,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "necs.charge_normalized",
-            manuscript_value={"k": 622, "n": 796},
+            manuscript_value={"k": 624, "n": 796},
             kind="counts",
             artifact=ci,
             row_id="necs:CHEBI:overall:charge_normalized",
@@ -172,7 +172,7 @@ def build() -> dict[str, Any]:
         # --- coverage ----------------------------------------------------------------------
         claim(
             "metaboliteannotator.positive",
-            manuscript_value={"k": 4096, "n": 4314},
+            manuscript_value={"k": 4179, "n": 4314},
             kind="counts",
             artifact=ci,
             row_id="metaboliteannotator:positive:name_hit",
@@ -209,7 +209,7 @@ def build() -> dict[str, Any]:
         # --- cross-linking -----------------------------------------------------------------
         claim(
             "metlinkr.curator_agreement",
-            manuscript_value={"k": 334, "n": 401},
+            manuscript_value={"k": 333, "n": 401},
             kind="counts",
             artifact=ci,
             row_id="metlinkr:curator_agreement",
@@ -217,7 +217,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "metlinkr.structural_concordance",
-            manuscript_value={"k": 549, "n": 650},
+            manuscript_value={"k": 543, "n": 649},
             kind="counts",
             artifact=ci,
             row_id="metlinkr:structural_concordance",
@@ -235,7 +235,7 @@ def build() -> dict[str, Any]:
         # --- clinical reference material ---------------------------------------------------
         claim(
             "srm1950.strict",
-            manuscript_value={"k": 396, "n": 983},
+            manuscript_value={"k": 411, "n": 983},
             kind="counts",
             artifact=ci,
             row_id="srm1950:CHEBI:overall:strict",
@@ -244,7 +244,7 @@ def build() -> dict[str, Any]:
         # --- lipid regimes -----------------------------------------------------------------
         claim(
             "lmsd.common_systematic.strict",
-            manuscript_value=0.516,
+            manuscript_value=0.419,
             kind="rate",
             artifact=ci,
             row_id="lmsd:CHEBI:common_systematic:strict",
@@ -252,7 +252,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "lmsd.common_systematic.charge_normalized",
-            manuscript_value=0.535,
+            manuscript_value=0.435,
             kind="rate",
             artifact=ci,
             row_id="lmsd:CHEBI:common_systematic:charge_normalized",
@@ -260,7 +260,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "lmsd.shorthand.strict",
-            manuscript_value=0.054,
+            manuscript_value=0.063,
             kind="rate",
             artifact=ci,
             row_id="lmsd:CHEBI:shorthand:strict",
@@ -268,7 +268,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "lmsd.overall.strict",
-            manuscript_value=0.198,
+            manuscript_value=0.170,
             kind="rate",
             artifact=ci,
             row_id="lmsd:CHEBI:overall:strict",
@@ -297,7 +297,7 @@ def build() -> dict[str, Any]:
         # --- gene / protein ----------------------------------------------------------------
         claim(
             "hgnc.any_namespace",
-            manuscript_value=0.963,
+            manuscript_value=0.964,
             kind="rate",
             artifact=ci,
             row_id="hgnc:ENSEMBL:any-namespace:strict",
@@ -305,7 +305,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "hgnc.ncbigene",
-            manuscript_value=0.978,
+            manuscript_value=0.977,
             kind="rate",
             artifact=ci,
             row_id="hgnc:ENSEMBL:NCBIGene:strict",
@@ -313,7 +313,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "hgnc.uniprot",
-            manuscript_value=0.906,
+            manuscript_value=0.924,
             kind="rate",
             artifact=ci,
             row_id="hgnc:ENSEMBL:UniProtKB:strict",
@@ -321,7 +321,7 @@ def build() -> dict[str, Any]:
         ),
         claim(
             "hgnc.ensembl",
-            manuscript_value=0.767,
+            manuscript_value=0.791,
             kind="rate",
             artifact=ci,
             row_id="hgnc:ENSEMBL:ENSEMBL:strict",
@@ -363,9 +363,16 @@ def build() -> dict[str, Any]:
             manuscript_value={"k": 34404, "n": 206000},
             kind="counts",
             artifact=ci,
-            row_id="refmet:CHEBI:overall:strict",
-            field="coverage",
-            note="structure-bearing rows out of the source release; recorded on the dataset card",
+            row_id=None,
+            field=None,
+            blocked_by=(
+                "this is a property of the RefMet source release -- how many of its rows carry a "
+                "curated InChIKey -- not an outcome of the benchmark run. It was bound to the "
+                "interval artifact's ``coverage`` field, which counts scored rows of the 1,500-row "
+                "subsample, so the check compared two unrelated quantities and reported drift. It "
+                "belongs on the dataset card; until the card is committed it resolves to nothing."
+            ),
+            note="structure-bearing rows out of the source release; belongs on the dataset card",
         ),
         claim(
             "refmet.subsample",
