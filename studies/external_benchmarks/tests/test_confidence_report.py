@@ -607,3 +607,38 @@ def test_the_committed_reference_artifact_quotes_the_deduplicated_rate_only():
 
 def _suite_id(path: Path) -> str:
     return path.stem.replace("confidence_intervals_", "")
+
+
+class TestNoDependentPairIsPresentedAsIndependent:
+    """The universal form of the invariant, rather than one worked example per dataset."""
+
+    def test_every_dependent_row_names_what_it_depends_on(self, report):
+        for row in report["rows"]:
+            if row["independence_role"] == "nested":
+                assert row["not_independent_of"], row["row_id"]
+            if row["independence_role"] in {"derived_union", "derived_aggregate"}:
+                assert row["derived_from"], row["row_id"]
+
+    def test_every_named_dependency_is_a_row_that_exists(self, report):
+        ids = {row["row_id"] for row in report["rows"]}
+        for row in report["rows"]:
+            if row["not_independent_of"]:
+                assert row["not_independent_of"] in ids, row["row_id"]
+            for parent in row["derived_from"] or []:
+                assert parent in ids, f"{row['row_id']} claims to derive from a row that is absent"
+
+    def test_a_nested_row_carries_a_paired_contrast_or_says_why_not(self, report):
+        """A nested row printed with only its own marginal interval is the failure this prevents:
+        two heavily overlapping intervals read as "no difference" while the paired truth can be an
+        all-one-way discordance."""
+        for row in report["rows"]:
+            if row["independence_role"] != "nested":
+                continue
+            diff = row["paired_difference"]
+            assert diff is not None or row["independence_assumption"]["assertion"], row["row_id"]
+
+    def test_the_rendered_table_marks_every_row_with_its_role(self, fixture_suite, tmp_path, monkeypatch):
+        monkeypatch.setattr(cr, "RESULTS_DIR", tmp_path / "results")
+        text = cr.write_report(fixture_suite)["md"].read_text()
+        for role in {row["independence_role"] for row in cr.build_report(fixture_suite)["rows"]}:
+            assert role in text
