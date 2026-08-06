@@ -36,53 +36,89 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# The files this change owns. Listed explicitly rather than derived from git: the guard should hold
-# for these files permanently, not just while they happen to appear in a diff.
-GUARDED_FILES = (
-    "src/biomapper2/config.py",
-    "src/biomapper2/core/resolver.py",
-    "src/biomapper2/core/structure_resolver.py",
-    "src/biomapper2/core/annotation_engine.py",
-    "src/biomapper2/core/annotators/base.py",
-    "src/biomapper2/core/annotators/kestrel_hybrid.py",
-    "src/biomapper2/core/annotators/kestrel_text.py",
-    "src/biomapper2/core/annotators/kestrel_vector.py",
-    "src/biomapper2/core/annotators/metabolomics_workbench.py",
-    "src/biomapper2/core/annotators/goslin_lipid.py",
-    "studies/analysis/__init__.py",
-    "studies/analysis/off_category_audit.py",
-    "studies/shared_gold_set/labeler.py",
-    "tests/test_kestrel_hybrid_category.py",
-    "tests/test_off_category_audit.py",
-    "tests/test_annotation_engine_category.py",
-    "tests/test_resolver_source_weighting.py",
-    "tests/test_structure_resolver.py",
-    "tests/test_annotation_engine_canonical.py",
-    # The evidence-base files. These exist to put measured numbers in artifacts, so a measured
-    # number restated in their own prose would be the defect they were written to remove.
-    #
-    # Deliberately NOT guarded: studies/external_benchmarks/config.py, which carries an external
-    # baseline in a comment that is explicitly flagged needs-verification alongside a null registry
-    # value. Guarding it would turn the suite red for a comment doing exactly the right thing.
-    # build_section3_claims.py IS guarded: the guard scans prose, not code, and the manuscript
-    # values it holds live in code where values belong.
-    #
-    # Every evidence-base file now sits under ``studies/analysis`` or top-level ``tests`` on
-    # purpose -- trees the certificate axis's globbed guard covers by default -- so all of them stay
-    # guarded when that rewrite replaces this hand-maintained list. Listing them here as well is
-    # redundant today and harmless. Placement survives a guard rewrite; a list entry does not.
-    "studies/analysis/stats.py",
-    "studies/analysis/confidence_report.py",
-    "tests/test_stats.py",
-    "tests/test_confidence_report.py",
-    "studies/analysis/reconcile_section3.py",
-    "studies/analysis/request_timeout.py",
-    "studies/analysis/build_section3_claims.py",
-    "tests/test_reconcile_section3.py",
-    "tests/test_row_index_gold_guard.py",
-    "src/biomapper2/utils.py",
-    "tests/test_kestrel_client_hardening.py",
+# The guarded set is DERIVED FROM A GLOB, not hand-maintained. That is the whole point.
+#
+# It used to be an explicit include-list, and the failure mode was silent: this guard reported a
+# screen of green while scanning none of the files in the change it was supposedly guarding, because
+# nobody had thought to add them. An enforcement mechanism that passes without checking is worse
+# than none, because it manufactures confidence. Deriving from a glob means the default for a new
+# file is COVERED, and an exemption has to be argued for in ``SKIPPED`` below.
+GUARDED_TREES = (
+    "src/biomapper2/core",
+    "studies/analysis",
+    "studies/shared_gold_set",
+    "tests",
 )
+
+# KNOWN GAP, stated rather than left to be discovered: ``studies/external_benchmarks`` is NOT
+# guarded. It is the largest body of measurement-bearing code in the repo outside this standard, and
+# it does not pass today -- run ``_violations`` over the tree to size it before adding it here.
+# Bringing it in is a real cleanup, not a one-line tree addition, and doing it by burying the tree in
+# SKIPPED entries would hollow out the meta-tests below. It is named here so the guard's coverage is
+# legible; silence would recreate the false confidence this rewrite exists to remove.
+#
+# One case in that tree wants an exemption rather than a rewrite when it happens:
+# ``studies/external_benchmarks/config.py`` restates competitor baseline figures inside a comment
+# that explicitly marks them UNVERIFIED and refuses to treat them as fact. That comment is the
+# needs-verification marker doing its job, not a drifted measurement.
+UNGUARDED_TREES_KNOWN = ("studies/external_benchmarks",)
+
+# Files outside the guarded trees that the standard still covers. Kept short on purpose: anything
+# that needs to be listed here individually is a hint the tree list is wrong.
+GUARDED_EXTRA_FILES = (
+    "src/biomapper2/config.py",
+    "src/biomapper2/mapper.py",
+    "src/biomapper2/models.py",
+    # From the evidence-base axis, which guarded it by name. It is the only file that axis listed
+    # that no guarded tree covers, so dropping its hand-maintained list in favour of the glob would
+    # have silently unguarded the client-hardening prose -- the exact failure this rewrite exists
+    # to remove, reintroduced by a merge resolution.
+    "src/biomapper2/utils.py",
+)
+
+# Documented exemptions. A skip-list rather than an include-list, so the guard FAILS CLOSED: adding
+# a file never silently escapes the standard, and every escape carries a reason a reviewer can
+# check. ``test_no_skip_outlives_its_reason`` deletes the entry's cover the moment it stops being
+# needed, so this list cannot quietly accumulate.
+#
+# Every reason below is the same class: the scrubber cannot tell a vocabulary FORMAT EXAMPLE or an
+# HTTP status code from a measurement. None of them is a figure that could drift out of sync with an
+# artifact, which is what the standard exists to prevent.
+SKIPPED: dict[str, str] = {
+    "src/biomapper2/core/normalizer/validators.py": "docstrings quote vocabulary format examples (LOINC, RXCUI)",
+    "src/biomapper2/core/normalizer/cleaners.py": "docstring quotes a zipcode format example",
+    "src/biomapper2/core/gene_symbol_resolver.py": "docstring quotes an accession format example",
+    "tests/test_api.py": "names an HTTP status code",
+    "tests/test_api_unit.py": "names HTTP status codes and a request-size limit asserted in code alongside",
+    "tests/test_dataset_analysis.py": "names a percentage that is the fixture's own constructed value",
+    "tests/test_dataset_kg_mapping.py": "names live-suite counts; belongs to the integration arm, not a figure",
+    "tests/test_gold_set_labeler.py": "quotes a CURIE-set literal that appears verbatim in the assertion",
+    "tests/test_goslin_grammar.py": "quotes a monoisotopic mass, a physical constant rather than a measurement",
+    "tests/test_kestrel_discovery.py": "spells out a fixture's own composition next to the fixture",
+    "tests/test_no_measured_figures_in_prose.py": "this guard's own positive-control fixtures and rationale",
+    "tests/test_visualizer.py": "names percentages that are the fixture's constructed inputs",
+}
+
+
+def _discover_guarded_files() -> tuple[str, ...]:
+    """Every source file under the guarded trees, minus documented exemptions.
+
+    Derived, never listed. A file added to a guarded tree is guarded from the moment it lands.
+    """
+    found: set[str] = set()
+    for tree in GUARDED_TREES:
+        root = REPO_ROOT / tree
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*.py"):
+            if "__pycache__" in path.parts:
+                continue
+            found.add(str(path.relative_to(REPO_ROOT)))
+    found.update(GUARDED_EXTRA_FILES)
+    return tuple(sorted(found - set(SKIPPED)))
+
+
+GUARDED_FILES = _discover_guarded_files()
 
 # Identifiers, not quantities. Stripped before scanning so a CURIE's digits are not read as a count.
 _IDENTIFIER_PATTERNS = (
@@ -96,6 +132,7 @@ _IDENTIFIER_PATTERNS = (
     re.compile(r"\bPR #\d+\b"),  # PR references
     re.compile(r"\b[a-z_]+\.py:\d+\b"),  # file:line references
     re.compile(r"\b:\d+\b"),  # bare line refs (``:229``)
+    re.compile(r"\b0o?[0-7]{3,4}\b"),  # Unix file modes (0700, 0644, 0o700)
 )
 
 # Exact tokens that are structural constants or protocol facts, never measurements.
@@ -198,6 +235,54 @@ def test_no_measured_figure_is_restated_in_prose(relative_path: str) -> None:
     )
 
 
+def test_no_source_file_under_a_guarded_tree_escapes_the_check() -> None:
+    """The meta-test. Without it, the next directory reorganisation silently reopens the hole.
+
+    Every ``.py`` under a guarded tree must be either checked or explicitly exempted. Nothing may
+    simply fall out of the set.
+    """
+    checked = set(GUARDED_FILES) | set(SKIPPED)
+    unaccounted = []
+    for tree in GUARDED_TREES:
+        root = REPO_ROOT / tree
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*.py"):
+            if "__pycache__" in path.parts:
+                continue
+            relative = str(path.relative_to(REPO_ROOT))
+            if relative not in checked:
+                unaccounted.append(relative)
+    assert not unaccounted, (
+        "these files live under a guarded tree but are neither checked nor exempted:\n  "
+        + "\n  ".join(sorted(unaccounted))
+    )
+
+
+def test_the_guarded_set_is_not_trivially_small() -> None:
+    """A glob that matched nothing would make every parametrized case vacuously green -- the exact
+    failure this rewrite exists to remove, in a new disguise."""
+    assert len(GUARDED_FILES) > len(SKIPPED)
+    for tree in GUARDED_TREES:
+        assert any(f.startswith(tree) for f in GUARDED_FILES), f"no file guarded under {tree}"
+
+
+def test_no_skip_outlives_its_reason() -> None:
+    """An exemption that no longer exempts anything is a hole with a comment on it.
+
+    If this fails, the fix is to DELETE the entry, not to loosen the guard: the file now passes.
+    """
+    stale = []
+    for relative, reason in SKIPPED.items():
+        path = REPO_ROOT / relative
+        assert reason.strip(), f"{relative} is exempted without a reason"
+        if not path.exists():
+            stale.append(f"{relative} (file is gone)")
+        elif not _violations(path):
+            stale.append(f"{relative} (no longer violates; remove the exemption)")
+    assert not stale, "stale exemptions:\n  " + "\n  ".join(stale)
+
+
 def test_the_guard_actually_detects_a_restated_figure(tmp_path: Path) -> None:
     """Positive control: the guard is worthless if it cannot fail.
 
@@ -224,6 +309,24 @@ def test_the_guard_does_not_flag_identifiers_or_code(tmp_path: Path) -> None:
     assert _violations(sample) == []
 
 
+def test_the_guard_does_not_flag_file_modes_or_protocol_status_codes(tmp_path: Path) -> None:
+    """Negative control: a Unix file mode and an HTTP status code are not measurements.
+
+    Both classes arrived with the cache-redaction change and are the same shape as the exemptions
+    already documented in ``SKIPPED``. They are fixed in the SCRUBBER rather than by skip-listing the
+    two files, because a file-level exemption would retire the whole file from the standard to
+    silence one token -- which is how an include-list-shaped hole reopens under a different name. A
+    leading-zero octal is never a count, and a redirect code is a protocol fact with no artifact to
+    drift against.
+    """
+    sample = tmp_path / "sample.py"
+    sample.write_text(
+        '"""Treats the directory as 0700 and the files as 0644."""\n'
+        "# retiring the internal host with a 301 to the public one strips the credential\n"
+    )
+    assert _violations(sample) == []
+
+
 def test_the_guard_does_not_treat_dict_values_as_docstrings(tmp_path: Path) -> None:
     """Regression: a token-level docstring heuristic flagged {"k": "1234"} as prose.
 
@@ -233,3 +336,22 @@ def test_the_guard_does_not_treat_dict_values_as_docstrings(tmp_path: Path) -> N
     sample = tmp_path / "sample.py"
     sample.write_text('row = {"gold_chebi": "1234", "gold_pubchem": "999999"}\n')
     assert _violations(sample) == []
+
+
+def test_known_unguarded_trees_are_real_and_still_unguarded() -> None:
+    """``UNGUARDED_TREES_KNOWN`` documents a gap; unenforced, it is just a comment.
+
+    Two ways the entry rots, both caught here: the tree stops existing (stale entry naming a
+    directory nobody has), or the tree quietly becomes guarded (the entry now hides nothing and its
+    presence misleads a reviewer into thinking coverage is narrower than it is). Either way the list
+    must be edited rather than left to drift -- the same failure mode as the include-list this
+    rewrite replaced.
+    """
+    for tree in UNGUARDED_TREES_KNOWN:
+        path = REPO_ROOT / tree
+        assert path.is_dir(), f"UNGUARDED_TREES_KNOWN names {tree!r}, which does not exist"
+        assert tree not in GUARDED_TREES, (
+            f"{tree!r} is listed as a known gap but is now guarded; delete the entry so the "
+            "documented gap matches reality"
+        )
+        assert any(path.rglob("*.py")), f"UNGUARDED_TREES_KNOWN names {tree!r}, which holds no Python"

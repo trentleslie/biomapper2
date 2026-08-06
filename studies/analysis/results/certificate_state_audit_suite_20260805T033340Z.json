@@ -1,0 +1,1378 @@
+{
+  "suite_dir": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z",
+  "provenance": {
+    "suite_manifest": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/suite_manifest.json",
+    "kg_stable_during_run": true
+  },
+  "tier_b_sweep": {
+    "path": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/tier_b_sweep.json",
+    "present": false,
+    "note": "no committed Tier B sweep; Tier B half unavailable"
+  },
+  "arm": "metabolite",
+  "per_dataset": [
+    {
+      "dataset": "necs",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/necs/necs-metabolon_CHEBI_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1488,
+      "n_rows_with_commit": 1488,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "chemical_name",
+        "n_rows": 1488,
+        "n_rows_with_slash": 159,
+        "rate_rows": 0.1069,
+        "n_distinct_names": 1488,
+        "n_distinct_names_with_slash": 159,
+        "rate_distinct": 0.1069
+      },
+      "spurious_independence": {
+        "n_committed": 1488,
+        "n_slash_bearing": 159,
+        "n_slash_bearing_without_refmet_vote": 63,
+        "share_of_committed": 0.0423,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 433,
+          "structure_present": 1055
+        },
+        "structure_absent_share": 0.291
+      },
+      "structure_oracle": {
+        "n_scored": 796,
+        "blended_precision": 0.8354,
+        "by_state": {
+          "structure_absent": {
+            "n": 78,
+            "share_of_scored": 0.098,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 718,
+            "share_of_scored": 0.902,
+            "n_correct": 665,
+            "precision": 0.9262
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 981,
+        "blended_precision": 0.7666,
+        "by_state": {
+          "structure_absent": {
+            "n": 135,
+            "share_of_scored": 0.1376,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 846,
+            "share_of_scored": 0.8624,
+            "n_correct": 752,
+            "precision": 0.8889
+          }
+        }
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 135,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 433,
+        "uncorroborated": 1055
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1488,
+          "n_unavailable": 433,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.291,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 718,
+          "strata": {
+            "none/indep=unknown": {
+              "n_verifiable": 718,
+              "independent_source": "none",
+              "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
+              "points": [
+                {
+                  "certificate_state": "uncorroborated",
+                  "n": 718,
+                  "coverage": 0.4825,
+                  "precision": 0.9262
+                }
+              ]
+            }
+          }
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1488,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 718,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": 0.0,
+          "outcomes": {
+            "off": 1488
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 135,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 75,
+          "structure_present": 9
+        },
+        "divergent_refmet": {
+          "structure_absent": 13,
+          "structure_present": 117
+        },
+        "no_flag": {
+          "structure_absent": 345,
+          "structure_present": 929
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 45
+          },
+          "divergent_refmet": {
+            "False": 11,
+            "True": 74
+          },
+          "no_flag": {
+            "False": 75,
+            "True": 591
+          }
+        },
+        "identifier_oracle": {
+          "conflict_no_structure": {
+            "False": 60
+          },
+          "divergent_refmet": {
+            "False": 30,
+            "True": 85
+          },
+          "no_flag": {
+            "False": 139,
+            "True": 667
+          }
+        }
+      }
+    },
+    {
+      "dataset": "refmet",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/refmet/refmet_CHEBI_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1500,
+      "n_rows_with_commit": 1500,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "refmet_name",
+        "n_rows": 1500,
+        "n_rows_with_slash": 438,
+        "rate_rows": 0.292,
+        "n_distinct_names": 1500,
+        "n_distinct_names_with_slash": 438,
+        "rate_distinct": 0.292
+      },
+      "spurious_independence": {
+        "n_committed": 1500,
+        "n_slash_bearing": 438,
+        "n_slash_bearing_without_refmet_vote": 83,
+        "share_of_committed": 0.0553,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 104,
+          "structure_present": 1396
+        },
+        "structure_absent_share": 0.0693
+      },
+      "structure_oracle": {
+        "n_scored": 1500,
+        "blended_precision": 0.8933,
+        "by_state": {
+          "structure_absent": {
+            "n": 104,
+            "share_of_scored": 0.0693,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 1396,
+            "share_of_scored": 0.9307,
+            "n_correct": 1340,
+            "precision": 0.9599
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 809,
+        "blended_precision": 0.5834,
+        "by_state": {
+          "structure_absent": {
+            "n": 78,
+            "share_of_scored": 0.0964,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 731,
+            "share_of_scored": 0.9036,
+            "n_correct": 472,
+            "precision": 0.6457
+          }
+        }
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 78,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 104,
+        "uncorroborated": 1396
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1500,
+          "n_unavailable": 104,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.0693,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 1396,
+          "strata": {
+            "none/indep=unknown": {
+              "n_verifiable": 1396,
+              "independent_source": "none",
+              "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
+              "points": [
+                {
+                  "certificate_state": "uncorroborated",
+                  "n": 1396,
+                  "coverage": 0.9307,
+                  "precision": 0.9599
+                }
+              ]
+            }
+          }
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1500,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 1396,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": 0.0,
+          "outcomes": {
+            "off": 1500
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 78,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 85
+        },
+        "divergent_refmet": {
+          "structure_absent": 1,
+          "structure_present": 34
+        },
+        "no_flag": {
+          "structure_absent": 18,
+          "structure_present": 1362
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 85
+          },
+          "divergent_refmet": {
+            "False": 1,
+            "True": 34
+          },
+          "no_flag": {
+            "False": 74,
+            "True": 1306
+          }
+        },
+        "identifier_oracle": {
+          "conflict_no_structure": {
+            "False": 69
+          },
+          "divergent_refmet": {
+            "False": 12,
+            "True": 10
+          },
+          "no_flag": {
+            "False": 256,
+            "True": 462
+          }
+        }
+      }
+    },
+    {
+      "dataset": "srm1950",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/srm1950/srm1950_CHEBI_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1058,
+      "n_rows_with_commit": 1058,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {
+        "gold_hmdb": "strictly monotonic and fully unique across rows -- a row index, not an accession"
+      },
+      "identifier_oracle_columns": [
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1058,
+        "n_rows_with_slash": 116,
+        "rate_rows": 0.1096,
+        "n_distinct_names": 1058,
+        "n_distinct_names_with_slash": 116,
+        "rate_distinct": 0.1096
+      },
+      "spurious_independence": {
+        "n_committed": 1058,
+        "n_slash_bearing": 116,
+        "n_slash_bearing_without_refmet_vote": 54,
+        "share_of_committed": 0.051,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 520,
+          "structure_present": 538
+        },
+        "structure_absent_share": 0.4915
+      },
+      "structure_oracle": {
+        "n_scored": 983,
+        "blended_precision": 0.4273,
+        "by_state": {
+          "structure_absent": {
+            "n": 487,
+            "share_of_scored": 0.4954,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 496,
+            "share_of_scored": 0.5046,
+            "n_correct": 420,
+            "precision": 0.8468
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 520,
+        "uncorroborated": 538
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1058,
+          "n_unavailable": 520,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.4915,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 496,
+          "strata": {
+            "none/indep=unknown": {
+              "n_verifiable": 496,
+              "independent_source": "none",
+              "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
+              "points": [
+                {
+                  "certificate_state": "uncorroborated",
+                  "n": 496,
+                  "coverage": 0.4688,
+                  "precision": 0.8468
+                }
+              ]
+            }
+          }
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1058,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 496,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": 0.0,
+          "outcomes": {
+            "off": 1058
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 0,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 235,
+          "structure_present": 27
+        },
+        "divergent_refmet": {
+          "structure_absent": 17,
+          "structure_present": 46
+        },
+        "no_flag": {
+          "structure_absent": 268,
+          "structure_present": 465
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 232,
+            "True": 7
+          },
+          "divergent_refmet": {
+            "False": 24,
+            "True": 35
+          },
+          "no_flag": {
+            "False": 307,
+            "True": 378
+          }
+        },
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "lmsd",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/lmsd/lmsd_CHEBI_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1499,
+      "n_rows_with_commit": 1499,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "lipid_name",
+        "n_rows": 1499,
+        "n_rows_with_slash": 51,
+        "rate_rows": 0.034,
+        "n_distinct_names": 1258,
+        "n_distinct_names_with_slash": 51,
+        "rate_distinct": 0.0405,
+        "by_name_source_regime": {
+          "common_systematic": {
+            "n": 450,
+            "n_with_slash": 51,
+            "rate": 0.1133
+          },
+          "shorthand": {
+            "n": 1049,
+            "n_with_slash": 0,
+            "rate": 0.0
+          }
+        }
+      },
+      "spurious_independence": {
+        "n_committed": 1499,
+        "n_slash_bearing": 51,
+        "n_slash_bearing_without_refmet_vote": 50,
+        "share_of_committed": 0.0334,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 980,
+          "structure_present": 519
+        },
+        "structure_absent_share": 0.6538
+      },
+      "structure_oracle": {
+        "n_scored": 1499,
+        "blended_precision": 0.1434,
+        "by_state": {
+          "structure_absent": {
+            "n": 980,
+            "share_of_scored": 0.6538,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 519,
+            "share_of_scored": 0.3462,
+            "n_correct": 215,
+            "precision": 0.4143
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 217,
+        "blended_precision": 0.2166,
+        "by_state": {
+          "structure_absent": {
+            "n": 137,
+            "share_of_scored": 0.6313,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 80,
+            "share_of_scored": 0.3687,
+            "n_correct": 47,
+            "precision": 0.5875
+          }
+        }
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 137,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 980,
+        "uncorroborated": 519
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1499,
+          "n_unavailable": 980,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.6538,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 519,
+          "strata": {
+            "none/indep=unknown": {
+              "n_verifiable": 519,
+              "independent_source": "none",
+              "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
+              "points": [
+                {
+                  "certificate_state": "uncorroborated",
+                  "n": 519,
+                  "coverage": 0.3462,
+                  "precision": 0.4143
+                }
+              ]
+            }
+          }
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1499,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 519,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": 0.0,
+          "outcomes": {
+            "off": 1499
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 137,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 32,
+          "structure_present": 20
+        },
+        "divergent_refmet": {
+          "structure_absent": 30,
+          "structure_present": 7
+        },
+        "no_flag": {
+          "structure_absent": 918,
+          "structure_present": 492
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 51,
+            "True": 1
+          },
+          "divergent_refmet": {
+            "False": 34,
+            "True": 3
+          },
+          "no_flag": {
+            "False": 1199,
+            "True": 211
+          }
+        },
+        "identifier_oracle": {
+          "conflict_no_structure": {
+            "False": 8
+          },
+          "divergent_refmet": {
+            "False": 5,
+            "True": 2
+          },
+          "no_flag": {
+            "False": 157,
+            "True": 45
+          }
+        }
+      }
+    },
+    {
+      "dataset": "metlinkr:CHEBI",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_CHEBI_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
+      "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 448,
+        "uncorroborated": 964
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1412,
+          "n_unavailable": 448,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.3173,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 0,
+          "strata": {}
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1412,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
+          "outcomes": {
+            "off": 1412
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 0,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:HMDB",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_HMDB_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
+      "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 448,
+        "uncorroborated": 964
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1412,
+          "n_unavailable": 448,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.3173,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 0,
+          "strata": {}
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1412,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
+          "outcomes": {
+            "off": 1412
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 0,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:KEGG",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_KEGG_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
+      "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 448,
+        "uncorroborated": 964
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1412,
+          "n_unavailable": 448,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.3173,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 0,
+          "strata": {}
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1412,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
+          "outcomes": {
+            "off": 1412
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 0,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:PUBCHEM",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_PUBCHEM_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
+      "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 448,
+        "uncorroborated": 964
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1412,
+          "n_unavailable": 448,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.3173,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 0,
+          "strata": {}
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1412,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
+          "outcomes": {
+            "off": 1412
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 0,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:REFMET",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_REFMET_MAPPED_d_mapped.tsv",
+      "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
+      "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "slash_bearing_name_rate": {
+        "query_name_column": "metabolite_name",
+        "n_rows": 1412,
+        "n_rows_with_slash": 73,
+        "rate_rows": 0.0517,
+        "n_distinct_names": 1189,
+        "n_distinct_names_with_slash": 73,
+        "rate_distinct": 0.0614
+      },
+      "spurious_independence": {
+        "n_committed": 1412,
+        "n_slash_bearing": 73,
+        "n_slash_bearing_without_refmet_vote": 42,
+        "share_of_committed": 0.0297,
+        "bound": "upper",
+        "note": "upper bound: a committed artifact cannot separate 'RefMet could not be asked' from 'RefMet was asked and had nothing'"
+      },
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "certificate_state_counts": {
+        "unavailable": 448,
+        "uncorroborated": 964
+      },
+      "figure5": {
+        "panel_a_abstention": {
+          "n_rows": 1412,
+          "n_unavailable": 448,
+          "n_not_applicable": 0,
+          "abstention_rate": 0.3173,
+          "note": "declared abstention; a refused row is unverifiable, not wrong"
+        },
+        "panel_b_precision_coverage": {
+          "n_verifiable": 0,
+          "strata": {}
+        },
+        "tier_b": {
+          "n_rows_with_tier_b_outcome": 1412,
+          "n_tier_b_resolved": 0,
+          "n_tier_b_lookup_failed": 0,
+          "resolution_rate_all_rows": 0.0,
+          "n_verifiable": 0,
+          "n_tier_b_resolved_verifiable": 0,
+          "resolution_rate": null,
+          "outcomes": {
+            "off": 1412
+          },
+          "min_resolution_rate_floor": 0.5
+        },
+        "sparsity_control": {
+          "n_absent_identifier_scorable": 0,
+          "n_absent_oracle_could_fire": 0,
+          "comparable_namespaces": [
+            "HMDB",
+            "KEGG.COMPOUND",
+            "PUBCHEM.COMPOUND"
+          ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
+        "curve_publishable": false,
+        "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    }
+  ]
+}

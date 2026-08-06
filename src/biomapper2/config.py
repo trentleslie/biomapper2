@@ -113,6 +113,22 @@ MW_INCHIKEY_URL = "https://www.metabolomicsworkbench.org/rest/refmet/name"  # /{
 PUBCHEM_INCHIKEY_URL = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name"  # /{name}/property/InChIKey/JSON
 STRUCTURE_LOOKUP_TIMEOUT_S = 3  # per external structure call; mirrors the RefMet /match timeout
 
+# Tier B of the resolution certificate: independent structure evidence for the QUERY NAME.
+#
+# OFF by default, and that default is part of the contract rather than a deployment convention.
+# Tier A is zero-I/O and reads only what the graph already asserts about the committed node; turning
+# Tier B on moves external calls from a small conflict subset to every unique query name in a run,
+# against rate-limited services, and changes what the emitted certificate state means. An operator
+# enables it deliberately for a supervised sweep. See core/tier_b.py.
+TIER_B_ENABLED = os.getenv("BIOMAPPER2_TIER_B_ENABLED", "").strip().lower() in {"1", "true", "yes"}
+TIER_B_MIN_INTERVAL_S = 0.25  # minimum spacing between outbound Tier B calls (PUG-REST is throttled)
+TIER_B_MAX_ATTEMPTS = 3  # attempts per hop before recording lookup_failed
+TIER_B_BACKOFF_BASE_S = 0.5  # first backoff; doubles per retry
+# Floor on Tier B's own resolution rate below which the corroboration curve is refused rather than
+# published: the endpoints are EXACT-name lookups while the annotator matches fuzzily, so a low rate
+# means the verdicts were computed on a biased easy subset.
+TIER_B_MIN_RESOLUTION_RATE = 0.5
+
 # Human-preference re-ranking for gene/protein resolution (see docs/plans HGNC plan).
 # When prefer_human is active, hybrid-search retrieves this many candidates (instead of 1) so the
 # human node — which often ranks below the wrong-species ortholog — is actually returned. Live spike
