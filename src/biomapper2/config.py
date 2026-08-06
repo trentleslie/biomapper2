@@ -74,6 +74,34 @@ def get_kestrel_api_key() -> str | None:
     return os.getenv("KESTREL_API_KEY") or None
 
 
+# Default per-request timeout, in seconds, for every Kestrel call. The kwarg always passed through
+# to the transport; what was missing was a DEFAULT, so the mapping-path callers that supply none had
+# no timeout at all and a wedged request could hang a run indefinitely. Sized from the successful-
+# request duration distribution recorded in
+# studies/analysis/results/request_timeout_derivation.json (field: recommended_timeout_s)
+# and asserted against it in the test suite -- a default UNDER the server's own limit is worse than
+# none, because it converts a recoverable server error into a client-side abort.
+KESTREL_REQUEST_TIMEOUT_S = 180
+
+# Bisect-on-5xx. Ships DORMANT. Its diagnosis -- that server errors are determined by payload
+# CONTENT rather than by load or timing -- is not yet confirmed by the gated single-request
+# diagnostic. If the cause turns out to be load, bisecting amplifies it: the failing chunk is
+# resubmitted as a tree of sub-chunks against a shared service with no rate limiting on either side.
+# Enable only after the diagnostic returns, and never as a default.
+KESTREL_BISECT_ON_5XX_ENABLED = False
+
+# Bisect budgets, in REQUEST VOLUME rather than recursion depth. Depth is bounded near ten by
+# construction and bounds nothing that matters; volume is what a shared, unrated service notices.
+# Bisect composes with the retry ladder multiplicatively, and several independent bad items cost
+# order m*log(N/m) nodes per chunk per vocabulary per dataset. Every cap fails LOUD.
+KESTREL_BISECT_MAX_REQUESTS = 200  # per dataset
+KESTREL_BISECT_MAX_WALL_CLOCK_S = 600.0
+KESTREL_BISECT_MAX_CONSECUTIVE_FAILURES = 12
+KESTREL_BISECT_MIN_INTER_REQUEST_DELAY_S = 1.0
+# The retry ladder is disabled inside bisect: a node gets a single attempt. Sequential is not the
+# same as polite, and the ladder's backoff sleeps turn one poison item into minutes of load.
+KESTREL_BISECT_MAX_RETRIES = 0
+
 # Batching for Kestrel API requests (to prevent timeouts on large datasets)
 KESTREL_BATCHING_ENABLED = True  # Set to False to disable batching (for performance testing)
 KESTREL_BATCH_SIZE_SEARCH = 1000  # For text-search, vector-search, hybrid-search

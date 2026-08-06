@@ -58,30 +58,68 @@ GUARDED_FILES = (
     "tests/test_resolver_source_weighting.py",
     "tests/test_structure_resolver.py",
     "tests/test_annotation_engine_canonical.py",
+    # The evidence-base files. These exist to put measured numbers in artifacts, so a measured
+    # number restated in their own prose would be the defect they were written to remove.
+    #
+    # Deliberately NOT guarded: studies/external_benchmarks/config.py, which carries an external
+    # baseline in a comment that is explicitly flagged needs-verification alongside a null registry
+    # value. Guarding it would turn the suite red for a comment doing exactly the right thing.
+    # build_section3_claims.py IS guarded: the guard scans prose, not code, and the manuscript
+    # values it holds live in code where values belong.
+    #
+    # Every evidence-base file now sits under ``studies/analysis`` or top-level ``tests`` on
+    # purpose -- trees the certificate axis's globbed guard covers by default -- so all of them stay
+    # guarded when that rewrite replaces this hand-maintained list. Listing them here as well is
+    # redundant today and harmless. Placement survives a guard rewrite; a list entry does not.
+    "studies/analysis/stats.py",
+    "studies/analysis/confidence_report.py",
+    "tests/test_stats.py",
+    "tests/test_confidence_report.py",
+    "studies/analysis/reconcile_section3.py",
+    "studies/analysis/request_timeout.py",
+    "studies/analysis/build_section3_claims.py",
+    "tests/test_reconcile_section3.py",
+    "tests/test_row_index_gold_guard.py",
+    "src/biomapper2/utils.py",
+    "tests/test_kestrel_client_hardening.py",
 )
 
 # Identifiers, not quantities. Stripped before scanning so a CURIE's digits are not read as a count.
 _IDENTIFIER_PATTERNS = (
-    re.compile(r"``[^`]*``"),                                   # inline code spans hold code, not prose
-    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),                       # ISO dates ("verified live 2026-06-18")
+    re.compile(r"``[^`]*``"),  # inline code spans hold code, not prose
+    re.compile(r"\b\d{4}-\d{2}-\d{2}\b"),  # ISO dates ("verified live 2026-06-18")
     re.compile(r"\b[A-Za-z][A-Za-z0-9._]*:[A-Za-z0-9_.\-]+"),  # CURIEs: CHEBI:16856, OBO:NCIT_C103149
-    re.compile(r"\bhttps?://\S+"),                              # URLs
-    re.compile(r"\b[A-Z]{10,}-[A-Z]{5,}-[A-Z]\b"),              # InChIKeys
-    re.compile(r"\b[0-9a-f]{7,40}\b"),                          # git SHAs
-    re.compile(r"\bv?\d+\.\d+\.\d+\b"),                         # semantic versions (biolink 4.2.5)
-    re.compile(r"\bPR #\d+\b"),                                 # PR references
-    re.compile(r"\b[a-z_]+\.py:\d+\b"),                         # file:line references
-    re.compile(r"\b:\d+\b"),                                    # bare line refs (``:229``)
+    re.compile(r"\bhttps?://\S+"),  # URLs
+    re.compile(r"\b[A-Z]{10,}-[A-Z]{5,}-[A-Z]\b"),  # InChIKeys
+    re.compile(r"\b[0-9a-f]{7,40}\b"),  # git SHAs
+    re.compile(r"\bv?\d+\.\d+\.\d+\b"),  # semantic versions (biolink 4.2.5)
+    re.compile(r"\bPR #\d+\b"),  # PR references
+    re.compile(r"\b[a-z_]+\.py:\d+\b"),  # file:line references
+    re.compile(r"\b:\d+\b"),  # bare line refs (``:229``)
 )
 
 # Exact tokens that are structural constants or protocol facts, never measurements.
+#
+# WHAT BELONGS HERE, and why the list is not a convenience hatch. The scanner flags any 3+ digit
+# number, which necessarily catches numbers that are *named by a standard* rather than *measured by
+# a run*: HTTP status codes, Unix permission modes, port numbers, fixed tool settings. The test for
+# membership is: could this number change if the code were run against different data? If yes it is
+# a measurement and it belongs in an artifact, however inconvenient. If no -- if it is fixed by a
+# specification, a protocol, or a configuration file -- it is a name that happens to be spelled in
+# digits, and suppressing it here costs nothing.
+#
+# Do NOT add a token merely because the guard is inconvenient. Two false positives have reached this
+# list so far, and both were of the named-constant kind. A measured figure added here would silently
+# defeat the standard for that exact value, which is the one thing this file exists to prevent.
 _ALLOWED_TOKENS = frozenset(
     {
         "100",  # percentage arithmetic / "100%" of a structural set
         "200",
+        "301",
         "401",
         "404",  # HTTP status codes
         "120",  # ruff line-length
+        "0700",  # Unix permission mode on the cache directory (chmod), not a quantity
     }
 )
 

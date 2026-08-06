@@ -67,8 +67,9 @@ def test_input_df_derives_gold_inchikey_when_column_empty(raw_srm_df):
     assert df[SRM1950.gold_inchikey_column].iloc[1] == "WQZGKKKJIJFFOK-GASJEMHNSA-N"
     # gold SMILES preserved for the charge-normalized variant
     assert df[SRM1950.gold_smiles_column].iloc[3] == "CCO"
-    # HMDB certified id carried as coverage
-    assert df["gold_hmdb"].iloc[0] == "HMDB0000001"
+    # The delivery's identifier column is dropped at acquisition, not carried as coverage: it was a
+    # row index in accession clothing. See tests/test_row_index_gold_guard.py.
+    assert "gold_hmdb" not in df.columns
 
 
 def test_explicit_inchikey_column_preferred_over_derivation(raw_srm_df):
@@ -95,7 +96,7 @@ def test_card_per_column_coverage(raw_srm_df):
     assert card["coverage"]["INCHIKEY"]["fraction"] == pytest.approx(0.75)
     # SMILES present on 4/4 (even the unparseable one is a present string)
     assert card["coverage"]["SMILES"]["n"] == 4
-    assert card["coverage"]["HMDB"]["n"] == 4
+    assert "HMDB" not in card["coverage"]  # dropped: the delivery's identifier column was a row index
     assert card["structure_oracle_column"] == SRM1950.gold_inchikey_column
     assert card["structure_oracle_source"] == "derived_from_certified_smiles"
     assert card["source_doi"] == SRM1950.source_doi

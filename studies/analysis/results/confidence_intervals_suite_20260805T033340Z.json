@@ -1,0 +1,1517 @@
+{
+  "header": {
+    "report": "confidence_intervals",
+    "suite_id": "suite_20260805T033340Z",
+    "suite_dir": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z",
+    "generated_utc": "2026-08-06T05:48:08.657010+00:00",
+    "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+    "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)",
+    "biolink_version": "4.2.5",
+    "backend": "https://kestrel.krakenkg.com/api",
+    "graph_census": {
+      "total_nodes": 14683250,
+      "total_edges": 92233909,
+      "unique_node_categories": 59,
+      "unique_node_prefixes": 194,
+      "unique_edge_predicates": 100,
+      "unique_meta_doubles": 1887,
+      "unique_meta_triples": 9763
+    },
+    "chebi_release": "unrecorded",
+    "chebi_node_count": 202220,
+    "interval_method": "score (Wilson) for single proportions; score interval for paired differences",
+    "z": 1.959963984540054,
+    "interval_simultaneity": "marginal",
+    "forbidden_inference": "These intervals are MARGINAL, not simultaneous. No claim of the form 'X exceeds Y' may be derived from two intervals failing to overlap: non-overlap is neither necessary nor sufficient for a difference, and several rows in this table are not independent of each other. Where a difference is claimed, use the paired_difference field on the dependent row.",
+    "preregistration": {
+      "preregistration": "external-benchmark significance testing",
+      "version": 1,
+      "status": "declared",
+      "why_this_file_exists": [
+        "Three competitors across roughly seven datasets and several vocabularies is plausibly a few",
+        "dozen paired tests. Under the null, several of those clear the conventional threshold by",
+        "chance alone. Choosing the family or the correction after seeing the output is p-hacking, so",
+        "the declaration is committed BEFORE any comparison run is fired and is consumed by the",
+        "reporting code rather than applied by hand."
+      ],
+      "families": [
+        {
+          "id": "d4_competitor_headtohead",
+          "rank": "primary",
+          "description": "BioMapper against each incumbent identifier-mapping service, run on identical rows with the identical scorer.",
+          "unit_of_analysis": "one input row, keyed by the dataset's row id",
+          "pairing": "genuine: the same rows are scored by every arm, so McNemar applies",
+          "test": "mcnemar_exact",
+          "correction": "holm",
+          "correction_rationale": "The primary family controls the family-wise error rate: a single false claim that BioMapper beats a named incumbent is the costly error here, so the stricter control is the right one.",
+          "primary_comparison": "BioMapper versus the best-performing incumbent on the CURIE-backbone dataset, strict correctness flag",
+          "planned_members": [
+            "biomapper vs g:Convert",
+            "biomapper vs bioDBnet",
+            "biomapper vs UniProt ID mapping"
+          ],
+          "gated": true,
+          "gate_note": "Requires live calls to three external hosted services. Declared here; fired separately as a supervised step."
+        },
+        {
+          "id": "oracle_variant_contrasts",
+          "rank": "secondary",
+          "description": "Within one dataset, the strict correctness flag against a relaxed variant of the same flag (charge-normalized, equivalence-set) over the same rows.",
+          "unit_of_analysis": "one input row",
+          "pairing": "genuine and nested: the relaxed flag is a superset of the strict flag on the same rows, so the contrast is paired by construction and the two marginal intervals are NOT independent",
+          "test": "mcnemar_exact",
+          "correction": "benjamini_hochberg",
+          "correction_rationale": "Descriptive contrasts characterising where relaxation helps, not claims of superiority over a competitor. Controlling the false-discovery rate keeps power where a family-wise correction would spend it for no decision benefit.",
+          "primary_comparison": "strict versus equivalence-set on the reference metabolite set",
+          "gated": false,
+          "gate_note": "Computed offline from an already-committed suite directory; no calls."
+        }
+      ],
+      "rules": [
+        "Every reported p-value names its family. A p-value with no declared family is a protocol violation, not a finding.",
+        "The correction is applied within family, over every test in the family that was RUN, not only those that were reported.",
+        "Marginal intervals are not simultaneous. No claim of the form 'X exceeds Y' may be derived from two intervals failing to overlap.",
+        "Where pairing does not genuinely exist, no difference statistic is emitted and the absence is recorded with its reason."
+      ]
+    },
+    "seed_free": true
+  },
+  "rows": [
+    {
+      "dataset": "metabench",
+      "row_id": "metabench:overall:strict",
+      "regime": "overall",
+      "arm": "metabolite",
+      "vocab": null,
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 527,
+      "n": 1000,
+      "rate": 0.527,
+      "wilson": {
+        "lower": 0.4960112345098613,
+        "upper": 0.5577821205319187,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 3.0885,
+      "independence_family": "metabench:grounding",
+      "independence_role": "derived_aggregate",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "the exact sum of the target-namespace sub-rows below, which partition this population; it carries no information the sub-rows do not"
+      },
+      "not_independent_of": null,
+      "derived_from": [
+        "metabench:KEGG:strict",
+        "metabench:HMDB:strict",
+        "metabench:CHEBI:strict"
+      ],
+      "paired_difference": null,
+      "coverage": null,
+      "note": "",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "metabench",
+      "row_id": "metabench:KEGG:strict",
+      "regime": "KEGG",
+      "arm": null,
+      "vocab": null,
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 303,
+      "n": 400,
+      "rate": 0.7575,
+      "wilson": {
+        "lower": 0.713177577926968,
+        "upper": 0.7969235904908694,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 4.1873,
+      "independence_family": "metabench:grounding",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a disjoint stratum of the grounding set; strata partition the population"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "metabench",
+      "row_id": "metabench:HMDB:strict",
+      "regime": "HMDB",
+      "arm": null,
+      "vocab": null,
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 69,
+      "n": 400,
+      "rate": 0.1725,
+      "wilson": {
+        "lower": 0.13863520728428094,
+        "upper": 0.21259534550468326,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 3.698,
+      "independence_family": "metabench:grounding",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a disjoint stratum of the grounding set; strata partition the population"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "metabench",
+      "row_id": "metabench:CHEBI:strict",
+      "regime": "CHEBI",
+      "arm": null,
+      "vocab": null,
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 155,
+      "n": 200,
+      "rate": 0.775,
+      "wilson": {
+        "lower": 0.7122587676433947,
+        "upper": 0.8273763028491088,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 5.7559,
+      "independence_family": "metabench:grounding",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a disjoint stratum of the grounding set; strata partition the population"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "necs",
+      "row_id": "necs:CHEBI:overall:strict",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 609,
+      "n": 796,
+      "rate": 0.7650753768844221,
+      "wilson": {
+        "lower": 0.7343939844207127,
+        "upper": 0.7932105743904886,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 2.9408,
+      "independence_family": "necs:CHEBI",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "one vendor delivery for one cohort; items are distinct compounds, so no cluster key is asserted, but the delivery is a single source and the rate does not generalise beyond it"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": {
+        "n_predicted": 1488,
+        "total": 1495,
+        "fraction": 0.9953177257525083
+      },
+      "note": "top1_accuracy",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "necs",
+      "row_id": "necs:CHEBI:overall:charge_normalized",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "charge_normalized",
+      "correctness_flag": "charge_normalized_correct",
+      "k": 624,
+      "n": 796,
+      "rate": 0.7839195979899497,
+      "wilson": {
+        "lower": 0.7540007880451627,
+        "upper": 0.8111112038568822,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 2.8555,
+      "independence_family": "necs:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "one vendor delivery for one cohort; items are distinct compounds, so no cluster key is asserted, but the delivery is a single source and the rate does not generalise beyond it"
+      },
+      "not_independent_of": "necs:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "contrast": "charge_normalized_correct minus correct",
+        "family": "oracle_variant_contrasts",
+        "b": 34,
+        "c": 19,
+        "n": 796,
+        "estimate": 0.018844221105527637,
+        "lower": 0.0009510403227923033,
+        "upper": 0.0377503420533965,
+        "method": "score (asymptotic) interval for the paired difference of proportions",
+        "mover_companion": {
+          "estimate": 0.018844221105527637,
+          "lower": 0.000871962527617131,
+          "upper": 0.036986758687455934,
+          "k1": 624,
+          "k2": 609,
+          "b": 34,
+          "c": 19,
+          "n": 796,
+          "z": 1.959963984540054,
+          "phi": 0.8100311326593592,
+          "paired": true,
+          "degenerate": false,
+          "method": "Newcombe MOVER interval for the paired difference of proportions"
+        },
+        "mcnemar": {
+          "b": 34,
+          "c": 19,
+          "n_discordant": 53,
+          "p_exact": 0.053438810537711046,
+          "p_midp": 0.0402235640957167,
+          "p_score": 0.03935950888824975,
+          "degenerate": false,
+          "note": "",
+          "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside"
+        },
+        "p_adjusted": 0.07481433475279546,
+        "n_tests_in_family": 7
+      },
+      "coverage": {
+        "n_predicted": 1488,
+        "total": 1495,
+        "fraction": 0.9953177257525083
+      },
+      "note": "top1_accuracy_charge_normalized",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "necs",
+      "row_id": "necs:CHEBI:overall:kg_equivalence_set",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "kg_equivalence_set",
+      "correctness_flag": "kg_equivalence_set_correct",
+      "k": 668,
+      "n": 796,
+      "rate": 0.8391959798994975,
+      "wilson": {
+        "lower": 0.8120567107140423,
+        "upper": 0.8630770849211441,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 2.551,
+      "independence_family": "necs:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "one vendor delivery for one cohort; items are distinct compounds, so no cluster key is asserted, but the delivery is a single source and the rate does not generalise beyond it"
+      },
+      "not_independent_of": "necs:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "contrast": "kg_equivalence_set_correct minus correct",
+        "family": "oracle_variant_contrasts",
+        "b": 59,
+        "c": 0,
+        "n": 796,
+        "estimate": 0.07412060301507538,
+        "lower": 0.0578962911517967,
+        "upper": 0.0944357209951357,
+        "method": "score (asymptotic) interval for the paired difference of proportions",
+        "mover_companion": {
+          "estimate": 0.07412060301507539,
+          "lower": 0.0561564033185223,
+          "upper": 0.09296100344170782,
+          "k1": 668,
+          "k2": 609,
+          "b": 59,
+          "c": 0,
+          "n": 796,
+          "z": 1.959963984540054,
+          "phi": 0.7893309416269411,
+          "paired": true,
+          "degenerate": false,
+          "method": "Newcombe MOVER interval for the paired difference of proportions"
+        },
+        "mcnemar": {
+          "b": 59,
+          "c": 0,
+          "n_discordant": 59,
+          "p_exact": 3.469446951953614e-18,
+          "p_midp": 1.734723475976807e-18,
+          "p_score": 1.576719665672811e-14,
+          "degenerate": false,
+          "note": "",
+          "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside"
+        },
+        "p_adjusted": 2.42861286636753e-17,
+        "n_tests_in_family": 7
+      },
+      "coverage": {
+        "n_predicted": 1488,
+        "total": 1495,
+        "fraction": 0.9953177257525083
+      },
+      "note": "top1_accuracy_kg_equivalence_set",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "hgnc",
+      "row_id": "hgnc:ENSEMBL:any-namespace:strict",
+      "regime": "overall",
+      "arm": "gene",
+      "vocab": "ENSEMBL",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 1442,
+      "n": 1496,
+      "rate": 0.963903743315508,
+      "wilson": {
+        "lower": 0.9532010631633244,
+        "upper": 0.9722300828001741,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 0.9515,
+      "independence_family": "hgnc:symbol-sample",
+      "independence_role": "derived_union",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a union over OVERLAPPING per-namespace subsets of the same symbols; the sub-rows are not independent of this row or of each other, so the four intervals must not be read side by side as separate measurements"
+      },
+      "not_independent_of": null,
+      "derived_from": [
+        "hgnc:ENSEMBL:ENSEMBL:strict",
+        "hgnc:ENSEMBL:NCBIGene:strict",
+        "hgnc:ENSEMBL:UniProtKB:strict"
+      ],
+      "paired_difference": null,
+      "coverage": null,
+      "note": "any-namespace union",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "hgnc",
+      "row_id": "hgnc:ENSEMBL:ENSEMBL:strict",
+      "regime": "ENSEMBL",
+      "arm": "gene",
+      "vocab": "ENSEMBL",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 1106,
+      "n": 1399,
+      "rate": 0.7905646890636169,
+      "wilson": {
+        "lower": 0.7684611335472151,
+        "upper": 0.8110769139549259,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 2.1308,
+      "independence_family": "hgnc:symbol-sample",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "an overlapping subset of the same symbol sample; not independent of the other namespaces or of the union row"
+      },
+      "not_independent_of": "hgnc:ENSEMBL:any-namespace:strict",
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "per-namespace subset",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "hgnc",
+      "row_id": "hgnc:ENSEMBL:NCBIGene:strict",
+      "regime": "NCBIGene",
+      "arm": "gene",
+      "vocab": "ENSEMBL",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 1441,
+      "n": 1475,
+      "rate": 0.9769491525423729,
+      "wilson": {
+        "lower": 0.9679621958226536,
+        "upper": 0.9834582499646967,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 0.7748,
+      "independence_family": "hgnc:symbol-sample",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "an overlapping subset of the same symbol sample; not independent of the other namespaces or of the union row"
+      },
+      "not_independent_of": "hgnc:ENSEMBL:any-namespace:strict",
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "per-namespace subset",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "hgnc",
+      "row_id": "hgnc:ENSEMBL:UniProtKB:strict",
+      "regime": "UniProtKB",
+      "arm": "gene",
+      "vocab": "ENSEMBL",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 594,
+      "n": 643,
+      "rate": 0.9237947122861586,
+      "wilson": {
+        "lower": 0.9006765724188356,
+        "upper": 0.941879192317752,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 2.0601,
+      "independence_family": "hgnc:symbol-sample",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "an overlapping subset of the same symbol sample; not independent of the other namespaces or of the union row"
+      },
+      "not_independent_of": "hgnc:ENSEMBL:any-namespace:strict",
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "per-namespace subset",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "metaboliteannotator",
+      "row_id": "metaboliteannotator:positive:name_hit",
+      "regime": "overall",
+      "arm": "positive",
+      "vocab": null,
+      "metric": "name_hit_rate",
+      "correctness_flag": "hit",
+      "k": 4179,
+      "n": 4314,
+      "rate": 0.9687065368567455,
+      "wilson": {
+        "lower": 0.9630795962309848,
+        "upper": 0.9734994881489483,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 0.521,
+      "independence_family": "metaboliteannotator:positive",
+      "independence_role": "standalone",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "unique curated names from independent studies; no clustering structure is asserted"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "COVERAGE, not correctness: the flag records that an identifier was produced, never that it matches the study's own annotation",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "metlinkr",
+      "row_id": "metlinkr:curator_agreement",
+      "regime": "overall",
+      "arm": null,
+      "vocab": null,
+      "metric": "curator_agreement_rate",
+      "correctness_flag": "linked",
+      "k": 333,
+      "n": 401,
+      "rate": 0.830423940149626,
+      "wilson": {
+        "lower": 0.7906001555932954,
+        "upper": 0.8639770726677299,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 3.6688,
+      "independence_family": "metlinkr:curator-pairs",
+      "independence_role": "standalone",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "curator-asserted cross-dataset pairs; pairs sharing a member are not fully independent, and no cluster key for that structure is persisted, so the plain half-width is an upper bound on precision"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "link recall on the curators' asserted cross-links",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "metlinkr",
+      "row_id": "metlinkr:structural_concordance",
+      "regime": "overall",
+      "arm": null,
+      "vocab": null,
+      "metric": "inchikey_structural_concordance",
+      "correctness_flag": "concordant",
+      "k": 543,
+      "n": 649,
+      "rate": 0.8366718027734977,
+      "wilson": {
+        "lower": 0.8062651539152744,
+        "upper": 0.8631163537932057,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 2.8426,
+      "independence_family": "metlinkr:structural",
+      "independence_role": "standalone",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "rows the external source could cover; rows it could not are held out as needs-verification rather than scored either way"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": null,
+      "note": "per-row rows persisted: no; the per-row correctness key here is 'concordant', a third vocabulary distinct from the other scorers'",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "refmet",
+      "row_id": "refmet:CHEBI:overall:strict",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 1319,
+      "n": 1500,
+      "rate": 0.8793333333333333,
+      "wilson": {
+        "lower": 0.8618725389690572,
+        "upper": 0.8948561662578985,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.6492,
+      "independence_family": "refmet:CHEBI",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a curated cross-source reference list; no clustering structure is asserted, so the plain interval is the one to read"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": {
+        "n_predicted": 1500,
+        "total": 1500,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "refmet",
+      "row_id": "refmet:CHEBI:overall:charge_normalized",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "charge_normalized",
+      "correctness_flag": "charge_normalized_correct",
+      "k": 1321,
+      "n": 1500,
+      "rate": 0.8806666666666667,
+      "wilson": {
+        "lower": 0.8632809306063689,
+        "upper": 0.8961076294719998,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.6413,
+      "independence_family": "refmet:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a curated cross-source reference list; no clustering structure is asserted, so the plain interval is the one to read"
+      },
+      "not_independent_of": "refmet:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "contrast": "charge_normalized_correct minus correct",
+        "family": "oracle_variant_contrasts",
+        "b": 3,
+        "c": 1,
+        "n": 1500,
+        "estimate": 0.0013333333333333333,
+        "lower": -0.0019357717697883582,
+        "upper": 0.005268510791980825,
+        "method": "score (asymptotic) interval for the paired difference of proportions",
+        "mover_companion": {
+          "estimate": 0.0013333333333334085,
+          "lower": -0.0019000431598051168,
+          "upper": 0.004658569021759495,
+          "k1": 1321,
+          "k2": 1319,
+          "b": 3,
+          "c": 1,
+          "n": 1500,
+          "z": 1.959963984540054,
+          "phi": 0.9870601338042987,
+          "paired": true,
+          "degenerate": false,
+          "method": "Newcombe MOVER interval for the paired difference of proportions"
+        },
+        "mcnemar": {
+          "b": 3,
+          "c": 1,
+          "n_discordant": 4,
+          "p_exact": 0.625,
+          "p_midp": 0.375,
+          "p_score": 0.31731050786291415,
+          "degenerate": false,
+          "note": "",
+          "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside"
+        },
+        "p_adjusted": 0.7291666666666666,
+        "n_tests_in_family": 7
+      },
+      "coverage": {
+        "n_predicted": 1500,
+        "total": 1500,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy_charge_normalized",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "refmet",
+      "row_id": "refmet:CHEBI:overall:kg_equivalence_set",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "kg_equivalence_set",
+      "correctness_flag": "kg_equivalence_set_correct",
+      "k": 1347,
+      "n": 1500,
+      "rate": 0.898,
+      "wilson": {
+        "lower": 0.8816533254589297,
+        "upper": 0.9123133476878059,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.533,
+      "independence_family": "refmet:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a curated cross-source reference list; no clustering structure is asserted, so the plain interval is the one to read"
+      },
+      "not_independent_of": "refmet:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "contrast": "kg_equivalence_set_correct minus correct",
+        "family": "oracle_variant_contrasts",
+        "b": 28,
+        "c": 0,
+        "n": 1500,
+        "estimate": 0.018666666666666668,
+        "lower": 0.012946064059841507,
+        "upper": 0.02684633458011987,
+        "method": "score (asymptotic) interval for the paired difference of proportions",
+        "mover_companion": {
+          "estimate": 0.01866666666666672,
+          "lower": 0.011838435162096485,
+          "upper": 0.026093643672487957,
+          "k1": 1347,
+          "k2": 1319,
+          "b": 28,
+          "c": 0,
+          "n": 1500,
+          "z": 1.959963984540054,
+          "phi": 0.9094647716125701,
+          "paired": true,
+          "degenerate": false,
+          "method": "Newcombe MOVER interval for the paired difference of proportions"
+        },
+        "mcnemar": {
+          "b": 28,
+          "c": 0,
+          "n_discordant": 28,
+          "p_exact": 7.450580596923828e-09,
+          "p_midp": 3.725290298461914e-09,
+          "p_score": 1.2131545083660773e-07,
+          "degenerate": false,
+          "note": "",
+          "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside"
+        },
+        "p_adjusted": 1.7384688059488933e-08,
+        "n_tests_in_family": 7
+      },
+      "coverage": {
+        "n_predicted": 1500,
+        "total": 1500,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy_kg_equivalence_set",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "srm1950",
+      "row_id": "srm1950:CHEBI:overall:strict",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 411,
+      "n": 983,
+      "rate": 0.41810783316378436,
+      "wilson": {
+        "lower": 0.3876505472759577,
+        "upper": 0.4492026791861734,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 3.0776,
+      "independence_family": "srm1950:CHEBI",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a SINGLE certified reference material: the items are one material's constituents, not a sample from a population of materials, so the interval covers sampling error over these items only and generalises to no wider population"
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": {
+        "n_predicted": 1058,
+        "total": 1058,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "srm1950",
+      "row_id": "srm1950:CHEBI:overall:charge_normalized",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "charge_normalized",
+      "correctness_flag": "charge_normalized_correct",
+      "k": 413,
+      "n": 983,
+      "rate": 0.4201424211597152,
+      "wilson": {
+        "lower": 0.3896564906915958,
+        "upper": 0.45125007175905374,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 3.0797,
+      "independence_family": "srm1950:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a SINGLE certified reference material: the items are one material's constituents, not a sample from a population of materials, so the interval covers sampling error over these items only and generalises to no wider population"
+      },
+      "not_independent_of": "srm1950:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "contrast": "charge_normalized_correct minus correct",
+        "family": "oracle_variant_contrasts",
+        "b": 6,
+        "c": 4,
+        "n": 983,
+        "estimate": 0.002034587995930824,
+        "lower": -0.005065341069418411,
+        "upper": 0.009678805318665211,
+        "method": "score (asymptotic) interval for the paired difference of proportions",
+        "mover_companion": {
+          "estimate": 0.0020345879959308144,
+          "lower": -0.004362993340709951,
+          "upper": 0.008434573960881299,
+          "k1": 413,
+          "k2": 411,
+          "b": 6,
+          "c": 4,
+          "n": 983,
+          "z": 1.959963984540054,
+          "phi": 0.9786074996267353,
+          "paired": true,
+          "degenerate": false,
+          "method": "Newcombe MOVER interval for the paired difference of proportions"
+        },
+        "mcnemar": {
+          "b": 6,
+          "c": 4,
+          "n_discordant": 10,
+          "p_exact": 0.75390625,
+          "p_midp": 0.548828125,
+          "p_score": 0.5270892568655381,
+          "degenerate": false,
+          "note": "",
+          "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside"
+        },
+        "p_adjusted": 0.75390625,
+        "n_tests_in_family": 7
+      },
+      "coverage": {
+        "n_predicted": 1058,
+        "total": 1058,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy_charge_normalized",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "srm1950",
+      "row_id": "srm1950:CHEBI:overall:kg_equivalence_set",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "kg_equivalence_set",
+      "correctness_flag": "kg_equivalence_set_correct",
+      "k": 450,
+      "n": 983,
+      "rate": 0.4577822990844354,
+      "wilson": {
+        "lower": 0.4268619297814109,
+        "upper": 0.4890313484568306,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 3.1085,
+      "independence_family": "srm1950:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": null,
+        "cluster_robust": null,
+        "assertion": "a SINGLE certified reference material: the items are one material's constituents, not a sample from a population of materials, so the interval covers sampling error over these items only and generalises to no wider population"
+      },
+      "not_independent_of": "srm1950:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "contrast": "kg_equivalence_set_correct minus correct",
+        "family": "oracle_variant_contrasts",
+        "b": 39,
+        "c": 0,
+        "n": 983,
+        "estimate": 0.03967446592065107,
+        "lower": 0.029156873467742095,
+        "upper": 0.05377585912995114,
+        "method": "score (asymptotic) interval for the paired difference of proportions",
+        "mover_companion": {
+          "estimate": 0.03967446592065105,
+          "lower": 0.027427881835204573,
+          "upper": 0.051883561784472905,
+          "k1": 450,
+          "k2": 411,
+          "b": 39,
+          "c": 0,
+          "n": 983,
+          "z": 1.959963984540054,
+          "phi": 0.9220208138100507,
+          "paired": true,
+          "degenerate": false,
+          "method": "Newcombe MOVER interval for the paired difference of proportions"
+        },
+        "mcnemar": {
+          "b": 39,
+          "c": 0,
+          "n_discordant": 39,
+          "p_exact": 3.637978807091713e-12,
+          "p_midp": 1.8189894035458565e-12,
+          "p_score": 4.2380554260794754e-10,
+          "degenerate": false,
+          "note": "",
+          "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside"
+        },
+        "p_adjusted": 1.2732925824820995e-11,
+        "n_tests_in_family": 7
+      },
+      "coverage": {
+        "n_predicted": 1058,
+        "total": 1058,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy_kg_equivalence_set",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "lmsd",
+      "row_id": "lmsd:CHEBI:overall:strict",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 255,
+      "n": 1500,
+      "rate": 0.17,
+      "wilson": {
+        "lower": 0.1518392582938526,
+        "upper": 0.18984666598146718,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.9004,
+      "independence_family": "lmsd:CHEBI",
+      "independence_role": "derived_aggregate",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": "lipid_class",
+        "cluster_robust": {
+          "method": "linearised cluster-robust variance for a ratio",
+          "n_clusters": 54,
+          "estimate": 0.06309751434034416,
+          "lower": 0.028199267053184943,
+          "upper": 0.09799576162750338,
+          "half_width_pt": 3.4898,
+          "design_effect": 5.609654215332631
+        },
+        "assertion": null
+      },
+      "not_independent_of": null,
+      "derived_from": [
+        "lmsd:CHEBI:common_systematic:strict",
+        "lmsd:CHEBI:shorthand:strict"
+      ],
+      "paired_difference": null,
+      "coverage": {
+        "n_predicted": 1499,
+        "total": 1500,
+        "fraction": 0.9993333333333333
+      },
+      "note": "top1_accuracy",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "lmsd",
+      "row_id": "lmsd:CHEBI:overall:charge_normalized",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "charge_normalized",
+      "correctness_flag": "charge_normalized_correct",
+      "k": 263,
+      "n": 1500,
+      "rate": 0.17533333333333334,
+      "wilson": {
+        "lower": 0.15692632827552022,
+        "upper": 0.19539901540545096,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.9236,
+      "independence_family": "lmsd:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": "lipid_class",
+        "cluster_robust": {
+          "method": "linearised cluster-robust variance for a ratio",
+          "n_clusters": 54,
+          "estimate": 0.06405353728489484,
+          "lower": 0.02872866738197849,
+          "upper": 0.09937840718781119,
+          "half_width_pt": 3.5325,
+          "design_effect": 5.667643425360672
+        },
+        "assertion": null
+      },
+      "not_independent_of": "lmsd:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "unavailable": "per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted",
+        "family": "oracle_variant_contrasts",
+        "mcnemar": {
+          "p_exact": null,
+          "p_midp": null,
+          "b": null,
+          "c": null
+        },
+        "lower": null,
+        "upper": null,
+        "b": null,
+        "c": null,
+        "p_adjusted": null,
+        "n_tests_in_family": null
+      },
+      "coverage": {
+        "n_predicted": 1499,
+        "total": 1500,
+        "fraction": 0.9993333333333333
+      },
+      "note": "top1_accuracy_charge_normalized",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "lmsd",
+      "row_id": "lmsd:CHEBI:overall:kg_equivalence_set",
+      "regime": "overall",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "kg_equivalence_set",
+      "correctness_flag": "kg_equivalence_set_correct",
+      "k": 263,
+      "n": 1500,
+      "rate": 0.17533333333333334,
+      "wilson": {
+        "lower": 0.15692632827552022,
+        "upper": 0.19539901540545096,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.9236,
+      "independence_family": "lmsd:CHEBI",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": "lipid_class",
+        "cluster_robust": {
+          "method": "linearised cluster-robust variance for a ratio",
+          "n_clusters": 54,
+          "estimate": 0.06405353728489484,
+          "lower": 0.02872866738197849,
+          "upper": 0.09937840718781119,
+          "half_width_pt": 3.5325,
+          "design_effect": 5.667643425360672
+        },
+        "assertion": null
+      },
+      "not_independent_of": "lmsd:CHEBI:overall:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "unavailable": "per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted",
+        "family": "oracle_variant_contrasts",
+        "mcnemar": {
+          "p_exact": null,
+          "p_midp": null,
+          "b": null,
+          "c": null
+        },
+        "lower": null,
+        "upper": null,
+        "b": null,
+        "c": null,
+        "p_adjusted": null,
+        "n_tests_in_family": null
+      },
+      "coverage": {
+        "n_predicted": 1499,
+        "total": 1500,
+        "fraction": 0.9993333333333333
+      },
+      "note": "top1_accuracy_kg_equivalence_set",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "lmsd",
+      "row_id": "lmsd:CHEBI:common_systematic:strict",
+      "regime": "common_systematic",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 189,
+      "n": 451,
+      "rate": 0.4190687361419069,
+      "wilson": {
+        "lower": 0.374402767705784,
+        "upper": 0.46510174846283164,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 4.5349,
+      "independence_family": "lmsd:CHEBI:common_systematic",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": "lipid_class",
+        "cluster_robust": {
+          "method": "linearised cluster-robust variance for a ratio",
+          "n_clusters": 7,
+          "estimate": 0.36363636363636365,
+          "lower": 0.03259853182835365,
+          "upper": 0.6946741954443736,
+          "half_width_pt": 33.1038,
+          "design_effect": 1.3560606060606062
+        },
+        "assertion": null
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": {
+        "n_predicted": 450,
+        "total": 451,
+        "fraction": 0.9977827050997783
+      },
+      "note": "top1_accuracy",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "lmsd",
+      "row_id": "lmsd:CHEBI:common_systematic:charge_normalized",
+      "regime": "common_systematic",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "charge_normalized",
+      "correctness_flag": "charge_normalized_correct",
+      "k": 196,
+      "n": 451,
+      "rate": 0.43458980044345896,
+      "wilson": {
+        "lower": 0.3895835086554827,
+        "upper": 0.48070096331641216,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 4.5559,
+      "independence_family": "lmsd:CHEBI:common_systematic",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": "lipid_class",
+        "cluster_robust": {
+          "method": "linearised cluster-robust variance for a ratio",
+          "n_clusters": 7,
+          "estimate": 0.36363636363636365,
+          "lower": 0.03259853182835365,
+          "upper": 0.6946741954443736,
+          "half_width_pt": 33.1038,
+          "design_effect": 1.3560606060606062
+        },
+        "assertion": null
+      },
+      "not_independent_of": "lmsd:CHEBI:common_systematic:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "contrast": "charge_normalized_correct minus correct",
+        "family": "oracle_variant_contrasts",
+        "b": 7,
+        "c": 0,
+        "n": 451,
+        "estimate": 0.015521064301552107,
+        "lower": 0.006944268421562297,
+        "upper": 0.03168736648926661,
+        "method": "score (asymptotic) interval for the paired difference of proportions",
+        "mover_companion": {
+          "estimate": 0.01552106430155209,
+          "lower": 0.003900569105831987,
+          "upper": 0.027152184391896345,
+          "k1": 196,
+          "k2": 189,
+          "b": 7,
+          "c": 0,
+          "n": 451,
+          "z": 1.959963984540054,
+          "phi": 0.9676649873620099,
+          "paired": true,
+          "degenerate": false,
+          "method": "Newcombe MOVER interval for the paired difference of proportions"
+        },
+        "mcnemar": {
+          "b": 7,
+          "c": 0,
+          "n_discordant": 7,
+          "p_exact": 0.015625,
+          "p_midp": 0.0078125,
+          "p_score": 0.008150971593502709,
+          "degenerate": false,
+          "note": "",
+          "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside"
+        },
+        "p_adjusted": 0.02734375,
+        "n_tests_in_family": 7
+      },
+      "coverage": {
+        "n_predicted": 450,
+        "total": 451,
+        "fraction": 0.9977827050997783
+      },
+      "note": "top1_accuracy_charge_normalized",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "lmsd",
+      "row_id": "lmsd:CHEBI:shorthand:strict",
+      "regime": "shorthand",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "strict",
+      "correctness_flag": "correct",
+      "k": 66,
+      "n": 1049,
+      "rate": 0.06291706387035272,
+      "wilson": {
+        "lower": 0.04975843293669775,
+        "upper": 0.07926522744693922,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.4753,
+      "independence_family": "lmsd:CHEBI:shorthand",
+      "independence_role": "primary",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": "lipid_class",
+        "cluster_robust": {
+          "method": "linearised cluster-robust variance for a ratio",
+          "n_clusters": 49,
+          "estimate": 0.05990338164251208,
+          "lower": 0.026239736978610297,
+          "upper": 0.09356702630641386,
+          "half_width_pt": 3.3664,
+          "design_effect": 5.421788917627002
+        },
+        "assertion": null
+      },
+      "not_independent_of": null,
+      "derived_from": null,
+      "paired_difference": null,
+      "coverage": {
+        "n_predicted": 1049,
+        "total": 1049,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    },
+    {
+      "dataset": "lmsd",
+      "row_id": "lmsd:CHEBI:shorthand:charge_normalized",
+      "regime": "shorthand",
+      "arm": null,
+      "vocab": "CHEBI",
+      "metric": "charge_normalized",
+      "correctness_flag": "charge_normalized_correct",
+      "k": 67,
+      "n": 1049,
+      "rate": 0.06387035271687322,
+      "wilson": {
+        "lower": 0.05060603988630931,
+        "upper": 0.08031724173967524,
+        "z": 1.959963984540054,
+        "method": "score (Wilson) interval"
+      },
+      "half_width_pt": 1.4856,
+      "independence_family": "lmsd:CHEBI:shorthand",
+      "independence_role": "nested",
+      "independence_assumption": {
+        "wilson_assumes": "the score interval treats items as independent draws; where they are not, the effective denominator is below the nominal one and the plain half-width is over-precise",
+        "cluster_key": "lipid_class",
+        "cluster_robust": {
+          "method": "linearised cluster-robust variance for a ratio",
+          "n_clusters": 49,
+          "estimate": 0.06086956521739131,
+          "lower": 0.026782776482621458,
+          "upper": 0.09495635395216115,
+          "half_width_pt": 3.4087,
+          "design_effect": 5.476337821315679
+        },
+        "assertion": null
+      },
+      "not_independent_of": "lmsd:CHEBI:shorthand:strict",
+      "derived_from": null,
+      "paired_difference": {
+        "unavailable": "per-row ids under 'name' are not unique, so a paired contrast keyed on them would manufacture discordant pairs; no difference statistic emitted",
+        "family": "oracle_variant_contrasts",
+        "mcnemar": {
+          "p_exact": null,
+          "p_midp": null,
+          "b": null,
+          "c": null
+        },
+        "lower": null,
+        "upper": null,
+        "b": null,
+        "c": null,
+        "p_adjusted": null,
+        "n_tests_in_family": null
+      },
+      "coverage": {
+        "n_predicted": 1049,
+        "total": 1049,
+        "fraction": 1.0
+      },
+      "note": "top1_accuracy_charge_normalized",
+      "git_sha": "d05956459ece9dffbc737250df98d2119c2eb0e6",
+      "kg_snapshot": "kraken 2.0.1 (14683250n/92233909e)"
+    }
+  ],
+  "missing_datasets": [
+    {
+      "dataset": "metaboliteannotator",
+      "suite_status": "failed",
+      "reason": "RuntimeError: metaboliteannotator-negative: no target vocab produced a result (mapper failed: {'CHEBI': '500 Server Error: Internal Server Error for url: https://kestrel.krakenkg.com/api/hybrid-search', 'HMDB': '500 Server Error: Internal Server Error for url: https://kestrel.krakenkg.com/api/hybrid-search', 'PUBCHEM': '500 Server Error: Internal Server Error for url: https://kestrel.krakenkg.com/api/hybrid-search', 'KEGG': '500 Server Error: Internal Server Error for url: https://kestrel.krakenkg.com/api/hybrid-search'}).",
+      "partial": true,
+      "arms_present": [
+        "metaboliteannotator:positive:name_hit"
+      ]
+    },
+    {
+      "dataset": "nlmgene",
+      "suite_status": "failed",
+      "reason": "RuntimeError: nlm-gene primary vocab 'NCBIGene' produced no result (mapper failed: '500 Server Error: Internal Server Error for url: https://kestrel.krakenkg.com/api/hybrid-search').",
+      "patterns_tried": [
+        "unambiguous_accuracy.json",
+        "ambiguous_flagrate.json"
+      ],
+      "shape_note": "NO conventionally named results file; a glob drops this dataset silently"
+    },
+    {
+      "dataset": "swisslipids",
+      "suite_status": "failed",
+      "reason": "RuntimeError: SwissLipids primary vocab 'CHEBI' produced no result (mapper failed: \"columns overlap but no suffix specified: Index(['lipid_name', 'query_source', 'held_out_pubchem',\\n       'gold_inchikey_swisslipids', 'gold_smiles', 'gold_hmdb',\\n       'gold_inchikey', 'has_gold_pubchem', 'assigned_ids'],\\n      dtype='object')\").",
+      "patterns_tried": [
+        "*_results.json"
+      ],
+      "shape_note": "same shape as the other lipid sets"
+    },
+    {
+      "dataset": "provided-id",
+      "suite_status": "skipped",
+      "reason": "a --dataset family over bulk backbones; needs a pinned artifact, not a URL",
+      "patterns_tried": [
+        "*_results.json"
+      ],
+      "shape_note": "not run unattended"
+    },
+    {
+      "dataset": "pham",
+      "suite_status": "skipped",
+      "reason": "source is a MetaNetX FTP path requiring hand reconstruction, not a fetchable file",
+      "patterns_tried": [
+        "*_results.json"
+      ],
+      "shape_note": "not run unattended"
+    },
+    {
+      "dataset": "hajjar",
+      "suite_status": "skipped",
+      "reason": "no pinned source_url; the supplement is hand-passed via --supplement",
+      "patterns_tried": [
+        "*_results.json"
+      ],
+      "shape_note": "results wrapped under an extra level"
+    }
+  ],
+  "off_category_weighting": {
+    "quote_this": "deduplicated",
+    "weighting_warning": "the file-weighted cross-dataset rate multiplies a dataset by the number of target-vocabulary files it ships, and those files carry identical resolutions. Quote the deduplicated figure below; the file-weighted one is named, not carried, so it cannot be lifted from here",
+    "file_weighted_field": "metabolite_total.pct_off_category in the off-category audit artifact",
+    "source_artifact": "studies/analysis/results/off_category_audit_suite_20260805T033340Z.json",
+    "deduplicated": {
+      "definition": "one representative file per metabolite dataset (first by filename), so a dataset that ships several identical target-vocab files is counted once rather than once per file",
+      "n_rows_with_commit": 6957,
+      "n_off_category": 282,
+      "pct_off_category": 4.05,
+      "representative_files": {
+        "lmsd": "lmsd/lmsd_CHEBI_MAPPED_d_mapped.tsv",
+        "metlinkr": "metlinkr/metlinkr-comets_CHEBI_MAPPED_d_mapped.tsv",
+        "necs": "necs/necs-metabolon_CHEBI_MAPPED_d_mapped.tsv",
+        "refmet": "refmet/refmet_CHEBI_MAPPED_d_mapped.tsv",
+        "srm1950": "srm1950/srm1950_CHEBI_MAPPED_d_mapped.tsv"
+      }
+    }
+  }
+}

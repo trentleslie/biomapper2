@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -27,6 +28,20 @@ import pandas as pd
 from ..config import SRM1950, DatasetConfig
 
 HAS_STRUCTURE_COL = "has_gold_structure"
+
+_ACCESSION_DIGITS = re.compile(r"(\d+)")
+
+
+class RowIndexGoldColumnError(ValueError):
+    """A gold accession column whose values are really the row number.
+
+    The delivery's identifier column ran in file order, one value per row, with the numeric parts
+    forming the sequence one to n against chemically unrelated names. It has an accession's exact
+    format, so it reads as gold to anything that greps for one, and the identifier-based coverage
+    figure derived from it was an artefact of the synthetic column rather than a resolver result.
+    The run refuses it at acquisition rather than scoring against it.
+    """
+
 
 # Canonical held-out column -> candidate raw headers (case-insensitive, exact after strip).
 QUERY_CANDIDATES: tuple[str, ...] = ("NAME", "Name", "metabolite_name", "Metabolite")
@@ -85,6 +100,52 @@ def inchikey_from_smiles(smiles: Any) -> str:
     return Chem.MolToInchiKey(mol)
 
 
+def is_row_index_column(values: Any) -> bool:
+    """True when a column of accession-shaped strings is really the row number in disguise.
+
+    The rule is deliberately narrow, because the cost of a false positive is a refused run. All
+    four must hold over the FULL column: every value populated, numeric parts unique, monotonically
+    increasing, and exactly the consecutive sequence starting at one. A genuine accession set is
+    unique but not consecutive; a sorted genuine set has gaps; a filtered subset of a corrupt
+    column also has gaps, which is why this must be evaluated on the raw delivery and never on a
+    downstream slice.
+
+    A single row satisfies "the consecutive sequence starting at one" trivially and is not
+    evidence, so the guard needs more than one row before it will fire.
+    """
+    parsed: list[int] = []
+    for value in list(values):
+        text = _norm(value)
+        if not text:
+            return False
+        match = _ACCESSION_DIGITS.search(text)
+        if match is None:
+            return False
+        parsed.append(int(match.group(1)))
+    if len(parsed) < 2:
+        return False
+    return parsed == list(range(1, len(parsed) + 1))
+
+
+def _refuse_row_index_gold_columns(raw_df: pd.DataFrame) -> None:
+    """Fail the run loudly when the delivery ships an accession column that is a row index.
+
+    Complements (and does not replace) the generic uniqueness-and-monotonicity quarantine that
+    handles *unknown* columns: this one refuses a known-bad column outright at acquisition, before
+    any figure can be computed from it.
+    """
+    hmdb_raw = _resolve_column(raw_df, HMDB_CANDIDATES)
+    if hmdb_raw is None:
+        return
+    if is_row_index_column(raw_df[hmdb_raw].tolist()):
+        raise RowIndexGoldColumnError(
+            f"{hmdb_raw!r} in the delivery is a row index wearing an accession's format: its "
+            f"numeric parts are unique, monotonic, and exactly the consecutive sequence starting "
+            f"at one over all rows. Refusing to build the input rather than scoring coverage "
+            f"against a synthetic gold column."
+        )
+
+
 def build_input_df(raw_df: pd.DataFrame, config: DatasetConfig = SRM1950) -> pd.DataFrame:
     """Build the mapper-ready input_df: name query + held-out gold columns + structure flag.
 
@@ -100,7 +161,7 @@ def build_input_df(raw_df: pd.DataFrame, config: DatasetConfig = SRM1950) -> pd.
         )
     smiles_raw = _resolve_column(raw_df, SMILES_CANDIDATES)
     inchikey_raw = _resolve_column(raw_df, INCHIKEY_CANDIDATES)
-    hmdb_raw = _resolve_column(raw_df, HMDB_CANDIDATES)
+    _refuse_row_index_gold_columns(raw_df)
 
     out = pd.DataFrame()
     out[config.name_column] = raw_df[query_raw].map(_norm)
@@ -112,8 +173,10 @@ def build_input_df(raw_df: pd.DataFrame, config: DatasetConfig = SRM1950) -> pd.
     out[config.gold_inchikey_column] = [
         ik if ik else inchikey_from_smiles(sm) for ik, sm in zip(explicit_ik.values, smiles.values)
     ]
-    out["gold_hmdb"] = raw_df[hmdb_raw].map(_norm).values if hmdb_raw is not None else ""
-
+    # The delivery's identifier column is NOT emitted. See ``RowIndexGoldColumnError``: it was a row
+    # index in accession clothing, and a quarantined-but-present gold column is a trap for the next
+    # person who greps for a gold identifier. The structure oracle is the certified SMILES-derived
+    # InChIKey, which never read this column, so accuracy is unaffected by the drop.
     out[HAS_STRUCTURE_COL] = out[config.gold_inchikey_column].map(lambda s: bool(_norm(s)))
     return out
 

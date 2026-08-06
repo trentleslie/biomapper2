@@ -1,0 +1,809 @@
+{
+  "inventory": "section 3 numeric claims",
+  "source": "studies/analysis/manuscript/section3_source.md",
+  "artifacts": [
+    "confidence_intervals",
+    "off_category_audit",
+    "tier3_determinism",
+    "northstar_ms1",
+    "published_external",
+    "competitor_headtohead"
+  ],
+  "claims": [
+    {
+      "id": "determinism.biomapper_accuracy",
+      "manuscript_value": 0.44,
+      "kind": "rate",
+      "artifact": "tier3_determinism",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the determinism study is a separate harness with its own artifact; it is not part of the benchmark suite this report reads",
+      "note": ""
+    },
+    {
+      "id": "metabench.overall",
+      "manuscript_value": {
+        "k": 527,
+        "n": 1000
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metabench:overall:strict",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": "the manuscript value predates the reference suite; restatement pending"
+    },
+    {
+      "id": "metabench.kegg",
+      "manuscript_value": {
+        "k": 303,
+        "n": 400
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metabench:KEGG:strict",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metabench.hmdb",
+      "manuscript_value": {
+        "k": 69,
+        "n": 400
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metabench:HMDB:strict",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metabench.chebi",
+      "manuscript_value": {
+        "k": 155,
+        "n": 200
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metabench:CHEBI:strict",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metabench.best_retrieval_augmented_lm",
+      "manuscript_value": 0.4093,
+      "kind": "rate",
+      "artifact": "published_external",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "a published aggregate from another group with no per-item data; the registry value is deliberately null pending transcription, and the denominator is not attainable on the stated sample size",
+      "note": ""
+    },
+    {
+      "id": "metabench.best_closed_book_lm",
+      "manuscript_value": 0.0087,
+      "kind": "rate",
+      "artifact": "published_external",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "a published figure from another group; nothing in this repository regenerates it",
+      "note": ""
+    },
+    {
+      "id": "hajjar.strict",
+      "manuscript_value": {
+        "k": 81,
+        "n": 100
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "hajjar:CHEBI:overall:strict",
+      "field": "k,n",
+      "blocked_by": "the curated set has no pinned source url and is hand-passed, so it is not in the unattended suite this report reads",
+      "note": ""
+    },
+    {
+      "id": "refmet.strict",
+      "manuscript_value": {
+        "k": 1319,
+        "n": 1500
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "refmet:CHEBI:overall:strict",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "refmet.charge_normalized",
+      "manuscript_value": {
+        "k": 1321,
+        "n": 1500
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "refmet:CHEBI:overall:charge_normalized",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "necs.strict",
+      "manuscript_value": {
+        "k": 609,
+        "n": 796
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "necs:CHEBI:overall:strict",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "necs.charge_normalized",
+      "manuscript_value": {
+        "k": 624,
+        "n": 796
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "necs:CHEBI:overall:charge_normalized",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metaboliteannotator.positive",
+      "manuscript_value": {
+        "k": 4179,
+        "n": 4314
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metaboliteannotator:positive:name_hit",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metaboliteannotator.negative",
+      "manuscript_value": {
+        "k": 2386,
+        "n": 2509
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metaboliteannotator:negative:name_hit",
+      "field": "k,n",
+      "blocked_by": "the negative arm returned server errors in the reference run and produced no results file; re-running it is a gated live step",
+      "note": ""
+    },
+    {
+      "id": "metaboliteannotator.published_positive",
+      "manuscript_value": 0.932,
+      "kind": "rate",
+      "artifact": "published_external",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "a transcribed baseline from another group's paper",
+      "note": ""
+    },
+    {
+      "id": "metaboliteannotator.published_negative",
+      "manuscript_value": 0.935,
+      "kind": "rate",
+      "artifact": "published_external",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "a transcribed baseline from another group's paper",
+      "note": ""
+    },
+    {
+      "id": "metlinkr.curator_agreement",
+      "manuscript_value": {
+        "k": 333,
+        "n": 401
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metlinkr:curator_agreement",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metlinkr.structural_concordance",
+      "manuscript_value": {
+        "k": 543,
+        "n": 649
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "metlinkr:structural_concordance",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metlinkr.published_curator_agreement",
+      "manuscript_value": 0.853,
+      "kind": "rate",
+      "artifact": "published_external",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the tool's own published figure",
+      "note": ""
+    },
+    {
+      "id": "srm1950.strict",
+      "manuscript_value": {
+        "k": 411,
+        "n": 983
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "srm1950:CHEBI:overall:strict",
+      "field": "k,n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "lmsd.common_systematic.strict",
+      "manuscript_value": 0.419,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "lmsd:CHEBI:common_systematic:strict",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "lmsd.common_systematic.charge_normalized",
+      "manuscript_value": 0.435,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "lmsd:CHEBI:common_systematic:charge_normalized",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "lmsd.shorthand.strict",
+      "manuscript_value": 0.063,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "lmsd:CHEBI:shorthand:strict",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "lmsd.overall.strict",
+      "manuscript_value": 0.17,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "lmsd:CHEBI:overall:strict",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "lmsd.subsample_population",
+      "manuscript_value": {
+        "k": null,
+        "n": 50000
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "identical in shape to ``refmet.source_population``: this is a property of the LMSD source release -- roughly how many curated lipids it holds -- not an outcome of the benchmark run. It was bound to the interval artifact's ``coverage`` field, whose ``total`` is the 1,500-row subsample, so the check was comparing 50,000 against 1,500 and reporting agreement. It belongs on the dataset card; until a versioned card is committed it resolves to nothing.",
+      "note": "approximate source-release size; belongs on the dataset card"
+    },
+    {
+      "id": "pham.non_lipid_membership",
+      "manuscript_value": {
+        "k": 625,
+        "n": 1500
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "pham:overall:strict",
+      "field": "k,n",
+      "blocked_by": "the source is a release directory that must be reconstructed into a table by hand, so it is not in the unattended suite",
+      "note": ""
+    },
+    {
+      "id": "hgnc.any_namespace",
+      "manuscript_value": 0.964,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "hgnc:ENSEMBL:any-namespace:strict",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "hgnc.ncbigene",
+      "manuscript_value": 0.977,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "hgnc:ENSEMBL:NCBIGene:strict",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "hgnc.uniprot",
+      "manuscript_value": 0.924,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "hgnc:ENSEMBL:UniProtKB:strict",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "hgnc.ensembl",
+      "manuscript_value": 0.791,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "hgnc:ENSEMBL:ENSEMBL:strict",
+      "field": "rate",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "provided_id.ncbigene_to_ensembl",
+      "manuscript_value": 0.992,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "provided-id:overall:strict",
+      "field": "rate",
+      "blocked_by": "a dataset family over bulk backbones; needs a pinned artifact, so it is not in the unattended suite",
+      "note": ""
+    },
+    {
+      "id": "ms1.comparable_features",
+      "manuscript_value": {
+        "k": 127,
+        "n": 152
+      },
+      "kind": "counts",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study reads a delivery panel, not the benchmark suite; its figures belong to a separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.chebi_agreement",
+      "manuscript_value": {
+        "k": 107,
+        "n": 126
+      },
+      "kind": "counts",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "same separate artifact as the other case-study figures",
+      "note": ""
+    },
+    {
+      "id": "refmet.source_population",
+      "manuscript_value": {
+        "k": 34404,
+        "n": 206000
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "this is a property of the RefMet source release -- how many of its rows carry a curated InChIKey -- not an outcome of the benchmark run. It was bound to the interval artifact's ``coverage`` field, which counts scored rows of the 1,500-row subsample, so the check compared two unrelated quantities and reported drift. It belongs on the dataset card; until the card is committed it resolves to nothing.",
+      "note": "structure-bearing rows out of the source release; belongs on the dataset card"
+    },
+    {
+      "id": "refmet.subsample",
+      "manuscript_value": {
+        "k": null,
+        "n": 1500
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "refmet:CHEBI:overall:strict",
+      "field": "n",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "srm1950.entries",
+      "manuscript_value": {
+        "k": null,
+        "n": 1058
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "srm1950:CHEBI:overall:strict",
+      "field": "coverage",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "necs.delivered_metabolites",
+      "manuscript_value": {
+        "k": null,
+        "n": 1495
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "necs:CHEBI:overall:strict",
+      "field": "coverage",
+      "blocked_by": null,
+      "note": ""
+    },
+    {
+      "id": "metabench.pre_fix_harness_output",
+      "manuscript_value": 0.243,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "metabench:overall:strict",
+      "field": "rate",
+      "blocked_by": "a superseded scorer output, retained in the prose as history; the current scorer's output is the row it points at, so the pre-fix figure resolves to nothing regenerable and must be presented as history or dropped",
+      "note": ""
+    },
+    {
+      "id": "metaboliteannotator.id_concordance_positive",
+      "manuscript_value": 0.071,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "metaboliteannotator:positive:name_hit",
+      "field": "rate",
+      "blocked_by": "the secondary identifier-concordance qualifier lives in the name-hit results file and is not carried into the interval artifact",
+      "note": ""
+    },
+    {
+      "id": "metaboliteannotator.id_concordance_negative",
+      "manuscript_value": 0.216,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "metaboliteannotator:negative:name_hit",
+      "field": "rate",
+      "blocked_by": "same secondary qualifier, on an arm that produced no results file",
+      "note": ""
+    },
+    {
+      "id": "metaboliteannotator.published_negative_denominator",
+      "manuscript_value": {
+        "k": null,
+        "n": 2510
+      },
+      "kind": "counts",
+      "artifact": "published_external",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the other group's stated denominator",
+      "note": ""
+    },
+    {
+      "id": "hajjar.charge_normalized_estimate",
+      "manuscript_value": 0.9,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "hajjar:CHEBI:overall:charge_normalized",
+      "field": "rate",
+      "blocked_by": "an estimate stated in prose rather than a measured figure; it must either resolve to a charge-normalized row or be withdrawn",
+      "note": ""
+    },
+    {
+      "id": "determinism.opus_accuracy",
+      "manuscript_value": 0.48,
+      "kind": "rate",
+      "artifact": "tier3_determinism",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the determinism study's own artifact",
+      "note": ""
+    },
+    {
+      "id": "determinism.qwen_accuracy",
+      "manuscript_value": 0.0,
+      "kind": "rate",
+      "artifact": "tier3_determinism",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the determinism study's own artifact",
+      "note": ""
+    },
+    {
+      "id": "pham.ambiguity_rate_published",
+      "manuscript_value": 0.83,
+      "kind": "rate",
+      "artifact": "published_external",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "a rate quoted from another group's paper",
+      "note": ""
+    },
+    {
+      "id": "pham.ambiguous_population",
+      "manuscript_value": {
+        "k": 16643,
+        "n": 129877
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "pham:overall:strict",
+      "field": "coverage",
+      "blocked_by": "the source must be reconstructed by hand, so the dataset is not in the unattended suite",
+      "note": ""
+    },
+    {
+      "id": "pham.lipid_stratum",
+      "manuscript_value": 0.059,
+      "kind": "rate",
+      "artifact": "confidence_intervals",
+      "row_id": "pham:lipid:strict",
+      "field": "rate",
+      "blocked_by": "same un-sourced dataset",
+      "note": ""
+    },
+    {
+      "id": "pham.gold_cross_check",
+      "manuscript_value": {
+        "k": 102,
+        "n": 887
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "pham:overall:strict",
+      "field": "coverage",
+      "blocked_by": "same un-sourced dataset",
+      "note": ""
+    },
+    {
+      "id": "competitors.uniprot_scoring_artifact",
+      "manuscript_value": {
+        "k": null,
+        "n": 637
+      },
+      "kind": "counts",
+      "artifact": "confidence_intervals",
+      "row_id": "competitors:uniprotkb:strict",
+      "field": "n",
+      "blocked_by": "the competitor head-to-head is a gated live run against three external hosted services; no artifact exists yet",
+      "note": ""
+    },
+    {
+      "id": "ms1.panel_comparability",
+      "manuscript_value": {
+        "k": 1001,
+        "n": 2710
+      },
+      "kind": "counts",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.all_namespace_agreement",
+      "manuscript_value": 0.843,
+      "kind": "rate",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.any_namespace_agreement",
+      "manuscript_value": 0.953,
+      "kind": "rate",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.inchikey_agreement",
+      "manuscript_value": 0.984,
+      "kind": "rate",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.kegg_agreement",
+      "manuscript_value": 0.988,
+      "kind": "rate",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.hmdb_agreement",
+      "manuscript_value": 0.982,
+      "kind": "rate",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.lipidmaps_agreement",
+      "manuscript_value": 1.0,
+      "kind": "rate",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "ms1.residual_disagreement",
+      "manuscript_value": 0.05,
+      "kind": "rate",
+      "artifact": "northstar_ms1",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the case study's separate artifact",
+      "note": ""
+    },
+    {
+      "id": "off_category.cross_dataset_rate",
+      "manuscript_value": null,
+      "kind": "rate",
+      "artifact": "off_category_audit",
+      "row_id": "metabolite_total_deduplicated",
+      "field": "pct_off_category",
+      "blocked_by": null,
+      "note": "quote the DEDUPLICATED rate; the file-weighted one multiplies a dataset by the number of target-vocabulary files it ships"
+    },
+    {
+      "id": "headtohead.biodbnet.ensembl",
+      "manuscript_value": 0.791,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet Ensembl"
+    },
+    {
+      "id": "headtohead.biodbnet.ncbigene",
+      "manuscript_value": 0.999,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet NCBI Gene"
+    },
+    {
+      "id": "headtohead.biodbnet.uniprot",
+      "manuscript_value": 0.995,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet UniProtKB"
+    },
+    {
+      "id": "headtohead.biodbnet.union",
+      "manuscript_value": 0.986,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet union"
+    },
+    {
+      "id": "headtohead.gconvert.ensembl",
+      "manuscript_value": 0.96,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert Ensembl"
+    },
+    {
+      "id": "headtohead.gconvert.ncbigene",
+      "manuscript_value": 0.55,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert NCBI Gene"
+    },
+    {
+      "id": "headtohead.gconvert.uniprot",
+      "manuscript_value": 0.956,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert UniProtKB"
+    },
+    {
+      "id": "headtohead.gconvert.union",
+      "manuscript_value": 0.904,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert union"
+    },
+    {
+      "id": "headtohead.uniprot_idmapping.uniprot",
+      "manuscript_value": 0.937,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "UniProt ID-mapping UniProtKB"
+    },
+    {
+      "id": "headtohead.uniprot_idmapping.union",
+      "manuscript_value": 0.398,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "UniProt ID-mapping union"
+    },
+    {
+      "id": "headtohead.gconvert.uniprot_precorrection",
+      "manuscript_value": 0.0,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "g:Convert UniProtKB before the separator fix"
+    },
+    {
+      "id": "headtohead.biodbnet.uniprot_precorrection",
+      "manuscript_value": 0.061,
+      "kind": "rate",
+      "artifact": "competitor_headtohead",
+      "row_id": null,
+      "field": null,
+      "blocked_by": "the gene/protein competitor head-to-head (D4) has never run on the public backend, so no committed artifact carries this value. studies/external_benchmarks/competitors/ holds the harness only, and the pinned suite contains no competitor results. Until D4 runs this cell is published with nothing behind it.",
+      "note": "bioDBnet UniProtKB before the separator fix"
+    }
+  ],
+  "not_a_measurement": {
+    "1950": "the designation of the certified reference material, not a count or a year",
+    "2019": "a citation year",
+    "2020": "a citation year",
+    "2025": "a citation year",
+    "2026": "a citation year",
+    "2510.14944": "a preprint identifier",
+    "100": "the size of the curated calibration set, stated as a structural fact",
+    "4.5": "the MetaNetX release number",
+    "4.6": "the Sonnet model version",
+    "4.8": "the Opus model version",
+    "6.0": "the MetaboAnalyst version",
+    "409": "an arithmetic illustration, not a result: the nearest attainable numerator to the published baseline rate on 1,000 items, cited to show that rate implies a different denominator"
+  }
+}
