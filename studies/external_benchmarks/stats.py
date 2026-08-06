@@ -120,8 +120,7 @@ def assert_paired(
     """
     if not (len(row_ids_a) == len(row_ids_b) == len(flags_a) == len(flags_b)):
         raise PairingError(
-            f"paired arms differ in length: ids {len(row_ids_a)}/{len(row_ids_b)}, "
-            f"flags {len(flags_a)}/{len(flags_b)}"
+            f"paired arms differ in length: ids {len(row_ids_a)}/{len(row_ids_b)}, flags {len(flags_a)}/{len(flags_b)}"
         )
     if len(set(row_ids_a)) != len(row_ids_a):
         raise PairingError(
