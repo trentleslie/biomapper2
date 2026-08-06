@@ -21,7 +21,12 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # Defaults to the PUBLIC Kestrel, which needs no API key and serves the KRAKEN build the
 # published benchmarks pin. The internal endpoint (kestrel.nathanpricelab.com/api) is a
 # different, older build — GET /metagraph on each reports the graph and version it serves.
-KESTREL_API_URL = os.getenv("KESTREL_API_URL", "https://kestrel.krakenkg.com/api")
+#
+# Named separately so request construction can refuse to send credentials here: an environment
+# that set KESTREL_API_KEY for the internal endpoint and never set KESTREL_API_URL would
+# otherwise start leaking that key to a third-party host the moment this default changed.
+PUBLIC_KESTREL_API_URL = "https://kestrel.krakenkg.com/api"
+KESTREL_API_URL = os.getenv("KESTREL_API_URL", PUBLIC_KESTREL_API_URL)
 
 # Biolink model version
 BIOLINK_VERSION_DEFAULT = "4.2.5"
