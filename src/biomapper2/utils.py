@@ -168,8 +168,9 @@ def bulk_kestrel_request(
         )
 
     headers: dict[str, str] = {}
-    if auth_required:
-        headers["X-API-Key"] = get_kestrel_api_key()
+    api_key = get_kestrel_api_key() if auth_required else None
+    if api_key:
+        headers["X-API-Key"] = api_key
 
     url = f"{KESTREL_API_URL}/{endpoint}"
     transient = (
@@ -193,6 +194,14 @@ def bulk_kestrel_request(
                 )
                 time.sleep(delay)
                 continue
+            if status in (401, 403) and not api_key:
+                logging.error(
+                    f"Kestrel API {status} on {endpoint} and no KESTREL_API_KEY is set. "
+                    f"{KESTREL_API_URL} requires authentication; set KESTREL_API_KEY, or point "
+                    "KESTREL_API_URL at the public endpoint (https://kestrel.krakenkg.com/api), "
+                    "which needs no key."
+                )
+                raise
             logging.error(f"Kestrel API HTTP error ({endpoint}): {e}", exc_info=True)
             raise
         except transient as e:

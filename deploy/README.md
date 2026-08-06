@@ -27,10 +27,15 @@ The API is deployed to the same Lightsail instance as kraken-backend:
 2. **Create environment file:**
    ```bash
    cat > .env << 'EOF'
-   KESTREL_API_KEY=your-kestrel-api-key
+   KESTREL_API_URL=https://kestrel.krakenkg.com/api
    BIOMAPPER_API_KEY=your-biomapper-api-key
    EOF
    ```
+
+   Set `KESTREL_API_URL` explicitly rather than relying on the code default, so the deployed
+   graph is visible in the environment. The public endpoint needs no `KESTREL_API_KEY`; add one
+   only if you point this at the internal endpoint. Confirm which build a deployment is serving
+   with `curl $KESTREL_API_URL/metagraph`.
 
 3. **Install uv and dependencies:**
    ```bash

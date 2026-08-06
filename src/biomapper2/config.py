@@ -17,8 +17,11 @@ PROJECT_ROOT = Path(__file__).parents[2]
 CACHE_DIR = PROJECT_ROOT / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-# KG API configuration — override via KESTREL_API_URL in .env
-KESTREL_API_URL = os.getenv("KESTREL_API_URL", "https://kestrel.nathanpricelab.com/api")
+# KG API configuration — override via KESTREL_API_URL in .env.
+# Defaults to the PUBLIC Kestrel, which needs no API key and serves the KRAKEN build the
+# published benchmarks pin. The internal endpoint (kestrel.nathanpricelab.com/api) is a
+# different, older build — GET /metagraph on each reports the graph and version it serves.
+KESTREL_API_URL = os.getenv("KESTREL_API_URL", "https://kestrel.krakenkg.com/api")
 
 # Biolink model version
 BIOLINK_VERSION_DEFAULT = "4.2.5"
@@ -30,12 +33,16 @@ LOG_LEVEL = "INFO"
 _kestrel_api_key: str | None = None
 
 
-def get_kestrel_api_key() -> str:
+def get_kestrel_api_key() -> str | None:
+    """The Kestrel API key, or None when unset.
+
+    An unset key is not an error: the default (public) endpoint requires no authentication, so
+    requests simply go out without the header. Endpoints that do require it answer 401, which
+    ``kestrel_request`` surfaces with a pointer back to ``KESTREL_API_KEY``.
+    """
     global _kestrel_api_key
     if _kestrel_api_key is None:
-        _kestrel_api_key = os.getenv("KESTREL_API_KEY")
-        if not _kestrel_api_key:
-            raise ValueError("KESTREL_API_KEY environment variable is not set")
+        _kestrel_api_key = os.getenv("KESTREL_API_KEY") or None
     return _kestrel_api_key
 
 
