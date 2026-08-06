@@ -26,6 +26,7 @@ scan, since ``CHEBI:16856`` is a name rather than a quantity.
 
 from __future__ import annotations
 
+import ast
 import io
 import re
 import tokenize
@@ -52,6 +53,7 @@ GUARDED_FILES = (
     "studies/analysis/off_category_audit.py",
     "studies/shared_gold_set/labeler.py",
     "tests/test_kestrel_hybrid_category.py",
+    "tests/test_off_category_audit.py",
     "tests/test_annotation_engine_category.py",
     "tests/test_resolver_source_weighting.py",
     "tests/test_structure_resolver.py",
@@ -102,22 +104,23 @@ def _prose_segments(path: Path) -> list[tuple[int, str]]:
     """
     source = path.read_text()
     segments: list[tuple[int, str]] = []
-    tokens = list(tokenize.generate_tokens(io.StringIO(source).readline))
-    for index, tok in enumerate(tokens):
+
+    # Comments: tokenize is exact.
+    for tok in tokenize.generate_tokens(io.StringIO(source).readline):
         if tok.type == tokenize.COMMENT:
             segments.append((tok.start[0], tok.string))
-        elif tok.type == tokenize.STRING:
-            # A string is a docstring when it stands alone as a statement.
-            prev = next(
-                (
-                    t
-                    for t in reversed(tokens[:index])
-                    if t.type not in (tokenize.NL, tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT, tokenize.COMMENT)
-                ),
-                None,
-            )
-            if prev is None or prev.type == tokenize.NEWLINE or prev.string in (":", "", "INDENT"):
-                segments.append((tok.start[0], tok.string))
+
+    # Docstrings: ast.get_docstring is exact. A token-level heuristic is NOT -- a dict value
+    # (``{"gold_chebi": "1234"}``) follows a ``:`` just as a docstring follows a ``def ...:``, so a
+    # heuristic flags string literals in ordinary code. That false positive is not hypothetical; it
+    # fired on this suite's own fixtures.
+    tree = ast.parse(source)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)):
+            doc = ast.get_docstring(node, clean=False)
+            if doc:
+                lineno = 1 if isinstance(node, ast.Module) else node.body[0].lineno
+                segments.append((lineno, doc))
     return segments
 
 
@@ -180,4 +183,15 @@ def test_the_guard_does_not_flag_identifiers_or_code(tmp_path: Path) -> None:
         '"""Cites CHEBI:16856, OBO:NCIT_C103149, biolink 4.2.5, sha d059564 and file.py:229."""\n'
         "LIMIT = 2400  # structural constant, not prose\n"
     )
+    assert _violations(sample) == []
+
+
+def test_the_guard_does_not_treat_dict_values_as_docstrings(tmp_path: Path) -> None:
+    """Regression: a token-level docstring heuristic flagged {"k": "1234"} as prose.
+
+    A dict value follows a : exactly as a docstring follows def ...:, so only real AST
+    docstrings count. This fired on this suite's own fixtures before the switch to ast.
+    """
+    sample = tmp_path / "sample.py"
+    sample.write_text('row = {"gold_chebi": "1234", "gold_pubchem": "999999"}\n')
     assert _violations(sample) == []

@@ -86,11 +86,12 @@ from biomapper2.biolink_client import BiolinkClient  # noqa: E402
 DEFAULT_SUITE_DIR = Path("~/benchmark-runs/suite_20260805T033340Z").expanduser()
 DEFAULT_RESULTS_DIR = REPO_ROOT / "studies" / "analysis" / "results"
 # Cache filename encodes the fetch shape. `truncate_long_fields` was briefly True, which caps
-# equivalent_ids at 50 entries; both node_has_chemical_identifier() and inchikey_blocks() read that
-# field, so a truncated cache biases every verdict toward "no chemical identifier" -- i.e. toward
-# flattering the change. Renaming the file on a shape change makes a stale cache impossible to
-# silently reuse. (Verified not material at the time of the switch: 0 of the off-category rows were
-# truncated. The assertion in fetch_nodes now enforces that rather than trusting it.)
+# equivalent_ids below what busy nodes actually carry; both node_has_chemical_identifier() and
+# inchikey_blocks() read that field, so a truncated cache biases every verdict toward "no chemical
+# identifier" -- i.e. toward flattering the change. Renaming the file on a shape change makes a stale
+# cache impossible to silently reuse, and `audit()` asserts post-fetch (via `_is_truncated`, which
+# compares against the node's own reported count rather than a hardcoded cap) that no adjudicated row
+# came back truncated.
 DEFAULT_CACHE_PATH = REPO_ROOT / "cache" / "off_category_audit_nodes_untruncated.json"
 
 KESTREL_GET_NODES_URL = "https://kestrel.krakenkg.com/api/get-nodes"
@@ -674,6 +675,28 @@ def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[s
             "a truncated record silently flatters the refusal-cost verdict"
         )
 
+    # Deduplicated cross-dataset rate: take a single representative file per dataset (the first by
+    # name, deterministically) so replicated target-vocab files cannot multiply a dataset's weight.
+    dedup_rows = dedup_off = 0
+    dedup_files: dict[str, str] = {}
+    for key, stats in sorted(per_file.items()):
+        dataset = key.split("/", 1)[0]
+        if dataset not in METABOLITE_DATASETS or dataset in dedup_files:
+            continue
+        dedup_files[dataset] = key
+        dedup_rows += stats["n_rows_with_commit"]
+        dedup_off += stats["n_off_category"]
+    dedup_total = {
+        "definition": (
+            "one representative file per metabolite dataset (first by filename), so a dataset that "
+            "ships several identical target-vocab files is counted once rather than once per file"
+        ),
+        "representative_files": dedup_files,
+        "n_rows_with_commit": dedup_rows,
+        "n_off_category": dedup_off,
+        "pct_off_category": round(100.0 * dedup_off / dedup_rows, 2) if dedup_rows else 0.0,
+    }
+
     pg_rows = [r for r in off_rows if set(r["categories"]) & PROTEIN_GENE_CATEGORIES]
     refusal_cost = adjudicate(pg_rows, "protein/gene-typed off-category commits")
     all_refusal_cost = adjudicate(off_rows, "all off-category commits, metabolite arm")
@@ -729,6 +752,12 @@ def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[s
         "failure_open_candidate_scan": candidate_category_scan(suite_dir, cache_path, offline=offline),
         # Backs D4's determinism claim in core/resolver.py and test_resolver_source_weighting.py.
         "refmet_multi_node_rate": refmet_multi_node_rate(suite_dir),
+        # One file per dataset, so a dataset cannot enter the cross-dataset rate more than once.
+        # metlinkr ships several target-vocab files carrying identical resolutions, which inflates
+        # the file-weighted rate above; this is the figure to quote for "how often does the resolver
+        # commit an off-category node", and the one that belongs in the preprint. It does NOT change
+        # the per-dataset coverage decision, which is computed within a dataset and so is unaffected.
+        "metabolite_total_deduplicated": dedup_total,
         "per_dataset": per_dataset,
         "per_file": per_file,
         "metabolite_total": {
@@ -742,6 +771,11 @@ def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[s
             # "no_chemical_category" is the literal reading, which the config.py comment used.
             "n_off_category_refused_by_validator": metab_off,
             "n_no_chemical_category_incl_failure_open": metab_off + metab_open,
+            "weighting_warning": (
+                "file-weighted: a dataset shipping N target-vocab files with identical resolutions "
+                "enters this total N times. See metabolite_total_deduplicated before quoting a "
+                "cross-dataset rate."
+            ),
             "pct_no_chemical_category_incl_failure_open": (
                 round(100.0 * (metab_off + metab_open) / metab_rows, 2) if metab_rows else 0.0
             ),
@@ -859,7 +893,12 @@ def adjudicate(rows: list[dict[str, Any]], population: str) -> dict[str, Any]:
 
     total = sum(verdicts.values())
     adjudicable = verdicts["CORRECT_BUT_REFUSED"] + verdicts["WRONG_AND_REFUSED"]
-    provably_costless = adjudicable + unresolvable_reason["node_carries_no_chemical_identifier"]
+    # CORRECT_BUT_REFUSED is the ONE verdict that is never costless -- it is precisely the outcome
+    # this whole audit exists to detect (a right compound refused for wearing a wrong Biolink type).
+    # Adding `adjudicable` here instead of WRONG_AND_REFUSED absorbed it into the safety number, which
+    # made the claim self-confirming: the instrument could not report the failure it was built to find.
+    # Masked on the refusal populations only because CORRECT_BUT_REFUSED happens to be zero there.
+    provably_costless = verdicts["WRONG_AND_REFUSED"] + unresolvable_reason["node_carries_no_chemical_identifier"]
     return {
         "population": population,
         "definition": (

@@ -71,11 +71,10 @@ def test_resolve_series_carries_review_field():
 
 # --------------------------- Deterministic RefMet pick (D4) ---------------------------
 # RefMet contributing >1 KG node is itself a signal, so the pick must not depend on dict insertion
-# order (which follows API response order). Counted over the pinned baseline (artifact field
-# refmet_multi_node_rate): rows carry a
-# metabolomics-workbench vote and 0 contributed more than one node, so this is a provable no-op on
-# every A/B row — reproducibility hardening, not a behaviour change. It is a *determinism* fix, not a
-# correctness one: lexicographic order is still chemically arbitrary, hence the warning.
+# order (which follows API response order). No row in the pinned baseline has a multi-node RefMet
+# vote (artifact field refmet_multi_node_rate), so this is a provable no-op on every A/B row —
+# reproducibility hardening, not a behaviour change. It is a *determinism* fix, not a correctness
+# one: lexicographic order is still chemically arbitrary, hence the warning.
 
 MULTI_ASSIGNED_A = {"metabolomics-workbench": {"CHEBI:refmet_b": ["RM:2"], "CHEBI:refmet_a": ["RM:1"]}}
 MULTI_ASSIGNED_B = {"metabolomics-workbench": {"CHEBI:refmet_a": ["RM:1"], "CHEBI:refmet_b": ["RM:2"]}}

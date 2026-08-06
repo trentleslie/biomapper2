@@ -4,7 +4,7 @@
 - KG snapshot: `kraken 2.0.1 (14683250n/92233909e)` (kg_stable_during_run=True)
 - biomapper2 git_sha: `d05956459ece9dffbc737250df98d2119c2eb0e6` | Biolink `4.2.5`
 - Acceptance set: 12 descendants of `biolink:ChemicalEntity`
-- Generated: 2026-08-06T00:26:22.266527+00:00
+- Generated: 2026-08-06T00:43:56.893106+00:00
 
 ### Per dataset
 
