@@ -154,6 +154,10 @@ TIER_B_SWEEP_FILENAME = "tier_b_sweep.json"
 # from the precision-coverage curve in panel B -- see the module docstring for why crossing that
 # boundary with a precision delta is the forbidden claim.
 ABSTENTION_STATES = ("unavailable",)
+
+# States that carry a Tier B verdict. Only these can be circular, so only these are gated -- an
+# all-uncorroborated stratum has no verdict to be circular about and must not veto the arm.
+ADJUDICATED_STATES = ("corroborated", "contradicted")
 OUT_OF_SCOPE_STATES = ("not_applicable",)
 
 # Floor on Tier B's own resolution rate below which the curve is refused rather than published.
@@ -468,7 +472,17 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
     # oracle can actually adjudicate. Everything else is excluded from the curve by construction.
     verifiable = df[~df["_state"].isin(ABSTENTION_STATES + OUT_OF_SCOPE_STATES) & df["_structure_oracle"].notna()]
     strata: dict[str, Any] = {}
-    for source, sub in verifiable.groupby(verifiable["_independent_source"].fillna("none")):
+    # Keyed on the PAIR (source, independent_of_selection), because L26 claims independence only on
+    # the subset where it holds and a curve is the unit that claim is read off. Keying on source
+    # alone averaged rows the corroborating registry ALSO selected together with rows it did not --
+    # on the pinned suite every metabolite arm is mixed, so this is the expected shape of the first
+    # live sweep, not an exotic one. Splitting them makes the dependent subset its own curve, which
+    # the gate can then refuse without discarding the independent rows beside it.
+    group_source = verifiable["_independent_source"].fillna("none")
+    group_indep = verifiable["_independent_of_selection"].map(
+        lambda v: "unknown" if v is None or (isinstance(v, float) and pd.isna(v)) else str(bool(v)).lower()
+    )
+    for (source, indep), sub in verifiable.groupby([group_source, group_indep]):
         points = []
         for state, state_rows in sub.groupby("_state"):
             points.append(
@@ -479,11 +493,11 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
                     "precision": round(float(state_rows["_structure_oracle"].mean()), 4),
                 }
             )
-        independence = sub["_independent_of_selection"].dropna().unique().tolist()
-        strata[str(source)] = {
+        strata[f"{source}/indep={indep}"] = {
             "n_verifiable": int(len(sub)),
-            # None when the stratum mixes both, which is itself a reason not to average it.
-            "independent_of_selection": bool(independence[0]) if len(independence) == 1 else None,
+            "independent_source": str(source),
+            # Now a property OF the stratum rather than a summary over a mixed one.
+            "independent_of_selection": {"true": True, "false": False}.get(str(indep)),
             # PER STRATUM, because that is the level Panel B is drawn at. A pooled rate lets a
             # fully circular stratum hide behind an independent one -- and the more independent
             # evidence an arm carries, the better it hides.
@@ -568,7 +582,13 @@ def _oracle_independence_control(verifiable: pd.DataFrame) -> dict[str, Any]:
     n = int(len(both))
     if not n:
         return {"n_comparable": 0, "n_agreeing": None, "agreement_rate": None}
-    agreeing = int((both["_independent_block"].astype(str) == both["_gold_block"].astype(str)).sum())
+    # Case-fold BOTH operands. ``_gold_block`` is normalized by ``_first_block`` but
+    # ``_independent_block`` is read raw from the certificate column, and normalizing only one side
+    # would drive agreement to 0.0 on a case mismatch -- which SILENTLY CLEARS this gate. The
+    # failure direction makes a circular curve look maximally independent.
+    agreeing = int(
+        (both["_independent_block"].astype(str).str.upper() == both["_gold_block"].astype(str).str.upper()).sum()
+    )
     return {
         "n_comparable": n,
         "n_agreeing": agreeing,
@@ -617,11 +637,36 @@ def _curve_publishable(
     # figure is drawn at. A stratum whose Tier B hop is the registry the gold came from can sit at
     # agreement 1.0 -- a pure identity -- while an independent stratum drags the pooled rate under
     # the ceiling and publishes it. Dilution by independent evidence must not buy admissibility.
-    for source, stratum in sorted((strata or {}).items()):
-        stratum_agreement = (stratum.get("oracle_independence_control") or {}).get("agreement_rate")
-        if stratum_agreement is not None and stratum_agreement > ORACLE_INDEPENDENCE_MAX_AGREEMENT:
+    for key, stratum in sorted((strata or {}).items()):
+        # Only strata carrying a Tier-B adjudicated row can be circular. The all-uncorroborated
+        # stratum legitimately has no verdict and must not veto the arm.
+        adjudicated = sum(
+            point["n"] for point in stratum.get("points", []) if point["certificate_state"] in ADJUDICATED_STATES
+        )
+        if not adjudicated:
+            continue
+        # L26: independence is claimed only on the subset where it holds. A stratum whose
+        # corroborating registry also SELECTED the committed node is corroborated by construction --
+        # a different circularity than the oracle one above, and the one the plan names.
+        if stratum.get("independent_of_selection") is not True:
             return False, (
-                f"stratum '{source}' agrees with the gold structural key above the stated ceiling, "
+                f"stratum '{key}' carries Tier-B-adjudicated rows whose corroborating source is not "
+                "established as independent of the selection, so its corroboration is not evidence; "
+                "independence is claimed only on the subset where it holds"
+            )
+        control = stratum.get("oracle_independence_control")
+        stratum_agreement = (control or {}).get("agreement_rate")
+        if stratum_agreement is None:
+            # Same rule as the pooled gate. The two levels must not disagree about what an
+            # unmeasurable overlap means.
+            return False, (
+                f"stratum '{key}' carries adjudicated rows but no row where Tier B's block and a "
+                "gold block can be compared, so its independence from the scoring oracle could not "
+                "be measured; absence of the comparison is not evidence of independence"
+            )
+        if stratum_agreement > ORACLE_INDEPENDENCE_MAX_AGREEMENT:
+            return False, (
+                f"stratum '{key}' agrees with the gold structural key above the stated ceiling, "
                 "so its curve would be an identity rather than a measurement; Panel B is drawn per "
                 "stratum and is refused whole rather than published with a circular stratum in it"
             )

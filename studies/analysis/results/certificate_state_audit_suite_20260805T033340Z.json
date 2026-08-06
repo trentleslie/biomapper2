@@ -109,9 +109,15 @@
         "panel_b_precision_coverage": {
           "n_verifiable": 718,
           "strata": {
-            "none": {
+            "none/indep=unknown": {
               "n_verifiable": 718,
+              "independent_source": "none",
               "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
               "points": [
                 {
                   "certificate_state": "uncorroborated",
@@ -144,6 +150,11 @@
             "KEGG.COMPOUND",
             "PUBCHEM.COMPOUND"
           ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
         },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
@@ -289,9 +300,15 @@
         "panel_b_precision_coverage": {
           "n_verifiable": 1396,
           "strata": {
-            "none": {
+            "none/indep=unknown": {
               "n_verifiable": 1396,
+              "independent_source": "none",
               "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
               "points": [
                 {
                   "certificate_state": "uncorroborated",
@@ -324,6 +341,11 @@
             "KEGG.COMPOUND",
             "PUBCHEM.COMPOUND"
           ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
         },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
@@ -456,9 +478,15 @@
         "panel_b_precision_coverage": {
           "n_verifiable": 496,
           "strata": {
-            "none": {
+            "none/indep=unknown": {
               "n_verifiable": 496,
+              "independent_source": "none",
               "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
               "points": [
                 {
                   "certificate_state": "uncorroborated",
@@ -491,6 +519,11 @@
             "KEGG.COMPOUND",
             "PUBCHEM.COMPOUND"
           ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
         },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
@@ -637,9 +670,15 @@
         "panel_b_precision_coverage": {
           "n_verifiable": 519,
           "strata": {
-            "none": {
+            "none/indep=unknown": {
               "n_verifiable": 519,
+              "independent_source": "none",
               "independent_of_selection": null,
+              "oracle_independence_control": {
+                "n_comparable": 0,
+                "n_agreeing": null,
+                "agreement_rate": null
+              },
               "points": [
                 {
                   "certificate_state": "uncorroborated",
@@ -672,6 +711,11 @@
             "KEGG.COMPOUND",
             "PUBCHEM.COMPOUND"
           ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
         },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
@@ -815,6 +859,11 @@
             "PUBCHEM.COMPOUND"
           ]
         },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
       },
@@ -931,6 +980,11 @@
             "KEGG.COMPOUND",
             "PUBCHEM.COMPOUND"
           ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
         },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
@@ -1049,6 +1103,11 @@
             "PUBCHEM.COMPOUND"
           ]
         },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
       },
@@ -1166,6 +1225,11 @@
             "PUBCHEM.COMPOUND"
           ]
         },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
       },
@@ -1282,6 +1346,11 @@
             "KEGG.COMPOUND",
             "PUBCHEM.COMPOUND"
           ]
+        },
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
         },
         "curve_publishable": false,
         "curve_not_publishable_reason": "input carries no certificate_* columns; Tier A was derived, Tier B never ran"

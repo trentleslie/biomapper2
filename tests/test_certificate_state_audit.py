@@ -19,6 +19,7 @@ import pandas as pd
 import pytest
 
 from studies.analysis.certificate_state_audit import (
+    ORACLE_INDEPENDENCE_MAX_AGREEMENT,
     TIER_B_SWEEP_FILENAME,
     _identifier_oracle,
     _quarantined_id_columns,
@@ -131,13 +132,23 @@ def test_panel_b_is_drawn_only_within_the_verifiable_population(result: dict) ->
     assert "not_applicable" not in states
 
 
-def test_panel_b_is_stratified_by_independent_source(result: dict) -> None:
+def test_panel_b_is_stratified_by_source_AND_independence(tmp_path: Path) -> None:
     """L26. A verdict from the registry that supplied the committed node is not independent
-    evidence, so the two populations are never averaged into one curve."""
-    panel_b = result["per_dataset"][0]["figure5"]["panel_b_precision_coverage"]
-    assert set(panel_b["strata"]) >= {"pubchem", "metabolomics-workbench"}
-    mw = panel_b["strata"]["metabolomics-workbench"]
-    assert mw["independent_of_selection"] is False
+    evidence, so the two populations are never averaged into one curve.
+
+    Keyed on the PAIR, not on the source alone: keying on source alone put rows the registry also
+    selected into the same curve as rows it did not, which is the averaging this docstring says
+    never happens. On the pinned suite every metabolite arm is mixed, so this is the expected shape
+    of the first live sweep.
+    """
+    strata = audit(_dependent_stratum_arm(tmp_path))["per_dataset"][0]["figure5"]["panel_b_precision_coverage"][
+        "strata"
+    ]
+    assert "metabolomics-workbench/indep=false" in strata
+    assert "metabolomics-workbench/indep=true" in strata
+    assert strata["metabolomics-workbench/indep=false"]["independent_of_selection"] is False
+    assert strata["metabolomics-workbench/indep=true"]["independent_of_selection"] is True
+    assert strata["metabolomics-workbench/indep=false"]["independent_source"] == "metabolomics-workbench"
 
 
 def test_every_operating_point_carries_sparsity_control_and_tier_b_resolution_rate(result: dict) -> None:
@@ -421,7 +432,9 @@ def _two_stratum_arm(tmp_path: Path) -> Path:
                 "certificate_structure_status": "structure_present",
                 "certificate_independent_source": "metabolomics-workbench",
                 "certificate_tier_b_outcome": "resolved",
-                "certificate_independent_of_selection": False,
+                # True on purpose: this arm isolates the ORACLE axis, so it must clear the L26
+                # gate and be refused only for restating the gold key.
+                "certificate_independent_of_selection": True,
                 "certificate_independent_inchikey_block": block,
             }
         )
@@ -461,8 +474,8 @@ def test_a_circular_stratum_cannot_hide_behind_an_independent_one(tmp_path: Path
     figure5 = audit(_two_stratum_arm(tmp_path))["per_dataset"][0]["figure5"]
     strata = figure5["panel_b_precision_coverage"]["strata"]
 
-    mw = strata["metabolomics-workbench"]["oracle_independence_control"]
-    pc = strata["pubchem"]["oracle_independence_control"]
+    mw = strata["metabolomics-workbench/indep=true"]["oracle_independence_control"]
+    pc = strata["pubchem/indep=true"]["oracle_independence_control"]
     assert mw["agreement_rate"] == 1.0, "the MW stratum is circular by construction"
     assert pc["agreement_rate"] < 1.0, "the PubChem stratum must carry real disagreement"
 
@@ -473,7 +486,10 @@ def test_a_circular_stratum_cannot_hide_behind_an_independent_one(tmp_path: Path
     )
 
     assert figure5["curve_publishable"] is False
-    assert "stratum 'metabolomics-workbench'" in figure5["curve_not_publishable_reason"]
+    assert "metabolomics-workbench/indep=true" in figure5["curve_not_publishable_reason"]
+    assert (
+        "above the stated ceiling" in figure5["curve_not_publishable_reason"]
+    ), "must be refused on the ORACLE axis, not short-circuited by the L26 independence branch"
 
 
 def test_every_stratum_reports_its_own_independence_control(result: dict) -> None:
@@ -481,3 +497,172 @@ def test_every_stratum_reports_its_own_independence_control(result: dict) -> Non
     for dataset in result["per_dataset"]:
         for source, stratum in dataset["figure5"]["panel_b_precision_coverage"]["strata"].items():
             assert "oracle_independence_control" in stratum, source
+
+
+def _dependent_stratum_arm(tmp_path: Path) -> Path:
+    """A `metabolomics-workbench` stratum corroborated BY THE REGISTRY THAT SELECTED THE NODE.
+
+    Oracle agreement is deliberately low, so the arm cannot be refused by the oracle gate and this
+    fixture tests the L26 axis alone. Measured over the pinned suite, every metabolite arm is mixed
+    this way, so the operator's first Tier B sweep produces exactly this shape.
+    """
+    rows = []
+    for i in range(100):  # dependent: MW both selected the node and corroborates it
+        node = f"DEP{i:011d}"
+        rows.append(
+            {
+                "name": f"dep-{i}",
+                "chosen_kg_id": f"CHEBI:7{i:04d}",
+                "chosen_kg_id_review": "",
+                "kg_equivalent_ids": str({"INCHIKEY": [f"{node}-UHFFFAOYSA-N"]}),
+                # Gold from an unrelated curation, so oracle agreement stays far under the ceiling.
+                "gold_inchikey": f"{node}-UHFFFAOYSA-N" if i % 5 else f"OTHER{i:09d}-UHFFFAOYSA-N",
+                "gold_hmdb": "",
+                "certificate_state": "corroborated",
+                "certificate_structure_status": "structure_present",
+                "certificate_independent_source": "metabolomics-workbench",
+                "certificate_tier_b_outcome": "resolved",
+                "certificate_independent_of_selection": False,
+                "certificate_independent_inchikey_block": f"MWB{i:011d}",
+            }
+        )
+    for i in range(100):  # independent rows from the SAME source, which must not be pooled in
+        node = f"IND{i:011d}"
+        rows.append(
+            {
+                "name": f"ind-{i}",
+                "chosen_kg_id": f"CHEBI:6{i:04d}",
+                "chosen_kg_id_review": "",
+                "kg_equivalent_ids": str({"INCHIKEY": [f"{node}-UHFFFAOYSA-N"]}),
+                "gold_inchikey": f"{node}-UHFFFAOYSA-N" if i % 3 else f"ELSE{i:010d}-UHFFFAOYSA-N",
+                "gold_hmdb": "",
+                "certificate_state": "corroborated",
+                "certificate_structure_status": "structure_present",
+                "certificate_independent_source": "metabolomics-workbench",
+                "certificate_tier_b_outcome": "resolved",
+                "certificate_independent_of_selection": True,
+                "certificate_independent_inchikey_block": f"MWI{i:011d}",
+            }
+        )
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+    return tmp_path
+
+
+def test_a_stratum_corroborated_by_its_own_selector_is_refused(tmp_path: Path) -> None:
+    """L26's actual rule: independence is claimed ONLY on the subset where it holds.
+
+    The code named this problem and then did it anyway -- it commented that a mixed stratum is "a
+    reason not to average it" and then averaged it, while the gate never read the field. A stratum
+    where the corroborating registry also supplied the node is corroborated by construction, which
+    is the round-4 defect one axis over.
+    """
+    figure5 = audit(_dependent_stratum_arm(tmp_path))["per_dataset"][0]["figure5"]
+    strata = figure5["panel_b_precision_coverage"]["strata"]
+
+    dependent = strata["metabolomics-workbench/indep=false"]
+    assert (
+        dependent["oracle_independence_control"]["agreement_rate"] <= ORACLE_INDEPENDENCE_MAX_AGREEMENT
+    ), "the oracle gate must NOT be what refuses this arm, or the L26 axis is untested"
+    assert figure5["curve_publishable"] is False
+    assert "not established as independent of the selection" in figure5["curve_not_publishable_reason"]
+
+
+def test_a_stratum_with_no_adjudicated_rows_does_not_veto_the_arm(result: dict) -> None:
+    """An all-uncorroborated stratum has no verdict to be circular about.
+
+    Without this the `indep=unknown` stratum -- whose independence is legitimately None because
+    Tier B never resolved -- would refuse every arm, and the gate would be wired shut.
+    """
+    figure5 = result["per_dataset"][0]["figure5"]
+    strata = figure5["panel_b_precision_coverage"]["strata"]
+    unknown = strata["pubchem/indep=unknown"]
+    assert unknown["independent_of_selection"] is None
+    assert unknown["oracle_independence_control"]["agreement_rate"] is None
+    assert figure5["curve_publishable"] is True, "a verdict-free stratum must not veto the arm"
+
+
+def test_an_adjudicated_stratum_with_no_measurable_overlap_is_refused(tmp_path: Path) -> None:
+    """The per-stratum gate must treat an unmeasurable overlap as the pooled gate does.
+
+    Constructed so the POOLED rate is measurable and clears the ceiling -- otherwise the pooled
+    gate refuses first and this test passes without ever reaching the per-stratum branch. (It did
+    exactly that on the first attempt: deleting the branch left the suite green.)
+    """
+    rows = []
+    for i in range(100):  # measurable stratum, low agreement -> pooled rate stays under the ceiling
+        node = f"MEAS{i:010d}"
+        rows.append(
+            {
+                "name": f"meas-{i}",
+                "chosen_kg_id": f"CHEBI:5{i:04d}",
+                "chosen_kg_id_review": "",
+                "kg_equivalent_ids": str({"INCHIKEY": [f"{node}-UHFFFAOYSA-N"]}),
+                "gold_inchikey": f"{node}-UHFFFAOYSA-N" if i % 4 else f"XX{i:012d}-UHFFFAOYSA-N",
+                "gold_hmdb": "",
+                "certificate_state": "corroborated",
+                "certificate_structure_status": "structure_present",
+                "certificate_independent_source": "pubchem",
+                "certificate_tier_b_outcome": "resolved",
+                "certificate_independent_of_selection": True,
+                "certificate_independent_inchikey_block": node,
+            }
+        )
+    for i in range(40):  # adjudicated, independent, but NO block to compare -> unmeasurable
+        node = f"BLIND{i:09d}"
+        rows.append(
+            {
+                "name": f"blind-{i}",
+                "chosen_kg_id": f"CHEBI:4{i:04d}",
+                "chosen_kg_id_review": "",
+                "kg_equivalent_ids": str({"INCHIKEY": [f"{node}-UHFFFAOYSA-N"]}),
+                "gold_inchikey": f"{node}-UHFFFAOYSA-N",
+                "gold_hmdb": "",
+                "certificate_state": "corroborated",
+                "certificate_structure_status": "structure_present",
+                "certificate_independent_source": "mystery-registry",
+                "certificate_tier_b_outcome": "resolved",
+                "certificate_independent_of_selection": True,
+                "certificate_independent_inchikey_block": "",
+            }
+        )
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+
+    figure5 = audit(tmp_path)["per_dataset"][0]["figure5"]
+    pooled = figure5["oracle_independence_control"]
+    assert (
+        pooled["agreement_rate"] is not None and pooled["agreement_rate"] <= ORACLE_INDEPENDENCE_MAX_AGREEMENT
+    ), "the pooled gate must NOT be what refuses this arm, or the per-stratum branch is untested"
+    blind = figure5["panel_b_precision_coverage"]["strata"]["mystery-registry/indep=true"]
+    assert blind["oracle_independence_control"]["agreement_rate"] is None
+
+    assert figure5["curve_publishable"] is False
+    assert "mystery-registry/indep=true" in figure5["curve_not_publishable_reason"]
+    assert "not evidence of independence" in figure5["curve_not_publishable_reason"]
+
+
+def test_the_agreement_comparison_case_folds_both_operands(tmp_path: Path) -> None:
+    """Normalizing one side only would drive agreement to 0.0 -- which SILENTLY CLEARS the gate.
+
+    `_first_block` case-folds the gold side; the certificate column is read raw. A case mismatch
+    would therefore make a perfectly circular arm look maximally independent, which is the worst
+    available failure direction.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame["certificate_independent_inchikey_block"] = frame["certificate_independent_inchikey_block"].map(
+        lambda v: str(v).lower() if isinstance(v, str) and v.strip() else v
+    )
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+
+    lowered = audit(tmp_path)["per_dataset"][0]["figure5"]["panel_b_precision_coverage"]["strata"]
+    upper = audit(FIXTURE_SUITE)["per_dataset"][0]["figure5"]["panel_b_precision_coverage"]["strata"]
+    key = "pubchem/indep=true"
+    assert (
+        lowered[key]["oracle_independence_control"]["agreement_rate"]
+        == upper[key]["oracle_independence_control"]["agreement_rate"]
+    ), "case must not change the measured agreement"

@@ -5,7 +5,7 @@ Provenance: `{"kg_stable_during_run": true, "suite_manifest": "/home/trentleslie
 
 ## Tier A certificate state and precision by state
 
-| dataset | rows | structure_absent share | struct-oracle blended | struct-oracle present | id-oracle blended | id-oracle present | absent rows id-oracle COULD score |
+| dataset | committed rows | structure_absent share | struct-oracle blended | struct-oracle present | id-oracle blended | id-oracle present | absent rows id-oracle COULD score |
 |---|---|---|---|---|---|---|---|
 | necs | 1488 | 29.1% | 83.5% | 92.6% | 76.7% | 88.9% | 0 |
 | refmet | 1500 | 6.9% | 89.3% | 96.0% | 58.3% | 64.6% | 0 |
@@ -28,7 +28,7 @@ the `unavailable` boundary would assert that refusing those rows buys precision,
 oracle here can support; this panel shows the refusal happening without implying the refused
 answers were wrong.
 
-| dataset | rows | unavailable | not_applicable | abstention rate | certificate source |
+| dataset | all rows | unavailable | not_applicable | abstention rate | certificate source |
 |---|---|---|---|---|---|
 | necs | 1488 | 433 | 0 | 29.1% | derived_from_kg_equivalent_ids |
 | refmet | 1500 | 104 | 0 | 6.9% | derived_from_kg_equivalent_ids |
@@ -54,9 +54,15 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
   "panel_b": {
     "n_verifiable": 718,
     "strata": {
-      "none": {
+      "none/indep=unknown": {
         "n_verifiable": 718,
+        "independent_source": "none",
         "independent_of_selection": null,
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
         "points": [
           {
             "certificate_state": "uncorroborated",
@@ -80,6 +86,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1488
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -93,9 +104,15 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
   "panel_b": {
     "n_verifiable": 1396,
     "strata": {
-      "none": {
+      "none/indep=unknown": {
         "n_verifiable": 1396,
+        "independent_source": "none",
         "independent_of_selection": null,
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
         "points": [
           {
             "certificate_state": "uncorroborated",
@@ -119,6 +136,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1500
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -132,9 +154,15 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
   "panel_b": {
     "n_verifiable": 496,
     "strata": {
-      "none": {
+      "none/indep=unknown": {
         "n_verifiable": 496,
+        "independent_source": "none",
         "independent_of_selection": null,
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
         "points": [
           {
             "certificate_state": "uncorroborated",
@@ -158,6 +186,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1058
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -171,9 +204,15 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
   "panel_b": {
     "n_verifiable": 519,
     "strata": {
-      "none": {
+      "none/indep=unknown": {
         "n_verifiable": 519,
+        "independent_source": "none",
         "independent_of_selection": null,
+        "oracle_independence_control": {
+          "n_comparable": 0,
+          "n_agreeing": null,
+          "agreement_rate": null
+        },
         "points": [
           {
             "certificate_state": "uncorroborated",
@@ -197,6 +236,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1499
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -223,6 +267,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1412
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -249,6 +298,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1412
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -275,6 +329,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1412
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -301,6 +360,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1412
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
@@ -327,6 +391,11 @@ Publishable: `False` — input carries no certificate_* columns; Tier A was deri
       "off": 1412
     },
     "min_resolution_rate_floor": 0.5
+  },
+  "oracle_independence_control": {
+    "n_comparable": 0,
+    "n_agreeing": null,
+    "agreement_rate": null
   }
 }
 ```
