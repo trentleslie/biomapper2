@@ -79,9 +79,11 @@ To add a new annotator (e.g., for Metabolomics Workbench API):
 ### Configuration
 
 `src/biomapper2/config.py` contains:
-- `KESTREL_API_URL`: Knowledge graph API endpoint
+- `KESTREL_API_URL`: Knowledge graph API endpoint. Defaults to `PUBLIC_KESTREL_API_URL` (the public, keyless Kestrel); point it at the internal host to use a gated build.
+- `PUBLIC_KESTREL_API_URL`: The public endpoint, named so request construction can refuse to send credentials to it
 - `BIOLINK_VERSION_DEFAULT`: Biolink model version
-- `KESTREL_API_KEY`: Required environment variable (from `.env`)
+- `KESTREL_API_KEY`: Optional (from `.env`). Only the internal endpoint needs it; unset is not an error, and the key is withheld entirely from the public host
+- `CACHE_IGNORED_PARAMETERS`: Header names redacted before `requests_cache` writes to disk — the cache is secret-bearing, so `CACHE_DIR` is `0700`
 
 ## Commit Convention
 
