@@ -48,7 +48,7 @@ Then create a `.env` file from the template:
 ```bash
 cp .env.example .env
 ```
-Edit `.env` to fill in your `KESTREL_API_KEY`. The file also contains `KESTREL_API_URL` and optional API authentication settings — see the comments in `.env.example` for details.
+The defaults work as-is: `KESTREL_API_URL` points at the public Kestrel, which needs no key. Set `KESTREL_API_KEY` only if you switch to the internal endpoint. The file also contains optional API authentication settings — see the comments in `.env.example` for details.
 
 Then [run the pytest suite](#run-tests) to confirm all is working.
 
@@ -133,7 +133,7 @@ Set `BIOMAPPER_API_KEY` or `BIOMAPPER2_API_KEYS` (comma-separated) in your `.env
 ### Quick start
 
 ```bash
-cp .env.example .env    # then edit .env with your KESTREL_API_KEY
+cp .env.example .env    # defaults to the keyless public Kestrel; edit only to change endpoints
 
 docker compose --profile prod up -d
 curl http://localhost:8001/api/v1/health
@@ -244,8 +244,12 @@ scripts/                        # Development scripts (check.sh, fix.sh)
 ### Configuration
 
 Environment variables (set in `.env`):
-- `KESTREL_API_URL` - Knowledge graph API endpoint (defaults to production)
-- `KESTREL_API_KEY` - API key for the Kestrel API
+- `KESTREL_API_URL` - Knowledge graph API endpoint. Defaults to the public Kestrel
+  (`https://kestrel.krakenkg.com/api`), which requires no key. Point it at
+  `https://kestrel.nathanpricelab.com/api` for the internal endpoint, which serves a
+  different KRAKEN build. `GET $KESTREL_API_URL/metagraph` reports the graph and version.
+- `KESTREL_API_KEY` - API key for the Kestrel API (required only by the internal endpoint;
+  the public one ignores it)
 
 Additional settings in `src/biomapper2/config.py`:
 - `BIOLINK_VERSION_DEFAULT` - Default Biolink model version

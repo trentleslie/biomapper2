@@ -9,6 +9,7 @@ import time
 from collections.abc import Iterator
 from datetime import timedelta
 from typing import Any, Literal, TypeGuard
+from urllib.parse import urlparse
 
 import requests
 import requests_cache
@@ -18,6 +19,7 @@ from .config import (
     KESTREL_API_URL,
     KESTREL_BATCHING_ENABLED,
     LOG_LEVEL,
+    PUBLIC_KESTREL_API_URL,
     get_kestrel_api_key,
 )
 from .models import AssignedIDsDict as AssignedIDsDict  # Re-export for backward compatibility
@@ -112,6 +114,31 @@ def safe_divide(numerator, denominator) -> float | None:
     return result
 
 
+_key_withheld_warned = False
+
+
+def _accepts_credentials(url: str) -> bool:
+    """False for the public Kestrel, which needs no key and must never receive one.
+
+    Compared by hostname so a trailing slash or a different path does not defeat the check.
+    """
+    return urlparse(url).hostname != urlparse(PUBLIC_KESTREL_API_URL).hostname
+
+
+def _warn_key_withheld_once() -> None:
+    """Say once that a configured key is deliberately not being sent to the public endpoint."""
+    global _key_withheld_warned
+    if _key_withheld_warned:
+        return
+    _key_withheld_warned = True
+    logging.warning(
+        f"KESTREL_API_KEY is set but KESTREL_API_URL points at the public endpoint "
+        f"({KESTREL_API_URL}), which needs no key — withholding the credential rather than "
+        "sending it to a public host. Unset KESTREL_API_KEY, or set KESTREL_API_URL to the "
+        "endpoint the key was issued for."
+    )
+
+
 def bulk_kestrel_request(
     method: str,
     endpoint: str,
@@ -168,8 +195,11 @@ def bulk_kestrel_request(
         )
 
     headers: dict[str, str] = {}
-    if auth_required:
-        headers["X-API-Key"] = get_kestrel_api_key()
+    api_key = get_kestrel_api_key() if auth_required else None
+    if api_key and _accepts_credentials(KESTREL_API_URL):
+        headers["X-API-Key"] = api_key
+    elif api_key:
+        _warn_key_withheld_once()
 
     url = f"{KESTREL_API_URL}/{endpoint}"
     transient = (
@@ -193,6 +223,14 @@ def bulk_kestrel_request(
                 )
                 time.sleep(delay)
                 continue
+            if status in (401, 403) and not api_key:
+                logging.error(
+                    f"Kestrel API {status} on {endpoint} and no KESTREL_API_KEY is set. "
+                    f"{KESTREL_API_URL} requires authentication; set KESTREL_API_KEY, or point "
+                    "KESTREL_API_URL at the public endpoint (https://kestrel.krakenkg.com/api), "
+                    "which needs no key."
+                )
+                raise
             logging.error(f"Kestrel API HTTP error ({endpoint}): {e}", exc_info=True)
             raise
         except transient as e:
