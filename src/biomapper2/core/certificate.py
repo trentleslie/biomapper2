@@ -33,7 +33,10 @@ self-certificate, and only the second is free.
 
 **Tier B** is opt-in and default-off. It resolves the *query name* against an independent registry
 and can refine ``structure_present`` into ``corroborated`` / ``contradicted``. It never moves a row
-off ``unavailable`` or ``not_applicable``.
+off ``unavailable`` or ``not_applicable`` -- so it is neither consulted on those rows (the producer
+side, in ``Mapper._issue_certificate``) nor reported on them (``issue`` below), which keeps the
+rate-limited lookups, the resolution-rate denominator, and the emitted evidence fields all scoped to
+the one population a structural comparison happens in.
 
 ``issue`` is pure and I/O-free on purpose, so the state table can be tested without a network.
 """
@@ -320,12 +323,21 @@ def issue(
                 else CertificateState.CONTRADICTED
             )
 
-    # Independent-evidence fields belong ONLY to rows inside the certificate's population. A row
-    # that is out of scope, or that committed no node, has nothing for this evidence to be about:
-    # attaching a structural block to a gene declares the entity outside the population and then
-    # describes its structure in the same breath, and ``_independent_of_selection`` is vacuously
-    # True with no committed node -- asserting independence from a selection that never happened.
-    in_population = structure_status is not StructureStatus.NOT_APPLICABLE
+    # Independent-evidence fields belong ONLY to rows the evidence was actually weighed on -- i.e.
+    # ``structure_present``. A row that is out of scope, or that committed no node, has nothing for
+    # this evidence to be about: attaching a structural block to a gene declares the entity outside
+    # the population and then describes its structure in the same breath, and
+    # ``_independent_of_selection`` is vacuously True with no committed node -- asserting
+    # independence from a selection that never happened.
+    #
+    # ``structure_absent`` is excluded for the same reason and is not a lesser case (L21): the state
+    # stays ``unavailable`` no matter what Tier B returns, because there is no node structure to
+    # compare against. Emitting ``independent_source``/``independent_inchikey_block`` there would
+    # publish an independent block beside a verdict that never used it, which reads as corroborating
+    # evidence the certificate declined to act on. The producer side of the same rule lives in
+    # ``Mapper._issue_certificate``, which does not spend the lookup at all; this branch is what
+    # makes a direct ``issue()`` caller behave identically.
+    in_population = structure_status is StructureStatus.STRUCTURE_PRESENT
     if tier_b is None or not in_population:
         independent_source = None
         independent_block = None

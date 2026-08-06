@@ -9,6 +9,12 @@ evidence rather than on the appeal of the idea. It now reads the certificate the
 falls back to deriving it, recording which of the two it used in ``per_dataset[].certificate_source``
 so a reader never has to guess.
 
+Those are the only two accepted input shapes. A frame carrying *part* of a certificate, an empty
+``certificate_state`` cell, or a state string outside the enum is refused outright by
+``_has_valid_certificate`` rather than completed with defaults -- the defaults are indistinguishable
+from measurements once they reach a figure (a missing state reads as a declared abstention; an
+unknown one becomes an operating point).
+
 Back then the only thing that escaped resolution was ``chosen_kg_id_review``, a flag string with
 three values whose ``None`` covered several distinct situations at once — which is the overloading
 the certificate removes.
@@ -144,6 +150,33 @@ CERT_SOURCE_COL = "certificate_independent_source"
 CERT_TIER_B_OUTCOME_COL = "certificate_tier_b_outcome"
 CERT_INDEPENDENT_COL = "certificate_independent_of_selection"
 CERT_INDEP_BLOCK_COL = "certificate_independent_inchikey_block"
+
+# The certificate columns this module READS. Treated as one contract: an input carries all of them
+# or none of them. A frame holding only some is a partial artifact, and the old
+# "presence of certificate_state means a certificate" test read one silently -- every absent sibling
+# defaulted (source -> None, outcome -> 'off', state -> 'unavailable' on a missing cell), so a
+# truncated or hand-edited TSV produced FABRICATED abstentions and a Panel B stratified on defaults,
+# with ``certificate_source: certificate_columns`` printed beside it.
+CERT_REQUIRED_COLUMNS = (
+    CERT_STATE_COL,
+    CERT_STRUCTURE_COL,
+    CERT_SOURCE_COL,
+    CERT_TIER_B_OUTCOME_COL,
+    CERT_INDEPENDENT_COL,
+    CERT_INDEP_BLOCK_COL,
+)
+
+# Value domains for the three enum-valued certificate columns, mirroring ``CertificateState``,
+# ``StructureStatus`` and ``TierBOutcome`` in ``biomapper2.core.certificate``. Duplicated as plain
+# tuples for the same reason ``TIER_B_MIN_RESOLUTION_RATE`` is: this study module stays importable
+# without the package installed. An unknown string here is not a curiosity -- ``_figure5`` groups on
+# ``certificate_state``, so it would become an operating point in the published curve, and a state
+# outside ``ABSTENTION_STATES``/``OUT_OF_SCOPE_STATES`` enters the verifiable population by default.
+CERT_ENUM_DOMAINS: dict[str, tuple[str, ...]] = {
+    CERT_STATE_COL: ("corroborated", "uncorroborated", "contradicted", "unavailable", "not_applicable"),
+    CERT_STRUCTURE_COL: ("structure_present", "structure_absent", "not_applicable"),
+    CERT_TIER_B_OUTCOME_COL: ("off", "resolved", "unresolvable", "lookup_failed"),
+}
 
 # The Tier-B sweep artifact, referenced by a FIXED name rather than a timestamp. A caption cannot
 # cite a timestamped path, and the pinned suite carries no certificate columns, so without a fixed
@@ -673,6 +706,57 @@ def _curve_publishable(
     return True, None
 
 
+def _has_valid_certificate(df: pd.DataFrame, source: Path) -> bool:
+    """True when the frame carries a COMPLETE, well-formed certificate; False when it carries none.
+
+    Raises rather than degrading in between, because the two ways to be in between both corrupt the
+    figure silently:
+
+    * **A partial column set.** The pipeline emits every certificate column together, so a frame
+      holding some of them has been truncated, merged, or hand-edited. Filling the rest with
+      defaults invents ``off`` outcomes and ``None`` sources, and Panel B would then stratify real
+      rows against fabricated ones -- while the artifact reports ``certificate_columns`` as its
+      source, i.e. claims provenance it does not have.
+    * **A value outside the enum.** ``_figure5`` groups on ``certificate_state``; an unrecognized
+      string is neither an abstention nor out of scope, so it silently joins the verifiable
+      population and becomes an operating point in the published curve.
+
+    A MISSING ``certificate_state`` cell is the same class of defect and is refused here rather than
+    read as ``unavailable``: that default turns a hole in the input into a declared abstention, which
+    is a claim about the resolver's behaviour manufactured out of a broken file, and it inflates the
+    one number Panel A exists to report.
+
+    The legacy shape -- no certificate columns at all -- is a supported input and returns False; the
+    pinned baseline predates the certificate and must still audit via the Tier A derivation.
+    """
+    present = [column for column in CERT_REQUIRED_COLUMNS if column in df.columns]
+    if not present:
+        return False
+    missing = [column for column in CERT_REQUIRED_COLUMNS if column not in df.columns]
+    if missing:
+        raise ValueError(
+            f"{source}: partial certificate — carries {sorted(present)} but is missing "
+            f"{sorted(missing)}. A certificate is one contract; the audit will not complete it with "
+            f"defaults, because the missing columns default to values that look like measurements."
+        )
+    for column, domain in CERT_ENUM_DOMAINS.items():
+        values = df[column]
+        n_missing = int(values.isna().sum())
+        if n_missing:
+            raise ValueError(
+                f"{source}: {column} is empty on {n_missing} of {len(df)} row(s). A missing "
+                f"certificate is not an abstention, and reading it as one would report a refusal "
+                f"the resolver never made."
+            )
+        unknown = sorted({str(value) for value in values.unique()} - set(domain))
+        if unknown:
+            raise ValueError(
+                f"{source}: {column} carries value(s) {unknown} outside the enum {sorted(domain)}. "
+                f"An unrecognized state is not a new operating point."
+            )
+    return True
+
+
 def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
     """Derive the full certificate-state picture for one dataset's mapped rows."""
     # Read EVERY row. The committed-only filter is applied later and ONLY to oracle scoring.
@@ -696,22 +780,18 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
     # Prefer the certificate the pipeline committed; fall back to deriving it. The fallback is not a
     # silent equivalence -- a derived Tier A knows nothing about Tier B, so the artifact records
     # which source was used and the curve refuses to publish off the derivation.
-    has_certificate = CERT_STATE_COL in df.columns
+    # Validated, not sniffed: every column below is guaranteed present and enum-valid, so nothing
+    # here has to fall back to a default that would be indistinguishable from a measurement.
+    has_certificate = _has_valid_certificate(df, mapped_tsv)
     if has_certificate:
-        df["_state"] = df[CERT_STATE_COL].fillna("unavailable").astype(str)
-        df["_independent_source"] = (
-            df[CERT_SOURCE_COL].astype("object").where(df[CERT_SOURCE_COL].notna(), None)
-            if CERT_SOURCE_COL in df.columns
-            else None
-        )
-        df["_tier_b_outcome"] = df[CERT_TIER_B_OUTCOME_COL].fillna("off") if CERT_TIER_B_OUTCOME_COL in df else "off"
-        df["_independent_of_selection"] = df[CERT_INDEPENDENT_COL] if CERT_INDEPENDENT_COL in df else None
+        df["_state"] = df[CERT_STATE_COL].astype(str)
+        df["_independent_source"] = df[CERT_SOURCE_COL].astype("object").where(df[CERT_SOURCE_COL].notna(), None)
+        df["_tier_b_outcome"] = df[CERT_TIER_B_OUTCOME_COL].astype(str)
+        df["_independent_of_selection"] = df[CERT_INDEPENDENT_COL]
         # Tier B's own block, kept so the oracle-independence control can ask whether it merely
         # restates the gold key the curve is scored against.
         df["_independent_block"] = (
             df[CERT_INDEP_BLOCK_COL].astype("object").where(df[CERT_INDEP_BLOCK_COL].notna(), None)
-            if CERT_INDEP_BLOCK_COL in df.columns
-            else None
         )
     else:
         df["_state"] = df["_tier_a"].map({"structure_present": "uncorroborated", "structure_absent": "unavailable"})

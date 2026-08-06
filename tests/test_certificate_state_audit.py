@@ -196,6 +196,65 @@ def test_committed_certificate_columns_are_preferred_over_the_derivation(result:
     assert result["per_dataset"][0]["certificate_source"] == "certificate_columns"
 
 
+# --------------------------------------------------------------------------------------------
+# Input schema: the two accepted shapes, and the refusal of everything between them
+# --------------------------------------------------------------------------------------------
+
+
+def _arm_from(frame: pd.DataFrame, tmp_path: Path) -> Path:
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+    return arm / "necs_MAPPED_chebi_d_mapped.tsv"
+
+
+def test_a_partial_certificate_is_refused_rather_than_completed_with_defaults(tmp_path: Path) -> None:
+    """Presence of ``certificate_state`` used to mean "this frame has a certificate".
+
+    Every absent sibling then defaulted -- source to None, outcome to 'off' -- so a truncated or
+    hand-merged TSV produced a Panel B stratified against values nothing measured, while the
+    artifact printed ``certificate_source: certificate_columns`` beside it. The missing column has to
+    be named in the error, because a partial frame is usually a broken join and the operator needs
+    to know which side dropped.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t").drop(columns=["certificate_tier_b_outcome"])
+    with pytest.raises(ValueError, match="certificate_tier_b_outcome"):
+        audit_dataset("necs", _arm_from(frame, tmp_path))
+
+
+def test_an_empty_certificate_state_is_not_read_as_an_abstention(tmp_path: Path) -> None:
+    """``fillna('unavailable')`` turned a hole in the input into a declared refusal.
+
+    That is the one number Panel A exists to report, so a partial file would have inflated the
+    headline abstention rate with rows the resolver never refused -- and nothing downstream could
+    tell the fabricated ones apart from the real ones.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame.loc[frame.index[0], "certificate_state"] = None
+    with pytest.raises(ValueError, match="certificate_state is empty"):
+        audit_dataset("necs", _arm_from(frame, tmp_path))
+
+
+def test_an_unknown_certificate_state_cannot_become_an_operating_point(tmp_path: Path) -> None:
+    """``_figure5`` groups on the raw state string, and anything outside ABSTENTION/OUT_OF_SCOPE
+    joins the verifiable population by default -- so a typo or a future enum value would be drawn as
+    a curve point rather than rejected."""
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame.loc[frame.index[0], "certificate_state"] = "probably_right"
+    with pytest.raises(ValueError, match="probably_right"):
+        audit_dataset("necs", _arm_from(frame, tmp_path))
+
+
+@pytest.mark.parametrize("column", ["certificate_structure_status", "certificate_tier_b_outcome"])
+def test_the_enum_check_covers_the_other_certificate_columns(column: str, tmp_path: Path) -> None:
+    """Not just ``certificate_state``: ``_tier_b_stats`` counts outcomes by string equality, so an
+    unrecognized outcome silently leaves the resolved count and moves the gate rate."""
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame.loc[frame.index[0], column] = "nonsense"
+    with pytest.raises(ValueError, match="nonsense"):
+        audit_dataset("necs", _arm_from(frame, tmp_path))
+
+
 def test_the_tier_b_sweep_is_referenced_by_a_fixed_committed_name() -> None:
     """Otherwise the Tier-B half of the figure has no reproducible provenance: the pinned suite
     carries no certificate columns, and a timestamped sweep path cannot be cited from a caption."""

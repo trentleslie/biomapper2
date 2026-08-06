@@ -276,6 +276,50 @@ def test_pubchem_tier_b_is_independent_of_the_refmet_selector() -> None:
     assert cert.independent_of_selection is True
 
 
+@pytest.mark.parametrize(
+    ("label", "is_small_molecule", "equiv", "lookup_ok", "chosen"),
+    [
+        ("structure_absent", True, {"HMDB": ["HMDB0001879"]}, True, NODE),
+        ("non_small_molecule", False, {"HGNC": ["1097"]}, True, NODE),
+        ("kestrel_outage", True, {}, False, NODE),
+        ("no_committed_node", True, BLOCKS, True, None),
+    ],
+)
+def test_independent_evidence_is_reported_only_where_a_comparison_happened(
+    label: str, is_small_molecule: bool, equiv: dict, lookup_ok: bool, chosen: str | None
+) -> None:
+    """A certificate must not show an independent block beside a state that never used it.
+
+    ``structure_absent`` is the case this adds: the state stays ``unavailable`` under every Tier B
+    outcome (L21), so publishing ``independent_source``/``independent_inchikey_block`` there reads as
+    corroborating evidence the certificate declined to act on -- and a consumer stratifying on
+    ``independent_source`` would pull those rows into a source curve they were never adjudicated in.
+    ``Mapper`` does not even spend the lookup; this pins the same rule for a direct caller.
+    """
+    cert = issue(
+        chosen_kg_id=chosen,
+        is_small_molecule=is_small_molecule,
+        kg_equivalent_ids=equiv,
+        equivalent_ids_lookup_ok=lookup_ok,
+        tier_b=_tier_b(TierBOutcome.RESOLVED, "BSYNRYMUTXBXSQ", "pubchem"),
+    )
+    assert cert.independent_source is None, label
+    assert cert.independent_inchikey_block is None, label
+    assert cert.independent_of_selection is None, label
+    # The OUTCOME still travels: whether a lookup was made is a fact about the run, not a verdict.
+    assert cert.tier_b_outcome is TierBOutcome.RESOLVED, label
+
+
+def test_independent_evidence_is_reported_when_a_comparison_did_happen() -> None:
+    """Guards the guard above: a rule that blanks the fields everywhere would leave Panel B with no
+    stratification and every gate trivially unmeasurable."""
+    cert = _issue(tier_b=_tier_b(TierBOutcome.RESOLVED, "BSYNRYMUTXBXSQ", "pubchem"))
+    assert cert.structure_status is StructureStatus.STRUCTURE_PRESENT
+    assert cert.independent_source == "pubchem"
+    assert cert.independent_inchikey_block == "BSYNRYMUTXBXSQ"
+    assert cert.independent_of_selection is True
+
+
 def test_independence_is_unclaimed_when_tier_b_is_off() -> None:
     """None, not True. An unmade comparison is not an independent one."""
     assert _issue().independent_of_selection is None

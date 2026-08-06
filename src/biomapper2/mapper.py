@@ -16,7 +16,12 @@ from .biolink_client import BiolinkClient
 from .config import PROJECT_ROOT, TIER_B_ENABLED
 from .core.analysis import analyze_dataset_mapping
 from .core.annotation_engine import AnnotationEngine
-from .core.certificate import ResolutionCertificate, derive_chosen_kg_id_review, issue
+from .core.certificate import (
+    ResolutionCertificate,
+    derive_chosen_kg_id_review,
+    issue,
+    node_blocks_from_equivalent_ids,
+)
 from .core.linker import Linker
 from .core.normalizer import Normalizer
 from .core.resolver import Resolver
@@ -101,8 +106,24 @@ class Mapper:
         # term: during a /get-nodes outage a committed small-molecule row is still out of scope,
         # and looking it up anyway would pay a throttled round trip whose result is discarded and
         # would put the name into the resolution-rate denominator this scoping exists to protect.
+        #
+        # The blocks term is on the same footing (L21). A committed node the GRAPH asserts no
+        # InChIKey for is ``structure_absent`` -> ``unavailable``, and no Tier B verdict can move it:
+        # there is nothing to compare against. Looking it up anyway would (a) spend a rate-limited
+        # MW/PubChem round trip per unverifiable row, on exactly the population that is largest where
+        # the KG is thinnest, (b) put those names into the Tier B resolution-rate denominator that
+        # travels with every operating point, and (c) hang ``independent_source`` /
+        # ``independent_inchikey_block`` on a row where no structural comparison was made -- a
+        # certificate that shows independent evidence beside a state that ignored it.
         is_small_molecule = self.resolver.is_small_molecule(category)
-        in_population = is_small_molecule and chosen_kg_id is not None and equivalent_ids_lookup_ok
+        in_population = (
+            is_small_molecule
+            and chosen_kg_id is not None
+            and equivalent_ids_lookup_ok
+            # Same producer ``issue()`` uses, so "the graph asserts a structure" cannot mean two
+            # things: a bare ``.get("INCHIKEY")`` truth test would count a whitespace-only key.
+            and bool(node_blocks_from_equivalent_ids(kg_equivalent_ids))
+        )
         tier_b_result = self.tier_b.lookup(query_name) if (self.tier_b is not None and in_population) else None
         return issue(
             chosen_kg_id=chosen_kg_id,

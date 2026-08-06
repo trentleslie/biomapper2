@@ -324,3 +324,95 @@ def test_committed_node_sources_are_threaded_for_the_independence_check() -> Non
     certificate = _entity_path(mapper, SMALL_MOLECULE)["resolution_certificate"]
     assert certificate["state"] == "corroborated"
     assert certificate["independent_of_selection"] is False
+
+
+# --------------------------------------------------------------------------------------------
+# Tier B's population: the lookup is scoped to the rows a verdict can be ABOUT
+# --------------------------------------------------------------------------------------------
+
+
+class _RecordingTierB:
+    """Records every name it is asked about, so a test can assert on calls NOT made."""
+
+    def __init__(self) -> None:
+        self.names: list[str | None] = []
+
+    def lookup(self, name):
+        from biomapper2.core.certificate import TierBOutcome, TierBResult
+
+        self.names.append(name)
+        return TierBResult(source="pubchem", inchikey_block="BSYNRYMUTXBXSQ", outcome=TierBOutcome.RESOLVED)
+
+
+_OUT_OF_POPULATION = [
+    # (label, entity_type, chosen, equiv, lookup_ok)
+    ("structure_absent", SMALL_MOLECULE, NODE, WITHOUT_KEY, True),
+    ("non_small_molecule", GENE, NODE, WITH_KEY, True),
+    ("no_committed_node", SMALL_MOLECULE, None, {}, True),
+    ("kestrel_outage", SMALL_MOLECULE, NODE, {}, False),
+]
+
+
+@pytest.mark.parametrize(
+    ("label", "entity_type", "chosen", "equiv", "lookup_ok"),
+    _OUT_OF_POPULATION,
+    ids=[row[0] for row in _OUT_OF_POPULATION],
+)
+def test_tier_b_is_not_looked_up_for_a_row_no_verdict_can_be_about(
+    label: str, entity_type: str, chosen: str | None, equiv: dict, lookup_ok: bool, tmp_path
+) -> None:
+    """A row outside the population must cost ZERO rate-limited round trips, on both paths.
+
+    ``structure_absent`` is the case that was missing and the one that matters most: it stays
+    ``unavailable`` under every Tier B outcome (L21), so the request buys nothing -- and it is the
+    LARGEST bucket exactly where the KG is thinnest, which is where a throttled MW/PubChem hop is
+    most expensive. Spending it anyway would also put the name into the Tier B resolution-rate
+    denominator that travels with every operating point, biasing a published rate with names the
+    curve never plots.
+    """
+    entity_tier_b = _RecordingTierB()
+    _entity_path(_stub_mapper(chosen_kg_id=chosen, equiv=equiv, lookup_ok=lookup_ok, tier_b=entity_tier_b), entity_type)
+    dataset_tier_b = _RecordingTierB()
+    _dataset_path(
+        _stub_mapper(chosen_kg_id=chosen, equiv=equiv, lookup_ok=lookup_ok, tier_b=dataset_tier_b),
+        entity_type,
+        tmp_path,
+    )
+    assert entity_tier_b.names == [], label
+    assert dataset_tier_b.names == [], label
+
+
+def test_tier_b_is_still_looked_up_for_the_population_it_exists_for() -> None:
+    """Guards the guard: a scoping predicate that excludes everything is a Tier B wired shut, and
+    the operator running the supervised sweep would see an all-``off`` column with no way to tell it
+    from a correct refusal."""
+    tier_b = _RecordingTierB()
+    certificate = _entity_path(
+        _stub_mapper(chosen_kg_id=NODE, equiv=WITH_KEY, tier_b=tier_b), SMALL_MOLECULE, name="glucose"
+    )["resolution_certificate"]
+    assert tier_b.names == ["glucose"]
+    assert certificate["state"] == "corroborated"
+    assert certificate["independent_source"] == "pubchem"
+
+
+def test_an_absent_structure_carries_no_independent_evidence_fields(tmp_path) -> None:
+    """The emitted row must not show independent evidence beside a verdict that ignored it.
+
+    Complements the call-count test above: this is the shape a reader (or Panel B's stratification)
+    sees, so it is asserted on the emitted certificate rather than on the lookup.
+    """
+    entity_certificate = _entity_path(
+        _stub_mapper(chosen_kg_id=NODE, equiv=WITHOUT_KEY, tier_b=_RecordingTierB()), SMALL_MOLECULE
+    )["resolution_certificate"]
+    assert entity_certificate["state"] == "unavailable"
+    assert entity_certificate["structure_status"] == "structure_absent"
+    assert entity_certificate["independent_source"] is None
+    assert entity_certificate["independent_inchikey_block"] is None
+    assert entity_certificate["independent_of_selection"] is None
+
+    frame = _dataset_path(
+        _stub_mapper(chosen_kg_id=NODE, equiv=WITHOUT_KEY, tier_b=_RecordingTierB()), SMALL_MOLECULE, tmp_path
+    )
+    assert frame.loc[0, "certificate_state"] == "unavailable"
+    assert pd.isna(frame.loc[0, "certificate_independent_source"])
+    assert pd.isna(frame.loc[0, "certificate_independent_inchikey_block"])
