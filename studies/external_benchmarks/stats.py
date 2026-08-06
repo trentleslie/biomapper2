@@ -239,6 +239,7 @@ def mcnemar(b: int, c: int) -> dict[str, Any]:
             "n_discordant": 0,
             "p_exact": DEGENERATE_MCNEMAR_P,
             "p_midp": DEGENERATE_MCNEMAR_P,
+            "p_score": DEGENERATE_MCNEMAR_P,
             "degenerate": True,
             "note": _DEGENERATE_NOTE,
             "method": "exact binomial sign test (two-sided), conditional on b + c",
@@ -246,15 +247,23 @@ def mcnemar(b: int, c: int) -> dict[str, Any]:
     m = min(b, c)
     p_exact = min(1.0, 2.0 * _binom_cdf_half(m, total))
     p_midp = min(1.0, 2.0 * (_binom_cdf_half(m - 1, total) + 0.5 * _binom_pmf_half(m, total)))
+    # The asymptotic (score) form. Carried alongside the exact one because it is the version that
+    # is coherent with the paired score INTERVAL: at a null difference the interval's constrained
+    # variance reduces to the discordant total, so this statistic is exactly the one the interval
+    # inverts. The exact test is conservative relative to it at small discordant totals, which is a
+    # real property of the exact test and not a disagreement to be explained away.
+    z = (b - c) / math.sqrt(total)
+    p_score = math.erfc(abs(z) / math.sqrt(2.0))
     return {
         "b": b,
         "c": c,
         "n_discordant": total,
         "p_exact": p_exact,
         "p_midp": p_midp,
+        "p_score": p_score,
         "degenerate": False,
         "note": "",
-        "method": "exact binomial sign test (two-sided), conditional on b + c",
+        "method": "exact binomial sign test (two-sided), conditional on b + c; score form carried alongside",
     }
 
 

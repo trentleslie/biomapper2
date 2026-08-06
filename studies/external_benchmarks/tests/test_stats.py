@@ -330,3 +330,37 @@ class TestMathematicalSanity:
             for k in (0, 1, n // 2, n):
                 lo, hi = wilson_interval(k, n)
                 assert not math.isnan(lo) and not math.isnan(hi)
+
+
+class TestScoreFormCoherence:
+    """The score form is the one the paired interval inverts; they must never disagree.
+
+    The exact binomial test is conservative at small discordant totals, so an interval that
+    excludes zero beside a non-significant EXACT p is expected and correct. Against the SCORE form
+    there is no such slack, and any disagreement is a bug in one of the two.
+    """
+
+    @pytest.mark.parametrize(
+        "b,c,n",
+        [(28, 0, 1500), (5, 0, 30), (1, 0, 100), (40, 10, 1000), (10, 40, 1000), (3, 3, 50), (0, 7, 200)],
+    )
+    def test_interval_excludes_zero_exactly_when_the_score_test_is_significant(self, b, c, n):
+        interval = tango_paired_difference(b=b, c=c, n=n)
+        excludes_zero = interval["lower"] > 0 or interval["upper"] < 0
+        assert excludes_zero == (mcnemar(b, c)["p_score"] < 0.05)
+
+    def test_the_two_forms_diverge_in_the_direction_the_literature_expects(self):
+        """Pinned so nobody later "fixes" a disagreement that is a real property of the tests.
+
+        At small discordant totals the exact test is the more conservative of the two. Far out in
+        the tail, on an all-one-way discordance, the ordering reverses: the normal approximation
+        overstates the tail probability there. Neither is a bug, and reporting both keeps the
+        difference visible instead of hiding it behind whichever one was picked.
+        """
+        small = mcnemar(5, 0)
+        assert small["p_exact"] > small["p_score"]
+        far_tail = mcnemar(28, 0)
+        assert far_tail["p_exact"] < far_tail["p_score"]
+
+    def test_score_form_is_undefined_at_zero_discordance(self):
+        assert mcnemar(0, 0)["p_score"] == DEGENERATE_MCNEMAR_P
