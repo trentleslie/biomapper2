@@ -66,12 +66,17 @@ GUARDED_FILES = (
     # value. Guarding it would turn the suite red for a comment doing exactly the right thing.
     # Also not guarded: build_section3_claims.py, whose CODE is a list of manuscript values -- the
     # guard scans prose, not code, but the file's whole purpose is to hold those values.
-    "studies/external_benchmarks/stats.py",
-    "studies/external_benchmarks/confidence_report.py",
+    # ``stats.py`` / ``confidence_report.py`` and their tests live under ``studies/analysis`` and
+    # top-level ``tests`` on purpose. Those are trees the certificate axis's globbed guard covers by
+    # default, so these four stay guarded when that rewrite replaces this hand-maintained list.
+    # Listing them here as well is redundant today and harmless; the placement is what survives.
+    "studies/analysis/stats.py",
+    "studies/analysis/confidence_report.py",
+    "tests/test_stats.py",
+    "tests/test_confidence_report.py",
+    # Still in the benchmarks tree, and therefore still list-dependent. See PLACEMENT-DEBT below.
     "studies/external_benchmarks/reconcile_section3.py",
     "studies/external_benchmarks/request_timeout.py",
-    "studies/external_benchmarks/tests/test_stats.py",
-    "studies/external_benchmarks/tests/test_confidence_report.py",
     "studies/external_benchmarks/tests/test_reconcile_section3.py",
     "studies/external_benchmarks/tests/test_row_index_gold_guard.py",
     "src/biomapper2/utils.py",

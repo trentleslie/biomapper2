@@ -57,7 +57,9 @@ from .stats import (
 MODULE_DIR = Path(__file__).parent
 RESULTS_DIR = MODULE_DIR / "results"
 PREREG_PATH = MODULE_DIR / "prereg_d4.json"
-OFF_CATEGORY_RESULTS_DIR = MODULE_DIR.parent / "analysis" / "results"
+# The off-category audit writes into the same directory this module does. Kept as its own name
+# because the two artifacts have different producers and lifetimes, not because the paths differ.
+OFF_CATEGORY_RESULTS_DIR = RESULTS_DIR
 
 INDEPENDENCE_ROLES = ("primary", "nested", "derived_union", "derived_aggregate", "standalone")
 

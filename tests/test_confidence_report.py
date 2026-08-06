@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-from studies.external_benchmarks import confidence_report as cr
+from studies.analysis import confidence_report as cr
 
 PINS = {
     "backend": "https://kestrel.example.invalid/api",
@@ -596,7 +596,7 @@ def test_the_committed_reference_artifact_quotes_the_deduplicated_rate_only():
         text = path.read_text()
         audit = json.loads(
             (
-                Path(cr.__file__).parents[1] / "analysis" / "results" / f"off_category_audit_{_suite_id(path)}.json"
+                Path(cr.__file__).parent / "results" / f"off_category_audit_{_suite_id(path)}.json"
             ).read_text()
         )
         file_weighted = str(audit["metabolite_total"]["pct_off_category"])

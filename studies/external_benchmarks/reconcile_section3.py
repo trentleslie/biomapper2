@@ -34,7 +34,10 @@ MODULE_DIR = Path(__file__).parent
 MANUSCRIPT_DIR = MODULE_DIR / "manuscript"
 SOURCE_PATH = MANUSCRIPT_DIR / "section3_source.md"
 CLAIMS_PATH = MANUSCRIPT_DIR / "section3_claims.json"
-RESULTS_DIR = MODULE_DIR / "results"
+# The interval artifact is produced by ``studies/analysis/confidence_report.py`` and lands beside
+# the other analysis artifacts, under the ``.gitignore`` negation that keeps them committed. This
+# module reads it from there rather than from its own tree.
+RESULTS_DIR = MODULE_DIR.parent / "analysis" / "results"
 
 # Relative tolerance when comparing a manuscript rate against an artifact rate. The manuscript
 # rounds; the artifact does not.

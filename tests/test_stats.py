@@ -17,7 +17,7 @@ import math
 
 import pytest
 
-from studies.external_benchmarks.stats import (
+from studies.analysis.stats import (
     DEGENERATE_MCNEMAR_P,
     PairingError,
     assert_paired,
@@ -258,7 +258,7 @@ class TestPairingGuards:
         discordance at all -- so this test dies. If it ever passes under positional pairing, the
         pairing is untested.
         """
-        from studies.external_benchmarks.stats import paired_counts_from_rows
+        from studies.analysis.stats import paired_counts_from_rows
 
         rows_a = [{"id": "x", "correct": True}, {"id": "y", "correct": False}]
         rows_b = [{"id": "y", "correct": True}, {"id": "x", "correct": False}]
@@ -271,7 +271,7 @@ class TestPairingGuards:
         assert positional == (0, 0)
 
     def test_paired_from_rows_raises_on_duplicate_ids(self):
-        from studies.external_benchmarks.stats import paired_counts_from_rows
+        from studies.analysis.stats import paired_counts_from_rows
 
         rows = [{"id": "x", "correct": True}, {"id": "x", "correct": False}]
         with pytest.raises(PairingError):
@@ -287,7 +287,7 @@ class TestNoHiddenRandomness:
         """
         import inspect
 
-        from studies.external_benchmarks import stats as mod
+        from studies.analysis import stats as mod
 
         for name, fn in vars(mod).items():
             if name.startswith("_") or not callable(fn) or not inspect.isfunction(fn):

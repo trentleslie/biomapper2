@@ -24,7 +24,7 @@ from pathlib import Path
 
 import pytest
 
-from studies.external_benchmarks import confidence_report as cr
+from studies.analysis import confidence_report as cr
 from studies.external_benchmarks import reconcile_section3 as rs
 
 

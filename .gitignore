@@ -59,8 +59,11 @@ data/**/*.json
 # Evidence-base artifacts. Same rule, same reason: each of these is the thing a published number
 # resolves TO, and the reconciliation check reads them from the tree. A blanket ignore here would
 # make the check silently unrunnable in a fresh clone, which is worse than it failing.
+#
+# The interval artifact and the D4 pre-registration are NOT listed here: they moved to
+# studies/analysis/ with the module that writes and reads them, where the negation above already
+# covers them. One rule, not two.
 !studies/external_benchmarks/results/*.json
-!studies/external_benchmarks/prereg_d4.json
 !studies/external_benchmarks/manuscript/*.json
 
 # Other app-specific items
