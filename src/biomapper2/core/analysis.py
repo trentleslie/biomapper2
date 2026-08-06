@@ -18,7 +18,10 @@ from ..utils import AnnotationMode, safe_divide
 
 
 def analyze_dataset_mapping(
-    results_tsv_path: str | Path, linker: Any, annotation_mode: AnnotationMode
+    results_tsv_path: str | Path,
+    linker: Any,
+    annotation_mode: AnnotationMode,
+    run_provenance: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Analyze dataset mapping results and generate summary statistics.
@@ -30,6 +33,8 @@ def analyze_dataset_mapping(
             - 'all': All entities were candidates for annotation
             - 'missing': Only entities without provided IDs were candidates
             - 'none': No annotation was attempted
+        run_provenance: Optional provenance dict to embed at the top of the stats JSON,
+            so the output is self-describing for analysts.
 
     Returns:
         Dictionary containing coverage, precision, recall, and F1 metrics
@@ -228,6 +233,10 @@ def analyze_dataset_mapping(
 
     # Tack the performance metrics onto our other stats
     stats["performance"] = performance
+
+    # Stamp run provenance so the stats file is self-describing for analysts
+    if run_provenance is not None:
+        stats = {"run_provenance": run_provenance, **stats}
 
     # Save all result stats
     logging.info(f"Dataset summary stats are: {json.dumps(stats, indent=2)}")
