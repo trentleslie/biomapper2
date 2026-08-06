@@ -4,6 +4,7 @@ Configuration settings for biomapper2.
 Customize these values to change API endpoints, model versions, and logging behavior.
 """
 
+import contextlib
 import os
 from pathlib import Path
 
@@ -15,7 +16,28 @@ load_dotenv()  # Load environmental variables (secrets)
 # Set up our general cache directory (e.g., for requests cache, biolink)
 PROJECT_ROOT = Path(__file__).parents[2]
 CACHE_DIR = PROJECT_ROOT / "cache"
-CACHE_DIR.mkdir(parents=True, exist_ok=True)
+# 0700: the requests_cache databases under here record request headers, so treat the directory as
+# secret-bearing. `mode` only applies when mkdir creates the directory, so chmod an existing one
+# too (best-effort — a read-only mount or foreign owner must not break import).
+CACHE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+with contextlib.suppress(OSError):
+    CACHE_DIR.chmod(0o700)
+
+# Header and query-parameter names requests_cache must redact before writing a response to disk.
+#
+# requests_cache ships a default list that already contains "X-API-KEY", but it matches
+# CASE-SENSITIVELY (`filter_sort_dict` sorts a plain dict, discarding the CaseInsensitiveDict
+# semantics), and we send the header spelled "X-API-Key". That one-character mismatch persisted the
+# Kestrel credential in cleartext into every cached record. Enumerate the casings we actually send
+# rather than relying on the library default.
+CACHE_IGNORED_PARAMETERS = [
+    "X-API-Key",
+    "X-API-KEY",
+    "x-api-key",
+    "Authorization",
+    "api_key",
+    "access_token",
+]
 
 # KG API configuration — override via KESTREL_API_URL in .env.
 # Defaults to the PUBLIC Kestrel, which needs no API key and serves the KRAKEN build the
@@ -35,7 +57,6 @@ BIOLINK_VERSION_DEFAULT = "4.2.5"
 LOG_LEVEL = "INFO"
 
 # Secrets (from environment variables)
-_kestrel_api_key: str | None = None
 
 
 def get_kestrel_api_key() -> str | None:
@@ -44,11 +65,13 @@ def get_kestrel_api_key() -> str | None:
     An unset key is not an error: the default (public) endpoint requires no authentication, so
     requests simply go out without the header. Endpoints that do require it answer 401, which
     ``kestrel_request`` surfaces with a pointer back to ``KESTREL_API_KEY``.
+
+    Deliberately not memoized. ``os.getenv`` is a dict lookup, and the previous cache keyed on
+    ``is None`` — which, once an unset key started returning None, only ever took effect when a key
+    WAS present. That froze the value for the process lifetime, so a test or caller changing the
+    environment mid-run got a result that depended on call order.
     """
-    global _kestrel_api_key
-    if _kestrel_api_key is None:
-        _kestrel_api_key = os.getenv("KESTREL_API_KEY") or None
-    return _kestrel_api_key
+    return os.getenv("KESTREL_API_KEY") or None
 
 
 # Batching for Kestrel API requests (to prevent timeouts on large datasets)
