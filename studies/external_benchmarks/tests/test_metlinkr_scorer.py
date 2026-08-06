@@ -101,9 +101,7 @@ def test_structural_concordance_uses_held_out_curator_id(mapped_df):
 
 def test_prediction_block_prefers_inline_inchikey():
     # An INCHIKEY carried inline in kg_equivalent_ids is used without any oracle call.
-    row = pd.Series(
-        {"chosen_kg_id": "CHEBI:4167", "kg_equivalent_ids": {"INCHIKEY": ["WQZGKKKJIJFFOK-GASJEMHNSA-N"]}}
-    )
+    row = pd.Series({"chosen_kg_id": "CHEBI:4167", "kg_equivalent_ids": {"INCHIKEY": ["WQZGKKKJIJFFOK-GASJEMHNSA-N"]}})
     assert prediction_block(row, oracle=None) == "WQZGKKKJIJFFOK"
 
 
@@ -194,9 +192,7 @@ def test_anti_trivial_guard_requires_held_out_columns():
 
 def test_merge_vocab_runs_unions_passes_by_input_row_id():
     # Two per-vocab passes of the SAME row (one resolves CHEBI, the other adds an HMDB equivalent).
-    pass_chebi = pd.DataFrame(
-        [_mapped_row("a:1", "glucose", "1", "fileA", "CHEBI:4167", {}, hmdb="HMDB0000122")]
-    )
+    pass_chebi = pd.DataFrame([_mapped_row("a:1", "glucose", "1", "fileA", "CHEBI:4167", {}, hmdb="HMDB0000122")])
     pass_hmdb = pd.DataFrame(
         [_mapped_row("a:1", "glucose", "1", "fileA", "", {"HMDB": ["HMDB0000122"]}, hmdb="HMDB0000122")]
     )
@@ -206,3 +202,75 @@ def test_merge_vocab_runs_unions_passes_by_input_row_id():
     assert row["chosen_kg_id"] == "CHEBI:4167"  # first non-empty pass is representative
     assert "HMDB" in row["kg_equivalent_ids"]  # equivalents unioned across passes
     assert row[METLINKR.group_label_column] == "1"  # held-out grouping carried through
+
+
+# --------------------------------------------------------------------------------------------
+# Per-row structural rows are persisted (they were computed and then discarded at the return)
+# --------------------------------------------------------------------------------------------
+def test_struct_per_row_is_persisted(mapped_df):
+    """The rows were already built and then dropped on the floor at the return.
+
+    Without them the structural rate is a scalar that no later analysis can pair, re-score or
+    audit: there is no way to ask which rows moved between two runs, and no way to recompute the
+    rate under a different correctness rule.
+    """
+    oracle = FakeBlockOracle({"CHEBI:4167": "WQZGKKKJIJFFOK"})
+    indep = FakeIndependentResolver(
+        hmdb={"HMDB0000122": "WQZGKKKJIJFFOK"},
+        pubchem={"5793": "XXXXXXXXXXXXXX"},
+    )
+    result = score_metlinkr(mapped_df, METLINKR, oracle=oracle, independent_resolver=indep)
+    st = result["inchikey_structural_concordance"]
+    rows = st["struct_per_row"]
+    assert len(rows) == st["scored"]
+    assert sum(1 for r in rows if r["concordant"]) == st["concordant"]
+    assert set(rows[0]) >= {"input_row_id", "name", "chosen_kg_id", "pred_block", "gold_block", "concordant"}
+
+
+def test_struct_per_row_ids_are_unique_so_the_rows_can_be_paired(mapped_df):
+    """A paired comparison keyed on a non-unique id manufactures flips; assert uniqueness here
+    rather than discovering it inside a statistic."""
+    oracle = FakeBlockOracle({"CHEBI:4167": "WQZGKKKJIJFFOK"})
+    indep = FakeIndependentResolver(hmdb={"HMDB0000122": "WQZGKKKJIJFFOK"}, pubchem={"5793": "YYYYYYYYYYYYYY"})
+    rows = score_metlinkr(mapped_df, METLINKR, oracle=oracle, independent_resolver=indep)[
+        "inchikey_structural_concordance"
+    ]["struct_per_row"]
+    ids = [r["input_row_id"] for r in rows]
+    assert len(set(ids)) == len(ids)
+
+
+def test_struct_per_row_carries_the_pairing_caveat(mapped_df):
+    """Persisting the rows is NOT on its own sufficient for a paired comparison, and the artifact
+    has to say so: the per-row correctness key is a third vocabulary distinct from the other
+    scorers', and skipped rows mean the list is shorter than the row count."""
+    oracle = FakeBlockOracle({"CHEBI:4167": "WQZGKKKJIJFFOK"})
+    indep = FakeIndependentResolver(hmdb={"HMDB0000122": "WQZGKKKJIJFFOK"}, pubchem={"5793": "YYYYYYYYYYYYYY"})
+    st = score_metlinkr(mapped_df, METLINKR, oracle=oracle, independent_resolver=indep)[
+        "inchikey_structural_concordance"
+    ]
+    assert st["struct_per_row_note"]
+    assert st["struct_per_row_covers_all_rows"] is False
+
+
+def test_struct_per_row_nil_path_when_no_oracle(mapped_df):
+    """The nil path, specified rather than left to discovery.
+
+    Offline runs have neither a KG oracle nor an independent resolver, so nothing structural is
+    computed at all. The whole structural block is absent, which is different from "computed and
+    empty" -- a consumer must not read a missing block as a zero rate.
+    """
+    result = score_metlinkr(mapped_df, METLINKR, oracle=None)
+    assert result["inchikey_structural_concordance"] is None
+
+
+def test_struct_per_row_is_empty_not_missing_when_available_but_nothing_scores(mapped_df):
+    """Available-but-unscorable is a real, distinct state: the resolvers exist yet no row yields
+    both a prediction block and a gold block. The key must be present and empty, so a consumer can
+    tell "measured nothing" from "did not measure"."""
+    oracle = FakeBlockOracle({})  # resolves nothing
+    indep = FakeIndependentResolver(hmdb={}, pubchem={})
+    result = score_metlinkr(mapped_df, METLINKR, oracle=oracle, independent_resolver=indep)
+    st = result["inchikey_structural_concordance"]
+    assert st["scored"] == 0
+    assert st["struct_per_row"] == []
+    assert st["concordance_rate"] is None
