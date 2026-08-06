@@ -47,6 +47,7 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         prefixes: list[str] | None = None,
         prefer_human: bool = True,  # accepted for interface parity; metabolites have no HGNC analogue
         preferred_prefixes: set[str] | None = None,  # parity; MW returns raw IDs, no namespace re-rank
+        accepted_categories: set[str] | None = None,  # parity; MW returns raw IDs, no KG categories to check
         cache: dict | None = None,
     ) -> AssignedIDsDict:
         """Implements BaseAnnotator.get_annotations"""
@@ -87,6 +88,7 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         prefixes: list[str] | None = None,
         prefer_human: bool = True,  # accepted for interface parity; metabolites have no HGNC analogue
         preferred_prefixes: set[str] | None = None,  # parity; MW returns raw IDs, no namespace re-rank
+        accepted_categories: set[str] | None = None,  # parity; MW returns raw IDs, no KG categories to check
     ) -> pd.Series:
         """Implements BaseAnnotator.get_annotations_bulk"""
 
