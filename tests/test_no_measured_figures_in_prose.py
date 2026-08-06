@@ -127,6 +127,7 @@ _IDENTIFIER_PATTERNS = (
     re.compile(r"\bPR #\d+\b"),                                 # PR references
     re.compile(r"\b[a-z_]+\.py:\d+\b"),                         # file:line references
     re.compile(r"\b:\d+\b"),                                    # bare line refs (``:229``)
+    re.compile(r"\b0o?[0-7]{3,4}\b"),                           # Unix file modes (0700, 0644, 0o700)
 )
 
 # Exact tokens that are structural constants or protocol facts, never measurements.
@@ -134,6 +135,7 @@ _ALLOWED_TOKENS = frozenset(
     {
         "100",  # percentage arithmetic / "100%" of a structural set
         "200",
+        "301",
         "401",
         "404",  # HTTP status codes
         "120",  # ruff line-length
@@ -285,6 +287,24 @@ def test_the_guard_does_not_flag_identifiers_or_code(tmp_path: Path) -> None:
     sample.write_text(
         '"""Cites CHEBI:16856, OBO:NCIT_C103149, biolink 4.2.5, sha d059564 and file.py:229."""\n'
         "LIMIT = 2400  # structural constant, not prose\n"
+    )
+    assert _violations(sample) == []
+
+
+def test_the_guard_does_not_flag_file_modes_or_protocol_status_codes(tmp_path: Path) -> None:
+    """Negative control: a Unix file mode and an HTTP status code are not measurements.
+
+    Both classes arrived with the cache-redaction change and are the same shape as the exemptions
+    already documented in ``SKIPPED``. They are fixed in the SCRUBBER rather than by skip-listing the
+    two files, because a file-level exemption would retire the whole file from the standard to
+    silence one token -- which is how an include-list-shaped hole reopens under a different name. A
+    leading-zero octal is never a count, and a redirect code is a protocol fact with no artifact to
+    drift against.
+    """
+    sample = tmp_path / "sample.py"
+    sample.write_text(
+        '"""Treats the directory as 0700 and the files as 0644."""\n'
+        "# retiring the internal host with a 301 to the public one strips the credential\n"
     )
     assert _violations(sample) == []
 

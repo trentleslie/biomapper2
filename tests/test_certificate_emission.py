@@ -179,9 +179,7 @@ _STATE_TABLE = [
 def test_both_emission_paths_agree_on_the_state(
     label: str, entity_type: str, chosen: str | None, equiv: dict, lookup_ok: bool, expected: CertificateState, tmp_path
 ) -> None:
-    entity_result = _entity_path(
-        _stub_mapper(chosen_kg_id=chosen, equiv=equiv, lookup_ok=lookup_ok), entity_type
-    )
+    entity_result = _entity_path(_stub_mapper(chosen_kg_id=chosen, equiv=equiv, lookup_ok=lookup_ok), entity_type)
     dataset_result = _dataset_path(
         _stub_mapper(chosen_kg_id=chosen, equiv=equiv, lookup_ok=lookup_ok), entity_type, tmp_path
     )
@@ -262,9 +260,7 @@ def test_mapped_tsv_carries_flat_scalar_certificate_columns(tmp_path) -> None:
 @pytest.mark.parametrize("flag", SELECTION_CONFLICT_VALUES)
 def test_legacy_review_flag_survives_derivation_on_both_paths(flag: str | None, tmp_path) -> None:
     """G2. All three values the resolver actually emits, unchanged for one release."""
-    entity_result = _entity_path(
-        _stub_mapper(chosen_kg_id=NODE, review_flag=flag, equiv=WITH_KEY), SMALL_MOLECULE
-    )
+    entity_result = _entity_path(_stub_mapper(chosen_kg_id=NODE, review_flag=flag, equiv=WITH_KEY), SMALL_MOLECULE)
     dataset_result = _dataset_path(
         _stub_mapper(chosen_kg_id=NODE, review_flag=flag, equiv=WITH_KEY), SMALL_MOLECULE, tmp_path
     )
@@ -294,9 +290,7 @@ def test_tier_b_changes_no_committed_id_either() -> None:
         def lookup(self, name):  # noqa: ARG002
             return TierBResult(source="pubchem", inchikey_block="ZZZZZZZZZZZZZZ", outcome=TierBOutcome.RESOLVED)
 
-    result = _entity_path(
-        _stub_mapper(chosen_kg_id=NODE, equiv=WITH_KEY, tier_b=_Contradicting()), SMALL_MOLECULE
-    )
+    result = _entity_path(_stub_mapper(chosen_kg_id=NODE, equiv=WITH_KEY, tier_b=_Contradicting()), SMALL_MOLECULE)
     assert result["resolution_certificate"]["state"] == "contradicted"
     assert result["chosen_kg_id"] == NODE
 

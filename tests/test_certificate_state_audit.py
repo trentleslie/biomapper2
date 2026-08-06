@@ -237,9 +237,8 @@ def test_abstention_counts_uncommitted_rows(tmp_path: Path) -> None:
     assert panel_a["abstention_rate"] > baseline["abstention_rate"]
 
     # ...and none of them leaked into the precision side.
-    assert (
-        audited["figure5"]["panel_b_precision_coverage"]["n_verifiable"]
-        == (audit_dataset("necs", FIXTURE_TSV)["figure5"]["panel_b_precision_coverage"]["n_verifiable"])
+    assert audited["figure5"]["panel_b_precision_coverage"]["n_verifiable"] == (
+        audit_dataset("necs", FIXTURE_TSV)["figure5"]["panel_b_precision_coverage"]["n_verifiable"]
     )
     assert audited["certificate_state_counts"]["unavailable"] >= 3
 
