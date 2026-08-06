@@ -172,14 +172,15 @@ def build_live_smoke_fn(
     """
     import time
 
-    from biomapper2.config import get_kestrel_api_key
+    from biomapper2.config import KESTREL_API_URL, get_kestrel_api_key
+    from biomapper2.utils import kestrel_host_accepts_credentials
 
     def _smoke() -> SmokeObservation:
-        key_ok = True
-        try:
-            get_kestrel_api_key()
-        except Exception:
-            key_ok = False
+        # A key is only *required* when the configured host actually accepts one. The public
+        # endpoint is keyless, so an unset key there is correct, not a failure. (This used to be a
+        # try/except around get_kestrel_api_key(), which stopped raising when the key became
+        # optional — leaving key_ok permanently True and this precondition dead.)
+        key_ok = get_kestrel_api_key() is not None or not kestrel_host_accepts_credentials(KESTREL_API_URL)
 
         kg_latencies: list[float] = []
         fallback_latencies: list[float] = []
@@ -437,16 +438,14 @@ def build_live_gene_protein_smoke_fn(
 
     import pandas as pd
 
-    from biomapper2.config import get_kestrel_api_key
+    from biomapper2.config import KESTREL_API_URL, get_kestrel_api_key
+    from biomapper2.utils import kestrel_host_accepts_credentials
 
     from .scorers.curie_scorer import predicted_curies
 
     def _smoke() -> GeneProteinObservation:
-        key_ok = True
-        try:
-            get_kestrel_api_key()
-        except Exception:
-            key_ok = False
+        # See build_live_smoke_fn: a key is required only for a host that accepts one.
+        key_ok = get_kestrel_api_key() is not None or not kestrel_host_accepts_credentials(KESTREL_API_URL)
 
         input_df = pd.DataFrame({name_column: list(symbols)})
         per_vocab: dict[str, VocabProbe] = {}

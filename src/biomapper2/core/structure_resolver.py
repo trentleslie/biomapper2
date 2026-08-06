@@ -15,6 +15,7 @@ import requests_cache
 
 from ..config import (
     CACHE_DIR,
+    CACHE_IGNORED_PARAMETERS,
     MW_INCHIKEY_URL,
     PUBCHEM_INCHIKEY_URL,
     STRUCTURE_LOOKUP_TIMEOUT_S,
@@ -27,7 +28,10 @@ class StructureResolver:
 
     def __init__(self, linker: Linker) -> None:
         self.linker = linker
-        self._session = requests_cache.CachedSession(str(CACHE_DIR / "structure_http"))
+        self._session = requests_cache.CachedSession(
+            str(CACHE_DIR / "structure_http"),
+            ignored_parameters=CACHE_IGNORED_PARAMETERS,
+        )
         self._name_cache: dict[str, str | None] = {}  # inchikey block by node name (per process)
 
     def connectivity_match(self, node_a: str, node_b: str) -> bool | None:

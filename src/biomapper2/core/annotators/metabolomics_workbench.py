@@ -10,7 +10,7 @@ import requests
 import requests_cache
 from circuitbreaker import CircuitBreakerError, circuit
 
-from ...config import CACHE_DIR
+from ...config import CACHE_DIR, CACHE_IGNORED_PARAMETERS
 from ...utils import AssignedIDsDict
 from .base import BaseAnnotator
 
@@ -37,6 +37,7 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         self._session = requests_cache.CachedSession(
             CACHE_DIR / "metabolomics_workbench_http",
             expire_after=timedelta(days=7),
+            ignored_parameters=CACHE_IGNORED_PARAMETERS,
         )
 
     def get_annotations(
