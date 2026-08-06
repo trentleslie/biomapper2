@@ -534,6 +534,47 @@ class TestArtifactIsSavedByDefault:
         for row in report["rows"]:
             assert row["row_id"] in text
 
+    def test_markdown_carries_the_p_that_the_interval_inverts(self, fixture_suite, tmp_path, monkeypatch):
+        """The rendered table is the surface a reader reads, so the invariant is pinned THERE.
+
+        The sibling test on the report DATA already checks that interval and p agree. It passed
+        while the .md printed the score-inverted interval beside the EXACT McNemar p -- an interval
+        excluding zero next to a non-significant p, which is the contradiction ``stats`` cites to
+        justify its own design. Deleting the ``score p`` column must turn this red.
+        """
+        monkeypatch.setattr(cr, "RESULTS_DIR", tmp_path / "results")
+        text = cr.write_report(fixture_suite)["md"].read_text()
+        lines = text.splitlines()
+        header = next(line for line in lines if line.startswith("| row | contrast |"))
+        assert "| score p |" in header
+        assert "| exact p |" in header
+        cells = [c for c in header.split("|") if c.strip()]
+        separator = lines[lines.index(header) + 1]
+        assert separator.count("---") == len(cells), "separator must match the header width"
+
+    def test_markdown_flags_an_interval_that_disagrees_with_its_own_p(self, fixture_suite):
+        """The coherence warning must actually render, not merely exist in the source.
+
+        Built by mutating a REAL report rather than hand-rolling the row shape, so the test cannot
+        drift away from the schema it guards. The state it induces -- an interval excluding zero
+        beside a score p that says otherwise -- does not occur in the committed artifact, which is
+        why it needs constructing to be exercised at all.
+        """
+        report = cr.build_report(fixture_suite)
+        paired = next(
+            row
+            for row in report["rows"]
+            if isinstance(row.get("paired_difference"), dict)
+            and row["paired_difference"].get("mcnemar", {}).get("p_score") is not None
+            and not row["paired_difference"].get("unavailable")
+        )
+        diff = paired["paired_difference"]
+        diff["lower"], diff["upper"] = 0.02, 0.18  # excludes zero
+        diff["mcnemar"]["p_score"] = 0.9  # ... while its own p says no difference
+
+        text = "\n".join(cr.render_markdown(report))
+        assert "\u26a0" in text, "an interval excluding zero beside a non-significant p must be flagged"
+
     def test_markdown_states_the_marginal_caveat(self, fixture_suite, tmp_path, monkeypatch):
         monkeypatch.setattr(cr, "RESULTS_DIR", tmp_path / "results")
         text = cr.write_report(fixture_suite)["md"].read_text()

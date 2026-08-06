@@ -389,6 +389,50 @@ class TestBisectBudgets:
         assert slept
         assert all(s >= 0.25 for s in slept)
 
+    def test_the_budget_spans_chunks_rather_than_restarting_on_each(self):
+        """The cap is documented "per dataset"; it must not silently become per chunk.
+
+        ``BisectBudget.start()`` zeroes the spend counters AND ``isolated_items``. Called inside the
+        per-chunk failure handler, every failing chunk got a fresh budget, so a dataset with N
+        failing chunks could spend N times the request and wall-clock cap against a shared public
+        service, and the caller's ``isolated_items`` kept only the last chunk's isolates.
+
+        Two poison items in DIFFERENT chunks is the smallest case that can observe it -- the
+        existing reset test uses a single chunk, so it cannot.
+        """
+
+        class TwoPoisonSession(RecordingSession):
+            def __init__(self, poisons):
+                super().__init__()
+                self.poisons = set(poisons)
+
+            def _respond(self, batch):
+                if self.poisons & set(batch):
+                    return FakeResponse(500)
+                return FakeResponse(200, {item: f"hit::{item}" for item in batch})
+
+        many = [f"item-{i:04d}" for i in range(192)]
+        session = TwoPoisonSession([many[5], many[130]])  # chunk 0 and chunk 2 at batch_size=64
+        budget = utils.BisectBudget(max_requests=200)
+        utils.kestrel_request(
+            "POST",
+            "hybrid-search",
+            batch_field="search_text",
+            batch_items=many,
+            batch_size=64,
+            session=session,
+            auth_required=False,
+            max_retries=0,
+            bisect_on_5xx=True,
+            budget=budget,
+        )
+
+        assert len(budget.isolated_items) == 2, (
+            "isolates from every failing chunk must accumulate; restarting the budget per chunk "
+            f"discards all but the last -- got {budget.isolated_items}"
+        )
+        assert budget.requests_spent > 0, "spend must be carried across chunks, not zeroed"
+
     def test_budget_state_is_reset_between_runs(self, items):
         """The budget is per-dataset. Without a reset, the second dataset in a suite inherits the
         first one's spend and aborts for no reason."""

@@ -628,6 +628,7 @@ def kestrel_request(
         bisect_on_5xx = KESTREL_BISECT_ON_5XX_ENABLED
 
     merged_results: dict = {}
+    chunk_budget: "BisectBudget | None" = None  # started at most once, on the first failing chunk
     for chunk in chunks:
         chunk_payload = {**json_payload, batch_field: chunk}
         try:
@@ -636,8 +637,16 @@ def kestrel_request(
             status = getattr(exc.response, "status_code", None)
             if not bisect_on_5xx or status is None or not (500 <= status < 600):
                 raise
-            chunk_budget = budget if budget is not None else BisectBudget()
-            chunk_budget.start()
+            # Start the budget ONCE per call, not once per failing chunk. ``start()`` zeroes
+            # requests_spent, consecutive_failures, started_monotonic AND isolated_items, so
+            # restarting it here made the documented per-dataset cap a PER-CHUNK cap -- a dataset
+            # with twelve failing chunks could spend twelve times the request and wall-clock
+            # budget against a shared public service -- and left ``isolated_items`` holding only
+            # the last failing chunk's isolates. Dormant while the flag is off; this is a load
+            # promise made to somebody else's service, so it is fixed before it can be enabled.
+            if chunk_budget is None:
+                chunk_budget = budget if budget is not None else BisectBudget()
+                chunk_budget.start()
             chunk_results = _bisect_failed_chunk(
                 method,
                 endpoint,

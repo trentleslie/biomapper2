@@ -150,6 +150,91 @@ class TestDriftIsSeparateFromRename:
         for item in result["drifted"]:
             assert item["id"] in resolved_ids
 
+    # ------------------------------------------------------------------------------------------
+    # Red-green pins for the field-resolution repair.
+    #
+    # The repair itself was verified by hand and the commit message said so -- which is the same
+    # mistake one level up: a control a reader cannot re-run is not a control, and the module this
+    # file guards exists precisely because a check reported ok while real disagreement sat in the
+    # source. Without these, reverting ``_has_drifted`` to the form that compared every claim
+    # against ``row["k"]/row["n"]`` leaves the whole suite green.
+    # ------------------------------------------------------------------------------------------
+
+    @staticmethod
+    def _override(claims: dict, claim_id: str, manuscript_value) -> dict:
+        mutated = json.loads(json.dumps(claims))
+        target = next(entry for entry in mutated["claims"] if entry["id"] == claim_id)
+        target["manuscript_value"] = manuscript_value
+        target["blocked_by"] = None
+        return mutated
+
+    def test_a_k_less_coverage_claim_is_checked_against_the_field_it_names(self, claims, artifact):
+        """POSITIVE control. The exact shape the old form accepted without comparing anything.
+
+        ``necs.delivered_metabolites`` names ``coverage`` and carries no ``k``. Pointed at the
+        SCORED-row denominator instead of ``coverage.total`` it must be reported as drift; the old
+        code returned False on any k-less claim and never looked.
+        """
+        mutated = self._override(claims, "necs.delivered_metabolites", {"k": None, "n": 796})
+        result = rs.reconcile(mutated, artifact)
+        assert "necs.delivered_metabolites" in {item["id"] for item in result["drifted"]}
+        assert result["ok"] is False
+
+    def test_a_correct_k_less_coverage_claim_stays_quiet(self, claims, artifact):
+        """NEGATIVE control, over the FULL committed set.
+
+        Pinned across every claim rather than one, because the first attempt at this repair omitted
+        ``k,n`` from the field whitelist and turned twelve correct claims into false drift. A
+        positive control alone would not have caught that.
+        """
+        result = rs.reconcile(claims, artifact)
+        assert result["drifted"] == [], result["drifted"]
+
+    def test_a_claim_naming_a_field_the_check_cannot_read_is_reported(self, claims, artifact):
+        """An unreadable field must be drift, never silent agreement.
+
+        The failure being prevented is a claim that resolves to nothing while reporting as backed --
+        the shape that let unbacked figures reach print.
+        """
+        mutated = self._override(claims, "necs.delivered_metabolites", {"k": None, "n": 1495})
+        target = next(e for e in mutated["claims"] if e["id"] == "necs.delivered_metabolites")
+        target["field"] = "half_width_pt"
+        result = rs.reconcile(mutated, artifact)
+        assert "necs.delivered_metabolites" in {item["id"] for item in result["drifted"]}
+        assert result["ok"] is False
+
+    def test_a_coverage_claim_resolves_its_numerator_from_coverage_too(self, claims, artifact):
+        """A coverage claim must not borrow its numerator from the scored rows.
+
+        Dormant on today's claim set (both k-bearing coverage claims are blocked), and pinned now
+        so it cannot wake up silently when the Pham source is reconstructed.
+        """
+        row = next(
+            r
+            for r in artifact["rows"]
+            if isinstance(r.get("coverage"), dict)
+            and r["coverage"].get("n_predicted") is not None
+            and r.get("k") is not None
+            and r["k"] != r["coverage"]["n_predicted"]
+        )
+        hybrid = {
+            "claims": [
+                {
+                    "id": "fixture.hybrid_coverage",
+                    "manuscript_value": {"k": row["k"], "n": row["coverage"]["total"]},
+                    "kind": "counts",
+                    "artifact": "confidence_intervals",
+                    "row_id": row["row_id"],
+                    "field": "coverage",
+                    "blocked_by": None,
+                    "note": "",
+                }
+            ],
+            "not_a_measurement": {},
+        }
+        result = rs.reconcile(hybrid, artifact)
+        assert result["drifted"], "a scored-row numerator under a coverage field must be reported"
+
     def test_matching_a_claim_to_the_artifact_clears_its_drift(self, claims, artifact):
         """Constructed proof that drift tracks the values rather than always firing."""
         mutated = json.loads(json.dumps(artifact))
@@ -277,3 +362,79 @@ class TestTheCompletenessCheckCanFailOnTheFormatSection3Uses:
         """The live document, as an end-to-end control over the two tests above."""
         claims = json.loads(rs.CLAIMS_PATH.read_text())
         assert rs.unclassified_prose_numbers(claims, rs.SOURCE_PATH.read_text()) == []
+
+
+class TestBlockedClaimsArePinned:
+    """The unresolved pile must not grow silently.
+
+    ``reconcile()`` computes ``ok`` from renamed and drifted only, so a claim moved to
+    ``blocked_by`` stops being checked without failing anything -- and it stays in the completeness
+    inventory, so it still reads as accounted-for. That is the right escape hatch for a figure with
+    no committed artifact, but it is only honest if each use is a deliberate, reviewed edit.
+
+    Pinning the exact set makes adding one a visible diff rather than a silent subtraction from what
+    the check covers. Removing one (because its artifact landed) is equally visible.
+    """
+
+    EXPECTED_BLOCKED = {
+        "competitors.uniprot_scoring_artifact",
+        "determinism.biomapper_accuracy",
+        "determinism.opus_accuracy",
+        "determinism.qwen_accuracy",
+        "hajjar.charge_normalized_estimate",
+        "hajjar.strict",
+        "headtohead.biodbnet.ensembl",
+        "headtohead.biodbnet.ncbigene",
+        "headtohead.biodbnet.union",
+        "headtohead.biodbnet.uniprot",
+        "headtohead.biodbnet.uniprot_precorrection",
+        "headtohead.gconvert.ensembl",
+        "headtohead.gconvert.ncbigene",
+        "headtohead.gconvert.union",
+        "headtohead.gconvert.uniprot",
+        "headtohead.gconvert.uniprot_precorrection",
+        "headtohead.uniprot_idmapping.union",
+        "headtohead.uniprot_idmapping.uniprot",
+        "lmsd.subsample_population",
+        "metabench.best_closed_book_lm",
+        "metabench.best_retrieval_augmented_lm",
+        "metabench.pre_fix_harness_output",
+        "metaboliteannotator.id_concordance_negative",
+        "metaboliteannotator.id_concordance_positive",
+        "metaboliteannotator.negative",
+        "metaboliteannotator.published_negative",
+        "metaboliteannotator.published_negative_denominator",
+        "metaboliteannotator.published_positive",
+        "metlinkr.published_curator_agreement",
+        "ms1.all_namespace_agreement",
+        "ms1.any_namespace_agreement",
+        "ms1.chebi_agreement",
+        "ms1.comparable_features",
+        "ms1.hmdb_agreement",
+        "ms1.inchikey_agreement",
+        "ms1.kegg_agreement",
+        "ms1.lipidmaps_agreement",
+        "ms1.panel_comparability",
+        "ms1.residual_disagreement",
+        "pham.ambiguity_rate_published",
+        "pham.ambiguous_population",
+        "pham.gold_cross_check",
+        "pham.lipid_stratum",
+        "pham.non_lipid_membership",
+        "provided_id.ncbigene_to_ensembl",
+        "refmet.source_population",
+    }
+
+    def test_the_blocked_set_is_exactly_what_was_reviewed(self, claims):
+        blocked = {entry["id"] for entry in claims["claims"] if entry["blocked_by"]}
+        added = blocked - self.EXPECTED_BLOCKED
+        removed = self.EXPECTED_BLOCKED - blocked
+        assert not added, (
+            f"claims newly excluded from the drift check: {sorted(added)}. If deliberate, add them "
+            "here with the reason in blocked_by -- an unbacked number must not become unbacked "
+            "silently."
+        )
+        assert not removed, (
+            f"claims no longer blocked: {sorted(removed)}. If their artifact landed, remove them "
+            "here so the pin tracks reality."
+        )

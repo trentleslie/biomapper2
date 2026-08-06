@@ -150,10 +150,15 @@ def _has_drifted(entry: dict[str, Any], row: dict[str, Any]) -> bool:
             if not isinstance(coverage, dict) or coverage.get("total") is None:
                 return False  # the field is absent; that is a rename, already reported as one
             target_n: Any = coverage["total"]
+            # Resolve the NUMERATOR from the same field too. Falling through to ``row["k"]`` here
+            # would compare a coverage denominator against a scored-subsample numerator and report
+            # agreement on a hybrid neither field asserts.
+            target_k: Any = coverage.get("n_predicted")
         elif field in (None, "k,n", "n", "k", "rate"):
             if row.get("n") is None:
                 return False  # the field is absent; that is a rename, already reported as one
             target_n = row["n"]
+            target_k = row.get("k")
         else:
             return True  # names a field this check cannot read: report it rather than assume
         if int(value["n"]) != int(target_n):
@@ -161,9 +166,9 @@ def _has_drifted(entry: dict[str, Any], row: dict[str, Any]) -> bool:
         # A ``k``-less claim asserts only its denominator; having checked that, it is settled.
         if value.get("k") is None:
             return False
-        if row.get("k") is None:
+        if target_k is None:
             return False  # the field is absent; that is a rename, already reported as one
-        return int(value["k"]) != int(row["k"])
+        return int(value["k"]) != int(target_k)
     if row.get("rate") is None:
         return True
     return abs(float(value) - float(row["rate"])) > RATE_TOLERANCE
