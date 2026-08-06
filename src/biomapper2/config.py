@@ -80,19 +80,18 @@ CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
 
 # Per-category Biolink acceptance root for the category *validator* (see
 # core/annotators/kestrel_hybrid.py:_is_on_category). Hybrid search ranks across categories as well as
-# namespaces, so a metabolite query can commit a node that is not a molecule at all — measured over the
-# pinned baseline, 1,148 of 12,605 metabolite-arm commits (9.1%) carried no chemical category, led by
-# 692 biolink:PhenotypicFeature (EFO "…measurement" nodes) and 369 typed Protein and/or Gene
-# (362 Protein, 209 Gene, 202 both). Of that 1,148, the validator refuses 1,138 — the other 10 are
-# pure-NamedThing typing gaps that fail open below.
+# namespaces, so a metabolite query can commit a node that is not a molecule at all: a sizeable slice of
+# metabolite-arm commits carry no chemical category, dominated by biolink:PhenotypicFeature (the EFO
+# "…measurement" nodes) and by Protein/Gene typings.
 #
-# These numbers are not an assertion: regenerate them with `studies/analysis/off_category_audit.py`
-# (artifact: studies/analysis/results/off_category_audit_suite_20260805T033340Z.json). That audit also
-# measures what the guard *costs*: of the 1,138 refusals, 0 were the right compound under a wrong type
-# (132 adjudicable, all wrong; 1,001 committed to nodes carrying no chemical identifier in any
-# namespace). The peptide-metabolite worry — glutathione/carnosine/gamma-glutamyl-X being the right
-# molecule typed as a Protein — does not materialize here: every such name in the suite committed to a
-# biolink:SmallMolecule node and is never seen by this guard.
+# No figure is restated here on purpose. Every number behind this policy is emitted by
+# `studies/analysis/off_category_audit.py` into its committed artifact under
+# studies/analysis/results/; read the fields rather than a comment that can drift:
+#   - metabolite_total / per_dataset  — the off-category rate, and how much of it each dataset carries
+#   - off_category_composition_by_category — which Biolink types dominate the refused population
+#   - protein_gene_refusal_cost — what the guard COSTS: whether any refused node was the right compound
+#     wearing a wrong Biolink type (the peptide-metabolite worry: glutathione/carnosine/gamma-glutamyl-X)
+#   - adjudicator_positive_control — proof that the cost measurement could have found a nonzero answer
 #
 # Semantics, and note the two sides are expanded *separately*:
 #   - The KEY is expanded via get_descendants so subcategories of a configured job category inherit the
@@ -102,10 +101,11 @@ CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
 #     broader typing (ChemicalEntity, MolecularMixture, Drug) survives while Protein/Polypeptide/
 #     PhenotypicFeature/Pathway/MolecularActivity do not.
 #
-# Gene/protein are intentionally absent: 4,197 of 4,476 hgnc commits (93.8%) are off-category relative
-# to the chemical root (artifact field per_dataset.hgnc), so the gene path must stay unfiltered. Any category with
-# no entry here is likewise unfiltered — including the biolink:NamedThing that standardize_entity_type
-# falls back to for an unrecognized entity type.
+# Gene/protein are intentionally absent, and the gene arm is the control that proves why: nearly every
+# hgnc commit is "off-category" relative to a chemical root, exactly as it should be (artifact field
+# per_dataset.hgnc). Pointing a chemical acceptance set at the gene path would refuse almost all of it,
+# so that path stays unfiltered. Any category with no entry here is likewise unfiltered — including the
+# biolink:NamedThing that standardize_entity_type falls back to for an unrecognized entity type.
 CATEGORY_ACCEPTED_ROOTS: dict[str, str] = {
     "biolink:SmallMolecule": "biolink:ChemicalEntity",
 }

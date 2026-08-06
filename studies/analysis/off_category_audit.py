@@ -1,12 +1,16 @@
-"""Regenerate the off-category commit numbers asserted in ``biomapper2/config.py``.
+"""Derive every measured figure behind the category validator, from a pinned suite.
 
 Motivation
 ----------
-``CATEGORY_ACCEPTED_ROOTS`` in ``src/biomapper2/config.py`` justifies itself with measured
-numbers ("1,148 of 12,605 metabolite-arm commits (9.1%) carried no chemical category"). Those
-numbers lived only in a comment: no script, no pinned input, no artifact. This module is the
-missing derivation. It reads a pinned benchmark suite, asks Kestrel ``/get-nodes`` for the
-Biolink type of every committed node, and re-derives the rate from scratch.
+The category-validator change was halted three times in review for one recurring defect: prose
+justified a decision with a live measurement that had drifted from -- or was never sourced by --
+any artifact. This module is the single derivation those numbers come from. It reads a pinned
+benchmark suite, asks Kestrel ``/get-nodes`` for the Biolink type of every committed node, and
+re-derives everything from scratch into a committed artifact.
+
+The companion rule is enforced by ``tests/test_no_measured_figures_in_prose.py``: comments and
+docstrings NAME the artifact field carrying a number, and never restate its value. Add a
+measurement here and reference the field; do not paste the result into prose.
 
 What it measures
 ----------------
@@ -141,7 +145,7 @@ NAME_COLUMN_CANDIDATES = (
 )
 
 # Secondary gold axis. metlinkr carries no InChIKey gold at all, so an InChIKey-only adjudication
-# would return UNRESOLVABLE for ~99% of the population and answer nothing. Where a dataset supplies
+# would return UNRESOLVABLE for nearly the whole population and answer nothing. Where a dataset supplies
 # a gold database identifier instead, membership of that CURIE in the committed node's
 # equivalent_ids is the same question asked with a coarser instrument.
 GOLD_ID_COLUMNS: dict[str, str] = {
@@ -186,7 +190,7 @@ CANONICAL_NAMESPACES = frozenset({"CHEBI", "HMDB", "RM"})
 REFMET_ANNOTATOR = "metabolomics-workbench"
 
 # Candidate-row scan (the failure-open measurement). Deterministic sample size and the production
-# search limit, so the emitted counts are reproducible rather than "we looked at about 1,200 rows".
+# search limit, so the emitted counts are reproducible rather than an approximate recollection.
 HYBRID_SCAN_NAMES = 120
 HYBRID_SCAN_LIMIT = 20
 KESTREL_HYBRID_SEARCH_URL = "https://kestrel.krakenkg.com/api/hybrid-search"
@@ -222,7 +226,7 @@ def fetch_nodes(curies: list[str], cache_path: Path, *, offline: bool = False) -
             resp = session.post(
                 KESTREL_GET_NODES_URL,
                 # Must match production Linker.get_node_records (core/linker.py), which sends False.
-                # Truncation caps equivalent_ids at 50 (CHEBI:101278 has 628), and this audit reads
+                # Truncation caps equivalent_ids well below what busy nodes actually carry, and this reads
                 # that field to decide both structural agreement and "carries no chemical identifier".
                 json={"curies": batch, "slim": False, "truncate_long_fields": False},
                 timeout=GET_NODES_TIMEOUT_S,
@@ -694,9 +698,10 @@ def audit(suite_dir: Path, cache_path: Path, *, offline: bool = False) -> dict[s
         "regenerates": [
             "src/biomapper2/config.py (CATEGORY_ACCEPTED_ROOTS docstring: off-category rate, "
             "composition, hgnc control)",
-            "src/biomapper2/core/annotators/kestrel_hybrid.py (_is_on_category docstring: "
-            "namespace-whitelist cost, failure-open candidate counts)",
+            "src/biomapper2/core/annotators/base.py (is_on_category docstring: "
+            "namespace_whitelist_cost, failure_open_candidate_scan)",
             "tests/test_kestrel_hybrid_category.py (module and test docstrings)",
+            "tests/test_annotation_engine_category.py (gene-arm control docstring)",
             "src/biomapper2/core/resolver.py + tests/test_resolver_source_weighting.py "
             "(RefMet multi-node rate behind the D4 determinism fix)",
         ],

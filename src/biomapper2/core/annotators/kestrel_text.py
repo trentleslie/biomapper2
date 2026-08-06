@@ -39,11 +39,14 @@ class KestrelTextSearchAnnotator(BaseAnnotator):
             if term_results:
                 first_result = term_results[0]
                 # Same commit-point category validator as kestrel-hybrid, and for the same reason.
-                # `annotators` is API-exposed (api/models/requests.py), so without this a caller could
-                # request annotators=['kestrel-text-search'] and commit a node the default annotator
-                # set would have refused — e.g. /text-search for "kynurenine" under
-                # category_filter=biolink:SmallMolecule returns UMLS:C0022818 typed biolink:Protein as
-                # its top hit. A guard a caller can step around is not a guard.
+                # `category_filter` is advisory: the endpoint returns rows outside the requested
+                # category, and this one commits its top row unconditionally. `annotators` is
+                # API-exposed (api/models/requests.py), so without this guard a caller could request
+                # annotators=['kestrel-text-search'] and commit a node the default annotator set
+                # refuses — an inconsistent correctness contract. Whether an off-category row lands at
+                # rank 1 varies by query and by ranker, so the guard cannot be skipped here on the
+                # grounds that this endpoint usually ranks better. A guard a caller can step around is
+                # not a guard.
                 if is_on_category(first_result, accepted_categories):
                     node_id = first_result["id"]
                     score = first_result["score"]

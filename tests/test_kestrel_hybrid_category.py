@@ -10,12 +10,13 @@ a substituted triacylglycerol does not). The validator can therefore only conver
 never wrong->right, which is the deliberately accepted cost.
 
 **The guard is on CATEGORY, never on NAMESPACE.** Writing it as "the committed node must be in a
-canonical namespace" would additionally destroy 577 on-category metabolite-arm commits this check
-keeps (LM 195, UMLS 98, UNII 97, MESH 77, PUBCHEM.COMPOUND 52, KEGG.GLYCAN 30, ...). Namespace
-preference is ``_select_canonical``'s job.
+canonical namespace" would additionally refuse a large population of on-category commits in
+non-canonical namespaces (LIPID MAPS, UMLS, UNII, MESH, PubChem, KEGG) that this check keeps.
+Namespace preference is ``_select_canonical``'s job.
 
-Every measured figure in this file regenerates from ``studies/analysis/off_category_audit.py``
-over the pinned suite; none of them are asserted from memory.
+No measured value is restated in this file. Figures live in the artifact emitted by
+``studies/analysis/off_category_audit.py``; see ``namespace_whitelist_cost``,
+``failure_open_candidate_scan`` and ``per_dataset``.
 
 Fixture rows are live-verified shapes from KRAKEN 2.0.1, not invented ones. Every test passes
 ``prefer_human=False`` explicitly: ``get_annotations`` defaults it to True, and at ``:69`` a
@@ -110,9 +111,9 @@ class TestIsOnCategory:
     def test_failure_open_on_top_of_hierarchy_sentinel(self):
         """``biolink:NamedThing`` is a typing gap, not an off-category assertion.
 
-        Over 2,400 live candidate rows *zero* had empty/missing categories, so the empty clause alone
-        would have been dead code. Three carried ``['biolink:NamedThing']`` (e.g. ``UNII:ZCA74223SV``
-        ".ALPHA.-CALACORENE, (+)-") — a typing gap, not a claim the node is not a chemical.
+        A scan of live candidate rows found the empty/missing shape does not occur in practice, while
+        the pure-``biolink:NamedThing`` shape does — on nodes that are legitimate chemicals the KG
+        simply failed to type. Counts and examples: artifact field ``failure_open_candidate_scan``.
         """
         assert KestrelHybridSearchAnnotator._is_on_category(NAMEDTHING_SENTINEL, CHEMICAL) is True
         assert KestrelHybridSearchAnnotator._is_on_category(_row("X:1", 1.0, "n", ["biolink:Entity"]), CHEMICAL) is True
@@ -169,8 +170,8 @@ class TestValidatorAtCommitPoint:
         """A non-canonical namespace with a chemical category must survive.
 
         ``UNII:LYJ3482CB6`` is not in {CHEBI, HMDB, RM} but is typed ``biolink:ChemicalEntity``. A
-        namespace whitelist would additionally destroy 577 on-category commits like
-        ``S-adenosylhomocysteine -> UNII:8K31Q2S66S``.
+        namespace whitelist would additionally refuse on-category commits like
+        ``S-adenosylhomocysteine -> UNII:8K31Q2S66S`` (artifact field ``namespace_whitelist_cost``).
         """
         annotations = _annotate([UNII_CHEMICAL_ENTITY, GO_ACTIVITY], "some chemical", accepted_categories=CHEMICAL)
         assert "LYJ3482CB6" in annotations.get("UNII", {})
@@ -234,9 +235,9 @@ class TestGenePathUnaffected:
     def test_gene_path_is_byte_for_byte_unchanged(self):
         """Gene/protein is intentionally absent from the acceptance map.
 
-        4,197 of 4,476 hgnc commits (93.8%) are "off-category" relative to the chemical root — the
-        clean positive control proving the gene path must never receive an acceptance set. Figure
-        regenerates from ``studies/analysis/off_category_audit.py`` (per_dataset.hgnc).
+        Nearly every hgnc commit is "off-category" relative to the chemical root — the clean positive
+        control proving the gene path must never receive an acceptance set (artifact field
+        ``per_dataset`` under ``hgnc``).
         """
         ann = KestrelHybridSearchAnnotator()
         gene_row = {"id": "NCBIGene:7132", "score": 4.0, "name": "TNFRSF1A", "prefixes": ["HGNC"], "synonyms": []}
@@ -251,9 +252,10 @@ class TestGuardCannotBeBypassedByNamingAnAnnotator:
 
     Before this, both documented `accepted_categories` as "not applicable" and committed
     `term_results[0]` unconditionally -- so `annotators=['kestrel-vector-search']` would commit a
-    Protein for a small-molecule query that the default annotator set refuses. Live example:
-    /vector-search for "kynurenine" under category_filter=biolink:SmallMolecule returns
-    UMLS:C0022818 typed ['biolink:Protein'] as its top hit.
+    Protein for a small-molecule query that the default annotator set refuses. Both endpoints return
+    `categories` and both are reachable, so both need the guard; which endpoint surfaces an
+    off-category node at rank 1 for a given query varies by query and by ranker, which is exactly why
+    the contract cannot depend on one endpoint happening to rank better than another.
     """
 
     @pytest.mark.parametrize("annotator_cls", [KestrelTextSearchAnnotator, KestrelVectorSearchAnnotator])
@@ -283,3 +285,46 @@ class TestGuardCannotBeBypassedByNamingAnAnnotator:
             accepted_categories=None, cache={"carnosine": [UMLS_PROTEIN]},
         )
         assert "C0639060" in out[ann.slug].get("UMLS", {})
+
+    @pytest.mark.parametrize(
+        ("annotator_cls", "search_method"),
+        [
+            (KestrelTextSearchAnnotator, "_kestrel_text_search"),
+            (KestrelVectorSearchAnnotator, "_kestrel_vector_search"),
+        ],
+    )
+    def test_bulk_forwards_accepted_categories(self, annotator_cls, search_method):
+        """The bulk re-dispatch must forward the kwarg on these paths too.
+
+        This gap was found by mutation: deleting ``accepted_categories=accepted_categories`` from
+        both bulk methods left the whole suite byte-identical, while the same mutation on hybrid
+        correctly failed. The bulk path is every benchmark run and every dataset API request, so an
+        untested forward here is a live correctness risk, not bookkeeping.
+        """
+        ann = annotator_cls()
+        with patch.object(ann, search_method, return_value={"carnosine": [UMLS_PROTEIN]}):
+            out = ann.get_annotations_bulk(
+                pd.DataFrame({"name": ["carnosine"]}),
+                "name",
+                "biolink:SmallMolecule",
+                accepted_categories=CHEMICAL,
+            )
+        assert out.iloc[0][ann.slug] == {}
+
+    @pytest.mark.parametrize(
+        ("annotator_cls", "search_method"),
+        [
+            (KestrelTextSearchAnnotator, "_kestrel_text_search"),
+            (KestrelVectorSearchAnnotator, "_kestrel_vector_search"),
+        ],
+    )
+    def test_bulk_without_accepted_categories_is_unchanged(self, annotator_cls, search_method):
+        """The negative twin: no acceptance set means byte-for-byte prior behaviour."""
+        ann = annotator_cls()
+        with patch.object(ann, search_method, return_value={"carnosine": [UMLS_PROTEIN]}):
+            out = ann.get_annotations_bulk(
+                pd.DataFrame({"name": ["carnosine"]}),
+                "name",
+                "biolink:SmallMolecule",
+            )
+        assert "C0639060" in out.iloc[0][ann.slug].get("UMLS", {})

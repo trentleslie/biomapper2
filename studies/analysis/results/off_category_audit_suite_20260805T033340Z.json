@@ -1,10 +1,11 @@
 {
   "analysis": "off_category_audit",
-  "generated_utc": "2026-08-05T23:55:51.955442+00:00",
+  "generated_utc": "2026-08-06T00:26:22.266527+00:00",
   "regenerates": [
     "src/biomapper2/config.py (CATEGORY_ACCEPTED_ROOTS docstring: off-category rate, composition, hgnc control)",
-    "src/biomapper2/core/annotators/kestrel_hybrid.py (_is_on_category docstring: namespace-whitelist cost, failure-open candidate counts)",
+    "src/biomapper2/core/annotators/base.py (is_on_category docstring: namespace_whitelist_cost, failure_open_candidate_scan)",
     "tests/test_kestrel_hybrid_category.py (module and test docstrings)",
+    "tests/test_annotation_engine_category.py (gene-arm control docstring)",
     "src/biomapper2/core/resolver.py + tests/test_resolver_source_weighting.py (RefMet multi-node rate behind the D4 determinism fix)"
   ],
   "pinned_input": {

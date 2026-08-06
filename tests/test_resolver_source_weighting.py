@@ -71,7 +71,8 @@ def test_resolve_series_carries_review_field():
 
 # --------------------------- Deterministic RefMet pick (D4) ---------------------------
 # RefMet contributing >1 KG node is itself a signal, so the pick must not depend on dict insertion
-# order (which follows API response order). Counted over the pinned baseline: 8,814 rows carry a
+# order (which follows API response order). Counted over the pinned baseline (artifact field
+# refmet_multi_node_rate): rows carry a
 # metabolomics-workbench vote and 0 contributed more than one node, so this is a provable no-op on
 # every A/B row — reproducibility hardening, not a behaviour change. It is a *determinism* fix, not a
 # correctness one: lexicographic order is still chemically arbitrary, hence the warning.
@@ -97,7 +98,7 @@ def test_multi_node_refmet_is_warned_so_it_can_be_surfaced(caplog):
 
 
 def test_single_node_refmet_emits_no_warning(caplog):
-    """The common case (1 node) must stay silent — no new log noise on 8,814 baseline rows."""
+    """The common case (1 node) must stay silent — no new log noise on the baseline (every row)."""
     with caplog.at_level(logging.WARNING):
         _resolver(True)._choose_best_kg_id(KG_IDS, ASSIGNED, "biolink:SmallMolecule")
     assert not [r for r in caplog.records if r.levelno >= logging.WARNING]

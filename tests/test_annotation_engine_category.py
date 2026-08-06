@@ -130,7 +130,7 @@ class TestAcceptanceMapResolution:
         assert _resolve(engine, spy, "biolink:SmallMolecule", prefer_human=False) == CHEMICAL
 
     def test_gene_receives_none(self):
-        """Gene/protein are intentionally absent from the map (4,197/4,476 hgnc commits, 93.8%, off-category)."""
+        """Gene/protein are intentionally absent from the map (nearly all hgnc commits are off-category)."""
         engine, spy = _engine()
         assert _resolve(engine, spy, "biolink:Gene", prefer_human=True) is None
 
