@@ -14,10 +14,10 @@ import requests_cache
 
 from .config import (
     CACHE_DIR,
-    KESTREL_API_URL,
     KESTREL_BATCHING_ENABLED,
     LOG_LEVEL,
     get_kestrel_api_key,
+    get_kestrel_api_url,
 )
 from .models import AssignedIDsDict as AssignedIDsDict  # Re-export for backward compatibility
 
@@ -154,7 +154,8 @@ def bulk_kestrel_request(
         headers["X-API-Key"] = get_kestrel_api_key()
 
     try:
-        response = session.request(method, f"{KESTREL_API_URL}/{endpoint}", headers=headers, **kwargs)
+        # Dynamic URL (supports --kestrel-url override) + auth_required-aware headers
+        response = session.request(method, f"{get_kestrel_api_url()}/{endpoint}", headers=headers, **kwargs)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.HTTPError as e:
