@@ -89,7 +89,7 @@ force-added and becomes legitimate under #47's `.gitignore` entry), then dispatc
    | `node_inchikey_blocks` | `list[str]` | sorted; committed node's blocks |
    | `independent_source` | `str \| None` | `metabolomics-workbench` / `pubchem` / None |
    | `independent_inchikey_block` | `str \| None` | Tier B result for the QUERY NAME |
-   | `independent_of_selection` | `bool \| None` | **L26** — false when the Tier B source is the same registry as the annotator that supplied the committed node (see item 12a) |
+   | `independent_of_selection` | `bool \| None` | **L26** — false when the Tier B source is the same registry as the annotator that supplied the committed node (see Phase 4 item 23a) |
    | `comparison_rule` | `str` | identifier of the rule that produced the verdict (L20) |
    | `selection_conflict` | `str \| None` | `divergent_refmet` / `conflict_no_structure` / None |
    | `equivalent_ids_lookup_ok` | `bool` | see item 12 |
