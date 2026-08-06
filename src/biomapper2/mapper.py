@@ -97,8 +97,12 @@ class Mapper:
         # later would spend a throttled external round trip on every gene symbol and every
         # uncommitted row, and would put those names into the resolution-rate denominator that
         # must accompany each operating point -- diluting it with names never in scope.
+        # Must be the SAME predicate ``issue()`` uses for the population, including the lookup-ok
+        # term: during a /get-nodes outage a committed small-molecule row is still out of scope,
+        # and looking it up anyway would pay a throttled round trip whose result is discarded and
+        # would put the name into the resolution-rate denominator this scoping exists to protect.
         is_small_molecule = self.resolver.is_small_molecule(category)
-        in_population = is_small_molecule and chosen_kg_id is not None
+        in_population = is_small_molecule and chosen_kg_id is not None and equivalent_ids_lookup_ok
         tier_b_result = self.tier_b.lookup(query_name) if (self.tier_b is not None and in_population) else None
         return issue(
             chosen_kg_id=chosen_kg_id,

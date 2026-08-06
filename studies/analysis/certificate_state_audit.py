@@ -313,7 +313,11 @@ def _first_block(inchikey: Any) -> str | None:
     """InChIKey first block (the 2-D connectivity skeleton), or None."""
     if not isinstance(inchikey, str) or not inchikey.strip():
         return None
-    return inchikey.split("-")[0]
+    # Case-folded to match ``_local_ids``. Tier B blocks arrive upper-case from the services, so a
+    # gold file shipping lower-case InChIKeys would zero the structure oracle AND drive the
+    # oracle-independence agreement rate to 0.0 -- and a zero agreement rate SILENTLY CLEARS the
+    # independence gate. The failure mode makes a circular curve look maximally independent.
+    return inchikey.split("-")[0].upper()
 
 
 def _node_blocks(equiv: dict[str, list[str]]) -> set[str]:
@@ -480,12 +484,16 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
             "n_verifiable": int(len(sub)),
             # None when the stratum mixes both, which is itself a reason not to average it.
             "independent_of_selection": bool(independence[0]) if len(independence) == 1 else None,
+            # PER STRATUM, because that is the level Panel B is drawn at. A pooled rate lets a
+            # fully circular stratum hide behind an independent one -- and the more independent
+            # evidence an arm carries, the better it hides.
+            "oracle_independence_control": _oracle_independence_control(sub),
             "points": sorted(points, key=lambda p: p["certificate_state"]),
         }
 
     tier_b = _tier_b_stats(df, verifiable)
     oracle_independence = _oracle_independence_control(verifiable)
-    publishable, reason = _curve_publishable(has_certificate, tier_b, oracle_independence)
+    publishable, reason = _curve_publishable(has_certificate, tier_b, oracle_independence, strata)
     return {
         "panel_a_abstention": panel_a,
         "panel_b_precision_coverage": {"n_verifiable": int(len(verifiable)), "strata": strata},
@@ -570,7 +578,10 @@ def _oracle_independence_control(verifiable: pd.DataFrame) -> dict[str, Any]:
 
 
 def _curve_publishable(
-    has_certificate: bool, tier_b: dict[str, Any], oracle_independence: dict[str, Any] | None = None
+    has_certificate: bool,
+    tier_b: dict[str, Any],
+    oracle_independence: dict[str, Any] | None = None,
+    strata: dict[str, Any] | None = None,
 ) -> tuple[bool, str | None]:
     if not has_certificate:
         return False, "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
@@ -601,6 +612,19 @@ def _curve_publishable(
             "'corroborated' and 'scored correct' are the same predicate and Panel B's precision "
             "separation would be an identity rather than a measurement"
         )
+    # The pooled rate is not sufficient. Panel B publishes ONE CURVE PER SOURCE STRATUM and the
+    # module refuses to average them, so the admissibility test has to hold at the same level the
+    # figure is drawn at. A stratum whose Tier B hop is the registry the gold came from can sit at
+    # agreement 1.0 -- a pure identity -- while an independent stratum drags the pooled rate under
+    # the ceiling and publishes it. Dilution by independent evidence must not buy admissibility.
+    for source, stratum in sorted((strata or {}).items()):
+        stratum_agreement = (stratum.get("oracle_independence_control") or {}).get("agreement_rate")
+        if stratum_agreement is not None and stratum_agreement > ORACLE_INDEPENDENCE_MAX_AGREEMENT:
+            return False, (
+                f"stratum '{source}' agrees with the gold structural key above the stated ceiling, "
+                "so its curve would be an identity rather than a measurement; Panel B is drawn per "
+                "stratum and is refused whole rather than published with a circular stratum in it"
+            )
     return True, None
 
 
@@ -852,7 +876,15 @@ def render_markdown(result: dict[str, Any]) -> str:
             "",
             "```json",
             json.dumps(
-                {"panel_b": figure5["panel_b_precision_coverage"], "tier_b": figure5["tier_b"]},
+                {
+                    "panel_b": figure5["panel_b_precision_coverage"],
+                    "tier_b": figure5["tier_b"],
+                    # The admissibility control travels WITH the figure, exactly as
+                    # ``n_absent_oracle_could_fire`` does in the Tier A table. Without it the .md
+                    # can show a perfect separation beside ``Publishable: true`` with no way to
+                    # see how much of that separation is forced.
+                    "oracle_independence_control": figure5["oracle_independence_control"],
+                },
                 indent=2,
             ),
             "```",

@@ -392,3 +392,92 @@ def test_an_arm_with_no_gold_key_is_told_the_real_reason(tmp_path: Path) -> None
     figure5 = audit(tmp_path)["per_dataset"][0]["figure5"]
     assert figure5["curve_publishable"] is False
     assert "no verifiable population" in figure5["curve_not_publishable_reason"]
+
+
+def _two_stratum_arm(tmp_path: Path) -> Path:
+    """One circular stratum (MW restates the gold) beside one genuinely independent stratum.
+
+    The shape that defeats a POOLED admissibility rate: the independent stratum's disagreement
+    drags the pooled figure under the ceiling while the circular stratum's own curve is a pure
+    identity. Reachable whenever the Workbench knows a minority of an arm's names -- lipids
+    especially, where PubChem picks up the remainder -- and the gold key is RefMet-derived for the
+    names it does know.
+    """
+    rows = []
+    for i in range(120):  # circular stratum: tier_b block == gold block on every row
+        block = f"MW{i:012d}"
+        hit = i % 5 != 0
+        rows.append(
+            {
+                "name": f"mw-{i}",
+                "chosen_kg_id": f"CHEBI:9{i:04d}",
+                "chosen_kg_id_review": "",
+                "kg_equivalent_ids": str(
+                    {"INCHIKEY": [f"{block}-UHFFFAOYSA-N"]} if hit else {"INCHIKEY": ["ZZZZZZZZZZZZZZ-UHFFFAOYSA-N"]}
+                ),
+                "gold_inchikey": f"{block}-UHFFFAOYSA-N",
+                "gold_hmdb": "",
+                "certificate_state": "corroborated" if hit else "contradicted",
+                "certificate_structure_status": "structure_present",
+                "certificate_independent_source": "metabolomics-workbench",
+                "certificate_tier_b_outcome": "resolved",
+                "certificate_independent_of_selection": False,
+                "certificate_independent_inchikey_block": block,
+            }
+        )
+    for i in range(180):  # independent stratum: tier_b disagrees with gold on most rows
+        node = f"PC{i:012d}"
+        agrees = i % 4 == 0
+        rows.append(
+            {
+                "name": f"pc-{i}",
+                "chosen_kg_id": f"CHEBI:8{i:04d}",
+                "chosen_kg_id_review": "",
+                "kg_equivalent_ids": str({"INCHIKEY": [f"{node}-UHFFFAOYSA-N"]}),
+                "gold_inchikey": f"{node}-UHFFFAOYSA-N" if agrees else f"GOLD{i:010d}-UHFFFAOYSA-N",
+                "gold_hmdb": "",
+                "certificate_state": "corroborated",
+                "certificate_structure_status": "structure_present",
+                "certificate_independent_source": "pubchem",
+                "certificate_tier_b_outcome": "resolved",
+                "certificate_independent_of_selection": True,
+                "certificate_independent_inchikey_block": node,
+            }
+        )
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame(rows).to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+    return tmp_path
+
+
+def test_a_circular_stratum_cannot_hide_behind_an_independent_one(tmp_path: Path) -> None:
+    """The admissibility test must hold at the level Panel B is DRAWN at, not just pooled.
+
+    Panel B publishes one curve per source stratum and the module refuses to average them, so a
+    pooled agreement rate is the wrong unit: dilution by independent evidence must not buy
+    admissibility for a stratum that is a pure identity. The perverse property of the pooled form
+    is that the MORE independent evidence an arm carries, the better a circular stratum hides.
+    """
+    figure5 = audit(_two_stratum_arm(tmp_path))["per_dataset"][0]["figure5"]
+    strata = figure5["panel_b_precision_coverage"]["strata"]
+
+    mw = strata["metabolomics-workbench"]["oracle_independence_control"]
+    pc = strata["pubchem"]["oracle_independence_control"]
+    assert mw["agreement_rate"] == 1.0, "the MW stratum is circular by construction"
+    assert pc["agreement_rate"] < 1.0, "the PubChem stratum must carry real disagreement"
+
+    pooled = figure5["oracle_independence_control"]["agreement_rate"]
+    assert pooled <= figure5["oracle_independence_control"]["max_agreement_ceiling"], (
+        "the pooled rate must clear the ceiling, or this fixture would be refused for the wrong "
+        "reason and would not test the per-stratum path at all"
+    )
+
+    assert figure5["curve_publishable"] is False
+    assert "stratum 'metabolomics-workbench'" in figure5["curve_not_publishable_reason"]
+
+
+def test_every_stratum_reports_its_own_independence_control(result: dict) -> None:
+    """The control travels with each stratum, so a reader can see how much of a curve is forced."""
+    for dataset in result["per_dataset"]:
+        for source, stratum in dataset["figure5"]["panel_b_precision_coverage"]["strata"].items():
+            assert "oracle_independence_control" in stratum, source
