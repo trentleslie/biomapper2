@@ -51,6 +51,11 @@ GUARDED_FILES = (
     "src/biomapper2/core/annotators/goslin_lipid.py",
     "studies/analysis/__init__.py",
     "studies/analysis/off_category_audit.py",
+    # Certificate axis. Added here rather than to a parallel guard: the standard is one standard,
+    # and an audit module that derives figures is exactly the kind of file whose docstring drifts
+    # into restating them.
+    "studies/analysis/certificate_state_audit.py",
+    "src/biomapper2/core/certificate.py",
     "studies/shared_gold_set/labeler.py",
     "tests/test_kestrel_hybrid_category.py",
     "tests/test_off_category_audit.py",

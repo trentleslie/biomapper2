@@ -36,8 +36,8 @@ What it measures
 
 3. **The sparsity control, and it is the point of this script.** ``structure_absent`` rows cannot
    be scored correct by ``structure_oracle`` *by construction* -- a node with no InChIKey can never
-   match a gold InChIKey -- so a 0% precision there is tautological and means nothing. The
-   ``identifier_oracle`` was added to escape that, and it does not: the control asks how many
+   match a gold InChIKey -- so whatever precision is reported there is tautological and means
+   nothing. The ``identifier_oracle`` was added to escape that, and it does not: the control asks how many
    ``structure_absent`` rows carry ANY of HMDB / KEGG / PubChem, i.e. how many rows the identifier
    oracle *could* have fired on. Field: ``per_dataset[].sparsity_control``, whose
    ``n_absent_oracle_could_fire`` is the number that decides whether any precision claim about the

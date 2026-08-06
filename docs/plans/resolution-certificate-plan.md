@@ -10,7 +10,8 @@ TSV; certificate is source of truth; this axis owns the refusal-reason follow-up
 precision gain for refusing it), **L26** (`independent_of_selection`; independence claimed only
 where it holds; curve stratified by source), **L27** (no precision delta across the `unavailable`
 boundary in Figure 5; abstention reported as a rate), **L28** (refusal-reason ships as a separate
-follow-up PR, still owned by this axis), **L29** (dispatch held until #47 merges), **L5** (D3
+follow-up PR, still owned by this axis), **L30** (refusal is NOT describable as observable in the
+released artifact until that follow-up lands), **L5** (D3
 tighten-only, separate PR), **L11** (category check is a validator on the committed node), **L13**,
 **L25** (srm1950 `gold_hmdb` quarantine only).
 
@@ -51,9 +52,14 @@ dependency, not a rebase hazard, and review found the collision is **same-hunk**
   this branch is currently force-added and re-stages cleanly only after the rebase.
 - #47 also edits `tests/test_resolver_source_weighting.py` and `tests/test_structure_resolver.py`.
 
-**Dispatch is HELD on this (L29).** #47 is open, mergeable and passed Greptile 5/5; merging it is
-Trent's action. On merge: rebase this branch onto it, re-stage the JSON artifact (it is currently
-force-added and becomes legitimate under #47's `.gitignore` entry), then dispatch.
+**SATISFIED — #47 merged 2026-08-06 as `b80f2874`; this branch is rebased onto it.** Verified on
+the merged code, not the anticipated shape: `connectivity_match` now takes the first-block **set
+intersection** via `inchikey_blocks`, which is `comparison_rule`'s seed semantics. Note this
+confirms item 16 is not hypothetical — the shared helper genuinely reaches MW/PubChem when the KG
+lists no key, so Tier A must not use it. The JSON artifact is now a normally tracked file under
+#47's `.gitignore` entry (no longer force-added), and `tests/test_no_measured_figures_in_prose.py`
+is present and extended to cover this axis's files. #46 and #48 are also on `dev`; zero open PRs on
+the fork.
 
 ---
 
@@ -246,9 +252,12 @@ force-added and becomes legitimate under #47's `.gitignore` entry), then dispatc
       operating point on a precision curve.
     - The precision-coverage curve is drawn **only within the verifiable population** — the rows an
       oracle can actually adjudicate — and is stratified by `independent_source` per L26.
-    - Two-panel form (abstention rate | precision-coverage) is the preferred presentation if the
-      floats axis returns panel budget; single-panel with the abstention rate stated in the caption
-      otherwise.
+    - **Two-panel form is CONFIRMED (panel budget granted by the manuscript axis).** Panel A:
+      abstention rate. Panel B: precision-coverage over the verifiable population, stratified by
+      `independent_source`. The reasoning is worth carrying, because it is the difference between
+      obeying L21 and making it legible: **an abstention-rate panel shows refusal happening without
+      implying the refused answers were wrong**, which a single precision-coverage panel tends to
+      blur. The floats axis is building to the same spec — keep them matched.
 30. One committed Tier-B sweep over the pinned suite, saved by default to a timestamped path with
     cache state and inputs pinned. The only network-touching step in the plan. The sweep artifact
     must be **committed and referenced by a fixed name** as a second audit input, or the Tier-B half
@@ -299,4 +308,8 @@ G1/G6 made evaluable · #47 reclassified as a hard functional dependency · line
 - **No refusal-reason plumbing (L28).** It ships as a separate follow-up PR, still owned by this
   axis. It is a per-annotator, `AssignedIDsDict`-contract-breaking change that cannot be designed
   correctly against an unmerged #47, and bundling it would delay the one thing that makes the
-  preprint's central claim true of the code.
+  preprint's central claim true of the code. **Consequence the manuscript axis must respect (L30):**
+  between #47 (now merged, shipping the `chosen_kg_id = None` overload) and that follow-up, a
+  consumer cannot distinguish an off-category refusal from a no-match — so refusal must not be
+  described as observable in the released artifact until the follow-up lands. Known and bounded,
+  not a surprise.
