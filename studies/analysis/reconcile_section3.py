@@ -143,12 +143,16 @@ def _has_drifted(entry: dict[str, Any], row: dict[str, Any]) -> bool:
         # denominator instead of against ``coverage.total`` -- two different quantities, so a
         # source-population claim could report agreement with a subsample size it never
         # matched. A claim naming a field this function cannot read is drift, not agreement:
-        # it must not pass silently.
+        # it must not pass silently -- on EVERY path, matching the scalar branch below, which
+        # already returns True when ``row["rate"]`` is absent.
         field = entry.get("field")
         if field == "coverage":
             coverage = row.get("coverage")
             if not isinstance(coverage, dict) or coverage.get("total") is None:
-                return False  # the field is absent; that is a rename, already reported as one
+                # NOT caught by the rename check: that only tests TOP-LEVEL key presence
+                # (``"coverage" in row``) and never a sub-key, nor present-but-None. So this is
+                # the last chance to notice, and it must report rather than assume agreement.
+                return True
             target_n: Any = coverage["total"]
             # Resolve the NUMERATOR from the same field too. Falling through to ``row["k"]`` here
             # would compare a coverage denominator against a scored-subsample numerator and report
@@ -156,7 +160,7 @@ def _has_drifted(entry: dict[str, Any], row: dict[str, Any]) -> bool:
             target_k: Any = coverage.get("n_predicted")
         elif field in (None, "k,n", "n", "k", "rate"):
             if row.get("n") is None:
-                return False  # the field is absent; that is a rename, already reported as one
+                return True  # present-but-None is invisible to the rename check; report it
             target_n = row["n"]
             target_k = row.get("k")
         else:
@@ -167,7 +171,10 @@ def _has_drifted(entry: dict[str, Any], row: dict[str, Any]) -> bool:
         if value.get("k") is None:
             return False
         if target_k is None:
-            return False  # the field is absent; that is a rename, already reported as one
+            # Introduced by the numerator fix: before it, a k-bearing coverage claim was compared
+            # against the wrong field; after it, an absent ``n_predicted`` compared it against
+            # NOTHING. Closing one silent pass must not open another.
+            return True
         return int(value["k"]) != int(target_k)
     if row.get("rate") is None:
         return True

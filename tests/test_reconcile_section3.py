@@ -235,6 +235,59 @@ class TestDriftIsSeparateFromRename:
         result = rs.reconcile(hybrid, artifact)
         assert result["drifted"], "a scored-row numerator under a coverage field must be reported"
 
+    @pytest.mark.parametrize(
+        "label,mutate",
+        [
+            ("total_key_removed", lambda cov: cov.pop("total", None)),
+            ("total_is_none", lambda cov: cov.update(total=None)),
+        ],
+    )
+    def test_an_unreadable_coverage_field_is_drift_not_agreement(self, claims, artifact, label, mutate):
+        """An unreadable field must never read as agreement.
+
+        The rename check is TOP-LEVEL only -- ``[k for k in field.split(",") if k not in row]`` --
+        so it cannot see a missing ``coverage`` sub-key and cannot see present-but-None. These
+        paths once returned False with a comment claiming the rename check had already reported
+        them. It had not: the whole reconciliation returned ok=True with nothing compared.
+        """
+        mutated = json.loads(json.dumps(artifact))
+        for row in mutated["rows"]:
+            if isinstance(row.get("coverage"), dict):
+                mutate(row["coverage"])
+        result = rs.reconcile(claims, mutated)
+        assert result["drifted"], f"{label}: an unreadable coverage field must be reported"
+        assert result["ok"] is False
+
+    @pytest.mark.parametrize("field_key", ["n", "k"])
+    def test_a_present_but_null_row_field_is_drift_not_agreement(self, claims, artifact, field_key):
+        """Present-but-None is invisible to the rename check, so the drift check must catch it."""
+        mutated = json.loads(json.dumps(artifact))
+        for row in mutated["rows"]:
+            row[field_key] = None
+        result = rs.reconcile(claims, mutated)
+        assert result["drifted"], f"row[{field_key!r}] = None must be reported"
+        assert result["ok"] is False
+
+    @pytest.mark.parametrize(
+        "coverage,expected",
+        [
+            ({"total": 1500}, True),  # n_predicted absent -> compared against nothing
+            ({"n_predicted": None, "total": 1500}, True),  # ... and present-but-None
+            ({"n_predicted": 1499, "total": 1500}, False),  # readable and correct
+        ],
+    )
+    def test_a_k_bearing_coverage_claim_needs_a_readable_numerator(self, coverage, expected):
+        """Closing one silent pass must not open another.
+
+        Before the numerator fix a k-bearing coverage claim was compared against ``row["k"]`` --
+        the wrong field, which is why it was fixed. After it, an absent ``coverage.n_predicted``
+        compared it against nothing at all. Unreachable from today's claim set (both k-bearing
+        coverage claims are blocked) and pinned before the Pham source unblocks them.
+        """
+        entry = {"manuscript_value": {"k": 1499, "n": 1500}, "field": "coverage"}
+        row = {"k": 255, "n": 1500, "coverage": coverage}
+        assert rs._has_drifted(entry, row) is expected
+
     def test_matching_a_claim_to_the_artifact_clears_its_drift(self, claims, artifact):
         """Constructed proof that drift tracks the values rather than always firing."""
         mutated = json.loads(json.dumps(artifact))
