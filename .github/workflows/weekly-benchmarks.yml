@@ -1,0 +1,92 @@
+name: Weekly Benchmarks
+
+# The external-benchmark suite makes live Kraken calls ($ / minutes), so it runs on a schedule and
+# on-demand ONLY — never per-PR. It drives every self-sourcing benchmark into one timestamped suite
+# dir and uploads the pinned manifest so the preprint's numbers are reproducible as code/Kraken move.
+#
+# Weekly rather than nightly: this is a REGRESSION CANARY over a slow-moving KG, not a provenance
+# source. Nightly spent ten runs to answer a question that changes on the order of weeks, and the
+# weekly cadence is what makes a broader dataset list affordable.
+#
+# DEPLOYMENT NOTE: GitHub only honours `schedule:` and `workflow_dispatch:` for the copy of this file
+# on the repository's DEFAULT branch. Merging it to a non-default branch (e.g. `dev`) installs the
+# file but it will never fire and no "Run workflow" button appears. This must reach the default
+# branch of whichever repo is meant to run it (org default = `main`).
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # 08:00 UTC Mondays (~00:00-01:00 PT), after the weekend, before the week
+  workflow_dispatch:
+    inputs:
+      kg_snapshot:
+        description: 'Operator-supplied KG snapshot label (recorded in the manifest pins)'
+        required: false
+        default: ''
+      chebi_release:
+        description: 'Operator-supplied ChEBI release label (recorded in the manifest pins)'
+        required: false
+        default: ''
+
+jobs:
+  suite:
+    runs-on: ubuntu-latest
+    env:
+      # Point the suite at the PUBLIC Kraken backend (not the internal lab host, not SPOKE). The
+      # public endpoint is https://kestrel.krakenkg.com/api — the base the app.krakenkg.com explorer
+      # itself calls. Verified 2026-08-04: it serves the same endpoints biomapper2 uses (text-search,
+      # vector-search, hybrid-search, canonicalize) and needs no credentials, so the weekly run
+      # runs with no secret configured. A repo secret still overrides, for a gated backend.
+      KESTREL_API_URL: ${{ secrets.KESTREL_API_URL || 'https://kestrel.krakenkg.com/api' }}
+      # Supplied only alongside an explicit backend URL, and deliberately NOT defaulted.
+      #
+      # This is defence in depth, not the primary control. utils.bulk_kestrel_request already
+      # withholds the key whenever the target host matches PUBLIC_KESTREL_API_URL, so the internal
+      # credential cannot reach public Kraken even if it is present in the environment. But this
+      # repo does have KESTREL_API_KEY set and no KESTREL_API_URL, so defaulting the two
+      # independently put the credential into the job environment — visible to every step — for a
+      # run that can never use it. Not injecting it is simpler than relying on one library
+      # function to keep withholding it.
+      #
+      # A missing key is not an error: get_kestrel_api_key() returns None and no header is sent,
+      # which is what the public endpoint wants. (The previous comment here claimed a placeholder
+      # was REQUIRED because the key was always sent. That stopped being true.)
+      KESTREL_API_KEY: ${{ secrets.KESTREL_API_URL && secrets.KESTREL_API_KEY || '' }}
+      # OVERRIDES ONLY — not the provenance mechanism. These come from github.event.inputs.*, which
+      # exist solely on workflow_dispatch; on the schedule: trigger they evaluate to empty. That is
+      # why provenance is no longer sourced from them: kg_provenance() reads the build from the
+      # graph's own /metagraph, so a cron run records a real snapshot plus a node/edge fingerprint
+      # with no operator discipline. A dispatch that supplies a label still wins, and the fetched
+      # metagraph is recorded alongside it either way.
+      KG_SNAPSHOT: ${{ github.event.inputs.kg_snapshot }}
+      CHEBI_RELEASE: ${{ github.event.inputs.chebi_release }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      # The official action, pinned to a commit SHA rather than piping astral.sh/uv/install.sh into
+      # sh or trusting the mutable `v7` tag: this job holds whatever KESTREL_* credentials are
+      # configured, and both an unpinned installer and a repointed tag would execute arbitrary
+      # replacement code beside them. The `version` input pins the uv BINARY; the SHA pins the action
+      # itself, and both are needed. SHA is astral-sh/setup-uv v7 (2026-03-16); bump deliberately.
+      # NOTE: .github/workflows/ci.yml still uses the curl|sh form and needs the same treatment.
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78  # v7
+        with:
+          version: '0.12.1'  # pinned: this run's numbers should be attributable to a known toolchain
+
+      - name: Install dependencies
+        run: uv sync --all-groups
+
+      - name: Run the benchmark suite against public Kraken
+        run: uv run python -m studies.external_benchmarks.run all --out "$GITHUB_WORKSPACE/benchmark_suite_out"
+
+      - name: Upload suite artifacts (manifest + per-dataset reports)
+        if: always()  # keep the partial suite + manifest even if a dataset failed
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-suite-${{ github.run_id }}
+          path: benchmark_suite_out/
+          if-no-files-found: warn
