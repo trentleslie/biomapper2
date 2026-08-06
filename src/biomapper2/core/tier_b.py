@@ -28,7 +28,7 @@ Guarded, throttled, and accounted
 ---------------------------------
 The fetchers are called through this wrapper rather than directly: the swallow-everything
 ``try/except`` in ``StructureResolver.inchikey_block`` does not cover them, so a ``raise_for_status``
-on a 503 would propagate into the mapping loop. Failures degrade to ``lookup_failed``, which is kept
+on a server error would propagate into the mapping loop. Failures degrade to ``lookup_failed``, which is kept
 distinct from ``unresolvable`` -- a throttled service is a property of the network, and collapsing
 the two would turn an operating curve into an artifact of the run. ``stats()`` reports the tier's own
 resolution rate, which must accompany every operating point: the endpoints here are EXACT-name

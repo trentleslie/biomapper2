@@ -67,7 +67,7 @@ def test_extract_mapping_result_carries_the_certificate_through(as_series: bool)
 
 
 def test_extract_mapping_result_survives_a_row_with_no_certificate() -> None:
-    """Older callers and error rows must not 500 on a missing field."""
+    """Older callers and error rows must not raise a server error on a missing field."""
     result = extract_mapping_result({"name": "glucose", "chosen_kg_id": None}, "glucose")
     assert result.resolution_certificate is None
 

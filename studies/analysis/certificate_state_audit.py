@@ -3,11 +3,15 @@
 Motivation
 ----------
 The preprint's central claim is that a name-input metabolite resolution carries a *structural
-certificate*, and that the resolver refuses when one cannot be issued. Today the resolver computes
-a structural verdict inside ``Resolver._choose_best_kg_id`` and discards it; the only thing that
-escapes is ``chosen_kg_id_review``, a flag string whose ``None`` is overloaded across four distinct
-states. This module measures what a certificate would be worth *before* any of it is built, so the
-design is chosen on evidence rather than on the appeal of the idea.
+certificate*, and that the resolver refuses when one cannot be issued. This module was written
+before the certificate existed, to measure what one would be worth so the design was chosen on
+evidence rather than on the appeal of the idea. It now reads the certificate the pipeline emits and
+falls back to deriving it, recording which of the two it used in ``per_dataset[].certificate_source``
+so a reader never has to guess.
+
+Back then the only thing that escaped resolution was ``chosen_kg_id_review``, a flag string with
+three values whose ``None`` covered several distinct situations at once — which is the overloading
+the certificate removes.
 
 It is deliberately a **zero-network, offline** derivation. Every figure comes from the committed
 ``*_d_mapped.tsv`` files of a pinned suite run. The chosen node's InChIKey is already present in
@@ -53,6 +57,28 @@ What it measures
    under both oracles, and crossed with the Tier-A state to show how much of each flag is simply
    the ``structure_absent`` population under another name. Fields:
    ``per_dataset[].review_flag_x_correctness`` and ``per_dataset[].review_flag_x_tier_a``.
+
+5. **The two panels behind the published figure.** Field: ``per_dataset[].figure5``.
+
+   - ``panel_a_abstention`` -- ``unavailable`` reported as a declared abstention RATE, a coverage
+     statistic. It carries no precision claim, by construction and by test.
+   - ``panel_b_precision_coverage`` -- precision-coverage drawn ONLY within the verifiable
+     population (rows an oracle can actually adjudicate), stratified by ``independent_source``.
+
+   The constraint that fixes this shape: a precision delta plotted *across* the ``unavailable``
+   boundary asserts that refusing those rows buys precision. That is the claim the sparsity control
+   in (3) exists to rule out, rendered as a line, in the one artifact that travels without its
+   caveat. Two panels rather than one because an abstention-rate panel shows the refusal happening
+   without implying the refused answers were wrong, which a single blended curve tends to blur.
+
+   ``curve_publishable`` is False whenever the input carries no certificate columns or Tier B's own
+   resolution rate is below ``TIER_B_MIN_RESOLUTION_RATE`` — the endpoints are exact-name lookups
+   while the annotator matches fuzzily, so a starved rate means the verdicts were computed on a
+   biased easy subset of query names.
+
+**No sweep is fired from here.** The single Tier-B sweep that supplies the second half of the figure
+is an operator-run, supervised step; this module only reads its committed artifact, referenced by the
+fixed name ``TIER_B_SWEEP_FILENAME``, and says plainly when there isn't one.
 
 Arms are never mixed. The metabolite arm (necs, refmet, srm1950, lmsd, metlinkr) is the headline;
 datasets shipping no structural gold are reported with a null oracle rather than dropped, so a
@@ -104,6 +130,31 @@ INCHIKEY_PREFIX = "INCHIKEY"
 CHOSEN_COL = "chosen_kg_id"
 REVIEW_COL = "chosen_kg_id_review"
 EQUIV_COL = "kg_equivalent_ids"
+
+# Columns the pipeline emits once the resolution certificate ships. The pinned baseline predates
+# them, so their absence is a supported input shape rather than an error -- the audit falls back to
+# deriving Tier A from kg_equivalent_ids and records which source it used.
+CERT_STATE_COL = "certificate_state"
+CERT_STRUCTURE_COL = "certificate_structure_status"
+CERT_SOURCE_COL = "certificate_independent_source"
+CERT_TIER_B_OUTCOME_COL = "certificate_tier_b_outcome"
+CERT_INDEPENDENT_COL = "certificate_independent_of_selection"
+
+# The Tier-B sweep artifact, referenced by a FIXED name rather than a timestamp. A caption cannot
+# cite a timestamped path, and the pinned suite carries no certificate columns, so without a fixed
+# committed name the Tier-B half of the figure has no reproducible provenance.
+TIER_B_SWEEP_FILENAME = "tier_b_sweep.json"
+
+# States that are refusals, not answers. A refusal is reported as a RATE in panel A and is excluded
+# from the precision-coverage curve in panel B -- see the module docstring for why crossing that
+# boundary with a precision delta is the forbidden claim.
+ABSTENTION_STATES = ("unavailable",)
+OUT_OF_SCOPE_STATES = ("not_applicable",)
+
+# Floor on Tier B's own resolution rate below which the curve is refused rather than published.
+# Mirrors ``biomapper2.config.TIER_B_MIN_RESOLUTION_RATE``; duplicated as a plain constant so this
+# study module stays importable without the package installed.
+TIER_B_MIN_RESOLUTION_RATE = 0.5
 
 # Label used in cross-tabs for a row the resolver did not flag. The whole point of the certificate
 # work is that this label is currently overloaded, so it is named explicitly rather than left NaN.
@@ -255,6 +306,97 @@ def _crosstab(frame: pd.DataFrame, index_col: str, value_col: str) -> dict[str, 
     return dict(sorted(out.items()))
 
 
+def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate: bool) -> dict[str, Any]:
+    """The numbers behind Figure 5's two panels. Rendering lives with the figure, not here.
+
+    Panel A is a declared abstention RATE. Panel B is precision-coverage over the verifiable
+    population only, stratified by independent source.
+
+    Two panels rather than one because the difference is what makes the constraint legible: an
+    abstention-rate panel shows refusal happening WITHOUT implying the refused answers were wrong,
+    which a single precision-coverage panel tends to blur. A precision delta plotted across the
+    abstention boundary would be the claim the sparsity control exists to rule out.
+    """
+    n_rows = int(len(df))
+    abstained = df[df["_state"].isin(ABSTENTION_STATES)]
+    out_of_scope = df[df["_state"].isin(OUT_OF_SCOPE_STATES)]
+
+    panel_a = {
+        "n_rows": n_rows,
+        "n_unavailable": int(len(abstained)),
+        "n_not_applicable": int(len(out_of_scope)),
+        "abstention_rate": round(len(abstained) / n_rows, 4) if n_rows else None,
+        "note": "declared abstention; a refused row is unverifiable, not wrong",
+    }
+
+    # The verifiable population: rows that are neither an abstention nor out of scope, AND that an
+    # oracle can actually adjudicate. Everything else is excluded from the curve by construction.
+    verifiable = df[
+        ~df["_state"].isin(ABSTENTION_STATES + OUT_OF_SCOPE_STATES) & df["_structure_oracle"].notna()
+    ]
+    strata: dict[str, Any] = {}
+    for source, sub in verifiable.groupby(verifiable["_independent_source"].fillna("none")):
+        points = []
+        for state, state_rows in sub.groupby("_state"):
+            points.append(
+                {
+                    "certificate_state": str(state),
+                    "n": int(len(state_rows)),
+                    "coverage": round(len(state_rows) / n_rows, 4) if n_rows else None,
+                    "precision": round(float(state_rows["_structure_oracle"].mean()), 4),
+                }
+            )
+        independence = sub["_independent_of_selection"].dropna().unique().tolist()
+        strata[str(source)] = {
+            "n_verifiable": int(len(sub)),
+            # None when the stratum mixes both, which is itself a reason not to average it.
+            "independent_of_selection": bool(independence[0]) if len(independence) == 1 else None,
+            "points": sorted(points, key=lambda p: p["certificate_state"]),
+        }
+
+    tier_b = _tier_b_stats(df)
+    publishable, reason = _curve_publishable(has_certificate, tier_b)
+    return {
+        "panel_a_abstention": panel_a,
+        "panel_b_precision_coverage": {"n_verifiable": int(len(verifiable)), "strata": strata},
+        "tier_b": tier_b,
+        "sparsity_control": sparsity_control,
+        "curve_publishable": publishable,
+        "curve_not_publishable_reason": reason,
+    }
+
+
+def _tier_b_stats(df: pd.DataFrame) -> dict[str, Any]:
+    """Tier B's own resolution rate, emitted beside every operating point.
+
+    Without it a reader cannot see that corroboration was computed on whichever names the exact-name
+    endpoints happened to know.
+    """
+    outcomes = Counter(str(v) for v in df["_tier_b_outcome"])
+    n_names = int(len(df))
+    n_resolved = int(outcomes.get("resolved", 0))
+    return {
+        "n_unique_query_names": n_names,
+        "n_tier_b_resolved": n_resolved,
+        "n_tier_b_lookup_failed": int(outcomes.get("lookup_failed", 0)),
+        "resolution_rate": round(n_resolved / n_names, 4) if n_names else None,
+        "outcomes": dict(sorted(outcomes.items())),
+        "min_resolution_rate_floor": TIER_B_MIN_RESOLUTION_RATE,
+    }
+
+
+def _curve_publishable(has_certificate: bool, tier_b: dict[str, Any]) -> tuple[bool, str | None]:
+    if not has_certificate:
+        return False, "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+    rate = tier_b["resolution_rate"]
+    if rate is None or rate < TIER_B_MIN_RESOLUTION_RATE:
+        return False, (
+            "Tier B resolution rate is below the stated floor, so corroboration was computed on a "
+            "biased easy subset of query names"
+        )
+    return True, None
+
+
 def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
     """Derive the full certificate-state picture for one dataset's mapped rows."""
     df = pd.read_csv(mapped_tsv, sep="\t", low_memory=False)
@@ -265,6 +407,25 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
 
     # Tier A: the self-certificate state, computable from what the pipeline already emits.
     df["_tier_a"] = df["_node_blocks"].map(lambda b: "structure_present" if b else "structure_absent")
+
+    # Prefer the certificate the pipeline committed; fall back to deriving it. The fallback is not a
+    # silent equivalence -- a derived Tier A knows nothing about Tier B, so the artifact records
+    # which source was used and the curve refuses to publish off the derivation.
+    has_certificate = CERT_STATE_COL in df.columns
+    if has_certificate:
+        df["_state"] = df[CERT_STATE_COL].fillna("unavailable").astype(str)
+        df["_independent_source"] = (
+            df[CERT_SOURCE_COL].astype("object").where(df[CERT_SOURCE_COL].notna(), None)
+            if CERT_SOURCE_COL in df.columns
+            else None
+        )
+        df["_tier_b_outcome"] = df[CERT_TIER_B_OUTCOME_COL].fillna("off") if CERT_TIER_B_OUTCOME_COL in df else "off"
+        df["_independent_of_selection"] = df[CERT_INDEPENDENT_COL] if CERT_INDEPENDENT_COL in df else None
+    else:
+        df["_state"] = df["_tier_a"].map({"structure_present": "uncorroborated", "structure_absent": "unavailable"})
+        df["_independent_source"] = None
+        df["_tier_b_outcome"] = "off"
+        df["_independent_of_selection"] = None
 
     gold_col = _gold_inchikey_column(df)
     df["_gold_block"] = df[gold_col].map(_first_block) if gold_col else None
@@ -284,10 +445,17 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
     absent_scorable = id_scorable[id_scorable["_tier_a"] == "structure_absent"]
     could_fire = absent_scorable["_equiv"].map(lambda e: any(e.get(p) for p in usable_id_columns.values()))
 
+    sparsity_control = {
+        "n_absent_identifier_scorable": int(len(absent_scorable)),
+        "n_absent_oracle_could_fire": int(could_fire.sum()) if len(absent_scorable) else 0,
+        "comparable_namespaces": sorted(GOLD_ID_COLUMNS.values()),
+    }
+
     tier_a_counts = Counter(df["_tier_a"])
     return {
         "dataset": name,
         "source_file": str(mapped_tsv),
+        "certificate_source": "certificate_columns" if has_certificate else "derived_from_kg_equivalent_ids",
         "n_rows_with_commit": int(len(df)),
         "gold_inchikey_column": gold_col,
         "quarantined_gold_columns": quarantined,
@@ -298,11 +466,9 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
         },
         "structure_oracle": _oracle_summary(df, "_structure_oracle", "_tier_a"),
         "identifier_oracle": _oracle_summary(df, "_identifier_oracle", "_tier_a"),
-        "sparsity_control": {
-            "n_absent_identifier_scorable": int(len(absent_scorable)),
-            "n_absent_oracle_could_fire": int(could_fire.sum()) if len(absent_scorable) else 0,
-            "comparable_namespaces": sorted(GOLD_ID_COLUMNS.values()),
-        },
+        "sparsity_control": sparsity_control,
+        "certificate_state_counts": dict(sorted(Counter(str(s) for s in df["_state"]).items())),
+        "figure5": _figure5(df, sparsity_control, has_certificate),
         "review_flag_x_tier_a": _crosstab(df, "_review", "_tier_a"),
         "review_flag_x_correctness": {
             "structure_oracle": _crosstab(df[df["_structure_oracle"].notna()], "_review", "_structure_oracle"),
@@ -339,8 +505,28 @@ def audit(suite_dir: Path) -> dict[str, Any]:
     return {
         "suite_dir": str(suite_dir),
         "provenance": _suite_provenance(suite_dir),
+        "tier_b_sweep": _tier_b_sweep_provenance(),
         "arm": "metabolite",
         "per_dataset": per_dataset,
+    }
+
+
+def _tier_b_sweep_provenance() -> dict[str, Any]:
+    """Locate the committed Tier-B sweep, or say plainly that there isn't one.
+
+    The sweep is the only network-touching step in this line of work and is fired by an operator,
+    never by a test or by this script. Until it lands, the Tier-B half of the figure has no
+    reproducible provenance and the curve is refused rather than drawn from whatever a local run
+    happened to produce.
+    """
+    path = DEFAULT_RESULTS_DIR / TIER_B_SWEEP_FILENAME
+    if not path.exists():
+        return {"path": str(path), "present": False, "note": "no committed Tier B sweep; Tier B half unavailable"}
+    data = json.loads(path.read_text())
+    return {
+        "path": str(path),
+        "present": True,
+        **{k: data.get(k) for k in ("suite_dir", "started_at", "git_sha", "cache_state", "tier_b") if k in data},
     }
 
 
@@ -354,7 +540,8 @@ def render_markdown(result: dict[str, Any]) -> str:
         "",
         "## Tier A certificate state and precision by state",
         "",
-        "| dataset | rows | structure_absent share | struct-oracle blended | struct-oracle present | id-oracle blended | id-oracle present | absent rows id-oracle COULD score |",
+        "| dataset | rows | structure_absent share | struct-oracle blended | struct-oracle present "
+        "| id-oracle blended | id-oracle present | absent rows id-oracle COULD score |",
         "|---|---|---|---|---|---|---|---|",
     ]
 
@@ -381,18 +568,69 @@ def render_markdown(result: dict[str, Any]) -> str:
         "`structure_absent` bucket: when it is zero, neither oracle can adjudicate that bucket and",
         "the honest certificate state is `unavailable`, not `contradicted`.",
         "",
+        "## Figure 5 — panel A: declared abstention rate",
+        "",
+        "Abstention is a coverage statistic, NOT an operating point. A precision delta plotted across",
+        "the `unavailable` boundary would assert that refusing those rows buys precision, which no",
+        "oracle here can support; this panel shows the refusal happening without implying the refused",
+        "answers were wrong.",
+        "",
+        "| dataset | rows | unavailable | not_applicable | abstention rate | certificate source |",
+        "|---|---|---|---|---|---|",
+    ]
+    for d in result["per_dataset"]:
+        panel_a = d["figure5"]["panel_a_abstention"]
+        lines.append(
+            "| {} | {} | {} | {} | {} | {} |".format(
+                d["dataset"],
+                panel_a["n_rows"],
+                panel_a["n_unavailable"],
+                panel_a["n_not_applicable"],
+                _fmt(panel_a["abstention_rate"]),
+                d["certificate_source"],
+            )
+        )
+
+    lines += [
+        "",
+        "## Figure 5 — panel B: precision-coverage within the verifiable population",
+        "",
+        "Stratified by independent source, never averaged: a verdict from the same registry that",
+        "supplied the committed node is not independent evidence of it.",
+        "",
+    ]
+    for d in result["per_dataset"]:
+        figure5 = d["figure5"]
+        lines += [
+            f"### {d['dataset']}",
+            "",
+            f"Publishable: `{figure5['curve_publishable']}`"
+            + (f" — {figure5['curve_not_publishable_reason']}" if figure5["curve_not_publishable_reason"] else ""),
+            "",
+            "```json",
+            json.dumps(
+                {"panel_b": figure5["panel_b_precision_coverage"], "tier_b": figure5["tier_b"]},
+                indent=2,
+            ),
+            "```",
+            "",
+        ]
+
+    lines += [
         "## Review flag vs Tier A state",
         "",
     ]
     for d in result["per_dataset"]:
-        lines += [f"### {d['dataset']}", "", f"```json", json.dumps(d["review_flag_x_tier_a"], indent=2), "```", ""]
+        lines += [f"### {d['dataset']}", "", "```json", json.dumps(d["review_flag_x_tier_a"], indent=2), "```", ""]
     return "\n".join(lines)
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--suite-dir", type=Path, default=DEFAULT_SUITE_DIR, help="pinned suite dir (read-only)")
-    parser.add_argument("--out", type=Path, default=None, help="JSON artifact path (override, not the only way to save)")
+    parser.add_argument(
+        "--out", type=Path, default=None, help="JSON artifact path (override, not the only way to save)"
+    )
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
