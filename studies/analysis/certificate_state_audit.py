@@ -143,6 +143,7 @@ CERT_STRUCTURE_COL = "certificate_structure_status"
 CERT_SOURCE_COL = "certificate_independent_source"
 CERT_TIER_B_OUTCOME_COL = "certificate_tier_b_outcome"
 CERT_INDEPENDENT_COL = "certificate_independent_of_selection"
+CERT_INDEP_BLOCK_COL = "certificate_independent_inchikey_block"
 
 # The Tier-B sweep artifact, referenced by a FIXED name rather than a timestamp. A caption cannot
 # cite a timestamped path, and the pinned suite carries no certificate columns, so without a fixed
@@ -159,6 +160,16 @@ OUT_OF_SCOPE_STATES = ("not_applicable",)
 # Mirrors ``biomapper2.config.TIER_B_MIN_RESOLUTION_RATE``; duplicated as a plain constant so this
 # study module stays importable without the package installed.
 TIER_B_MIN_RESOLUTION_RATE = 0.5
+
+# Ceiling on the agreement between Tier B's answer and the GOLD structural key, above which Panel B
+# is refused. This gates a different circularity than ``independent_of_selection`` (L26) does: that
+# field asks whether the corroborating source also SELECTED the committed node, whereas this asks
+# whether the corroborating source is the same measurement as the ORACLE the curve is scored
+# against. Both predicates -- ``corroborated`` and the structure oracle -- test membership in the
+# node's block set, so when Tier B's block equals the gold block they are the SAME predicate and
+# Panel B's precision separation is an identity rather than a measurement. Reachable on any arm
+# whose gold key and whose Tier B first hop are the same registry keyed on the same query name.
+ORACLE_INDEPENDENCE_MAX_AGREEMENT = 0.95
 
 # Label used in cross-tabs for a row the resolver did not flag. The whole point of the certificate
 # work is that this label is currently overloaded, so it is named explicitly rather than left NaN.
@@ -473,12 +484,14 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
         }
 
     tier_b = _tier_b_stats(df, verifiable)
-    publishable, reason = _curve_publishable(has_certificate, tier_b)
+    oracle_independence = _oracle_independence_control(verifiable)
+    publishable, reason = _curve_publishable(has_certificate, tier_b, oracle_independence)
     return {
         "panel_a_abstention": panel_a,
         "panel_b_precision_coverage": {"n_verifiable": int(len(verifiable)), "strata": strata},
         "tier_b": tier_b,
         "sparsity_control": sparsity_control,
+        "oracle_independence_control": oracle_independence,
         "curve_publishable": publishable,
         "curve_not_publishable_reason": reason,
     }
@@ -522,14 +535,71 @@ def _tier_b_stats(df: pd.DataFrame, verifiable: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def _curve_publishable(has_certificate: bool, tier_b: dict[str, Any]) -> tuple[bool, str | None]:
+def _oracle_independence_control(verifiable: pd.DataFrame) -> dict[str, Any]:
+    """Does Tier B's answer merely restate the GOLD key the curve is scored against?
+
+    Panel B plots precision -- ``gold_block in node_blocks`` -- against the certificate state, which
+    is ``corroborated`` iff ``tier_b_block in node_blocks``. Those are the same predicate whenever
+    ``tier_b_block == gold_block``, and then the curve's separation is an identity: precision is 1
+    inside ``corroborated`` and 0 inside ``contradicted`` by construction, on every row where Tier B
+    resolved and gold exists.
+
+    This is reachable, not hypothetical: an arm whose gold key comes from a registry keyed on the
+    query name, scored against a Tier B first hop that queries THAT registry with THAT name, gets a
+    very high agreement rate and a curve that looks like a perfect stratification.
+
+    Reported as ``agreement_rate`` over rows carrying BOTH keys. A rate near 1.0 means Panel B is
+    circular and the curve must be refused -- the same discipline as
+    ``n_absent_oracle_could_fire``, which exists because a precision that cannot fail is not a
+    measurement. ``None`` when no row carries both keys, which is itself not evidence of
+    independence and so does not clear the gate.
+    """
+    if "_independent_block" not in verifiable.columns:
+        return {"n_comparable": 0, "n_agreeing": None, "agreement_rate": None}
+    both = verifiable[verifiable["_independent_block"].notna() & verifiable["_gold_block"].notna()]
+    n = int(len(both))
+    if not n:
+        return {"n_comparable": 0, "n_agreeing": None, "agreement_rate": None}
+    agreeing = int((both["_independent_block"].astype(str) == both["_gold_block"].astype(str)).sum())
+    return {
+        "n_comparable": n,
+        "n_agreeing": agreeing,
+        "agreement_rate": round(agreeing / n, 4),
+        "max_agreement_ceiling": ORACLE_INDEPENDENCE_MAX_AGREEMENT,
+    }
+
+
+def _curve_publishable(
+    has_certificate: bool, tier_b: dict[str, Any], oracle_independence: dict[str, Any] | None = None
+) -> tuple[bool, str | None]:
     if not has_certificate:
         return False, "input carries no certificate_* columns; Tier A was derived, Tier B never ran"
+    # Distinguish "no verifiable population at all" from "Tier B reached too little of it". An arm
+    # shipping no gold structural key has ``resolution_rate is None`` for a reason that improving
+    # Tier B coverage cannot fix, and saying otherwise sends an operator after the wrong thing.
+    if not tier_b["n_verifiable"]:
+        return False, (
+            "arm has no verifiable population (it ships no gold structural key), so Panel B cannot "
+            "be drawn at all -- this is not a Tier B coverage problem"
+        )
     rate = tier_b["resolution_rate"]
     if rate is None or rate < TIER_B_MIN_RESOLUTION_RATE:
         return False, (
             "Tier B resolution rate is below the stated floor, so corroboration was computed on a "
             "biased easy subset of query names"
+        )
+    agreement = (oracle_independence or {}).get("agreement_rate")
+    if agreement is None:
+        return False, (
+            "no row carries both Tier B's block and a gold block, so the independence of the "
+            "corroborating source from the scoring oracle could not be measured; absence of the "
+            "comparison is not evidence of independence"
+        )
+    if agreement > ORACLE_INDEPENDENCE_MAX_AGREEMENT:
+        return False, (
+            "Tier B's answer agrees with the gold structural key above the stated ceiling, so "
+            "'corroborated' and 'scored correct' are the same predicate and Panel B's precision "
+            "separation would be an identity rather than a measurement"
         )
     return True, None
 
@@ -567,11 +637,19 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
         )
         df["_tier_b_outcome"] = df[CERT_TIER_B_OUTCOME_COL].fillna("off") if CERT_TIER_B_OUTCOME_COL in df else "off"
         df["_independent_of_selection"] = df[CERT_INDEPENDENT_COL] if CERT_INDEPENDENT_COL in df else None
+        # Tier B's own block, kept so the oracle-independence control can ask whether it merely
+        # restates the gold key the curve is scored against.
+        df["_independent_block"] = (
+            df[CERT_INDEP_BLOCK_COL].astype("object").where(df[CERT_INDEP_BLOCK_COL].notna(), None)
+            if CERT_INDEP_BLOCK_COL in df.columns
+            else None
+        )
     else:
         df["_state"] = df["_tier_a"].map({"structure_present": "uncorroborated", "structure_absent": "unavailable"})
         df["_independent_source"] = None
         df["_tier_b_outcome"] = "off"
         df["_independent_of_selection"] = None
+        df["_independent_block"] = None
 
     gold_col = _gold_inchikey_column(df)
     df["_gold_block"] = df[gold_col].map(_first_block) if gold_col else None
@@ -705,7 +783,7 @@ def render_markdown(result: dict[str, Any]) -> str:
         "",
         "## Tier A certificate state and precision by state",
         "",
-        "| dataset | rows | structure_absent share | struct-oracle blended | struct-oracle present "
+        "| dataset | committed rows | structure_absent share | struct-oracle blended | struct-oracle present "
         "| id-oracle blended | id-oracle present | absent rows id-oracle COULD score |",
         "|---|---|---|---|---|---|---|---|",
     ]
@@ -740,7 +818,7 @@ def render_markdown(result: dict[str, Any]) -> str:
         "oracle here can support; this panel shows the refusal happening without implying the refused",
         "answers were wrong.",
         "",
-        "| dataset | rows | unavailable | not_applicable | abstention rate | certificate source |",
+        "| dataset | all rows | unavailable | not_applicable | abstention rate | certificate source |",
         "|---|---|---|---|---|---|",
     ]
     for d in result["per_dataset"]:

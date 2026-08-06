@@ -93,10 +93,16 @@ class Mapper:
         committed_sources = {
             annotator for annotator, kg_ids in assigned.items() if chosen_kg_id is not None and chosen_kg_id in kg_ids
         }
-        tier_b_result = self.tier_b.lookup(query_name) if self.tier_b is not None else None
+        # Only look up rows the certificate can actually be about. Calling first and discarding
+        # later would spend a throttled external round trip on every gene symbol and every
+        # uncommitted row, and would put those names into the resolution-rate denominator that
+        # must accompany each operating point -- diluting it with names never in scope.
+        is_small_molecule = self.resolver.is_small_molecule(category)
+        in_population = is_small_molecule and chosen_kg_id is not None
+        tier_b_result = self.tier_b.lookup(query_name) if (self.tier_b is not None and in_population) else None
         return issue(
             chosen_kg_id=chosen_kg_id,
-            is_small_molecule=self.resolver.is_small_molecule(category),
+            is_small_molecule=is_small_molecule,
             kg_equivalent_ids=kg_equivalent_ids,
             equivalent_ids_lookup_ok=equivalent_ids_lookup_ok,
             selection_conflict=selection_conflict,

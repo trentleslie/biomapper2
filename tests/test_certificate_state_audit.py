@@ -298,3 +298,97 @@ def test_the_tier_b_gate_uses_the_same_population_as_the_curve_it_gates(result: 
         if tier_b["n_verifiable"]:
             expected = round(tier_b["n_tier_b_resolved_verifiable"] / tier_b["n_verifiable"], 4)
             assert tier_b["resolution_rate"] == expected
+
+
+# ----------------------------------------------------------------------------------------------
+# The oracle-independence control: is Tier B a second measurement, or a restatement of the gold?
+# ----------------------------------------------------------------------------------------------
+#
+# Panel B plots ``gold_block in node_blocks`` against a state that is ``corroborated`` iff
+# ``tier_b_block in node_blocks``. Those are the SAME predicate whenever Tier B's block equals the
+# gold block, and then the curve's separation is an identity -- precision 1 inside ``corroborated``
+# and 0 inside ``contradicted``, by construction, on every row where Tier B resolved and gold
+# exists. This is a different circularity than ``independent_of_selection`` (L26) guards: that field
+# asks whether the corroborating source also SELECTED the node; this asks whether it is the same
+# measurement as the ORACLE.
+
+
+def _circular_arm(tmp_path: Path) -> Path:
+    """A fixture arm where Tier B's answer IS the gold key on every resolved row."""
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    gold_block = frame["gold_inchikey"].map(lambda v: str(v).split("-")[0] if isinstance(v, str) else None)
+    resolved = frame["certificate_tier_b_outcome"] == "resolved"
+    frame["certificate_independent_inchikey_block"] = gold_block.where(resolved, "")
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+    return tmp_path
+
+
+def test_curve_is_refused_when_tier_b_merely_restates_the_gold_key(tmp_path: Path) -> None:
+    """POSITIVE control for the oracle-independence gate: it must be able to say no.
+
+    Without this the gate is untested in the direction that matters. The failure it prevents is not
+    a crash -- it is a Figure 5 that looks like a perfect stratification and is an identity, which
+    is the L21 defect ("a precision that is tautological and means nothing") arriving through a
+    channel L21's own sparsity control does not watch.
+    """
+    figure5 = audit(_circular_arm(tmp_path))["per_dataset"][0]["figure5"]
+    control = figure5["oracle_independence_control"]
+
+    assert control["agreement_rate"] == 1.0, "the constructed arm is fully circular by design"
+    assert control["n_comparable"] > 0
+    assert figure5["curve_publishable"] is False
+    assert "same predicate" in figure5["curve_not_publishable_reason"]
+
+
+def test_curve_survives_when_tier_b_disagrees_with_the_gold_key(result: dict) -> None:
+    """NEGATIVE control: a genuinely independent Tier B must NOT be refused.
+
+    Paired with the test above so the gate is pinned in both directions -- a gate that refuses
+    everything suppresses Figure 5 just as effectively as one that refuses nothing publishes a
+    false one, and the operator cannot tell either apart from a correct verdict.
+    """
+    figure5 = result["per_dataset"][0]["figure5"]
+    control = figure5["oracle_independence_control"]
+
+    assert control["n_comparable"] > 0, "the control must actually have compared something"
+    assert control["agreement_rate"] < control["max_agreement_ceiling"]
+    assert figure5["curve_publishable"] is True
+
+
+def test_an_unmeasurable_overlap_does_not_count_as_independence(tmp_path: Path) -> None:
+    """A missing comparison is not evidence of independence, so it must not clear the gate.
+
+    The pinned baseline predates the certificate columns entirely. Treating "no rows carried both
+    keys" as a pass would let exactly the arms we cannot check publish their curve.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame["certificate_independent_inchikey_block"] = ""
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+
+    figure5 = audit(tmp_path)["per_dataset"][0]["figure5"]
+    assert figure5["oracle_independence_control"]["agreement_rate"] is None
+    assert figure5["curve_publishable"] is False
+    assert "not evidence of independence" in figure5["curve_not_publishable_reason"]
+
+
+def test_an_arm_with_no_gold_key_is_told_the_real_reason(tmp_path: Path) -> None:
+    """A gold-free arm cannot have a Panel B at all; saying "Tier B coverage" misdirects.
+
+    ``resolution_rate`` is None both when Tier B reached nothing and when there is no verifiable
+    population to reach. Five of the nine arms in the pinned suite are the second case, and an
+    operator reading the coverage reason would try to improve Tier B on an arm where no amount of
+    coverage can ever produce a curve.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame["gold_inchikey"] = ""
+    arm = tmp_path / "necs"
+    arm.mkdir(parents=True, exist_ok=True)
+    frame.to_csv(arm / "necs_MAPPED_chebi_d_mapped.tsv", sep="\t", index=False)
+
+    figure5 = audit(tmp_path)["per_dataset"][0]["figure5"]
+    assert figure5["curve_publishable"] is False
+    assert "no verifiable population" in figure5["curve_not_publishable_reason"]

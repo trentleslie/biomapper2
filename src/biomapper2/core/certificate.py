@@ -309,9 +309,20 @@ def issue(
                 CertificateState.CORROBORATED if tier_b.inchikey_block in set(blocks) else CertificateState.CONTRADICTED
             )
 
-    independent_source = tier_b.source if tier_b and tier_b.outcome is not TierBOutcome.OFF else None
-    independent_block = tier_b.inchikey_block if tier_b else None
-    independence = _independent_of_selection(tier_b, committed_node_sources) if tier_b else None
+    # Independent-evidence fields belong ONLY to rows inside the certificate's population. A row
+    # that is out of scope, or that committed no node, has nothing for this evidence to be about:
+    # attaching a structural block to a gene declares the entity outside the population and then
+    # describes its structure in the same breath, and ``_independent_of_selection`` is vacuously
+    # True with no committed node -- asserting independence from a selection that never happened.
+    in_population = structure_status is not StructureStatus.NOT_APPLICABLE
+    if tier_b is None or not in_population:
+        independent_source = None
+        independent_block = None
+        independence = None
+    else:
+        independent_source = tier_b.source if tier_b.outcome is not TierBOutcome.OFF else None
+        independent_block = tier_b.inchikey_block
+        independence = _independent_of_selection(tier_b, committed_node_sources)
 
     certificate = ResolutionCertificate(
         state=state,
