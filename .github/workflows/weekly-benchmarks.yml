@@ -33,12 +33,23 @@ jobs:
       # Point the suite at the PUBLIC Kraken backend (not the internal lab host, not SPOKE). The
       # public endpoint is https://kestrel.krakenkg.com/api — the base the app.krakenkg.com explorer
       # itself calls. Verified 2026-08-04: it serves the same endpoints biomapper2 uses (text-search,
-      # vector-search, hybrid-search, canonicalize) and does NOT enforce X-API-Key, so the weekly run
+      # vector-search, hybrid-search, canonicalize) and needs no credentials, so the weekly run
       # runs with no secret configured. A repo secret still overrides, for a gated backend.
       KESTREL_API_URL: ${{ secrets.KESTREL_API_URL || 'https://kestrel.krakenkg.com/api' }}
-      # biomapper2 always sends X-API-Key (utils.bulk_kestrel_request auth_required defaults True),
-      # so a placeholder is needed even though public Kraken ignores it.
-      KESTREL_API_KEY: ${{ secrets.KESTREL_API_KEY || 'public-kraken-no-auth' }}
+      # Supplied only alongside an explicit backend URL, and deliberately NOT defaulted.
+      #
+      # This is defence in depth, not the primary control. utils.bulk_kestrel_request already
+      # withholds the key whenever the target host matches PUBLIC_KESTREL_API_URL, so the internal
+      # credential cannot reach public Kraken even if it is present in the environment. But this
+      # repo does have KESTREL_API_KEY set and no KESTREL_API_URL, so defaulting the two
+      # independently put the credential into the job environment — visible to every step — for a
+      # run that can never use it. Not injecting it is simpler than relying on one library
+      # function to keep withholding it.
+      #
+      # A missing key is not an error: get_kestrel_api_key() returns None and no header is sent,
+      # which is what the public endpoint wants. (The previous comment here claimed a placeholder
+      # was REQUIRED because the key was always sent. That stopped being true.)
+      KESTREL_API_KEY: ${{ secrets.KESTREL_API_URL && secrets.KESTREL_API_KEY || '' }}
       # OVERRIDES ONLY — not the provenance mechanism. These come from github.event.inputs.*, which
       # exist solely on workflow_dispatch; on the schedule: trigger they evaluate to empty. That is
       # why provenance is no longer sourced from them: kg_provenance() reads the build from the
