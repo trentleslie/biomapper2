@@ -105,8 +105,14 @@ class StructureResolver:
         return inchikey.split("-")[0] if inchikey else None
 
     def _fetch_mw_inchikey(self, name: str) -> str | None:
-        """Metabolomics Workbench: GET /rest/refmet/name/{name}/inchi_key."""
-        url = f"{MW_INCHIKEY_URL}/{quote(name)}/inchi_key"
+        """Metabolomics Workbench: GET /rest/refmet/name/{name}/inchi_key.
+
+        ``safe=""`` is load-bearing. ``quote`` defaults to ``safe="/"``, which leaves a slash in the
+        name UNESCAPED -- so a lipid-shorthand name splits into extra URL path segments, the request
+        404s, and the caller records the name as structurally unresolvable rather than as a failed
+        lookup. Share of affected names, per arm: artifact field ``slash_bearing_name_rate``.
+        """
+        url = f"{MW_INCHIKEY_URL}/{quote(name, safe='')}/inchi_key"
         resp = self._session.get(url, timeout=STRUCTURE_LOOKUP_TIMEOUT_S)
         resp.raise_for_status()
         data = resp.json()
@@ -116,8 +122,12 @@ class StructureResolver:
         return None
 
     def _fetch_pubchem_inchikey(self, name: str) -> str | None:
-        """PubChem: GET /rest/pug/compound/name/{name}/property/InChIKey/JSON."""
-        url = f"{PUBCHEM_INCHIKEY_URL}/{quote(name)}/property/InChIKey/JSON"
+        """PubChem: GET /rest/pug/compound/name/{name}/property/InChIKey/JSON.
+
+        ``safe=""`` for the same reason as :meth:`_fetch_mw_inchikey` -- an unescaped slash injects
+        URL path segments and turns a resolvable name into a silent 404.
+        """
+        url = f"{PUBCHEM_INCHIKEY_URL}/{quote(name, safe='')}/property/InChIKey/JSON"
         resp = self._session.get(url, timeout=STRUCTURE_LOOKUP_TIMEOUT_S)
         resp.raise_for_status()
         data = resp.json()

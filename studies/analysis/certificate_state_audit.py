@@ -335,9 +335,7 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
 
     # The verifiable population: rows that are neither an abstention nor out of scope, AND that an
     # oracle can actually adjudicate. Everything else is excluded from the curve by construction.
-    verifiable = df[
-        ~df["_state"].isin(ABSTENTION_STATES + OUT_OF_SCOPE_STATES) & df["_structure_oracle"].notna()
-    ]
+    verifiable = df[~df["_state"].isin(ABSTENTION_STATES + OUT_OF_SCOPE_STATES) & df["_structure_oracle"].notna()]
     strata: dict[str, Any] = {}
     for source, sub in verifiable.groupby(verifiable["_independent_source"].fillna("none")):
         points = []
@@ -408,8 +406,17 @@ def _curve_publishable(has_certificate: bool, tier_b: dict[str, Any]) -> tuple[b
 
 def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
     """Derive the full certificate-state picture for one dataset's mapped rows."""
+    # Read EVERY row. The committed-only filter is applied later and ONLY to oracle scoring.
+    #
+    # Filtering here instead would under-report abstention, because the certificate labels a
+    # no-commit row ``unavailable`` -- an uncommitted row IS an abstention, and dropping it before
+    # ``panel_a_abstention`` and ``certificate_state_counts`` removes exactly the rows those two
+    # figures exist to count. This is latent on the current suite only because every arm in it is
+    # fully committed; PR #47's category validator moves a large population to unmapped, so the next
+    # suite WILL carry uncommitted rows and Panel A of Figure 5 would silently under-report. Pinned
+    # by ``tests/test_certificate_state_audit.py::test_abstention_counts_uncommitted_rows``.
     df = pd.read_csv(mapped_tsv, sep="\t", low_memory=False)
-    df = df[df[CHOSEN_COL].notna()].copy()
+    committed_mask = df[CHOSEN_COL].notna()
 
     df["_equiv"] = df[EQUIV_COL].map(_parse_mapping) if EQUIV_COL in df.columns else [{}] * len(df)
     df["_node_blocks"] = df["_equiv"].map(_node_blocks)
@@ -446,11 +453,15 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
     df["_identifier_oracle"] = [_identifier_oracle(row, row["_equiv"], usable_id_columns) for _, row in df.iterrows()]
     df["_review"] = df[REVIEW_COL].fillna(NO_FLAG) if REVIEW_COL in df.columns else NO_FLAG
 
+    # ``scored`` is the committed subset: an uncommitted row has no answer to adjudicate, so it
+    # cannot enter a precision denominator. ``df`` stays whole for the state/abstention accounting.
+    scored = df[committed_mask].copy()
+
     # The sparsity control. Restricted to rows the identifier oracle would score at all, then asks
     # how many structure_absent rows carry a comparable namespace. When that count is zero the
     # identifier oracle never had a chance to fire on the absent bucket, and NO precision claim
     # about that bucket is admissible under either oracle.
-    id_scorable = df[df["_identifier_oracle"].notna()]
+    id_scorable = scored[scored["_identifier_oracle"].notna()]
     absent_scorable = id_scorable[id_scorable["_tier_a"] == "structure_absent"]
     could_fire = absent_scorable["_equiv"].map(lambda e: any(e.get(p) for p in usable_id_columns.values()))
 
@@ -460,28 +471,36 @@ def audit_dataset(name: str, mapped_tsv: Path) -> dict[str, Any]:
         "comparable_namespaces": sorted(GOLD_ID_COLUMNS.values()),
     }
 
-    tier_a_counts = Counter(df["_tier_a"])
+    # Tier A describes the committed answer, so its denominator is the committed subset. The
+    # certificate-state counts and Panel A use the FULL frame -- see the read comment above.
+    tier_a_counts = Counter(scored["_tier_a"])
     return {
         "dataset": name,
         "source_file": str(mapped_tsv),
         "certificate_source": "certificate_columns" if has_certificate else "derived_from_kg_equivalent_ids",
-        "n_rows_with_commit": int(len(df)),
+        "n_rows": int(len(df)),
+        "n_rows_with_commit": int(len(scored)),
+        "n_rows_uncommitted": int(len(df) - len(scored)),
         "gold_inchikey_column": gold_col,
         "quarantined_gold_columns": quarantined,
         "identifier_oracle_columns": sorted(usable_id_columns),
         "tier_a": {
             "counts": dict(sorted(tier_a_counts.items())),
-            "structure_absent_share": round(tier_a_counts["structure_absent"] / len(df), 4) if len(df) else None,
+            "structure_absent_share": (
+                round(tier_a_counts["structure_absent"] / len(scored), 4) if len(scored) else None
+            ),
         },
-        "structure_oracle": _oracle_summary(df, "_structure_oracle", "_tier_a"),
-        "identifier_oracle": _oracle_summary(df, "_identifier_oracle", "_tier_a"),
+        "structure_oracle": _oracle_summary(scored, "_structure_oracle", "_tier_a"),
+        "identifier_oracle": _oracle_summary(scored, "_identifier_oracle", "_tier_a"),
         "sparsity_control": sparsity_control,
         "certificate_state_counts": dict(sorted(Counter(str(s) for s in df["_state"]).items())),
         "figure5": _figure5(df, sparsity_control, has_certificate),
-        "review_flag_x_tier_a": _crosstab(df, "_review", "_tier_a"),
+        "review_flag_x_tier_a": _crosstab(scored, "_review", "_tier_a"),
         "review_flag_x_correctness": {
-            "structure_oracle": _crosstab(df[df["_structure_oracle"].notna()], "_review", "_structure_oracle"),
-            "identifier_oracle": _crosstab(df[df["_identifier_oracle"].notna()], "_review", "_identifier_oracle"),
+            "structure_oracle": _crosstab(scored[scored["_structure_oracle"].notna()], "_review", "_structure_oracle"),
+            "identifier_oracle": _crosstab(
+                scored[scored["_identifier_oracle"].notna()], "_review", "_identifier_oracle"
+            ),
         },
     }
 
@@ -514,21 +533,26 @@ def audit(suite_dir: Path) -> dict[str, Any]:
     return {
         "suite_dir": str(suite_dir),
         "provenance": _suite_provenance(suite_dir),
-        "tier_b_sweep": _tier_b_sweep_provenance(),
+        "tier_b_sweep": _tier_b_sweep_provenance(suite_dir),
         "arm": "metabolite",
         "per_dataset": per_dataset,
     }
 
 
-def _tier_b_sweep_provenance() -> dict[str, Any]:
-    """Locate the committed Tier-B sweep, or say plainly that there isn't one.
+def _tier_b_sweep_provenance(suite_dir: Path) -> dict[str, Any]:
+    """Locate the committed Tier-B sweep INSIDE the suite, or say plainly that there isn't one.
+
+    Resolved relative to ``suite_dir`` rather than to the repo's results directory, so ``audit()``
+    stays a pure function of its single input. Reading a repo path here would mean a sweep landing
+    later silently changes the artifact for an unchanged suite -- breaking both the bit-identical
+    contract and test hermeticity.
 
     The sweep is the only network-touching step in this line of work and is fired by an operator,
     never by a test or by this script. Until it lands, the Tier-B half of the figure has no
     reproducible provenance and the curve is refused rather than drawn from whatever a local run
     happened to produce.
     """
-    path = DEFAULT_RESULTS_DIR / TIER_B_SWEEP_FILENAME
+    path = suite_dir / TIER_B_SWEEP_FILENAME
     if not path.exists():
         return {"path": str(path), "present": False, "note": "no committed Tier B sweep; Tier B half unavailable"}
     data = json.loads(path.read_text())

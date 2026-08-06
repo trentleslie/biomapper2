@@ -298,3 +298,22 @@ def test_the_guard_does_not_treat_dict_values_as_docstrings(tmp_path: Path) -> N
     sample = tmp_path / "sample.py"
     sample.write_text('row = {"gold_chebi": "1234", "gold_pubchem": "999999"}\n')
     assert _violations(sample) == []
+
+
+def test_known_unguarded_trees_are_real_and_still_unguarded() -> None:
+    """``UNGUARDED_TREES_KNOWN`` documents a gap; unenforced, it is just a comment.
+
+    Two ways the entry rots, both caught here: the tree stops existing (stale entry naming a
+    directory nobody has), or the tree quietly becomes guarded (the entry now hides nothing and its
+    presence misleads a reviewer into thinking coverage is narrower than it is). Either way the list
+    must be edited rather than left to drift -- the same failure mode as the include-list this
+    rewrite replaced.
+    """
+    for tree in UNGUARDED_TREES_KNOWN:
+        path = REPO_ROOT / tree
+        assert path.is_dir(), f"UNGUARDED_TREES_KNOWN names {tree!r}, which does not exist"
+        assert tree not in GUARDED_TREES, (
+            f"{tree!r} is listed as a known gap but is now guarded; delete the entry so the "
+            "documented gap matches reality"
+        )
+        assert any(path.rglob("*.py")), f"UNGUARDED_TREES_KNOWN names {tree!r}, which holds no Python"

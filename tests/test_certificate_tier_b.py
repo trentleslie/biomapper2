@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from biomapper2.config import MW_INCHIKEY_URL
 from biomapper2.core.certificate import TierBOutcome
 from biomapper2.core.tier_b import IndependentStructureLookup
 
@@ -147,9 +148,7 @@ def test_throttle_paces_outbound_calls() -> None:
     now = [0.0]
     slept: list[float] = []
     session = _FakeSession({"refmet/name": _FakeResponse({"inchi_key": MW_KEY})})
-    lookup = IndependentStructureLookup(
-        session=session, sleep=slept.append, clock=lambda: now[0], min_interval_s=0.2
-    )
+    lookup = IndependentStructureLookup(session=session, sleep=slept.append, clock=lambda: now[0], min_interval_s=0.2)
     lookup.lookup("a")
     lookup.lookup("b")
     assert slept and slept[0] > 0
@@ -200,3 +199,43 @@ def test_lookup_never_touches_kestrel(name: str) -> None:
     lookup, session = _lookup({"refmet/name": _FakeResponse({"inchi_key": MW_KEY})})
     lookup.lookup(name)
     assert all("kestrel" not in url and "krakenkg" not in url for url in session.calls)
+
+
+def test_a_slash_in_the_query_name_is_percent_encoded() -> None:
+    """A slash must not survive into the URL as a path separator.
+
+    ``quote`` defaults to ``safe="/"``. With that default a lipid-shorthand name splits the URL into
+    extra path segments, the registry 404s, and the row is recorded ``unresolvable`` -- a statement
+    about the NAME -- when nothing about the name was ever actually asked. That biases the
+    ``resolution_rate`` the figure's admissibility gate reads, in the direction that makes the gate
+    look satisfied.
+
+    The same default was live in shipped code at ``StructureResolver._fetch_mw_inchikey`` and
+    ``_fetch_pubchem_inchikey``; ``test_structure_resolver_name_fallback_encodes_slashes`` pins those.
+    """
+    name = "GlcCer 16:0;O3/10:0"
+    lookup, session = _lookup({"refmet/name": _FakeResponse({"inchi_key": MW_KEY})})
+    lookup.lookup(name)
+
+    assert session.calls, "no request was made"
+    url = session.calls[0]
+    assert "%2F" in url, f"the slash was not encoded: {url}"
+    # Exactly the service's own path separators remain: nothing the name contributed.
+    assert url.count("/") == MW_INCHIKEY_URL.count("/") + 2, f"the name injected a path segment: {url}"
+
+
+def test_structure_resolver_name_fallback_encodes_slashes() -> None:
+    """The same bug pre-existed on the shipped name-fallback rung, which fires whenever the KG
+    carries no InChIKey -- so a slash-bearing name 404s and is recorded structurally unresolvable."""
+    from biomapper2.core.structure_resolver import StructureResolver
+
+    resolver = StructureResolver.__new__(StructureResolver)
+    session = _FakeSession({"refmet/name": _FakeResponse({"inchi_key": MW_KEY})})
+    resolver._session = session
+
+    resolver._fetch_mw_inchikey("GlcCer 16:0;O3/10:0")
+    assert "%2F" in session.calls[0], f"the slash was not encoded: {session.calls[0]}"
+
+    session.responses = {"pug/compound/name": _FakeResponse({"PropertyTable": {"Properties": [{"InChIKey": MW_KEY}]}})}
+    resolver._fetch_pubchem_inchikey("PC 16:0/18:1")
+    assert "%2F" in session.calls[1], f"the slash was not encoded: {session.calls[1]}"

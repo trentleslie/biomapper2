@@ -190,3 +190,48 @@ def test_markdown_renders_without_restating_a_figure_in_prose(result: dict) -> N
     text = render_markdown(result)
     assert "Abstention" in text
     assert "unavailable" in text
+
+
+def test_abstention_counts_uncommitted_rows(tmp_path: Path) -> None:
+    """A no-commit row IS an abstention and must reach Panel A.
+
+    The committed-only filter used to run before the state accounting, so uncommitted rows were
+    dropped before ``panel_a_abstention`` and ``certificate_state_counts`` ever saw them -- Panel A
+    under-reported abstention by exactly the population it exists to count. That was latent only
+    because every arm in the current suite is fully committed; PR #47's category validator moves a
+    large population to unmapped, so the next suite will not have that property.
+
+    Precision is a separate question: an uncommitted row has no answer to adjudicate, so it must NOT
+    enter the Panel B denominator. This pins both halves at once.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    uncommitted = frame.head(3).copy()
+    uncommitted["chosen_kg_id"] = None
+    uncommitted["kg_equivalent_ids"] = "{}"
+    uncommitted["certificate_state"] = "unavailable"
+    uncommitted["certificate_structure_status"] = "structure_absent"
+    mixed = pd.concat([frame, uncommitted], ignore_index=True)
+
+    arm = tmp_path / "necs"
+    arm.mkdir()
+    path = arm / "necs_MAPPED_chebi_d_mapped.tsv"
+    mixed.to_csv(path, sep="\t", index=False)
+
+    audited = audit_dataset("necs", path)
+
+    assert audited["n_rows"] == len(mixed)
+    assert audited["n_rows_with_commit"] == len(frame)
+    assert audited["n_rows_uncommitted"] == 3
+
+    panel_a = audited["figure5"]["panel_a_abstention"]
+    # The denominator is every row, and all three uncommitted rows are counted as abstentions.
+    assert panel_a["n_rows"] == len(mixed)
+    baseline = audit_dataset("necs", FIXTURE_TSV)["figure5"]["panel_a_abstention"]
+    assert panel_a["n_unavailable"] == baseline["n_unavailable"] + 3
+    assert panel_a["abstention_rate"] > baseline["abstention_rate"]
+
+    # ...and none of them leaked into the precision side.
+    assert audited["figure5"]["panel_b_precision_coverage"]["n_verifiable"] == (
+        audit_dataset("necs", FIXTURE_TSV)["figure5"]["panel_b_precision_coverage"]["n_verifiable"]
+    )
+    assert audited["certificate_state_counts"]["unavailable"] >= 3

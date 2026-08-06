@@ -5,7 +5,7 @@
     "kg_stable_during_run": true
   },
   "tier_b_sweep": {
-    "path": "/home/trentleslie/worktrees/bm2-certificate/studies/analysis/results/tier_b_sweep.json",
+    "path": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/tier_b_sweep.json",
     "present": false,
     "note": "no committed Tier B sweep; Tier B half unavailable"
   },
@@ -15,7 +15,9 @@
       "dataset": "necs",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/necs/necs-metabolon_CHEBI_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1488,
       "n_rows_with_commit": 1488,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": "gold_inchikey",
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [
@@ -173,7 +175,9 @@
       "dataset": "refmet",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/refmet/refmet_CHEBI_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1500,
       "n_rows_with_commit": 1500,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": "gold_inchikey",
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [
@@ -330,7 +334,9 @@
       "dataset": "srm1950",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/srm1950/srm1950_CHEBI_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1058,
       "n_rows_with_commit": 1058,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": "gold_inchikey",
       "quarantined_gold_columns": {
         "gold_hmdb": "strictly monotonic and fully unique across rows -- a row index, not an accession"
@@ -465,7 +471,9 @@
       "dataset": "lmsd",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/lmsd/lmsd_CHEBI_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1499,
       "n_rows_with_commit": 1499,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": "gold_inchikey",
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [
@@ -624,7 +632,9 @@
       "dataset": "metlinkr:CHEBI",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_CHEBI_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
       "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": null,
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [
@@ -719,7 +729,9 @@
       "dataset": "metlinkr:HMDB",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_HMDB_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
       "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": null,
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [
@@ -814,7 +826,9 @@
       "dataset": "metlinkr:KEGG",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_KEGG_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
       "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": null,
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [
@@ -909,7 +923,9 @@
       "dataset": "metlinkr:PUBCHEM",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_PUBCHEM_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
       "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": null,
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [
@@ -1004,7 +1020,9 @@
       "dataset": "metlinkr:REFMET",
       "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_REFMET_MAPPED_d_mapped.tsv",
       "certificate_source": "derived_from_kg_equivalent_ids",
+      "n_rows": 1412,
       "n_rows_with_commit": 1412,
+      "n_rows_uncommitted": 0,
       "gold_inchikey_column": null,
       "quarantined_gold_columns": {},
       "identifier_oracle_columns": [

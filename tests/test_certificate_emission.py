@@ -21,7 +21,7 @@ from typing import Any
 import pandas as pd
 import pytest
 
-from biomapper2.core.certificate import CertificateState, StructureStatus
+from biomapper2.core.certificate import SELECTION_CONFLICT_VALUES, CertificateState, StructureStatus
 from biomapper2.mapper import Mapper
 
 SMALL_MOLECULE = "biolink:SmallMolecule"
@@ -259,7 +259,7 @@ def test_mapped_tsv_carries_flat_scalar_certificate_columns(tmp_path) -> None:
     assert "resolution_certificate" not in frame.columns
 
 
-@pytest.mark.parametrize("flag", [None, "divergent_refmet", "conflict_no_structure"])
+@pytest.mark.parametrize("flag", SELECTION_CONFLICT_VALUES)
 def test_legacy_review_flag_survives_derivation_on_both_paths(flag: str | None, tmp_path) -> None:
     """G2. All three values the resolver actually emits, unchanged for one release."""
     entity_result = _entity_path(

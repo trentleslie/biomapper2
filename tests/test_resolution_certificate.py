@@ -20,6 +20,7 @@ import pytest
 
 from biomapper2.core.certificate import (
     COMPARISON_RULE_FIRST_BLOCK_SET_INTERSECTION,
+    SELECTION_CONFLICT_VALUES,
     CertificateState,
     ResolutionCertificate,
     StructureStatus,
@@ -181,7 +182,7 @@ def test_tier_b_cannot_promote_a_row_that_has_no_tier_a_structure(
 @pytest.mark.parametrize("lookup_ok", [True, False])
 @pytest.mark.parametrize("chosen", [NODE, None])
 @pytest.mark.parametrize("equiv", [BLOCKS, {"HMDB": ["HMDB0001879"]}, {}])
-@pytest.mark.parametrize("selection_conflict", [None, "divergent_refmet", "conflict_no_structure"])
+@pytest.mark.parametrize("selection_conflict", SELECTION_CONFLICT_VALUES)
 @pytest.mark.parametrize(
     "tier_b",
     [
@@ -286,7 +287,7 @@ def test_independence_is_unclaimed_when_tier_b_is_off() -> None:
 # --------------------------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("flag", [None, "divergent_refmet", "conflict_no_structure"])
+@pytest.mark.parametrize("flag", SELECTION_CONFLICT_VALUES)
 def test_legacy_review_flag_is_derived_identically(flag: str | None) -> None:
     """Three values, not four. The brainstorm's 'four states' counts situations collapsed into
     ``None``, which is a different thing -- ``resolver.py`` returns exactly these three."""

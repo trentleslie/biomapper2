@@ -98,6 +98,11 @@ class IndependentStructureLookup:
         self._backoff_base_s = backoff_base_s
         self._last_call_at: float | None = None
         self._memo: dict[str, TierBResult] = {}
+        # Unique names attempted, and those whose LAST attempt failed. Tracked separately from the
+        # memo because a failed lookup is intentionally not cached (see ``lookup``), so the memo is
+        # no longer a complete record of what was attempted.
+        self._seen: set[str] = set()
+        self._failed: set[str] = set()
 
     # -- public API ---------------------------------------------------------------------------
 
@@ -115,7 +120,17 @@ class IndependentStructureLookup:
                 cache_state="process_memo",
             )
 
+        self._seen.add(name)
         result = self._resolve(name)
+        if result.outcome is TierBOutcome.LOOKUP_FAILED:
+            # Deliberately NOT memoized. ``lookup_failed`` is a statement about the network at one
+            # instant -- a throttle, a timeout, a 5xx -- not about the name. Caching it would pin a
+            # transient outage onto every later occurrence of that name for the rest of the process,
+            # so a brief rate-limit would masquerade as a durable property of the data and depress
+            # the resolution rate the figure's admissibility gate reads. Counted, not cached.
+            self._failed.add(name)
+            return result
+        self._failed.discard(name)
         self._memo[name] = result
         return result
 
@@ -126,9 +141,9 @@ class IndependentStructureLookup:
         would flatter the rate. The published curve must be refused below the floor in
         ``config.TIER_B_MIN_RESOLUTION_RATE``; that check lives with the figure, not here.
         """
-        n_unique = len(self._memo)
+        n_unique = len(self._seen)
         n_resolved = sum(1 for r in self._memo.values() if r.outcome is TierBOutcome.RESOLVED)
-        n_failed = sum(1 for r in self._memo.values() if r.outcome is TierBOutcome.LOOKUP_FAILED)
+        n_failed = len(self._failed)
         return {
             "n_unique_query_names": n_unique,
             "n_tier_b_resolved": n_resolved,
@@ -158,7 +173,15 @@ class IndependentStructureLookup:
         return _UNRESOLVED
 
     def _fetch_mw(self, name: str) -> tuple[str | None, str | None, bool]:
-        """Metabolomics Workbench exact-name endpoint: GET /rest/refmet/name/{name}/inchi_key."""
+        """Metabolomics Workbench exact-name endpoint: GET /rest/refmet/name/{name}/inchi_key.
+
+        ``quote(..., safe="")`` is load-bearing, and the default is actively wrong here. ``quote``
+        defaults to ``safe="/"``, so a slash inside a query name survives encoding and becomes an
+        extra URL path segment; the request 404s and the row is recorded ``unresolvable`` rather
+        than ``lookup_failed``. That biases the very ``resolution_rate`` that ``_curve_publishable``
+        gates Figure 5 on, in the direction that makes the gate look satisfied. Lipid shorthand is
+        full of slashes. Share of affected names, per arm: artifact field ``slash_bearing_name_rate``.
+        """
 
         def parse(payload: Any) -> str | None:
             if isinstance(payload, dict):
@@ -166,7 +189,7 @@ class IndependentStructureLookup:
                 return key if key and key != "-" else None
             return None
 
-        return self._get(f"{MW_INCHIKEY_URL}/{quote(name)}/inchi_key", parse)
+        return self._get(f"{MW_INCHIKEY_URL}/{quote(name, safe='')}/inchi_key", parse)
 
     def _fetch_pubchem(self, name: str) -> tuple[str | None, str | None, bool]:
         """PubChem PUG-REST: GET /rest/pug/compound/name/{name}/property/InChIKey/JSON."""
@@ -175,7 +198,7 @@ class IndependentStructureLookup:
             props = (payload or {}).get("PropertyTable", {}).get("Properties", []) if isinstance(payload, dict) else []
             return props[0].get("InChIKey") if props else None
 
-        return self._get(f"{PUBCHEM_INCHIKEY_URL}/{quote(name)}/property/InChIKey/JSON", parse)
+        return self._get(f"{PUBCHEM_INCHIKEY_URL}/{quote(name, safe='')}/property/InChIKey/JSON", parse)
 
     def _get(self, url: str, parse: Callable[[Any], str | None]) -> tuple[str | None, str | None, bool]:
         """One guarded, throttled, retried GET.

@@ -71,8 +71,9 @@ KESTREL_CACHE_EXPIRY = "1h"
 STRUCTURE_CACHE_STORE = "structure_http"
 STRUCTURE_CACHE_EXPIRY = "never"
 
-# The legacy review-flag values the resolver actually returns. Three, not four.
-SELECTION_CONFLICT_VALUES = ("divergent_refmet", "conflict_no_structure")
+# The legacy review-flag values the resolver actually returns. The field is tri-valued: these two
+# plus None. Exported so the derivation test enumerates the real domain instead of a hand-copied one.
+SELECTION_CONFLICT_VALUES = ("divergent_refmet", "conflict_no_structure", None)
 
 
 class CertificateState(str, Enum):
@@ -201,8 +202,9 @@ def node_blocks_from_equivalent_ids(kg_equivalent_ids: Mapping[str, Any] | None)
     Reads ``kg_equivalent_ids[INCHIKEY]`` only. Do not "simplify" this to
     ``StructureResolver.inchikey_blocks``: that helper reaches MW/PubChem by name when the KG lists
     no key, which is the entire ``structure_absent`` population, and would shift the state
-    distribution with no test going red. ``tests/test_certificate_zero_io.py`` (G6) asserts on the
-    StructureResolver and Kestrel sessions specifically for that reason.
+    distribution with no test going red.
+    ``tests/test_certificate_emission.py::test_tier_a_makes_no_structure_lookup`` (G6) asserts on
+    the StructureResolver fetchers specifically for that reason.
     """
     if not kg_equivalent_ids:
         return []
