@@ -1,0 +1,691 @@
+{
+  "suite_dir": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z",
+  "provenance": {
+    "suite_manifest": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/suite_manifest.json",
+    "kg_stable_during_run": true
+  },
+  "arm": "metabolite",
+  "per_dataset": [
+    {
+      "dataset": "necs",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/necs/necs-metabolon_CHEBI_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1488,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 433,
+          "structure_present": 1055
+        },
+        "structure_absent_share": 0.291
+      },
+      "structure_oracle": {
+        "n_scored": 796,
+        "blended_precision": 0.8354,
+        "by_state": {
+          "structure_absent": {
+            "n": 78,
+            "share_of_scored": 0.098,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 718,
+            "share_of_scored": 0.902,
+            "n_correct": 665,
+            "precision": 0.9262
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 981,
+        "blended_precision": 0.7666,
+        "by_state": {
+          "structure_absent": {
+            "n": 135,
+            "share_of_scored": 0.1376,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 846,
+            "share_of_scored": 0.8624,
+            "n_correct": 752,
+            "precision": 0.8889
+          }
+        }
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 135,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 75,
+          "structure_present": 9
+        },
+        "divergent_refmet": {
+          "structure_absent": 13,
+          "structure_present": 117
+        },
+        "no_flag": {
+          "structure_absent": 345,
+          "structure_present": 929
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 45
+          },
+          "divergent_refmet": {
+            "False": 11,
+            "True": 74
+          },
+          "no_flag": {
+            "False": 75,
+            "True": 591
+          }
+        },
+        "identifier_oracle": {
+          "conflict_no_structure": {
+            "False": 60
+          },
+          "divergent_refmet": {
+            "False": 30,
+            "True": 85
+          },
+          "no_flag": {
+            "False": 139,
+            "True": 667
+          }
+        }
+      }
+    },
+    {
+      "dataset": "refmet",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/refmet/refmet_CHEBI_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1500,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 104,
+          "structure_present": 1396
+        },
+        "structure_absent_share": 0.0693
+      },
+      "structure_oracle": {
+        "n_scored": 1500,
+        "blended_precision": 0.8933,
+        "by_state": {
+          "structure_absent": {
+            "n": 104,
+            "share_of_scored": 0.0693,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 1396,
+            "share_of_scored": 0.9307,
+            "n_correct": 1340,
+            "precision": 0.9599
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 809,
+        "blended_precision": 0.5834,
+        "by_state": {
+          "structure_absent": {
+            "n": 78,
+            "share_of_scored": 0.0964,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 731,
+            "share_of_scored": 0.9036,
+            "n_correct": 472,
+            "precision": 0.6457
+          }
+        }
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 78,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 85
+        },
+        "divergent_refmet": {
+          "structure_absent": 1,
+          "structure_present": 34
+        },
+        "no_flag": {
+          "structure_absent": 18,
+          "structure_present": 1362
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 85
+          },
+          "divergent_refmet": {
+            "False": 1,
+            "True": 34
+          },
+          "no_flag": {
+            "False": 74,
+            "True": 1306
+          }
+        },
+        "identifier_oracle": {
+          "conflict_no_structure": {
+            "False": 69
+          },
+          "divergent_refmet": {
+            "False": 12,
+            "True": 10
+          },
+          "no_flag": {
+            "False": 256,
+            "True": 462
+          }
+        }
+      }
+    },
+    {
+      "dataset": "srm1950",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/srm1950/srm1950_CHEBI_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1058,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {
+        "gold_hmdb": "strictly monotonic and fully unique across rows -- a row index, not an accession"
+      },
+      "identifier_oracle_columns": [
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 520,
+          "structure_present": 538
+        },
+        "structure_absent_share": 0.4915
+      },
+      "structure_oracle": {
+        "n_scored": 983,
+        "blended_precision": 0.4273,
+        "by_state": {
+          "structure_absent": {
+            "n": 487,
+            "share_of_scored": 0.4954,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 496,
+            "share_of_scored": 0.5046,
+            "n_correct": 420,
+            "precision": 0.8468
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 235,
+          "structure_present": 27
+        },
+        "divergent_refmet": {
+          "structure_absent": 17,
+          "structure_present": 46
+        },
+        "no_flag": {
+          "structure_absent": 268,
+          "structure_present": 465
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 232,
+            "True": 7
+          },
+          "divergent_refmet": {
+            "False": 24,
+            "True": 35
+          },
+          "no_flag": {
+            "False": 307,
+            "True": 378
+          }
+        },
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "lmsd",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/lmsd/lmsd_CHEBI_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1499,
+      "gold_inchikey_column": "gold_inchikey",
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 980,
+          "structure_present": 519
+        },
+        "structure_absent_share": 0.6538
+      },
+      "structure_oracle": {
+        "n_scored": 1499,
+        "blended_precision": 0.1434,
+        "by_state": {
+          "structure_absent": {
+            "n": 980,
+            "share_of_scored": 0.6538,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 519,
+            "share_of_scored": 0.3462,
+            "n_correct": 215,
+            "precision": 0.4143
+          }
+        }
+      },
+      "identifier_oracle": {
+        "n_scored": 217,
+        "blended_precision": 0.2166,
+        "by_state": {
+          "structure_absent": {
+            "n": 137,
+            "share_of_scored": 0.6313,
+            "n_correct": 0,
+            "precision": 0.0
+          },
+          "structure_present": {
+            "n": 80,
+            "share_of_scored": 0.3687,
+            "n_correct": 47,
+            "precision": 0.5875
+          }
+        }
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 137,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 32,
+          "structure_present": 20
+        },
+        "divergent_refmet": {
+          "structure_absent": 30,
+          "structure_present": 7
+        },
+        "no_flag": {
+          "structure_absent": 918,
+          "structure_present": 492
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {
+          "conflict_no_structure": {
+            "False": 51,
+            "True": 1
+          },
+          "divergent_refmet": {
+            "False": 34,
+            "True": 3
+          },
+          "no_flag": {
+            "False": 1199,
+            "True": 211
+          }
+        },
+        "identifier_oracle": {
+          "conflict_no_structure": {
+            "False": 8
+          },
+          "divergent_refmet": {
+            "False": 5,
+            "True": 2
+          },
+          "no_flag": {
+            "False": 157,
+            "True": 45
+          }
+        }
+      }
+    },
+    {
+      "dataset": "metlinkr:CHEBI",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_CHEBI_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1412,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:HMDB",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_HMDB_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1412,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:KEGG",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_KEGG_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1412,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:PUBCHEM",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_PUBCHEM_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1412,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    },
+    {
+      "dataset": "metlinkr:REFMET",
+      "source_file": "/home/trentleslie/benchmark-runs/suite_20260805T033340Z/metlinkr/metlinkr-comets_REFMET_MAPPED_d_mapped.tsv",
+      "n_rows_with_commit": 1412,
+      "gold_inchikey_column": null,
+      "quarantined_gold_columns": {},
+      "identifier_oracle_columns": [
+        "gold_hmdb",
+        "gold_kegg",
+        "gold_pubchem"
+      ],
+      "tier_a": {
+        "counts": {
+          "structure_absent": 448,
+          "structure_present": 964
+        },
+        "structure_absent_share": 0.3173
+      },
+      "structure_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "identifier_oracle": {
+        "n_scored": 0,
+        "blended_precision": null,
+        "by_state": {}
+      },
+      "sparsity_control": {
+        "n_absent_identifier_scorable": 0,
+        "n_absent_oracle_could_fire": 0,
+        "comparable_namespaces": [
+          "HMDB",
+          "KEGG.COMPOUND",
+          "PUBCHEM.COMPOUND"
+        ]
+      },
+      "review_flag_x_tier_a": {
+        "conflict_no_structure": {
+          "structure_absent": 64,
+          "structure_present": 8
+        },
+        "divergent_refmet": {
+          "structure_absent": 4,
+          "structure_present": 108
+        },
+        "no_flag": {
+          "structure_absent": 380,
+          "structure_present": 848
+        }
+      },
+      "review_flag_x_correctness": {
+        "structure_oracle": {},
+        "identifier_oracle": {}
+      }
+    }
+  ]
+}
