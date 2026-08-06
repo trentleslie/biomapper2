@@ -304,9 +304,7 @@ def issue(
         state = CertificateState.UNCORROBORATED
         if tier_b is not None and tier_b.outcome is TierBOutcome.RESOLVED and tier_b.inchikey_block:
             state = (
-                CertificateState.CORROBORATED
-                if tier_b.inchikey_block in set(blocks)
-                else CertificateState.CONTRADICTED
+                CertificateState.CORROBORATED if tier_b.inchikey_block in set(blocks) else CertificateState.CONTRADICTED
             )
 
     independent_source = tier_b.source if tier_b and tier_b.outcome is not TierBOutcome.OFF else None

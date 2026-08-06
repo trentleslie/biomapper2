@@ -88,8 +88,8 @@ class IndependentStructureLookup:
         max_attempts: int = TIER_B_MAX_ATTEMPTS,
         backoff_base_s: float = TIER_B_BACKOFF_BASE_S,
     ) -> None:
-        self._session = session if session is not None else requests_cache.CachedSession(
-            str(CACHE_DIR / STRUCTURE_CACHE_STORE)
+        self._session = (
+            session if session is not None else requests_cache.CachedSession(str(CACHE_DIR / STRUCTURE_CACHE_STORE))
         )
         self._sleep = sleep
         self._clock = clock

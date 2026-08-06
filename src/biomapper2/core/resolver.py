@@ -157,6 +157,15 @@ class Resolver:
             return refmet_node, "divergent_refmet"  # different molecule -> RefMet, FLAG
         return majority, "conflict_no_structure"  # no InChIKey -> majority, FLAG
 
+    def is_small_molecule(self, category: str | None) -> bool:
+        """Public form of the small-molecule subtree test, for callers outside resolution.
+
+        The resolution certificate needs it to tell a metabolite row (where "the graph asserts no
+        structure" is a meaningful refusal) from a gene row (where it is a category error). Kept as
+        a thin delegate so both answers come from one definition.
+        """
+        return bool(category) and self._is_small_molecule(str(category))
+
     def _is_small_molecule(self, category: str) -> bool:
         """True when the category is ``biolink:SmallMolecule`` or a descendant.
 
