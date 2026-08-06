@@ -341,6 +341,35 @@ class TestDriftIsSeparateFromRename:
         assert rs._has_drifted({"manuscript_value": {"k": row["k"]}, "field": "k,n"}, row) is False
         assert rs._has_drifted({"manuscript_value": {"n": row["n"]}, "field": "k,n"}, row) is False
 
+    @pytest.mark.parametrize("replacement", [None, 4, "1495"])
+    def test_a_coverage_field_that_is_not_a_mapping_is_drift(self, replacement):
+        """`coverage` present but not a dict must not fall through to the scored-row denominator.
+
+        Asserted directly on ``_has_drifted`` with a row whose scored ``n`` EQUALS the claim's, so
+        falling through produces a false AGREEMENT rather than an incidental disagreement. Driving
+        this through ``reconcile()`` over the committed set does not work: another claim drifts for
+        an unrelated reason and the assertion passes with the guard reverted -- which is exactly the
+        decorative-control shape this round is about.
+
+        Reachable now, not hypothetical: a scorer shipping no coverage block yields
+        ``coverage: None``, several committed rows are already in that state, and the rename check
+        cannot see it because ``"coverage" in row`` is True for a present-but-None value.
+        """
+        row = {"k": 1495, "n": 1495, "coverage": replacement}
+        entry = {"manuscript_value": {"k": None, "n": 1495}, "field": "coverage"}
+        assert rs._has_drifted(entry, row) is True
+
+    def test_a_readable_coverage_field_still_agrees(self):
+        """Guards the guard above: the unusable-coverage rule must not make coverage unusable."""
+        row = {"k": 1495, "n": 1495, "coverage": {"total": 1495, "n_predicted": 1488}}
+        entry = {"manuscript_value": {"k": None, "n": 1495}, "field": "coverage"}
+        assert rs._has_drifted(entry, row) is False
+
+    def test_a_claim_asserting_no_number_is_not_backed(self, artifact):
+        """A claim naming a row and a field but asserting nothing cannot be verified."""
+        row = next(r for r in artifact["rows"] if r.get("k") is not None)
+        assert rs._has_drifted({"manuscript_value": None, "field": "k,n"}, row) is True
+
     def test_matching_a_claim_to_the_artifact_clears_its_drift(self, claims, artifact):
         """Constructed proof that drift tracks the values rather than always firing."""
         mutated = json.loads(json.dumps(artifact))

@@ -564,21 +564,57 @@ class TestArtifactIsSavedByDefault:
         header, rows = self._paired_table(text)
         score_i, exact_i = header.index("score p"), header.index("exact p")
 
-        expected = {}
+        expected, expected_diff = {}, {}
         for row in report["rows"]:
             diff = row.get("paired_difference")
             if isinstance(diff, dict) and not diff.get("unavailable") and diff.get("mcnemar", {}).get("p_score"):
                 expected[f"`{row['row_id']}`"] = diff["mcnemar"]
+                expected_diff[f"`{row['row_id']}`"] = diff
 
         checked = 0
         for cells in rows:
             mcnemar = expected.get(cells[0])
             if not mcnemar:
                 continue
+            diff = expected_diff[cells[0]]
+            # Do NOT strip the marker blind: rstrip() made the assertion structurally incapable of
+            # seeing whether the ⚠ was there, so deleting the warning -- or inverting it so it
+            # fired on every COHERENT row -- left the suite green.
+            excludes_zero = diff["lower"] > 0 or diff["upper"] < 0
+            expect_warn = excludes_zero != (mcnemar["p_score"] < 0.05)
+            assert ("⚠" in cells[score_i]) is expect_warn, f"coherence marker on {cells[0]}"
             assert cells[score_i].rstrip(" ⚠") == f"{mcnemar['p_score']:.3g}", f"score p cell for {cells[0]}"
             assert cells[exact_i] == f"{mcnemar['p_exact']:.3g}", f"exact p cell for {cells[0]}"
             checked += 1
         assert checked, "no paired row was actually checked; the assertion loop is vacuous"
+
+    def test_the_coherence_marker_lands_in_the_score_p_cell_of_the_offending_row(self, fixture_suite):
+        """POSITIVE control for the ⚠, restored.
+
+        Round 2 added this pin; round 4 found it grepped the whole document and DELETED it rather
+        than tightening it, leaving the warning with no control at all. Two mutations then passed
+        silently: removing the marker entirely, and inverting the condition so it fired on every
+        coherent row -- which would flag most of the published table as self-contradictory.
+        """
+        report = cr.build_report(fixture_suite)
+        paired = next(
+            row
+            for row in report["rows"]
+            if isinstance(row.get("paired_difference"), dict)
+            and row["paired_difference"].get("mcnemar", {}).get("p_score") is not None
+            and not row["paired_difference"].get("unavailable")
+        )
+        diff = paired["paired_difference"]
+        diff["lower"], diff["upper"] = 0.02, 0.18  # excludes zero
+        diff["mcnemar"]["p_score"] = 0.9  # ... while its own p says no difference
+
+        header, rows = self._paired_table(cr.render_markdown(report))
+        score_i = header.index("score p")
+        offending = [cells for cells in rows if cells[0] == f"`{paired['row_id']}`"]
+        assert offending, "the mutated row must still render"
+        assert "⚠" in offending[0][score_i], "the marker must be in the score-p cell of THAT row"
+        others = [c for c in rows if c[0] != f"`{paired['row_id']}`" and "⚠" in c[score_i]]
+        assert not others, f"coherent rows must not be flagged: {[c[0] for c in others]}"
 
     def test_the_two_p_columns_are_not_interchangeable_on_this_fixture(self, fixture_suite):
         """Guards the guard: the value assertion above is only meaningful if the two p's differ.
@@ -703,3 +739,51 @@ class TestNoDependentPairIsPresentedAsIndependent:
         text = cr.write_report(fixture_suite)["md"].read_text()
         for role in {row["independence_role"] for row in cr.build_report(fixture_suite)["rows"]}:
             assert role in text
+
+
+class TestDerivedRelationsAreActuallyChecked:
+    """A derived row asserts an ARITHMETIC relation in prose; nothing compared the numbers.
+
+    `derived_aggregate` says it is "the exact sum of the target-namespace sub-rows below, which
+    partition this population"; `derived_union` says it is a union over overlapping subsets of the
+    same symbols. `derived_from` names the children and the existing test asserts only that those
+    ids resolve. Halving an aggregate numerator, or setting a union below its own subsets (a union
+    smaller than a member -- arithmetically impossible), both left the suite green while the row
+    kept shipping its assertion. The assertion string is what a reader trusts.
+    """
+
+    @staticmethod
+    def _by_id(report):
+        return {row["row_id"]: row for row in report["rows"]}
+
+    def test_a_derived_aggregate_equals_the_sum_of_the_rows_it_names(self, fixture_suite):
+        report = cr.build_report(fixture_suite)
+        rows = self._by_id(report)
+        checked = 0
+        for row in report["rows"]:
+            if row.get("independence_role") != "derived_aggregate" or not row.get("derived_from"):
+                continue
+            children = [rows[c] for c in row["derived_from"] if c in rows]
+            if len(children) != len(row["derived_from"]):
+                continue
+            assert row["k"] == sum(c["k"] for c in children), f"{row['row_id']}: k is not the partition sum"
+            assert row["n"] == sum(c["n"] for c in children), f"{row['row_id']}: n is not the partition sum"
+            checked += 1
+        assert checked, "no derived_aggregate row was checked; the loop is vacuous"
+
+    def test_a_derived_union_is_bounded_by_the_subsets_it_names(self, fixture_suite):
+        report = cr.build_report(fixture_suite)
+        rows = self._by_id(report)
+        checked = 0
+        for row in report["rows"]:
+            if row.get("independence_role") != "derived_union" or not row.get("derived_from"):
+                continue
+            children = [rows[c] for c in row["derived_from"] if c in rows]
+            if not children:
+                continue
+            # A union over overlapping subsets: at least as large as its largest member, never
+            # larger than their sum. Both bounds are arithmetic facts about a union.
+            assert row["k"] >= max(c["k"] for c in children), f"{row['row_id']}: union below a member"
+            assert row["k"] <= sum(c["k"] for c in children), f"{row['row_id']}: union above the sum"
+            checked += 1
+        assert checked, "no derived_union row was checked; the loop is vacuous"
