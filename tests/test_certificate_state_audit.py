@@ -255,6 +255,43 @@ def test_the_enum_check_covers_the_other_certificate_columns(column: str, tmp_pa
         audit_dataset("necs", _arm_from(frame, tmp_path))
 
 
+def test_a_non_boolean_independence_value_is_refused_rather_than_coerced(tmp_path: Path) -> None:
+    """``certificate_independent_of_selection`` is a nullable BOOLEAN, so the enum sweep never saw it.
+
+    Raised by Greptile on PR #52 and worse than reported: the damage is not confined to the bad cell.
+    ``read_csv`` types this column ``bool`` only while every cell parses as one, so ONE unparseable
+    value retypes the whole column to strings -- and ``bool("False")`` is ``True``, which moves every
+    dependent row at once into the ``indep=true`` stratum. The circularity gate only refuses a
+    stratum whose independence is not ``True``, so a single junk cell disarms it for the entire arm.
+    """
+    frame = pd.read_csv(FIXTURE_TSV, sep="\t")
+    frame["certificate_independent_of_selection"] = frame["certificate_independent_of_selection"].astype("object")
+    frame.loc[frame.index[0], "certificate_independent_of_selection"] = "unknown"
+    with pytest.raises(ValueError, match="non-boolean"):
+        audit_dataset("necs", _arm_from(frame, tmp_path))
+
+
+def test_a_dependent_stratum_survives_the_column_being_read_as_strings(tmp_path: Path) -> None:
+    """The other half of the same defect: parsing must be right when the column IS strings.
+
+    A trailing space on one cell is enough to retype the column -- a merge artifact, not an exotic
+    input -- and every remaining cell then arrives as ``'True'``/``'False'``. Under truthiness the
+    dependent stratum simply disappears into ``indep=true`` and the arm publishes; the assertion that
+    it is still refused, for the L26 reason, is what makes this a control rather than a smoke test.
+    """
+    arm = _dependent_stratum_arm(tmp_path) / "necs" / "necs_MAPPED_chebi_d_mapped.tsv"
+    arm.write_text(arm.read_text().replace("\tFalse\t", "\tFalse \t", 1))
+    assert pd.read_csv(arm, sep="\t")["certificate_independent_of_selection"].dtype == object, (
+        "the premise of this test is that the column arrives as strings"
+    )
+
+    figure5 = audit(tmp_path)["per_dataset"][0]["figure5"]
+    strata = figure5["panel_b_precision_coverage"]["strata"]
+    assert strata["metabolomics-workbench/indep=false"]["independent_of_selection"] is False
+    assert figure5["curve_publishable"] is False
+    assert "not established as independent of the selection" in figure5["curve_not_publishable_reason"]
+
+
 def test_the_tier_b_sweep_is_referenced_by_a_fixed_committed_name() -> None:
     """Otherwise the Tier-B half of the figure has no reproducible provenance: the pinned suite
     carries no certificate columns, and a timestamped sweep path cannot be cited from a caption."""

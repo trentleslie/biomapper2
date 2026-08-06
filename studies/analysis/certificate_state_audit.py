@@ -178,6 +178,40 @@ CERT_ENUM_DOMAINS: dict[str, tuple[str, ...]] = {
     CERT_TIER_B_OUTCOME_COL: ("off", "resolved", "unresolvable", "lookup_failed"),
 }
 
+# ``certificate_independent_of_selection`` is a NULLABLE BOOLEAN, so the enum sweep cannot check it --
+# and it is the one field L26's independence claim is read off. It has to be parsed rather than
+# coerced, because ``bool()`` on this column is wrong in the direction that publishes:
+#
+# ``pd.read_csv`` types the column ``bool`` only while EVERY cell parses as one. A single
+# unparseable cell -- one merge artifact, one hand-edit, one 'unknown' from a producer that did not
+# have the field -- retypes the WHOLE column to strings, and then ``bool("False")`` is ``True`` on
+# every dependent row at once. Those rows would be keyed into the ``indep=true`` stratum, and the
+# per-stratum circularity gate only refuses a stratum whose ``independent_of_selection`` is not
+# ``True`` -- so the strata that exist to be refused would be exactly the ones let through, and Panel
+# B would publish a curve built on the corroborating source having also selected the node.
+INDEPENDENCE_LITERALS: dict[str, bool] = {"true": True, "false": False}
+
+
+def _independence(value: Any) -> bool | None:
+    """Parse one ``independent_of_selection`` cell into ``True`` / ``False`` / unknown (``None``).
+
+    Raises on anything that is not a boolean spelling. Unknown is a legitimate value -- Tier B off,
+    or no committed node to be independent OF -- but an unrecognized one is not, because the only
+    ways to absorb it are to call it independent (publishes circular evidence) or to call it
+    dependent (silently drops real rows out of the stratum the claim is made on).
+    """
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return None
+    # ``str`` first, deliberately: pandas hands this column back as Python ``bool``, ``numpy.bool_``
+    # (NOT a ``bool`` subclass, so ``isinstance`` misses it), or ``str``, depending on whether any
+    # other cell in the column parsed. All three spell themselves the same way.
+    text = str(value).strip().lower()
+    if text in ("", "nan", "none"):
+        return None
+    if text not in INDEPENDENCE_LITERALS:
+        raise ValueError(f"{value!r} is not a boolean")
+    return INDEPENDENCE_LITERALS[text]
+
 # The Tier-B sweep artifact, referenced by a FIXED name rather than a timestamp. A caption cannot
 # cite a timestamped path, and the pinned suite carries no certificate columns, so without a fixed
 # committed name the Tier-B half of the figure has no reproducible provenance.
@@ -512,8 +546,10 @@ def _figure5(df: pd.DataFrame, sparsity_control: dict[str, Any], has_certificate
     # live sweep, not an exotic one. Splitting them makes the dependent subset its own curve, which
     # the gate can then refuse without discarding the independent rows beside it.
     group_source = verifiable["_independent_source"].fillna("none")
+    # Parsed, never coerced: ``bool(v)`` here read the string 'False' as independent. See
+    # ``_independence``.
     group_indep = verifiable["_independent_of_selection"].map(
-        lambda v: "unknown" if v is None or (isinstance(v, float) and pd.isna(v)) else str(bool(v)).lower()
+        lambda v: {True: "true", False: "false", None: "unknown"}[_independence(v)]
     )
     for (source, indep), sub in verifiable.groupby([group_source, group_indep]):
         points = []
@@ -754,6 +790,19 @@ def _has_valid_certificate(df: pd.DataFrame, source: Path) -> bool:
                 f"{source}: {column} carries value(s) {unknown} outside the enum {sorted(domain)}. "
                 f"An unrecognized state is not a new operating point."
             )
+    unparseable = []
+    for value in df[CERT_INDEPENDENT_COL].unique():
+        try:
+            _independence(value)
+        except ValueError:
+            unparseable.append(str(value))
+    if unparseable:
+        raise ValueError(
+            f"{source}: {CERT_INDEPENDENT_COL} carries non-boolean value(s) {sorted(unparseable)}. "
+            f"One such cell retypes the whole column to strings, and a stratum keyed on the truthiness "
+            f"of the string 'False' is labelled INDEPENDENT — which is precisely the stratum the "
+            f"circularity gate exists to refuse."
+        )
     return True
 
 
