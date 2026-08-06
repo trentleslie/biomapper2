@@ -1,0 +1,10 @@
+name	chosen_kg_id	chosen_kg_id_review	kg_equivalent_ids	gold_inchikey	gold_hmdb	certificate_state	certificate_structure_status	certificate_independent_source	certificate_tier_b_outcome	certificate_independent_of_selection
+alpha	CHEBI:1001		{'INCHIKEY': ['AAAAAAAAAAAAAA-UHFFFAOYSA-N'], 'HMDB': ['HMDB0000001']}	AAAAAAAAAAAAAA-UHFFFAOYSA-N	HMDB0000001	corroborated	structure_present	pubchem	resolved	True
+beta	CHEBI:1002	divergent_refmet	{'INCHIKEY': ['BBBBBBBBBBBBBB-UHFFFAOYSA-N'], 'HMDB': ['HMDB0000002']}	CCCCCCCCCCCCCC-UHFFFAOYSA-N	HMDB0000009	contradicted	structure_present	pubchem	resolved	True
+gamma	CHEBI:1003	conflict_no_structure	{'INCHIKEY': ['DDDDDDDDDDDDDD-UHFFFAOYSA-N'], 'HMDB': ['HMDB0000003']}	DDDDDDDDDDDDDD-UHFFFAOYSA-N	HMDB0000003	corroborated	structure_present	metabolomics-workbench	resolved	False
+delta	CHEBI:1004		{'HMDB': ['HMDB0000004']}	EEEEEEEEEEEEEE-UHFFFAOYSA-N	HMDB0000004	unavailable	structure_absent		off	
+epsilon	CHEBI:1005		{'HMDB': ['HMDB0000005']}		HMDB0000099	unavailable	structure_absent		off	
+zeta	CHEBI:1006		{'INCHIKEY': ['FFFFFFFFFFFFFF-UHFFFAOYSA-N']}			uncorroborated	structure_present	pubchem	unresolvable	
+eta	CHEBI:1007		{'INCHIKEY': ['GGGGGGGGGGGGGG-UHFFFAOYSA-N'], 'HMDB': ['HMDB0000007']}	GGGGGGGGGGGGGG-UHFFFAOYSA-N	HMDB0000007	uncorroborated	structure_present	pubchem	lookup_failed	
+theta	CHEBI:1008		{'INCHIKEY': ['HHHHHHHHHHHHHH-UHFFFAOYSA-N'], 'HMDB': ['HMDB0000008']}	HHHHHHHHHHHHHH-UHFFFAOYSA-N	HMDB0000008	corroborated	structure_present	pubchem	resolved	True
+iota	CHEBI:1009		{'INCHIKEY': ['IIIIIIIIIIIIII-UHFFFAOYSA-N'], 'HMDB': ['HMDB0000010']}	JJJJJJJJJJJJJJ-UHFFFAOYSA-N	HMDB0000010	contradicted	structure_present	metabolomics-workbench	resolved	False

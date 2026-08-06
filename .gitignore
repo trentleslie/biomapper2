@@ -56,6 +56,13 @@ data/**/*.json
 # a blanket *.json ignore is exactly how a number ends up cited with no artifact behind it.
 !studies/analysis/results/*.json
 
+# Committed test fixtures. Same failure mode, one step earlier: the certificate audit's
+# offline-reproducibility gate reads a small anonymized mapped-row fixture, and the pinned baseline
+# it replaces lives outside the repo, so this file is the only input that gate can ever have. Under
+# the blanket *.tsv rule it stays green locally and vanishes on a fresh clone.
+!tests/fixtures/**/*.tsv
+!tests/fixtures/**/*.json
+
 # Other app-specific items
 cache/
 .env

@@ -37,6 +37,23 @@ def result() -> dict:
     return audit(FIXTURE_SUITE)
 
 
+def test_the_fixture_is_actually_tracked_by_git() -> None:
+    """The repo's blanket ``*.tsv`` ignore silently un-commits this fixture.
+
+    Every test in this file would still pass on the machine that created it, and the whole audit
+    would fail to run on a fresh clone. Caught once already; pinned so it cannot happen twice.
+    """
+    import subprocess
+
+    tracked = subprocess.run(
+        ["git", "ls-files", "--error-unmatch", str(FIXTURE_TSV.relative_to(FIXTURE_TSV.parents[3]))],
+        cwd=FIXTURE_TSV.parents[3],
+        capture_output=True,
+        text=True,
+    )
+    assert tracked.returncode == 0, f"the audit fixture is not tracked by git: {tracked.stderr.strip()}"
+
+
 def test_the_fixture_covers_all_three_legacy_flag_values_and_both_tier_a_states() -> None:
     """If this fails the fixture has been narrowed and the guarantees below stopped being tested."""
     frame = pd.read_csv(FIXTURE_TSV, sep="\t")

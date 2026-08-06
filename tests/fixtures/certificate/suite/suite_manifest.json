@@ -1,0 +1,8 @@
+{
+  "kg_snapshot": "fixture-kg",
+  "kg_stable_during_run": true,
+  "git_sha": "0000000",
+  "biolink_version": "4.2.5",
+  "backend": "fixture",
+  "started_at": "2026-01-01T00:00:00Z"
+}
