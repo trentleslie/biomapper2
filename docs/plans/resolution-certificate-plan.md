@@ -11,7 +11,8 @@ precision gain for refusing it), **L26** (`independent_of_selection`; independen
 where it holds; curve stratified by source), **L27** (no precision delta across the `unavailable`
 boundary in Figure 5; abstention reported as a rate), **L28** (refusal-reason ships as a separate
 follow-up PR, still owned by this axis), **L30** (refusal is NOT describable as observable in the
-released artifact until that follow-up lands), **L5** (D3
+released artifact until that follow-up lands), **L31** (the prose-figure guard must fail closed —
+glob-derived guarded set + a meta-test, not a hand-maintained include-list), **L5** (D3
 tighten-only, separate PR), **L11** (category check is a validator on the committed node), **L13**,
 **L25** (srm1950 `gold_hmdb` quarantine only).
 
@@ -78,6 +79,29 @@ the fork.
 5. **Committed row fixtures.** The pinned baseline lives at `~/benchmark-runs/…`, outside the repo,
    so no test or gate may read it. Commit a small anonymized row fixture under `tests/fixtures/`
    covering all three legacy flag values and both Tier-A states. G4 uses the same fixture.
+6a. **Harden the prose-figure guard itself — repo-wide, not certificate-specific (L31).**
+   This rides along because this axis found it and already touches the file; it is a tight related
+   change, not scope creep. **How it was found: gate G5 reported 22 green tests on this branch while
+   scanning none of this axis's files.** `GUARDED_FILES` is a hand-maintained include-list, so a
+   guard protecting a standard that cost five review rounds was silently passing on everything it
+   had never been told about. An enforcement mechanism that passes without checking is worse than
+   none, because it manufactures false confidence. Concretely — **evidence-base is already
+   dispatched with none of its files enumerated, so its PR would clear G5 having scanned nothing.**
+
+   1. **Derive the guarded set from a directory glob over the guarded trees, not a hand-maintained
+      list**, so new files are covered by default. Keep an explicit **skip**-list for genuinely
+      exempt files rather than an explicit include-list — **fail closed, not open**.
+   2. **Meta-test:** fail when a source file under the guarded trees is absent from the checked set.
+      This is the part that makes the fix durable — without it, the next person who reorganises
+      directories silently reopens the hole and nothing goes red.
+   3. **Keep the graceful skip for files that do not exist yet** (the `certificate.py` case).
+      Failing closed must not mean failing on absence.
+
+   Interim step already taken on this branch: this axis's files were added to the existing list, and
+   doing so immediately caught a restated figure in `certificate_state_audit.py`'s own docstring —
+   in the module whose entire purpose is backing figures with artifacts. That is the evidence the
+   include-list model does not hold.
+
 6. `tests/test_certificate_state_audit.py` — covers the already-committed instrument, including
    `test_unscorable_rows_leave_the_denominator` (the pandas `str`-dtype / `pd.NA` trap fixed in
    `_structure_oracle`, already referenced by name from `certificate_state_audit.py`) and the
@@ -129,8 +153,10 @@ the fork.
     `structure_present` refines to `corroborated` / `contradicted` / stays `uncorroborated`.
     `structure_absent` stays `unavailable` regardless — nothing to compare against.
 
-11. `comparison_rule` seeded to #47's shipped semantics (first-block **set intersection**). D3's
-    tightening introduces a second value later; **D3 is not implemented here** (L5).
+11. `comparison_rule` seeded to #47's shipped semantics (first-block **set intersection**).
+    **Verified against the merged code, not assumed:** post-merge `connectivity_match` on `dev`
+    computes `bool(blocks_a & blocks_b)` over `inchikey_blocks`, matching what this plan
+    anticipated. D3's tightening introduces a second value later; **D3 is not implemented here** (L5).
 
 12. **`structure_absent` must not absorb a Kestrel outage.** `Linker.get_equivalent_ids` returns
     `{}` on any exception and only logs a warning (`core/linker.py:175-177`), so a transient
@@ -159,6 +185,12 @@ the fork.
     of NECS rows … 65.4% of LMSD). Calling it would fire an external request per absent row and
     silently reclassify some as `structure_present` from a non-KG source, changing the very
     distribution the committed audit measured.
+
+    **This is a VERIFIED hazard, not a precaution.** Confirmed against the merged #47 code on `dev`:
+    `connectivity_match` calls `inchikey_blocks`, and `inchikey_blocks` genuinely does fall through
+    to `_fetch_mw_inchikey` / `_fetch_pubchem_inchikey` by name when the KG lists no key. The ban is
+    therefore demonstrably load-bearing rather than defensive — and it is the guard most likely to
+    be "simplified" away by a future reader, with no test going red to stop them.
 
     **Do not "simplify" this back to the shared helper.** The two look interchangeable in a diff and
     are not: `inchikey_blocks()` answers "what structure can I find for this node by any means",
@@ -283,7 +315,7 @@ the fork.
 | **G2 — legacy flag preserved** | Derived `chosen_kg_id_review` identical across its **three** values on the committed fixture, enums serialized as `.value`. |
 | **G3 — L21 invariant** | `contradicted` never issued for a structure-absent node (test, not inspection). |
 | **G4 — offline reproducibility** | Audit reruns bit-identical on the **committed fixture** with no network. |
-| **G5 — provenance standard** | `tests/test_no_measured_figures_in_prose.py` green (available after #47). |
+| **G5 — provenance standard** | `tests/test_no_measured_figures_in_prose.py` green **AND its guarded set glob-derived with the L31 meta-test passing**. Green alone is not the gate — the guard passed 22 tests on this branch while scanning none of this axis's files, so "G5 green" without the meta-test is exactly the false confidence L31 exists to remove. |
 | **G6 — default path adds no I/O** | Assert on the **StructureResolver session and the Kestrel session**, not the linker — MW/PubChem calls never traverse `Linker`, so a mocked-linker counter is blind to exactly the calls Tier A must not make. |
 
 ## Review fixes applied
