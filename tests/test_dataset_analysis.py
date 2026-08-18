@@ -10,6 +10,8 @@ import pytest
 
 from biomapper2.core.analysis import analyze_dataset_mapping
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture
 def mock_linker():
@@ -256,3 +258,47 @@ class TestOutputFiles:
             saved_stats = json.load(f)
         assert saved_stats["total_items"] == 10
         assert saved_stats["annotation_mode"] == "missing"
+
+
+@pytest.mark.unit
+def test_summary_stats_includes_run_provenance(tmp_path):
+    """analyze_dataset_mapping embeds the run_provenance block it is given."""
+    import json
+
+    import pandas as pd
+
+    from biomapper2.core.analysis import analyze_dataset_mapping
+
+    df = pd.DataFrame(
+        {
+            "name": ["glucose"],
+            "curies": ["[]"],
+            "curies_provided": ["[]"],
+            "curies_assigned": ["{}"],
+            "invalid_ids_provided": ["{}"],
+            "invalid_ids_assigned": ["{}"],
+            "unrecognized_vocabs_provided": ["[]"],
+            "unrecognized_vocabs_assigned": ["[]"],
+            "kg_ids": ["{}"],
+            "kg_ids_provided": ["{}"],
+            "kg_ids_assigned": ["{}"],
+            "chosen_kg_id": [None],
+            "chosen_kg_id_provided": [None],
+            "chosen_kg_id_assigned": [None],
+        }
+    )
+    tsv = tmp_path / "out.tsv"
+    df.to_csv(tsv, sep="\t", index=False)
+
+    provenance = {
+        "biomapper2_version": "0.1.0",
+        "kestrel_version": "0.2.0",
+        "kestrel_url": "u",
+        "run_timestamp": "2026-06-15T00:00:00+00:00",
+        "kg_build": {"kg_version": "2026.06.0"},
+    }
+
+    analyze_dataset_mapping(tsv, linker=MagicMock(), annotation_mode="none", run_provenance=provenance)
+
+    stats = json.loads((tmp_path / "out_a_summary_stats.json").read_text())
+    assert stats["run_provenance"]["kg_build"]["kg_version"] == "2026.06.0"
