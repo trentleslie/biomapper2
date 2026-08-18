@@ -659,3 +659,20 @@ def is_ensemblgenomes_id(local_id: str) -> bool:
     """Ensembl Genomes IDs: uppercase letters followed by digits.
     Examples: BMEI0545"""
     return bool(re.match(r"^[A-Z]+\d+$", local_id))
+
+
+def is_pgs_id(local_id: str) -> bool:
+    """PGS Catalog scores: the 6-digit zero-padded accession (e.g., 000027 for PGS000027)."""
+    return bool(re.match(r"^\d{6}$", local_id))
+
+
+def is_cde_id(local_id: str) -> bool:
+    """NIH CDE 'tinyId's: alphanumeric with underscores/hyphens.
+    Examples: QkESX3mk1l, 3_J_5WKnXp"""
+    return bool(re.match(r"^[A-Za-z0-9_-]+$", local_id))
+
+
+def is_biological_measure_label(local_id: str) -> bool:
+    """KRAKEN-minted biological-measure umbrella nodes (BIOAGE:BiologicalAge, BIOBMI:BiologicalBMI):
+    a single alphanumeric label."""
+    return bool(re.match(r"^[A-Za-z][A-Za-z0-9]*$", local_id))

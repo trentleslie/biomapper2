@@ -78,6 +78,12 @@ def load_prefix_info(biolink_client: BiolinkClient) -> dict[str, dict[str, str]]
     prefix_to_iri_map["OBA"] = "http://purl.obolibrary.org/obo/OBA_"
     prefix_to_iri_map["OBO"] = "http://purl.obolibrary.org/obo/"
 
+    # KRAKEN source-ingest prefixes (minted for sources without a registered infores)
+    prefix_to_iri_map["PGS"] = "https://www.pgscatalog.org/score/PGS"  # PGS:000027 -> .../score/PGS000027
+    prefix_to_iri_map["CDE"] = "https://cde.nlm.nih.gov/deView?tinyId="
+    prefix_to_iri_map["BIOAGE"] = ""  # minted umbrella node (Earls et al. biological age); no external resource
+    prefix_to_iri_map["BIOBMI"] = ""  # minted umbrella node (Watanabe et al. biological BMI); no external resource
+
     # Override prefixes only when Biolink's IRI is broken
     prefix_to_iri_map["OMIM"] = "http://purl.bioontology.org/ontology/OMIM/"  # Works for regular ids and MTHU ids
     prefix_to_iri_map["REACT"] = "https://reactome.org/content/detail/"  # Works for Complexes and Pathways
@@ -107,10 +113,13 @@ def load_validator_map() -> dict[str, dict[str, Any]]:
         "araport": {validator: validators.is_araport_id},
         "atc": {validator: validators.is_atc_id},
         "bfo": {validator: validators.is_bfo_id},
+        "bioage": {validator: validators.is_biological_measure_label},
+        "biobmi": {validator: validators.is_biological_measure_label},
         "bspo": {validator: validators.is_seven_digit_id},
         "bvbrc": {validator: validators.is_bvbrc_id},
         "cas": {validator: validators.is_cas_id},
         "cdcsvi": {validator: validators.is_cdcsvi_id},
+        "cde": {validator: validators.is_cde_id},
         "cdno": {validator: validators.is_seven_digit_id},
         "cgnc": {validator: validators.is_numeric_id},
         "chebi": {validator: validators.is_chebi_id},
@@ -209,6 +218,7 @@ def load_validator_map() -> dict[str, dict[str, Any]]:
         "pato": {validator: validators.is_seven_digit_id},
         "pdq": {validator: validators.is_pdq_id},
         "pfam": {validator: validators.is_pfam_id},
+        "pgs": {validator: validators.is_pgs_id},
         "pharmvar": {validator: validators.is_pharmvar_id},
         "plantfa": {validator: validators.is_plantfa_id},
         "po": {validator: validators.is_seven_digit_id},
