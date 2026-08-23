@@ -222,6 +222,23 @@ class TestKrakenValidators:
         assert validators.is_foodon_id("03541961")
         assert not validators.is_foodon_id("0354196")  # 7 digits
 
+    def test_loinc_id(self):
+        """Test LOINC validator: numeric codes plus prefixed Part/Answer/List/Group codes."""
+        # Regular numeric LOINC codes
+        assert validators.is_loinc_id("27858-0")
+        assert validators.is_loinc_id("67259-2")
+        # Prefixed code types (all share the NNNNN-N shape)
+        assert validators.is_loinc_id("LP32606-3")  # Part
+        assert validators.is_loinc_id("LA33-6")  # Answer string
+        assert validators.is_loinc_id("LA12688-0")  # Answer string
+        assert validators.is_loinc_id("LL2223-3")  # Answer list
+        assert validators.is_loinc_id("LG32863-7")  # Group
+        # Invalid
+        assert not validators.is_loinc_id("LA33")  # Missing check digit
+        assert not validators.is_loinc_id("LX33-6")  # Unknown prefix
+        assert not validators.is_loinc_id("LOINC:67259-2")  # With prefix
+        assert not validators.is_loinc_id("abc-1")  # Non-numeric body
+
     # =========================================================================
     # Tier 4: Model Organism Databases
     # =========================================================================
