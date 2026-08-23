@@ -55,6 +55,33 @@ def _capture_headers(url: str, api_key: str | None, *, calls: int = 1, auth_requ
     return session.request.call_args.kwargs["headers"]
 
 
+# --- which host we talk to ----------------------------------------------------------------------
+
+
+def test_the_constant_and_the_resolver_share_one_default(monkeypatch):
+    """With KESTREL_API_URL unset, both sources of the backend URL must name the public host.
+
+    These are two independent readings of the same setting: ``config.KESTREL_API_URL`` captured at
+    import, and ``get_kestrel_api_url()`` read per call. The client resolves through the FUNCTION,
+    so if only the constant is updated the promotion is cosmetic -- config reports public while
+    every request goes somewhere else. That is exactly what #78 shipped: it moved the constant's
+    default to public and left the function's own hardcoded fallback on the internal host.
+
+    Reimported under a cleared environment because the constant is import-time state; asserting on
+    the already-imported module would read whatever the developer's .env happened to set.
+    """
+    import importlib
+
+    monkeypatch.delenv("KESTREL_API_URL", raising=False)
+    config = importlib.reload(importlib.import_module("biomapper2.config"))
+    try:
+        assert config.KESTREL_API_URL == config.PUBLIC_KESTREL_API_URL
+        assert config.get_kestrel_api_url() == config.PUBLIC_KESTREL_API_URL
+        assert config.KESTREL_API_URL == config.get_kestrel_api_url()
+    finally:
+        importlib.reload(config)
+
+
 # --- on the wire -------------------------------------------------------------------------------
 
 
