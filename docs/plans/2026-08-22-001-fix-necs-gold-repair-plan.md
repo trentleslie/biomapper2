@@ -226,6 +226,38 @@ Surfaced by the persona review; each changes what gets built.
 - **The held-out sample size for R2a verification** — settled once the class distribution from Unit 4
   is known.
 
+## Disagreement Provenance (measured 2026-08-23, RDKit on the pinned file)
+
+The two contradictory columns are two **Metabolon annotation vintages**: legacy (`INCHIKEY` +
+`SMILES`, uniformly 25-char two-block keys, 786/786) and modern (`inchi_key` + `smiles`, uniformly
+27-char three-block keys, 839/839, key and SMILES 99.9% co-derived). Both carry SMILES; legacy SMILES
+are largely correct even where the legacy key is not.
+
+The 48 block-1 disagreements split by whether each key matches **its own** SMILES:
+
+| Kind | n | Mechanism | Resolution |
+|---|---|---|---|
+| **A — bad legacy key** | 8 | Legacy `INCHIKEY` contradicts its own SMILES; the SMILES is correct and agrees with modern | **Offline** — trust the SMILES-derived key |
+| **B — different structure** | 30 | Both keys self-consistent; the two vintages drew genuinely different structures | **External name/CID anchor** (decision #3) |
+| corrupt | ~9 | Legacy cell is `"4000"` | Trivial — modern wins |
+| unparseable | 1 | — | undecidable |
+
+**This corrects the August audit's framing of the known rows.** cortisone and gamma-glutamylvaline are
+**Kind A** — the legacy *key* is wrong (cortisone's legacy key encodes a sulfate ester absent from the
+row's own structures; the legacy SMILES is plain cortisone). "Formula-confirmed defect" compared the
+bad key's looked-up structure; the row's own SMILES already had the answer, so these are offline-
+detectable. xylose and choline are **Kind B** — both keys match their own SMILES, so the vintages
+encode different structures (ring form; charge convention).
+
+**RDKit canonicalization cannot classify Kind B, proven on the known rows.** The `TautomerEnumerator`
+MISSED xylose's ring-chain interconversion (labelled it a connectivity defect — the retracted verdict
+reborn) and OVER-MERGED gamma-glutamylvaline's regioisomers (labelled a real defect a tautomer). Too
+weak and too strong, in the two directions we can check. It must not be the arbiter for Kind B.
+
+**Consequence for scope:** ~17 rows (Kind A + corrupt) are fully offline-resolvable; only the 30
+Kind-B rows require the external pass. This is the offline/online boundary that decisions #1 and #2
+turn on.
+
 ## High-Level Technical Design
 
 > *This illustrates the intended approach and is directional guidance for review, not implementation
@@ -440,9 +472,19 @@ against the prior measurement of the same quantity.
 - Test: `studies/external_benchmarks/tests/test_necs_gold_classifier.py`
 
 **Approach:**
-- Classes: `wrong_molecule_formula_confirmed`, `wrong_molecule_formula_identical`, `stereo_only`,
-  `tautomer_or_charge`, `undecidable`. The first two are deliberately distinct — see Key Technical
-  Decisions.
+- **First split by KIND, established 2026-08-23 (see Disagreement Provenance).** Kind A (a key
+  contradicts its own SMILES → the key is the defect, the SMILES is the arbiter, fully offline) versus
+  Kind B (both keys self-consistent, the two SMILES genuinely differ → needs the external anchor).
+  This split is computable offline for every row and determines whether external resolution is even
+  needed.
+- Within-kind classes: `wrong_molecule_formula_confirmed`, `wrong_molecule_formula_identical`,
+  `stereo_only`, `tautomer_or_charge`, `undecidable`.
+- ⚠️ **RDKit canonicalization is NOT the Kind-B arbiter** — proven to miss ring-chain sugars (xylose)
+  and over-merge regioisomers (gamma-glutamylvaline). Kind-B class is decided against the external
+  name/CID resolution, with canonicalization used only as a corroborating signal, never the decider.
+- **Uncharger cannot neutralize quaternary ammonium** (choline stays C5H14NO+), so charge-convention
+  differences on permanently-charged species need a charge-parent standardizer or a charge-insensitive
+  comparison layer, not `Uncharger` alone.
 - Canonicalize before comparing, per the design sketch. A pre-canonicalization block-1 difference that
   disappears after canonicalization is `tautomer_or_charge`, i.e. an encoding artifact.
 - `undecidable` carries the reason (which side was absent or unparseable). It must never be the default
@@ -454,10 +496,13 @@ against the prior measurement of the same quantity.
   a different comparison (structure-versus-key) than this one (key-versus-key), so the numbers need not
   match — but the relationship must be explained in the artifact. If they cannot be reconciled, one of
   the two comparison rules is wrong and that must be resolved before either number is published.
-- **Known-answer rows that must come out right**, from the August audit: cortisone →
-  `wrong_molecule_formula_confirmed`; gamma-glutamylvaline → `wrong_molecule_formula_identical`;
-  choline → `tautomer_or_charge`; xylose → `tautomer_or_charge`. These four are the classifier's
-  acceptance test, not merely examples.
+- **Known-answer rows (corrected 2026-08-23 to kind-aware verdicts), the classifier's acceptance
+  test:** cortisone → **Kind A** (legacy key wrong, legacy SMILES = cortisone); gamma-glutamylvaline →
+  **Kind A** (legacy key is a regioisomer's, legacy SMILES correct); choline → **Kind B**,
+  charge-convention (Uncharger cannot fix quaternary N); xylose → **Kind B**, ring-chain (RDKit tautomer
+  canon does NOT collapse it — must resolve via the external anchor, must NOT fall through to a
+  connectivity defect). A classifier that reproduces the old audit verdicts (cortisone as
+  formula-confirmed-from-SMILES, xylose as connectivity) is WRONG.
 
 **Execution note:** Test-first, driven by the four known-answer rows.
 
