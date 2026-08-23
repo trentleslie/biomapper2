@@ -216,9 +216,11 @@ Surfaced by the persona review; each changes what gets built.
   near-worthless; and self-consistency ties on 30 of the 48 disagreeing rows. **Precedence is now decided
   by an independent name/CID anchor** (HMDB 29/30, pubchem_cid 22/30, CAS 20/30 available on the ties).
   Consequence: the disagreeing rows now require one cached, pinned external pass — see decision #2.
-- **Does the `gold_smiles` binding fix ship in this PR or its own?** Its blast radius is every row with
-  a SMILES value (835–1180), not the disagreeing subset, and it moves an already-published metric.
-  Bundling it into the gold repair means one review covers two changes with different risk profiles.
+- ✅ **RESOLVED 2026-08-23 — bundled into this PR (Unit 2).** The classifier cannot run until both SMILES
+  columns are correctly bound, so the fix is a genuine prerequisite, not an opportunistic adjacent
+  change. The reviewers' objection — that it moves the already-published 78.4% charge-normalized number
+  with no recompute path — is neutralized by decision #2, which recomputes that number live. Unit 2's
+  characterization test still pins the pre-fix behavior so the change is demonstrable.
 
 ### Run-time flag — pin before the live run
 
