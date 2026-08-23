@@ -203,9 +203,13 @@ Surfaced by the persona review; each changes what gets built.
   (both vintages specify stereo and disagree — glucose, cholesterol, lactose, glutamate, sphingosine,
   inosine), **81 completeness differences** (one vintage stereo-specified, the other not), **9 odd**
   (keys differ in stereo layer, neither SMILES carries stereo markers). Repaired in tiers — see Unit 5.
-- **Are the charge-normalized and equivalence-set arms in scope for the re-score?** They are not
-  recomputable offline — both need live Kestrel. Either accept one supervised live pass, or drop them
-  and state that Unit 2's binding fix leaves the published 78.4% stale with no recomputation path.
+- ✅ **RESOLVED 2026-08-23 — live recompute all three arms.** The persisted `suite_20260805T033340Z`
+  run predates substantial updates to dev BioMapper and the kraken backend and was already marked
+  `Publishable: False`, so re-scoring it offline would produce stale numbers. Instead run current-dev
+  BioMapper over the NECS panel fresh (a supervised operator step) and score the fresh predictions
+  against both the original and repaired gold, all three arms. This also resolves the "re-score vs
+  re-derive suite_20260805" open question below — re-derive live. Note: this is a **different** live
+  touchpoint from the gold-adjudication PubChem pass (decision #3); one hits kraken, the other PubChem.
 - ✅ **RESOLVED 2026-08-23 — the self-consistency rule is circular AND undecidable; replaced.** Measured
   on the pinned file: legacy 97.5% / modern 99.9% block-1 self-consistency (the old "0/8 legacy" was a
   two-block format artifact at full-key). Modern's 99.9% = co-derived key+SMILES, so the signal is
@@ -215,6 +219,15 @@ Surfaced by the persona review; each changes what gets built.
 - **Does the `gold_smiles` binding fix ship in this PR or its own?** Its blast radius is every row with
   a SMILES value (835–1180), not the disagreeing subset, and it moves an already-published metric.
   Bundling it into the gold repair means one review covers two changes with different risk profiles.
+
+### Run-time flag — pin before the live run
+
+- **Which kraken does the accuracy recompute run against?** dev BioMapper has the updates, but the
+  preprint wants **public-Kraken-backed** numbers for reproducibility (kestrel.krakenkg.com, which
+  self-reports its build via `/metagraph`). If the substantial kraken-backend updates are only on dev
+  and not yet on public, there is a tension: current/correct numbers (dev) vs reproducible numbers
+  (public). Decide and pin the deployment before firing the run; record it in the manifest. This is the
+  one decision that gates whether the recomputed numbers are preprint-citable.
 
 ### Deferred to Implementation
 
@@ -643,26 +656,32 @@ evidence (R2), plus the bounded external check that could disconfirm the precede
 - [ ] **Unit 6: Offline re-score under both golds**
 
 **Goal:** Report how the NECS headline accuracy and the 134-miss disposition move under the repaired
-gold versus the original (R3), with a guard proving the re-score reproduces the persisted baseline
-before any delta is trusted.
+gold versus the original (R3), from a **fresh live run of current-dev BioMapper** — not an offline
+re-score of the stale August run (decision #2, 2026-08-23).
 
 **Requirements:** R3, R23
 
-**Dependencies:** Units 1, 5
+**Dependencies:** Units 1, 5. **Supervised live run** — never fired inside an automated pipeline tail.
 
 **Files:**
-- Create: `studies/external_benchmarks/rescore_necs_gold.py`
-- Test: `studies/external_benchmarks/tests/test_rescore_necs_gold.py`
-- Reads: the persisted run at `~/benchmark-runs/suite_20260805T033340Z/necs/` (`CHEBI_results.json`
-  `per_row`, `necs-metabolon_CHEBI_MAPPED.tsv`, `dataset_card.json`)
+- Use: `studies/external_benchmarks/run.py` `orchestrate_necs()` for the fresh run (save-by-default to a
+  timestamped dir, `build_manifest` pins commit + KG provenance)
+- Create: `studies/external_benchmarks/score_necs_both_golds.py` (scores the fresh run's predictions
+  against original and repaired gold, all three arms)
+- Test: `studies/external_benchmarks/tests/test_score_necs_both_golds.py`
+- Reads for DRIFT ANCHOR only: `~/benchmark-runs/suite_20260805T033340Z/necs/` (the stale baseline)
 
 **Approach:**
-- Clone the shape of `rescore_id_equivalence.py`: module-level pinned source SHA and commit, `main(argv)`
-  with `--run-dir`/`--out`, both `.json` and `.md` output, fail loud when the run dir is absent.
-- **Reproduction guard first.** Re-derive the persisted baseline (strict 609/796 = 76.5%,
-  charge-normalized 624/796 = 78.4%, KG-equivalence-set 668/796 = 83.9%, coverage 1488/1495) and
-  require **both** numerator and denominator to match. Matching the numerator alone would falsely
-  certify — this is the documented failure mode in the file being cloned.
+- **Pin the deployment.** The fresh run records via `build_manifest`/`kg_provenance`: biomapper2
+  commit, the BioMapper deployment URL, the KG snapshot + node/edge fingerprint from `/metagraph`, and
+  the ChEBI release. A freshly-pinned run is MORE reproducible than the stale one, which pinned none of
+  these. **See the open flag below — which kraken (public vs dev) is a run-time decision that gates
+  preprint reproducibility.**
+- **The stale August run is a DRIFT ANCHOR, not a reproduction target.** Report current-dev accuracy
+  under the *original* gold beside the archived 76.5% strict / 78.4% charge-normalized / 83.9%
+  equivalence-set / 1488/1495 coverage. Drift beyond the ~1pt NECS noise floor is expected (kraken +
+  resolver updated) and must be reported and attributed, not silently absorbed. Do not treat
+  reproducing the old numbers as a pass condition — they are stale by construction.
 - Re-scoring joins the repaired gold against the recorded `predicted_block`. No oracle, no Kestrel.
 - ⚠️ **Only the strict arm is genuinely offline.** The charge-normalized arm calls
   `oracle.neutral_block(chosen_id)` and the equivalence-set arm calls `oracle.resolved_blocks(chosen_id)`;
@@ -680,6 +699,8 @@ before any delta is trusted.
   if abstentions exceed the count observed under the original gold. Otherwise accuracy rises
   monotonically with the undecidable count and the plan violates its own rule against reporting a rate
   across the abstention boundary — in its headline number, while forbidding it in a figure.
+- The delta of interest is now **original-gold vs repaired-gold on the SAME fresh predictions** —
+  isolating the gold change from the deployment change, which the drift anchor handles separately.
 - **Report the primary delta on the fixed intersection population** (rows scored under both golds).
   The repaired column is expected to fill 839 against the baseline's 796, so ~43 rows enter that the
   baseline never scored, and they are plausibly easier. Add a `newly_covered` decomposition bucket
@@ -702,8 +723,11 @@ before any delta is trusted.
   indicative and flag re-derivation as required rather than quoting it as final.
 
 **Test scenarios:**
-- Happy path: re-scoring with the *original* gold reproduces the persisted baseline exactly on both
-  numerator and denominator.
+- Happy path: scoring the fresh predictions under the *original* gold, then the *repaired* gold,
+  yields two numbers whose difference is attributable to gold rows that actually changed (assert the
+  changed-row set equals the repair's touched-row set).
+- Drift anchor: the fresh original-gold score is reported beside the archived August numbers; a drift
+  beyond the noise floor is surfaced with an attribution line, not silently passed.
 - Happy path: re-scoring with the repaired gold produces a delta decomposed by correction class.
 - Edge case: a row whose repaired gold is `undecidable` is excluded from the scored denominator, not
   counted as a miss.
