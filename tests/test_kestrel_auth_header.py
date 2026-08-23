@@ -32,9 +32,7 @@ def _reset_warn_flag():
         yield
 
 
-def _capture_headers(
-    url: str, api_key: str | None, *, calls: int = 1, auth_required: bool = True
-) -> dict[str, str]:
+def _capture_headers(url: str, api_key: str | None, *, calls: int = 1, auth_required: bool = True) -> dict[str, str]:
     """Run `calls` requests against `url` with `api_key`, returning the headers actually sent."""
     session = MagicMock()
     response = MagicMock()
@@ -42,14 +40,16 @@ def _capture_headers(
     response.raise_for_status.return_value = None
     session.request.return_value = response
 
+    # Patch the RESOLVER, not the import-time constant. The client resolves the backend per call
+    # (kg-regression's --kestrel-url sets the env after this module is imported), and the
+    # key-withholding decision reads that same resolved value. Pinning the constant here would
+    # assert against a value production no longer consults.
     with (
-        patch.object(utils, "KESTREL_API_URL", url),
+        patch.object(utils, "get_kestrel_api_url", return_value=url),
         patch.object(utils, "get_kestrel_api_key", return_value=api_key),
     ):
         for _ in range(calls):
-            utils.bulk_kestrel_request(
-                "POST", "hybrid-search", session=session, auth_required=auth_required, json={}
-            )
+            utils.bulk_kestrel_request("POST", "hybrid-search", session=session, auth_required=auth_required, json={})
 
     assert session.request.called, "bulk_kestrel_request never issued a request"
     return session.request.call_args.kwargs["headers"]
@@ -97,6 +97,38 @@ def test_public_host_variants_all_withhold_the_key(url):
 def test_unparseable_url_fails_closed():
     """A URL with no parseable host must withhold the key rather than send it somewhere unproven."""
     assert "X-API-Key" not in _capture_headers("kestrel.krakenkg.com/api", SECRET)
+
+
+def test_key_follows_the_resolved_url_not_the_import_time_constant():
+    """The host guard must judge the URL the request actually goes to.
+
+    #74 made the backend resolvable after import (``--kestrel-url`` / KESTREL_API_URL set later),
+    while this guard was written against the import-time constant. Rebasing one onto the other
+    silently splits them: the constant still names the internal host, so the guard says "internal,
+    send the key" about a request being issued to the public one -- the exact leak this file exists
+    to prevent, re-opened by a merge rather than by an edit.
+
+    Asserted structurally -- on the URL the guard was HANDED versus the URL the request was SENT to
+    -- rather than on a leaked header. A header assertion is vacuous whenever the constant and the
+    resolver happen to agree, which is the case on the default config, so it would pass against the
+    very bug it names.
+    """
+    session = MagicMock()
+    response = MagicMock()
+    response.json.return_value = {}
+    response.raise_for_status.return_value = None
+    session.request.return_value = response
+
+    with (
+        patch.object(utils, "get_kestrel_api_url", return_value=INTERNAL_URL),
+        patch.object(utils, "get_kestrel_api_key", return_value=SECRET),
+        patch.object(utils, "kestrel_host_accepts_credentials", return_value=True) as guard,
+    ):
+        utils.bulk_kestrel_request("POST", "hybrid-search", session=session, json={})
+
+    judged = guard.call_args.args[0]
+    sent_to = session.request.call_args.args[1]
+    assert sent_to.startswith(judged), f"guard judged {judged!r} but the request went to {sent_to!r}"
 
 
 def test_withholding_the_key_is_warned_once():
@@ -171,8 +203,8 @@ def local_json_server():
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, *args):  # keep pytest output clean
-            pass
+        def log_message(self, format, *args):  # noqa: A002 -- BaseHTTPRequestHandler's own spelling
+            pass  # keep pytest output clean
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()

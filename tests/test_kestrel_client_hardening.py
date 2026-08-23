@@ -16,6 +16,14 @@ terminates; under the third it is a retry storm against somebody else's service,
 must stop it loudly rather than let it run.
 """
 
+# The transports below are duck-typed doubles, deliberately NOT requests.Session subclasses: each
+# implements only the surface the client actually uses, so a test cannot accidentally fall through
+# to real connection handling. Subclassing to satisfy the checker would mean running Session's
+# __init__ (adapters, connection pools) and matching its much wider request() signature -- real
+# machinery inside fixtures whose whole point is that no real machinery runs. Scoped to this file
+# and to the argument-type rule alone, so production call sites keep the strict Session type.
+# pyright: reportArgumentType=false
+
 from __future__ import annotations
 
 import itertools

@@ -5,6 +5,8 @@ import pytest
 
 from biomapper2.core.normalizer import Normalizer
 
+pytestmark = pytest.mark.unit
+
 
 class TestParseDelimitedString:
     """Tests for Normalizer._parse_delimited_string method."""
@@ -167,3 +169,36 @@ class TestGetCuries:
         )
         assert "UNII:01MP33F412" in curies
         assert "CHEMBL.COMPOUND:CHEMBL112" in curies
+
+    def test_get_curies_array_delimiters_split_compound(self, normalizer):
+        """A delimited/compound id string resolves to ALL its codes when array_delimiters is given."""
+        curies, invalid_ids, _ = normalizer.get_curies(
+            {"ncit": "C34831:C34915"}, array_delimiters=[":"], log_warnings=False, fuzzy_match_vocab=False
+        )
+        assert set(curies) == {"NCIT:C34831", "NCIT:C34915"}
+        assert not invalid_ids
+        # Whitespace around delimited codes is cleaned; unparseable fragments are marked invalid
+        curies, invalid_ids, _ = normalizer.get_curies(
+            {"ncit": "C48660: C37998:C43234(Primary)"},
+            array_delimiters=[":"],
+            log_warnings=False,
+            fuzzy_match_vocab=False,
+        )
+        assert set(curies) == {"NCIT:C48660", "NCIT:C37998"}
+        assert invalid_ids["ncit"] == ["C43234(Primary)"]
+
+    def test_get_curies_prefix_stripping_and_multi_colon(self, normalizer):
+        """A single-colon full curie has its prefix stripped (any prefix, not just recognized ones);
+        a multi-colon local id is left intact and fails validation rather than resolving to one part."""
+        # Recognized prefix is stripped
+        curies, _, _ = normalizer.get_curies({"ncit": "NCIT:C34831"}, log_warnings=False, fuzzy_match_vocab=False)
+        assert "NCIT:C34831" in curies
+        # A nonstandard/aliased prefix is also stripped (we don't require a known prefix)
+        curies, _, _ = normalizer.get_curies({"ncit": "foo:C34831"}, log_warnings=False, fuzzy_match_vocab=False)
+        assert "NCIT:C34831" in curies
+        # Multi-colon (un-split compound) is not silently reduced -> invalid
+        curies, invalid_ids, _ = normalizer.get_curies(
+            {"ncit": "C34831:C34915:C34916"}, log_warnings=False, fuzzy_match_vocab=False
+        )
+        assert not curies
+        assert invalid_ids["ncit"] == ["C34831:C34915:C34916"]

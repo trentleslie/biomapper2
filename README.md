@@ -195,6 +195,8 @@ uv run pytest -vs      # Run with verbose output and logging/prints displayed
 
 **Note:** Tests run automatically on every commit via GitHub Actions (CI/CD).
 
+**New contributor?** See [TESTING.md](TESTING.md) for a concise walkthrough of the test scripts and what happens on push/merge (CI gating, release-please), plus the full reference for test tiers and markers.
+
 ## Development
 
 ### Quick Start
@@ -254,3 +256,25 @@ Environment variables (set in `.env`):
 Additional settings in `src/biomapper2/config.py`:
 - `BIOLINK_VERSION_DEFAULT` - Default Biolink model version
 - `LOG_LEVEL` - Logging verbosity (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+
+## Future work
+
+Known follow-ups, mostly around the cross-repo build-provenance chain (KRAKEN
+`build_info.json` → Kestrel `/health` → biomapper2 `run_provenance`):
+
+- **Cross-repo round-trip test.** Each repo tests its own leg of the provenance chain in
+  isolation; the schema-drift guard in KRAKEN is the only thing tying them together. A
+  committed golden `build_info.json` fixture, shared and asserted in all three repos,
+  would catch a field that is spelled consistently in the schema but consumed wrongly.
+- **Wire up the `kg_regression` marker.** It is registered (`pyproject.toml`) but unused —
+  the `kg-regression.yml` workflow currently runs the whole correctness suite against a
+  candidate KG. Marking a focused subset would let regression runs target just the tests
+  that detect KG-version drift.
+- **Populate `node_count` / `edge_count`.** These are reserved in
+  `kraken/build_info.schema.json` and surface in `run_provenance`, but KRAKEN does not yet
+  emit them (they serialize as `null`). Wiring them in would give analysts graph-scale at a
+  glance.
+- **Pre-1.0 release cadence.** release-please currently bumps the minor on every `feat:`
+  (0.1.0 → 0.2.0 → …). If we'd rather keep features as patch bumps until a deliberate 1.0,
+  set `bump-patch-for-minor-pre-major` (and `bump-minor-pre-major`) in each repo's
+  `release-please-config.json`.

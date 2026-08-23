@@ -166,6 +166,7 @@ class Normalizer:
         stop_on_invalid_id: bool = False,
         log_warnings: bool = True,
         fuzzy_match_vocab: bool = True,
+        array_delimiters: list[str] | None = None,
     ) -> tuple[dict[str, str], dict[str | tuple, list[str]], set[str]]:
         """
         Convert local IDs to curies for all fields in dictionary.
@@ -175,6 +176,10 @@ class Normalizer:
             stop_on_invalid_id: Halt on invalid IDs (default: False)
             log_warnings: Whether to log warnings for invalid IDs
             fuzzy_match_vocab: Whether to get more creative when identifying the ID's vocab
+            array_delimiters: Optional characters for splitting a single delimited/compound ID string
+                (e.g. "C1:C2") into multiple local IDs, each resolved independently. When omitted,
+                each value is treated as a single ID. (The higher-level normalize() splits before
+                calling this, so it does not pass this through.)
 
         Returns:
             Tuple of (valid_curies_dict_with_iris, invalid_ids_dict, unrecognized_vocabs_set)
@@ -184,6 +189,13 @@ class Normalizer:
         unrecognized_vocabs = set()
         for id_field_name, local_ids_entry in local_ids_dict.items():
             local_ids = to_list(local_ids_entry)
+            if array_delimiters:
+                # Split any delimited/compound strings into individual local IDs before resolving
+                split_ids: list[Any] = []
+                for local_id in local_ids:
+                    parsed = self._parse_delimited_string(local_id, array_delimiters)
+                    split_ids.extend(parsed if isinstance(parsed, list) else [parsed])
+                local_ids = split_ids
             id_field_names = [id_field_name] if isinstance(id_field_name, str) else id_field_name
             vocab_names = set()
             for field_name in id_field_names:
@@ -334,8 +346,14 @@ class Normalizer:
         Returns:
             Tuple of (curie, iri) - empty strings if validation fails
         """
-        # First, if this is a proper curie - remove its prefix
-        local_id = local_id.split(":")[1] if ":" in local_id and not local_id.startswith("http") else local_id
+        # If a full curie was passed (e.g. "NCIT:C123"), strip the single leading prefix to get the
+        # bare local id. A local id with MULTIPLE colons is treated as malformed (e.g. an un-split
+        # compound like "C1:C2:C3") -- left intact so it fails validation below rather than silently
+        # resolving to one of its parts. Genuine compounds should be split via get_curies'
+        # array_delimiters, which runs before this and removes the colons, so ':' as a delimiter and
+        # ':' as a prefix separator never collide here.
+        if not local_id.startswith("http") and local_id.count(":") == 1:
+            local_id = local_id.split(":", 1)[1]
         # Construct a standardized curie for the given local ID and vocab (or list of vocabs; first valid kept)
         prefixes_lowercase = [vocab_name_cleaned] if isinstance(vocab_name_cleaned, str) else vocab_name_cleaned
         curie = ""

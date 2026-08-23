@@ -83,6 +83,7 @@ def gold_set_run(shared_mapper):
 
 
 @pytest.mark.integration
+@pytest.mark.requires_api
 class TestCanonicalNamespaceGoldSet:
     @pytest.mark.parametrize("name", sorted({**METABOLITE_GOLD, **DISEASE_GOLD}))
     def test_resolves_to_canonical_namespace(self, gold_set_run, name):

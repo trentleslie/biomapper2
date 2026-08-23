@@ -50,6 +50,21 @@ CACHE_IGNORED_PARAMETERS = [
 PUBLIC_KESTREL_API_URL = "https://kestrel.krakenkg.com/api"
 KESTREL_API_URL = os.getenv("KESTREL_API_URL", PUBLIC_KESTREL_API_URL)
 
+
+def get_kestrel_api_url() -> str:
+    """Return the current Kestrel API URL, reading os.environ on every call.
+
+    Unlike the module-level KESTREL_API_URL constant (captured at import time),
+    this function reflects any os.environ overrides applied after import — e.g.
+    the --kestrel-url pytest option used in KG regression testing.
+
+    The fallback is PUBLIC_KESTREL_API_URL, the SAME default as the constant above.
+    They must not diverge: the client resolves through this function, so a default set
+    only on the constant is cosmetic. See Phenome-Health/biomapper2#82.
+    """
+    return os.environ.get("KESTREL_API_URL", PUBLIC_KESTREL_API_URL)
+
+
 # Biolink model version
 BIOLINK_VERSION_DEFAULT = "4.2.5"
 

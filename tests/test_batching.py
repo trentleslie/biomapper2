@@ -67,6 +67,9 @@ def test_bulk_kestrel_request_raises_after_exhausting_retries():
     assert session.request.call_count == 4  # 1 initial + 3 retries
 
 
+pytestmark = pytest.mark.unit
+
+
 def test_batch_size_constants_exist():
     """Verify batch size constants are defined with reasonable defaults."""
     assert isinstance(KESTREL_BATCH_SIZE_SEARCH, int)
