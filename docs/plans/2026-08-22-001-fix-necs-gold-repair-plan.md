@@ -19,8 +19,10 @@ scored against the contradicted one.
 
 This plan repairs that column, classifies the disagreements by chemical cause, re-scores the existing
 benchmark under both golds, recomputes the withdrawn Unit 0 sizing gate, and produces a publishable
-exemplar set. **Derivation is offline** — no BioMapper run and no Kestrel call on the repair path.
-Two bounded exceptions are explicit and pinned: R2a's one cached external resolution (Unit 5), and the
+exemplar set. **Derivation is offline for the ~640 agreeing rows; the disagreeing rows require one cached, pinned
+external resolution** (name/CID → InChIKey), which decision #3 established is the only signal that can
+adjudicate them (self-consistency ties on 30 of 48). No BioMapper run and no Kestrel call. The pinned
+exceptions are: that adjudication pass (Unit 5), and the
 recovered gate scripts' own cached network dependencies (Unit 7 — `adjudicate_conflicts.py` hits
 PubChem PUG-REST; `llfs_step1_sizing.py` hits the Metabolomics Workbench RefMet service). Both have
 on-disk caches; the caches must be pinned as inputs, not assumed.
@@ -203,11 +205,12 @@ Surfaced by the persona review; each changes what gets built.
 - **Are the charge-normalized and equivalence-set arms in scope for the re-score?** They are not
   recomputable offline — both need live Kestrel. Either accept one supervised live pass, or drop them
   and state that Unit 2's binding fix leaves the published 78.4% stale with no recomputation path.
-- **Is the self-consistency precedence rule circular?** It assumes a vintage's key and SMILES are
-  independent observations. If Metabolon's modern pipeline generated `smiles` from `inchi_key` (or both
-  from one internal record), self-consistency is guaranteed by construction and carries zero
-  information about which molecule is right — and the 0/8 versus 8/8 split is exactly that signature.
-  Establishing each SMILES column's provenance is cheap and decides whether the rule means anything.
+- ✅ **RESOLVED 2026-08-23 — the self-consistency rule is circular AND undecidable; replaced.** Measured
+  on the pinned file: legacy 97.5% / modern 99.9% block-1 self-consistency (the old "0/8 legacy" was a
+  two-block format artifact at full-key). Modern's 99.9% = co-derived key+SMILES, so the signal is
+  near-worthless; and self-consistency ties on 30 of the 48 disagreeing rows. **Precedence is now decided
+  by an independent name/CID anchor** (HMDB 29/30, pubchem_cid 22/30, CAS 20/30 available on the ties).
+  Consequence: the disagreeing rows now require one cached, pinned external pass — see decision #2.
 - **Does the `gold_smiles` binding fix ship in this PR or its own?** Its blast radius is every row with
   a SMILES value (835–1180), not the disagreeing subset, and it moves an already-published metric.
   Bundling it into the gold repair means one review covers two changes with different risk profiles.
@@ -503,9 +506,17 @@ evidence (R2), plus the bounded external check that could disconfirm the precede
 - Test: `studies/external_benchmarks/tests/test_necs_gold_precedence.py`
 
 **Approach:**
-- Precedence per row is decided by **self-consistency**: which vintage's key matches the key derived
-  from that same vintage's own SMILES. Prior work found the legacy keys do not match their own SMILES
-  (0/8 checked) while the modern keys do (8/8) — but that must be re-derived per row here, not assumed.
+- ⚠️ **Precedence is NOT decided by self-consistency (resolved 2026-08-23, decision #3).** Measured on
+  the pinned file: legacy is 97.5% block-1 self-consistent and modern is 99.9%. The old "legacy 0/8"
+  was a full-key comparison defeated by legacy's two-block format, not a chemistry failure. Modern's
+  99.9% is the fingerprint of a key and SMILES co-derived from one record, so self-consistency carries
+  almost no independent signal — and on the 48 disagreeing rows it is a **tie on 30** (both columns
+  self-consistent, keys still disagree; xylose and choline are among them). It resolves only 18.
+- **Precedence is decided by an INDEPENDENT anchor: the compound name or a non-SMILES-derived ID**
+  (pubchem_cid / HMDB / CAS), resolved externally, then compared to each column's key. This is what the
+  2026-08-04 gate did. Anchor availability on the 30 tie rows was verified: HMDB 29/30, pubchem_cid
+  22/30, CAS 20/30. A row with no usable anchor, or one that resolves ambiguously, is `undecidable` —
+  never defaulted to either column.
 - **The repair is a total function over all 1,495 rows, not a patch over the disagreeing subset.**
   Enumerate and name every disposition explicitly — connectivity-disagreeing (adjudicated),
   stereo-disagreeing (currently silent in the draft: decide and record), legacy-only-filled,
@@ -522,7 +533,10 @@ evidence (R2), plus the bounded external check that could disconfirm the precede
 - Follow the certificate design template: "no evidence" is its own state, and infrastructure failure is
   distinct from a real negative. A row where neither vintage is self-consistent is not the same as a row
   where the check could not run.
-- **R2a verification must be name- or CID-anchored, NOT a SMILES round-trip.** Resolving vendor SMILES
+- **The external resolution is now the PRIMARY adjudicator for disagreeing rows, not a held-out
+  spot-check.** Decision #3 promoted it: self-consistency cannot break the 30 ties, so name/CID
+  resolution is what actually decides precedence. It must be name- or CID-anchored, NOT a SMILES
+  round-trip. Resolving vendor SMILES
   externally sends the same structure out and gets its key back — that re-confirms the SMILES→key
   transform on a second implementation, i.e. self-consistency again, and cannot detect a wrong
   structure, which is the failure it exists to detect. Anchor instead on the compound *name* or the
