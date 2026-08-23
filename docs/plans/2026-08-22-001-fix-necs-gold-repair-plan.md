@@ -197,11 +197,12 @@ RDKit surface is parameterization better settled at implementation time.
 
 Surfaced by the persona review; each changes what gets built.
 
-- **Is the deliverable the 48-row set or the 182-row set?** Measured against the pinned file: 48 rows
-  disagree at block 1, 182 under the plan's own `block1 + "-" + block2[:8]` key. The 134-row difference
-  is the stereo layer. Selecting at block 1 means `stereo_only` is near-unpopulated and the exemplar set
-  omits the isomer groups the domain must keep apart; selecting at the fuller key nearly quadruples the
-  primary deliverable.
+- ✅ **RESOLVED 2026-08-23 — 182 rows, the full `block1 + "-" + block2[:8]` key.** This is the key the
+  benchmark scores at, so selecting narrower would leave the "repaired" gold still contradictory at the
+  granularity the scorer uses. The 134 stereo-only rows characterized: **44 genuine stereo conflicts**
+  (both vintages specify stereo and disagree — glucose, cholesterol, lactose, glutamate, sphingosine,
+  inosine), **81 completeness differences** (one vintage stereo-specified, the other not), **9 odd**
+  (keys differ in stereo layer, neither SMILES carries stereo markers). Repaired in tiers — see Unit 5.
 - **Are the charge-normalized and equivalence-set arms in scope for the re-score?** They are not
   recomputable offline — both need live Kestrel. Either accept one supervised live pass, or drop them
   and state that Unit 2's binding fix leaves the published 78.4% stale with no recomputation path.
@@ -241,6 +242,18 @@ The 48 block-1 disagreements split by whether each key matches **its own** SMILE
 | **B — different structure** | 30 | Both keys self-consistent; the two vintages drew genuinely different structures | **External name/CID anchor** (decision #3) |
 | corrupt | ~9 | Legacy cell is `"4000"` | Trivial — modern wins |
 | unparseable | 1 | — | undecidable |
+
+Plus **134 stereo-only rows** (block 1 agrees, `block2[:8]` differs), included because the benchmark
+scores at that key:
+
+| Stereo tier | n | Mechanism | Resolution |
+|---|---|---|---|
+| **genuine stereo conflict** | 44 | Both vintages specify stereo and disagree (glucose, cholesterol, lactose) | External name/CID anchor — same pipeline as Kind B |
+| **completeness difference** | 81 | One vintage stereo-specified, the other not (arginine, AMP) | Recorded rule: prefer the stereo-complete vintage |
+| **odd** | 9 | Keys differ in stereo layer, neither SMILES carries stereo markers | Flag; classify individually |
+
+**Full scope = 182 rows** (48 block-1 + 134 stereo-only). The external anchor pass (decision #3) covers
+30 Kind-B + 44 genuine stereo = 74 rows; the rest resolve offline or by mechanical rule.
 
 **This corrects the August audit's framing of the known rows.** cortisone and gamma-glutamylvaline are
 **Kind A** — the legacy *key* is wrong (cortisone's legacy key encodes a sulfate ester absent from the
@@ -472,6 +485,8 @@ against the prior measurement of the same quantity.
 - Test: `studies/external_benchmarks/tests/test_necs_gold_classifier.py`
 
 **Approach:**
+- **Select disagreements at `block1 + "-" + block2[:8]` → 182 rows** (decision #1, 2026-08-23), not
+  block-1. Selecting at block-1 would leave the repaired gold contradictory at the key the scorer uses.
 - **First split by KIND, established 2026-08-23 (see Disagreement Provenance).** Kind A (a key
   contradicts its own SMILES → the key is the defect, the SMILES is the arbiter, fully offline) versus
   Kind B (both keys self-consistent, the two SMILES genuinely differ → needs the external anchor).
@@ -562,6 +577,11 @@ evidence (R2), plus the bounded external check that could disconfirm the precede
   2026-08-04 gate did. Anchor availability on the 30 tie rows was verified: HMDB 29/30, pubchem_cid
   22/30, CAS 20/30. A row with no usable anchor, or one that resolves ambiguously, is `undecidable` —
   never defaulted to either column.
+- **Repair tiers (decision #1):** (1) Kind A bad-key (8) — trust the SMILES-derived key, offline;
+  (2) corrupt `"4000"` (9) — modern wins, offline; (3) Kind B structure differences (30) + genuine
+  stereo conflicts (44) — external name/CID anchor, one cached pinned pass; (4) completeness
+  differences (81) — recorded rule preferring the stereo-complete vintage; (5) odd (9) — flag and
+  classify individually. Every tier records its rule per row.
 - **The repair is a total function over all 1,495 rows, not a patch over the disagreeing subset.**
   Enumerate and name every disposition explicitly — connectivity-disagreeing (adjudicated),
   stereo-disagreeing (currently silent in the draft: decide and record), legacy-only-filled,
@@ -795,8 +815,11 @@ one published file without running anything (R22a).
 - Test: `studies/external_benchmarks/tests/test_necs_gold_exemplars.py`
 
 **Approach:**
-- One row per disagreement: compound name, both candidate keys, both SMILES, formula, the assigned
-  class, the precedence rule applied, and the evidence.
+- One row per disagreement across the **full 182-row scope**, each tagged with its tier (bad-key /
+  structure-difference / genuine-stereo-conflict / completeness / corrupt / odd): compound name, both
+  candidate keys, both SMILES, formula, the assigned class, the precedence rule applied, and the
+  evidence. The 44 genuine stereo conflicts on household molecules (glucose, cholesterol) are the most
+  legible exemplars and anchor the narrative's stereochemistry beat.
 - Follow `report/assemble.py` and `report/campaign.py`: markdown generated from a validated results
   bundle, never hand-typed numbers, never auto-published to the wiki.
 - **Prose names the artifact field, never restates the value.** The repo has a test enforcing this
