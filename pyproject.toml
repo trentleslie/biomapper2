@@ -63,6 +63,9 @@ select = [
 known-first-party = ["biomapper2"]
 
 [tool.pytest.ini_options]
+# Repo root on the path so standalone studies import as real packages
+# (studies.analysis.*), no per-test sys.path hacks.
+pythonpath = ["."]
 markers = [
     # Pyramid levels (Tier A = required/commit, Tier B = nightly, Tier C = opt-in)
     "unit: Tier A - Pure functions, no external dependencies",
