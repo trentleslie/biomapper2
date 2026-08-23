@@ -172,9 +172,10 @@ class TestHumanGeneGoldSet:
             # Accept either a correct mechanism: the curated bridge, or a direct search hit
             # (resolved_via is None) when the conflated node surfaces directly. A *wrong* non-None
             # mechanism would still fail the clique/HGNC gates above.
-            assert row["resolved_via"] in (None, "symbol_fallback"), (
-                f"{name} resolved into the clique via an unexpected mechanism: {row['resolved_via']!r}"
-            )
+            assert row["resolved_via"] in (
+                None,
+                "symbol_fallback",
+            ), f"{name} resolved into the clique via an unexpected mechanism: {row['resolved_via']!r}"
 
     def test_resolution_and_bridge_usage_reported(self, gold_set_run):
         """The run quantifies clique resolution and how often the bridge fired (R8 observability)."""

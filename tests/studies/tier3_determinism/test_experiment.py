@@ -289,9 +289,7 @@ def test_relabel_native_temp_maps_opus_zero_to_none(tmp_path: Path) -> None:
     out = tmp_path / "run"
     # Opus-class config, but simulate a run produced by the OLD arms.py: force temp 0.0
     # onto the raw calls + fig4 panel as if native had been mislabeled.
-    opus = ModelSpec(
-        provider="anthropic", model_id="claude-opus-x", label="opus-4.8", supports_temperature=False
-    )
+    opus = ModelSpec(provider="anthropic", model_id="claude-opus-x", label="opus-4.8", supports_temperature=False)
     cfg = ExperimentConfig(
         dataset_path=ds,
         models=[opus],

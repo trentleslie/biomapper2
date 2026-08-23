@@ -253,9 +253,10 @@ def test_no_source_file_under_a_guarded_tree_escapes_the_check() -> None:
             relative = str(path.relative_to(REPO_ROOT))
             if relative not in checked:
                 unaccounted.append(relative)
-    assert not unaccounted, (
-        "these files live under a guarded tree but are neither checked nor exempted:\n  "
-        + "\n  ".join(sorted(unaccounted))
+    assert (
+        not unaccounted
+    ), "these files live under a guarded tree but are neither checked nor exempted:\n  " + "\n  ".join(
+        sorted(unaccounted)
     )
 
 

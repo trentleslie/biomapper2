@@ -195,9 +195,7 @@ def test_resolution_canary_raises_on_service_outage():
 
 def test_resolution_canary_passes_when_known_metabolite_resolves():
     # Caffeine resolves to its known first block -> canary is silent (no raise).
-    resolver = _fake_resolver_factory(
-        lambda name: bgs.CANARY_INCHIKEY_BLOCK if name == bgs.CANARY_NAME else None
-    )()
+    resolver = _fake_resolver_factory(lambda name: bgs.CANARY_INCHIKEY_BLOCK if name == bgs.CANARY_NAME else None)()
     bgs._resolution_canary(cast(bgs.StructureResolver, resolver))  # must not raise
 
 
