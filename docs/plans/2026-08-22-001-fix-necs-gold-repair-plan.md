@@ -222,14 +222,21 @@ Surfaced by the persona review; each changes what gets built.
   with no recompute path — is neutralized by decision #2, which recomputes that number live. Unit 2's
   characterization test still pins the pre-fix behavior so the change is demonstrable.
 
-### Run-time flag — pin before the live run
+### Run-time prerequisites — verified 2026-08-23, resolve before the live run
 
-- **Which kraken does the accuracy recompute run against?** dev BioMapper has the updates, but the
-  preprint wants **public-Kraken-backed** numbers for reproducibility (kestrel.krakenkg.com, which
-  self-reports its build via `/metagraph`). If the substantial kraken-backend updates are only on dev
-  and not yet on public, there is a tension: current/correct numbers (dev) vs reproducible numbers
-  (public). Decide and pin the deployment before firing the run; record it in the manifest. This is the
-  one decision that gates whether the recomputed numbers are preprint-citable.
+- ✅ **Public Kraken is live at 2.1.0** (`kestrel.krakenkg.com/api/metagraph` → `graph: kraken,
+  version: 2.1.0`). No current-vs-reproducible tension: the public endpoint IS the updated one. Run
+  against public Kestrel; the config on this branch already defaults to it (PR #46).
+- ⚠️ **This checkout lacks the Kraken 2.1.0 normalizer (#80).** #80 (normalizer.py, validators.py,
+  vocab_config.py — the client-side adaptation to 2.1.0) merged to **org `main` only**; it is NOT on
+  fork `dev` (this branch) nor org `dev`. Running this checkout against public Kestrel 2.1.0 is
+  **pre-2.1.0 normalizer against the 2.1.0 KG** — a likely resolution-quality mismatch. **Merge or
+  cherry-pick #80 onto the working branch before the accuracy run.**
+- ⚠️ **Org still defaults to the internal host.** Org `main` and `dev` both ship
+  `kestrel.nathanpricelab.com`; the public-default promotion (org PR #78) is open and conflicting. Not
+  a blocker for this work (the fork branch defaults to public), but the org is not "on public" yet.
+- Record the resolved deployment (URL + `/metagraph` fingerprint + ChEBI release + biomapper2 commit
+  including #80) in the run manifest.
 
 ### Deferred to Implementation
 
