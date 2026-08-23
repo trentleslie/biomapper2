@@ -6,8 +6,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-import pytest
-
 from biomapper2.config import KESTREL_BATCH_SIZE_CANONICALIZE, KESTREL_BATCH_SIZE_SEARCH, KESTREL_BATCHING_ENABLED
 from biomapper2.utils import bulk_kestrel_request, chunk_list, kestrel_request
 
@@ -67,6 +65,7 @@ def test_bulk_kestrel_request_raises_after_exhausting_retries():
         with pytest.raises(requests.exceptions.HTTPError):
             bulk_kestrel_request("POST", "text-search", session=session, auth_required=False, max_retries=3, json={})
     assert session.request.call_count == 4  # 1 initial + 3 retries
+
 
 pytestmark = pytest.mark.unit
 
