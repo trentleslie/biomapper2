@@ -2,15 +2,24 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
+
+# Cancel superseded runs on the same ref — caps redundant live-Kestrel calls when
+# a PR gets several quick pushes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  ci:
+  # Deterministic, offline gate — this is what blocks merge. No external services,
+  # so it can't go red because of a Kestrel outage or network blip.
+  gate:
     runs-on: ubuntu-latest
-    env:
-      KESTREL_API_KEY: ${{ secrets.KESTREL_API_KEY }}
     strategy:
       matrix:
         python-version: ['3.10', '3.12']
@@ -24,24 +33,67 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      run: curl -LsSf https://astral.sh/uv/install.sh | sh
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
 
     - name: Install dependencies
-      run: |
-        uv sync --all-groups
+      run: uv sync --all-groups
 
     - name: Run ruff check
-      run: |
-        uv run ruff check
+      run: uv run ruff check
 
     - name: Run black check
-      run: |
-        uv run black --check .
+      run: uv run black --check .
 
     - name: Run pyright
-      run: |
-        uv run pyright
+      run: uv run pyright
 
-    - name: Run tests
-      run: |
-        uv run pytest -v -m "not external"
+    - name: Run fast tests (no live API)
+      run: uv run pytest -v -m "not requires_api and not third_party and not performance"
+
+  # Live correctness suite against the hosted Kestrel. INFORMATIONAL — it depends on
+  # an external service we don't fully control, so a failure must not block unrelated
+  # PRs. continue-on-error keeps the workflow green; read the step summary / artifact
+  # for the real outcome. On main this still runs and surfaces regressions.
+  #
+  # Restricted to main. dev PRs get the offline gate only — the live tier is
+  # informational anyway, and running it on every dev PR multiplies calls against a
+  # service we don't control for signal nobody blocks on.
+  live-kestrel:
+    if: github.ref == 'refs/heads/main' || github.base_ref == 'main'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    env:
+      KESTREL_API_KEY: ${{ secrets.KESTREL_API_KEY }}
+
+    steps:
+    - uses: actions/checkout@v5
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: '3.12'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+
+    - name: Install dependencies
+      run: uv sync --all-groups
+
+    - name: Run full correctness suite (live Kestrel)
+      run: uv run pytest -v -m "not third_party and not performance" --tag ci-live
+
+    - name: Write report to step summary
+      if: always()
+      run: uv run python scripts/report_to_summary.py >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Upload test report
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-report-ci-live
+        path: reports/*.json
+        if-no-files-found: ignore

@@ -15,10 +15,10 @@ import requests_cache
 
 from .config import (
     CACHE_DIR,
-    KESTREL_API_URL,
     KESTREL_BATCHING_ENABLED,
     LOG_LEVEL,
     get_kestrel_api_key,
+    get_kestrel_api_url,
 )
 from .models import AssignedIDsDict as AssignedIDsDict  # Re-export for backward compatibility
 
@@ -171,7 +171,11 @@ def bulk_kestrel_request(
     if auth_required:
         headers["X-API-Key"] = get_kestrel_api_key()
 
-    url = f"{KESTREL_API_URL}/{endpoint}"
+    # Resolved per call rather than from the import-time KESTREL_API_URL constant: the
+    # --kestrel-url pytest option used by kg-regression sets os.environ AFTER this module is
+    # imported, so a captured constant would silently ignore the override and the regression job
+    # would report on whichever backend happened to be the default.
+    url = f"{get_kestrel_api_url()}/{endpoint}"
     transient = (
         requests.exceptions.ConnectionError,
         requests.exceptions.Timeout,

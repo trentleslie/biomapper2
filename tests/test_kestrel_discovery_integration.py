@@ -15,7 +15,7 @@ from biomapper2.api.main import app
 
 
 @pytest.mark.integration
-@pytest.mark.external
+@pytest.mark.requires_api
 class TestKestrelDiscoveryIntegration:
     """Integration tests against live Kestrel API (4 tests)."""
 

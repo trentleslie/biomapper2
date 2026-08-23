@@ -25,6 +25,7 @@ class TestMetabolomicsWorkbenchAnnotator:
     # =========================================================================
     # Test 1: Basic annotator structure
     # =========================================================================
+    @pytest.mark.unit
     def test_annotator_basics(self):
         """Test annotator has correct slug and inherits from BaseAnnotator."""
         annotator = MetabolomicsWorkbenchAnnotator()
@@ -35,7 +36,7 @@ class TestMetabolomicsWorkbenchAnnotator:
     # Test 2: Core annotation behavior
     # =========================================================================
     @patch("biomapper2.core.annotators.metabolomics_workbench.requests.get")
-    @pytest.mark.external
+    @pytest.mark.unit
     def test_get_annotations_returns_refmet_id(self, mock_get: MagicMock):
         """Test that annotations return refmet_id (KRAKEN has all equivalencies)."""
         # Arrange - /match endpoint response format
@@ -69,6 +70,7 @@ class TestMetabolomicsWorkbenchAnnotator:
     # =========================================================================
     # Test 3: Edge case - not found
     # =========================================================================
+    @pytest.mark.unit
     @patch("biomapper2.core.annotators.metabolomics_workbench.requests.get")
     def test_no_match_response(self, mock_get: MagicMock):
         """Test that /match 'no match' response (dash values) returns empty annotations."""
@@ -97,6 +99,7 @@ class TestMetabolomicsWorkbenchAnnotator:
     # =========================================================================
     # Test 4: Edge case - missing input
     # =========================================================================
+    @pytest.mark.unit
     def test_missing_name_field(self):
         """Test that entity without name field returns empty dict."""
         annotator = MetabolomicsWorkbenchAnnotator()
@@ -109,6 +112,7 @@ class TestMetabolomicsWorkbenchAnnotator:
     # =========================================================================
     # Test 5: Bulk operations
     # =========================================================================
+    @pytest.mark.unit
     @patch("biomapper2.core.annotators.metabolomics_workbench.requests.get")
     def test_bulk_returns_series(self, mock_get: MagicMock):
         """Test that get_annotations_bulk returns Series with matching index."""
@@ -137,6 +141,7 @@ class TestMetabolomicsWorkbenchAnnotator:
     # =========================================================================
     # Test 6: Engine integration
     # =========================================================================
+    @pytest.mark.unit
     def test_engine_selects_annotator_for_metabolite(self):
         """Test that AnnotationEngine selects MetabolomicsWorkbenchAnnotator for metabolite."""
         from biomapper2.core.annotation_engine import AnnotationEngine
@@ -150,7 +155,7 @@ class TestMetabolomicsWorkbenchAnnotator:
     # Test 7: Real API call (integration)
     # =========================================================================
     @pytest.mark.integration
-    @pytest.mark.external
+    @pytest.mark.third_party
     def test_real_api_match_endpoint(self):
         """Test real API call: exact match and fuzzy match."""
         annotator = MetabolomicsWorkbenchAnnotator()
@@ -173,7 +178,8 @@ class TestMetabolomicsWorkbenchAnnotator:
     # Test 8: Full Mapper pipeline (end-to-end)
     # =========================================================================
     @pytest.mark.integration
-    @pytest.mark.external
+    @pytest.mark.third_party
+    @pytest.mark.requires_api
     def test_mapper_end_to_end(self):
         """Test full pipeline using Mapper.map_entity_to_kg() with MW annotator."""
         from biomapper2.mapper import Mapper

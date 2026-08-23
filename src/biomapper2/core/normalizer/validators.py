@@ -4,9 +4,10 @@ import re
 
 
 def is_loinc_id(local_id: str) -> bool:
-    """LOINC codes: digits followed by dash and check digit (e.g., 27858-0)
-    or LP codes: LP followed by digits and dash-digit (e.g., LP32606-3)"""
-    return bool(re.match(r"^(LP)?\d+-\d$", local_id))
+    """LOINC codes: digits followed by a dash and check digit (e.g., 27858-0), plus the
+    prefixed code types that share that shape -- Parts (LP32606-3), Answer strings (LA33-6),
+    Answer lists (LL2223-3), and Groups (LG32863-7)."""
+    return bool(re.match(r"^(LP|LA|LL|LG)?\d+-\d$", local_id))
 
 
 def is_lipidbank_id(local_id: str) -> bool:
@@ -658,3 +659,20 @@ def is_ensemblgenomes_id(local_id: str) -> bool:
     """Ensembl Genomes IDs: uppercase letters followed by digits.
     Examples: BMEI0545"""
     return bool(re.match(r"^[A-Z]+\d+$", local_id))
+
+
+def is_pgs_id(local_id: str) -> bool:
+    """PGS Catalog scores: the 6-digit zero-padded accession (e.g., 000027 for PGS000027)."""
+    return bool(re.match(r"^\d{6}$", local_id))
+
+
+def is_cde_id(local_id: str) -> bool:
+    """NIH CDE 'tinyId's: alphanumeric with underscores/hyphens.
+    Examples: QkESX3mk1l, 3_J_5WKnXp"""
+    return bool(re.match(r"^[A-Za-z0-9_-]+$", local_id))
+
+
+def is_biological_measure_label(local_id: str) -> bool:
+    """KRAKEN-minted biological-measure umbrella nodes (BIOAGE:BiologicalAge, BIOBMI:BiologicalBMI):
+    a single alphanumeric label."""
+    return bool(re.match(r"^[A-Za-z][A-Za-z0-9]*$", local_id))

@@ -59,9 +59,7 @@ class StructureResolver:
         self._name_cache[node_name] = block
         return block
 
-    def inchikey_blocks(
-        self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None
-    ) -> set[str]:
+    def inchikey_blocks(self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None) -> set[str]:
         """ALL KG-asserted InChIKey first-blocks for a node (the full ``equivalent_ids`` list).
 
         ``inchikey_block`` returns only ``keys[0]``; a KG node's INCHIKEY list is multi-valued
