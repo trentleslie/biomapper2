@@ -23,14 +23,44 @@ analysis.
 This is the applied use case for the BioMapper preprint, whose spine is *a structural certificate
 issued for a name-input resolution, plus refusal when one cannot be issued.*
 
-**The central design problem:** beating a hand-curated coverage number is a weak claim on its own.
-The obvious objection is "you made your matcher more permissive." Coverage alone also reproduces
-exactly the limitation being criticised. Expert adjudication is what converts a coverage comparison
-into a precision claim on **both** arms, and is therefore load-bearing rather than an add-on.
+## Narrative Spine
 
-A second problem was discovered while establishing the baseline and must be fixed first: the NECS
-annotation ships **two InChIKey columns that contradict each other on 48 of 691 rows**, and the
-existing benchmark scores against the wrong one (see R1–R2).
+The comparison is told in four beats, each deeper than the last. Coverage is the on-ramp, not the
+claim; the claim is structural certification; the punchline is that even expert-curated ground truth
+carries structural contradictions.
+
+1. **Coverage / overlap — the shared language.** Monti reported overlap counts, and every reader of
+   that paper thinks in them. BioMapper reproduces the overlap picture **automatically**, with none of
+   the manual name curation Monti's method required. On same-vendor pairs (Arivale, Xu — both
+   Metabolon) name matching already reaches ~98%, so the honest statement is *parity, achieved
+   without hand curation*; on cross-platform pairs (LLFS, BLSA) BioMapper *recovers* overlap the
+   name-based method silently drops when RefMet cannot standardize a name. Accessible, non-threatening,
+   establishes common ground.
+2. **The turn: coverage is not correctness.** Two names can "match" and denote different molecules; a
+   name can fail to match and denote the same one. Coverage cannot tell these apart — by construction,
+   which is why Monti reported no accuracy. This is where the familiar metric runs out.
+3. **Structural certification — the contribution.** BioMapper resolves a name to a structure and
+   issues a certificate, or refuses when it cannot. Now the overlaps can be *graded*, not just counted.
+   This is the paper's spine: *a structural certificate issued for a name-input resolution, plus
+   refusal when one cannot be issued.* UniChem is the prior art for structural cross-referencing but
+   cannot start from a name and never declines.
+4. **The deepest cut: the curated ground truth itself is structurally self-contradictory.** The NECS
+   annotation ships **two InChIKey columns that disagree on 48 of 691 rows** (see Disagreement
+   Provenance), and the existing benchmark scores against the wrong one. Name-based curation cannot
+   detect this; a structural check does. So "expert-curated gold" is not a fixed floor — it needs the
+   same structural lens, and demonstrating that on Monti's own data is the strongest evidence for the
+   approach. This beat lands last because it is the most convincing.
+
+**Why coverage is the opening and not the claim.** Beating a hand-curated coverage number, on its own,
+invites the obvious objection "you made your matcher more permissive," and coverage alone reproduces
+exactly the limitation being criticised. So coverage earns attention and establishes parity, then
+beats 2–4 carry the actual contribution. Expert adjudication is what converts the graded overlaps into
+a precision claim on **both** arms, and is therefore load-bearing rather than an add-on.
+
+**The two deliverables map onto the arc.** Beat 1 is the Deliverable 2 four-cohort overlap comparison
+(the metabolite spreadsheet). Beats 2–4 are the structural through-line that Deliverable 1's gold
+repair and exemplar set anchor — beat 4 *is* the Deliverable 1 work, and it is the deepest, last, and
+most convincing evidence, which is part of why Deliverable 1 ships first and stands on its own.
 
 ## Glossary
 
@@ -324,8 +354,9 @@ planning and execution follow Deliverable 1.
   reproducible algorithmically. Their published counts are the baseline to beat, not a target to
   match. The replication already performed (Arivale 95%, LLFS 88%, Xu 109%, BLSA 80% of reported)
   served its purpose by surfacing the errors below and is not a deliverable.
-- **Not** a coverage-only claim. Coverage without certification reproduces the limitation being
-  criticised.
+- **Not** a coverage-only claim. Coverage is the narrative on-ramp (beat 1), not the destination;
+  the claim is structural certification (beats 2–4). A coverage number presented as the headline
+  reproduces the limitation being criticised.
 - **Not** building or modifying the review application. Verified against the deployed code: the
   protocol fits with **configuration only, no code changes**. Staging is two campaigns rather than
   two UI stages (R15); blinding is an export-time property rather than a display toggle (R15a); the
