@@ -25,6 +25,8 @@ import re
 from collections import Counter
 from typing import Any
 
+import pandas as pd
+
 from . import structure_compare as sc
 
 COMPARISON_RULE = "block1+block2[:8]"
@@ -135,3 +137,124 @@ def classify_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
     results = [classify_row(**r) for r in rows]
     counts = Counter(r["kind"] for r in results)
     return {"rows": results, "kind_counts": dict(counts)}
+
+
+# --- Unit 5: repaired gold column + per-row provenance (total function over all rows) ----------
+
+_ARBITER_KEY = {"legacy": "gold_inchikey", "modern": "gold_inchikey_standard"}
+_NEEDS_ANCHOR = frozenset({"kind_b_structure", "stereo_conflict", "stereo_odd"})
+
+
+def _repair_one(row: dict[str, Any]) -> dict[str, Any]:
+    """Decide the repaired gold key + provenance for ONE row. Total: every row gets a state."""
+    lk = str(row.get("gold_inchikey", "") or "").strip()
+    mk = str(row.get("gold_inchikey_standard", "") or "").strip()
+    ls = row.get("gold_smiles", "")
+    ms = row.get("gold_smiles_standard", "")
+    formula = row.get("gold_formula", "")
+
+    if not lk and not mk:
+        return {"repaired_inchikey": "", "repair_state": "no_gold", "repair_kind": "",
+                "repair_arbiter": "", "repair_rule": "no gold InChIKey in either vintage"}
+    if lk and not mk:
+        return {"repaired_inchikey": lk, "repair_state": "legacy_only", "repair_kind": "",
+                "repair_arbiter": "legacy", "repair_rule": "only the legacy vintage carries a key"}
+    if mk and not lk:
+        return {"repaired_inchikey": mk, "repair_state": "modern_only", "repair_kind": "",
+                "repair_arbiter": "modern", "repair_rule": "only the modern vintage carries a key"}
+
+    res = classify_row(lk, ls, mk, ms, formula)
+    kind = res["kind"]
+    if kind == "agree":
+        return {"repaired_inchikey": mk, "repair_state": "agreed", "repair_kind": kind,
+                "repair_arbiter": "modern", "repair_rule": f"keys agree at {COMPARISON_RULE}; standard form kept"}
+    if res["offline_resolved"] and res["arbiter"] in _ARBITER_KEY:
+        chosen = lk if res["arbiter"] == "legacy" else mk
+        return {"repaired_inchikey": chosen, "repair_state": "resolved_offline", "repair_kind": kind,
+                "repair_arbiter": res["arbiter"], "repair_rule": res["reason"] or kind}
+    if kind in _NEEDS_ANCHOR:
+        return {"repaired_inchikey": "", "repair_state": "pending_anchor", "repair_kind": kind,
+                "repair_arbiter": "", "repair_rule": f"{kind}: awaiting external name/CID anchor"}
+    return {"repaired_inchikey": "", "repair_state": "undecidable", "repair_kind": kind,
+            "repair_arbiter": "", "repair_rule": res["reason"] or "undecidable"}
+
+
+def build_repaired_gold(input_df: pd.DataFrame) -> pd.DataFrame:
+    """Return input_df with the repaired gold column + per-row provenance, for EVERY row."""
+    prov = pd.DataFrame([_repair_one(r) for r in input_df.to_dict("records")], index=input_df.index)
+    return pd.concat([input_df, prov], axis=1)
+
+
+def pending_anchor_names(repaired_df: pd.DataFrame) -> list[str]:
+    """Names still awaiting the external anchor pass — the input to the (gated) name/CID fetch."""
+    mask = repaired_df["repair_state"] == "pending_anchor"
+    return repaired_df.loc[mask, "chemical_name"].astype(str).tolist()
+
+
+def apply_anchor_resolutions(
+    repaired_df: pd.DataFrame, anchor_map: dict[str, str]
+) -> pd.DataFrame:
+    """Apply external name/CID -> InChIKey resolutions to pending_anchor rows.
+
+    A name absent from ``anchor_map`` (the anchor could not resolve it) STAYS pending — never
+    silently defaulted to a vintage. ``anchor_map`` is produced by the gated live pass; this
+    transform is offline and testable with a stand-in map.
+    """
+    out = repaired_df.copy()
+    for idx, row in out.iterrows():
+        if row["repair_state"] != "pending_anchor":
+            continue
+        key = anchor_map.get(str(row["chemical_name"]))
+        if key:
+            out.at[idx, "repaired_inchikey"] = key
+            out.at[idx, "repair_state"] = "resolved_anchor"
+            out.at[idx, "repair_rule"] = "external name/CID anchor selected this structure"
+    return out
+
+
+# --- External name/CID anchor for pending rows (Unit 5, R2a) -----------------------------------
+# The DECISION logic (anchor_choice) and the map application (apply_anchor_resolutions) are pure
+# and offline-tested. Only fetch_anchor_resolutions touches the network, and it is a SUPERVISED
+# OPERATOR STEP — never call it inside an automated pipeline tail.
+
+def anchor_choice(resolved_key: str | None, legacy_key: str, modern_key: str) -> str | None:
+    """Given an INDEPENDENTLY resolved key (from name/CID, not from either vintage's SMILES),
+    return which vintage it corroborates at the adjudication key: 'legacy' | 'modern' | None.
+
+    None means the anchor matches NEITHER vintage — a real finding (both vintages may be wrong),
+    never silently forced onto one.
+    """
+    if not resolved_key:
+        return None
+    a = _adj(resolved_key)
+    if a == _adj(legacy_key):
+        return "legacy"
+    if a == _adj(modern_key):
+        return "modern"
+    return None
+
+
+def fetch_anchor_resolutions(pending_df: pd.DataFrame, resolver) -> dict[str, str]:
+    """Build the name -> chosen-vintage-key map for pending_anchor rows via an INDEPENDENT anchor.
+
+    ``resolver`` is a callable ``(name: str, cid: str) -> str | None`` returning a full InChIKey
+    resolved from the compound identity (name or PubChem CID), NOT from either vintage's SMILES.
+    Inject the live PubChem resolver in production (SUPERVISED) or a stand-in in tests.
+
+    A name whose anchor matches neither vintage, or does not resolve, is OMITTED from the map so
+    apply_anchor_resolutions leaves it pending — never a silent default.
+    """
+    out: dict[str, str] = {}
+    for _, row in pending_df.iterrows():
+        if row.get("repair_state") != "pending_anchor":
+            continue
+        name = str(row["chemical_name"])
+        cid = str(row.get("gold_pubchem", "") or "")
+        resolved = resolver(name, cid)
+        choice = anchor_choice(resolved, str(row.get("gold_inchikey", "")),
+                               str(row.get("gold_inchikey_standard", "")))
+        if choice == "legacy":
+            out[name] = str(row["gold_inchikey"])
+        elif choice == "modern":
+            out[name] = str(row["gold_inchikey_standard"])
+    return out
