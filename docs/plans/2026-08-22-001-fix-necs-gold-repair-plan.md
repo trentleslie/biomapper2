@@ -222,21 +222,27 @@ Surfaced by the persona review; each changes what gets built.
   with no recompute path — is neutralized by decision #2, which recomputes that number live. Unit 2's
   characterization test still pins the pre-fix behavior so the change is demonstrable.
 
-### Run-time prerequisites — verified 2026-08-23, resolve before the live run
+### Run-time prerequisites — ✅ RESOLVED 2026-08-24 (housekeeping session)
 
-- ✅ **Public Kraken is live at 2.1.0** (`kestrel.krakenkg.com/api/metagraph` → `graph: kraken,
-  version: 2.1.0`). No current-vs-reproducible tension: the public endpoint IS the updated one. Run
-  against public Kestrel; the config on this branch already defaults to it (PR #46).
-- ⚠️ **This checkout lacks the Kraken 2.1.0 normalizer (#80).** #80 (normalizer.py, validators.py,
-  vocab_config.py — the client-side adaptation to 2.1.0) merged to **org `main` only**; it is NOT on
-  fork `dev` (this branch) nor org `dev`. Running this checkout against public Kestrel 2.1.0 is
-  **pre-2.1.0 normalizer against the 2.1.0 KG** — a likely resolution-quality mismatch. **Merge or
-  cherry-pick #80 onto the working branch before the accuracy run.**
-- ⚠️ **Org still defaults to the internal host.** Org `main` and `dev` both ship
-  `kestrel.nathanpricelab.com`; the public-default promotion (org PR #78) is open and conflicting. Not
-  a blocker for this work (the fork branch defaults to public), but the org is not "on public" yet.
-- Record the resolved deployment (URL + `/metagraph` fingerprint + ChEBI release + biomapper2 commit
-  including #80) in the run manifest.
+The three-way split is gone. Fork `dev` (HEAD `1200396`) now carries **all three at once**: the
+public-Kestrel default (`get_kestrel_api_url()` → `kestrel.krakenkg.com/api`), the Kraken 2.1.0
+normalizer (`BIOAGE/BIOBMI/CDE/PGS` in `vocab_config.py`), AND the `studies/external_benchmarks`
+harness. Org `main` (`9e51d6d`, #86 merge) and org `dev` are now identical on the functional stack and
+also default to public. Verified empirically 2026-08-24: public Kestrel `/metagraph` → 2.1.0; org and
+fork configs both `PUBLIC_KESTREL_API_URL`; #78/#79/#82–86 all merged green; #86's CI ran the
+live-Kestrel tier against public and passed.
+
+- **Run checkout = fork `dev` (or this branch rebased onto it).** `studies/` stayed on the fork by
+  design (only functional code promoted to org), so the harness + the full 2.1.0 stack coexist only on
+  fork `dev`. **Concrete step before implementing Deliverable 1: rebase `feat/cross-cohort-eitl-campaign`
+  onto fork `dev` @ `1200396`** — a clean rebase now (fork dev already merged everything), not a
+  cherry-pick.
+- **Pin the manifest** against fork `dev` `1200396` (functionally identical to org `main` `9e51d6d`),
+  the deployment URL, the `/metagraph` fingerprint (`{graph: kraken, version: 2.1.0}`), and the ChEBI
+  release.
+- **Local/uv checkout vs deployed API:** running the benchmark from the local `uv` checkout defaults to
+  public — nothing to confirm. Only if hitting the deployed `biomapper2-api` service must its `.env`
+  `KESTREL_API_URL` be confirmed (the deploy succeeded but its endpoint depends on that var).
 
 ### Deferred to Implementation
 
