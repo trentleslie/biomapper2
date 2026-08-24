@@ -88,3 +88,6 @@ reports/
 # Memtrace code-graph daemon (per-checkout runtime state: pid, port, local MemDB)
 .memdb/
 .memtrace/
+
+# Licensed cohort panel (CC BY-NC-ND) — referenced by path, never committed
+data/NIHMS2038904-supplement-2.xlsx
