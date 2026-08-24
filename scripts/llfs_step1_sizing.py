@@ -121,6 +121,14 @@ def necs_has_structure(r: dict, gold_column: str = "gold_inchikey") -> bool:
     return row_has_gold_structure(r, gold_column)
 
 
+def _gate_gold_column() -> str:
+    """Which gold column the gate evaluates. Default is the legacy `gold_inchikey` (the
+    original-gold run). The REPAIRED-gold gate run (a supervised operator step) sets
+    NECS_GATE_GOLD_COLUMN=repaired_inchikey — so the ruler is always chosen explicitly and
+    announced in the output below, never silently defaulted."""
+    return os.environ.get("NECS_GATE_GOLD_COLUMN", "gold_inchikey")
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     x = pd.ExcelFile(LLFS_XLSX)
@@ -175,7 +183,7 @@ def main() -> None:
         lr = llfs_by_refmet[key][0]
         nrs = necs_by_refmet[key]
         llfs_ok = not lr["sum_comp"]
-        necs_ok = any(necs_has_structure(r) for r in nrs)
+        necs_ok = any(necs_has_structure(r, _gate_gold_column()) for r in nrs)
         verdict = ("adjudicable" if (llfs_ok and necs_ok)
                    else "blocked_both" if (not llfs_ok and not necs_ok)
                    else "blocked_llfs_sum_composition" if not llfs_ok
@@ -187,7 +195,8 @@ def main() -> None:
                      "verdict": verdict})
 
     adj = counts["adjudicable"]
-    print("GATE: of the overlapping pairs their method finds, how many can structure adjudicate?")
+    print(f"GATE (gold column = {_gate_gold_column()}): of the overlapping pairs their method finds, "
+          "how many can structure adjudicate?")
     for k in ("adjudicable", "blocked_llfs_sum_composition", "blocked_necs_no_structure", "blocked_both"):
         print(f"  {k:32s} {counts[k]:4d}  ({counts[k]/len(shared):.0%})")
     print(f"\n  BLSA comparison: 93 of 497 analytes (19%) were discrete")
