@@ -41,3 +41,16 @@ def test_row_predicate_reads_the_named_column_not_always_legacy():
     row = {"gold_inchikey": "4000", "repaired_inchikey": _STANDARD_3BLOCK}
     assert row_has_gold_structure(row) is False  # legacy default
     assert row_has_gold_structure(row, gold_column="repaired_inchikey") is True
+
+
+def test_assert_gold_column_present_fails_loud_on_absent_ruler():
+    """A selected-but-absent ruler (wrong env var, or repaired column on a pre-repair frame) must
+    raise, not silently score every row as missing."""
+    import pytest
+
+    from studies.external_benchmarks.scorers.gold_structure import assert_gold_column_present
+
+    rows = [{"gold_inchikey": _STANDARD_3BLOCK}, {"gold_inchikey": _LEGACY_2BLOCK}]
+    assert_gold_column_present(rows, "gold_inchikey")  # present -> no raise
+    with pytest.raises(ValueError, match="absent or empty on all"):
+        assert_gold_column_present(rows, "repaired_inchikey")  # never populated -> raise

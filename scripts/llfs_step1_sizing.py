@@ -177,6 +177,10 @@ def main() -> None:
         raise SystemExit("no shared RefMet names: the reproduction failed, refusing to report a gate.")
 
     # ---- 3. THE GATE ----------------------------------------------------------------------------
+    # Fail loud if the selected ruler column is absent/empty on every NECS row, rather than
+    # silently scoring an all-missing (degenerate) verdict.
+    from studies.external_benchmarks.scorers.gold_structure import assert_gold_column_present
+    assert_gold_column_present([r for rs in necs_by_refmet.values() for r in rs], _gate_gold_column())
     counts = Counter()
     rows = []
     for key in shared:
