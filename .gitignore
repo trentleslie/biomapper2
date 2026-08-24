@@ -73,8 +73,13 @@ data/**/*.json
 !tests/fixtures/**/*.tsv
 !tests/fixtures/**/*.json
 
+# Allow release-please config and versioning files
+!release-please-config.json
+!.release-please-manifest.json
+
 # Other app-specific items
 cache/
+reports/
 .env
 
 # Serena AI tool

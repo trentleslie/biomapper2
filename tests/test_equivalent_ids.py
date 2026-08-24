@@ -4,9 +4,12 @@ from functools import partial
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
+import pytest
 
 from biomapper2.core.linker import Linker
 from biomapper2.models import Entity
+
+pytestmark = pytest.mark.unit
 
 
 class TestEquivalentIds:

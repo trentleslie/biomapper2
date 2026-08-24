@@ -55,7 +55,10 @@ class KestrelTextSearchAnnotator(BaseAnnotator):
                 else:
                     logging.info(
                         "off_category_refusal: annotator=%s term=%r node=%s categories=%s",
-                        self.slug, search_term, first_result.get("id"), first_result.get("categories"),
+                        self.slug,
+                        search_term,
+                        first_result.get("id"),
+                        first_result.get("categories"),
                     )
 
             return {self.slug: annotations}

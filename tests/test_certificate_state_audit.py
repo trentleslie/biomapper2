@@ -281,9 +281,9 @@ def test_a_dependent_stratum_survives_the_column_being_read_as_strings(tmp_path:
     """
     arm = _dependent_stratum_arm(tmp_path) / "necs" / "necs_MAPPED_chebi_d_mapped.tsv"
     arm.write_text(arm.read_text().replace("\tFalse\t", "\tFalse \t", 1))
-    assert pd.read_csv(arm, sep="\t")["certificate_independent_of_selection"].dtype == object, (
-        "the premise of this test is that the column arrives as strings"
-    )
+    assert (
+        pd.read_csv(arm, sep="\t")["certificate_independent_of_selection"].dtype == object
+    ), "the premise of this test is that the column arrives as strings"
 
     figure5 = audit(tmp_path)["per_dataset"][0]["figure5"]
     strata = figure5["panel_b_precision_coverage"]["strata"]

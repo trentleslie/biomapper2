@@ -262,8 +262,11 @@ class TestGuardCannotBeBypassedByNamingAnAnnotator:
     def test_off_category_top_hit_is_refused(self, annotator_cls):
         ann = annotator_cls()
         out = ann.get_annotations(
-            {"name": "carnosine"}, "name", "biolink:SmallMolecule",
-            accepted_categories=CHEMICAL, cache={"carnosine": [UMLS_PROTEIN]},
+            {"name": "carnosine"},
+            "name",
+            "biolink:SmallMolecule",
+            accepted_categories=CHEMICAL,
+            cache={"carnosine": [UMLS_PROTEIN]},
         )
         assert out[ann.slug] == {}, "an off-category top hit must be refused, not committed"
 
@@ -271,8 +274,11 @@ class TestGuardCannotBeBypassedByNamingAnAnnotator:
     def test_on_category_top_hit_still_commits(self, annotator_cls):
         ann = annotator_cls()
         out = ann.get_annotations(
-            {"name": "some chemical"}, "name", "biolink:SmallMolecule",
-            accepted_categories=CHEMICAL, cache={"some chemical": [UNII_CHEMICAL_ENTITY]},
+            {"name": "some chemical"},
+            "name",
+            "biolink:SmallMolecule",
+            accepted_categories=CHEMICAL,
+            cache={"some chemical": [UNII_CHEMICAL_ENTITY]},
         )
         assert "LYJ3482CB6" in out[ann.slug].get("UNII", {})
 
@@ -281,8 +287,11 @@ class TestGuardCannotBeBypassedByNamingAnAnnotator:
         """The gene path and every unconfigured category must be untouched."""
         ann = annotator_cls()
         out = ann.get_annotations(
-            {"name": "carnosine"}, "name", "biolink:SmallMolecule",
-            accepted_categories=None, cache={"carnosine": [UMLS_PROTEIN]},
+            {"name": "carnosine"},
+            "name",
+            "biolink:SmallMolecule",
+            accepted_categories=None,
+            cache={"carnosine": [UMLS_PROTEIN]},
         )
         assert "C0639060" in out[ann.slug].get("UMLS", {})
 

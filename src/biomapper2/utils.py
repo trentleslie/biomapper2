@@ -20,7 +20,6 @@ import requests_cache
 from .config import (
     CACHE_DIR,
     CACHE_IGNORED_PARAMETERS,
-    KESTREL_API_URL,
     KESTREL_BATCHING_ENABLED,
     KESTREL_BISECT_MAX_CONSECUTIVE_FAILURES,
     KESTREL_BISECT_MAX_REQUESTS,
@@ -32,6 +31,7 @@ from .config import (
     LOG_LEVEL,
     PUBLIC_KESTREL_API_URL,
     get_kestrel_api_key,
+    get_kestrel_api_url,
 )
 from .models import AssignedIDsDict as AssignedIDsDict  # Re-export for backward compatibility
 
@@ -319,15 +319,20 @@ def kestrel_host_accepts_credentials(url: str) -> bool:
     return host != _normalized_host(PUBLIC_KESTREL_API_URL)
 
 
-def _warn_key_withheld_once() -> None:
-    """Say once that a configured key is deliberately not being sent to the public endpoint."""
+def _warn_key_withheld_once(url: str) -> None:
+    """Say once that a configured key is deliberately not being sent to the public endpoint.
+
+    Takes the URL the decision was actually made against. Reading the import-time constant here
+    would name a different host than the one the key was withheld from whenever the URL was
+    overridden after import.
+    """
     global _key_withheld_warned
     if _key_withheld_warned:
         return
     _key_withheld_warned = True
     logging.warning(
         f"KESTREL_API_KEY is set but KESTREL_API_URL points at the public endpoint "
-        f"({KESTREL_API_URL}), which needs no key — withholding the credential rather than "
+        f"({url}), which needs no key — withholding the credential rather than "
         "sending it to a public host. Unset KESTREL_API_KEY, or set KESTREL_API_URL to the "
         "endpoint the key was issued for."
     )
@@ -391,15 +396,26 @@ def bulk_kestrel_request(
     # ``config.KESTREL_REQUEST_TIMEOUT_S`` for how the value is sized.
     kwargs.setdefault("timeout", KESTREL_REQUEST_TIMEOUT_S)
 
+    # Resolved per call rather than from the import-time KESTREL_API_URL constant: the
+    # --kestrel-url pytest option used by kg-regression sets os.environ AFTER this module is
+    # imported, so a captured constant would silently ignore the override and the regression job
+    # would report on whichever backend happened to be the default.
+    #
+    # The credential decision below reads this SAME resolved value. Deciding against the import-time
+    # constant while sending to the resolved URL is how the key reaches a host it was withheld from:
+    # override to the public endpoint after import and the constant still names the internal host,
+    # so the guard says "accepts credentials" about a request going somewhere else entirely.
+    base_url = get_kestrel_api_url()
+
     headers: dict[str, str] = {}
     api_key = get_kestrel_api_key() if auth_required else None
     if api_key:
-        if kestrel_host_accepts_credentials(KESTREL_API_URL):
+        if kestrel_host_accepts_credentials(base_url):
             headers[_KESTREL_KEY_HEADER] = api_key
         else:
-            _warn_key_withheld_once()
+            _warn_key_withheld_once(base_url)
 
-    url = f"{KESTREL_API_URL}/{endpoint}"
+    url = f"{base_url}/{endpoint}"
     transient = (
         requests.exceptions.ConnectionError,
         requests.exceptions.Timeout,
@@ -434,7 +450,7 @@ def bulk_kestrel_request(
             hint = ""
             if status in (401, 403) and not api_key:
                 hint = (
-                    f" No KESTREL_API_KEY is set and {KESTREL_API_URL} requires authentication; "
+                    f" No KESTREL_API_KEY is set and {base_url} requires authentication; "
                     f"set it, or point KESTREL_API_URL at the public endpoint "
                     f"({PUBLIC_KESTREL_API_URL}), which needs no key."
                 )
@@ -628,7 +644,7 @@ def kestrel_request(
         bisect_on_5xx = KESTREL_BISECT_ON_5XX_ENABLED
 
     merged_results: dict = {}
-    chunk_budget: "BisectBudget | None" = None  # started at most once, on the first failing chunk
+    chunk_budget: BisectBudget | None = None  # started at most once, on the first failing chunk
     for chunk in chunks:
         chunk_payload = {**json_payload, batch_field: chunk}
         try:
