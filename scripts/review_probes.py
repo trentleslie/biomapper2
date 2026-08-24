@@ -12,9 +12,9 @@ def clean(v):
     s = "" if v is None else str(v).strip()
     return "" if s.lower() in ("", "-", "na", "nan", "none", "null") else s
 
-def has_struct(r):
-    from studies.external_benchmarks.scorers.gold_structure import has_gold_structure
-    return has_gold_structure(r.get("gold_inchikey"))
+def has_struct(r, gold_column="gold_inchikey"):
+    from studies.external_benchmarks.scorers.gold_structure import row_has_gold_structure
+    return row_has_gold_structure(r, gold_column)
 
 print("=" * 72)
 print("FINDING 2 (feasibility, P0): does LLFS carry ANY registry identifier?")

@@ -113,11 +113,12 @@ def refmet_convert(names: list[str]) -> dict[str, str]:
     return cached
 
 
-def necs_has_structure(r: dict) -> bool:
-    """NECS row carries a usable gold InChIKey. Accepts BOTH the legacy two-block and the standard
-    three-block forms (a repaired gold carries three-block keys) — see scorers.gold_structure."""
-    from studies.external_benchmarks.scorers.gold_structure import has_gold_structure
-    return has_gold_structure(r.get("gold_inchikey"))
+def necs_has_structure(r: dict, gold_column: str = "gold_inchikey") -> bool:
+    """NECS row carries a usable gold InChIKey in ``gold_column``. Accepts BOTH the legacy
+    two-block and the standard three-block forms. Pass ``gold_column="repaired_inchikey"`` to run
+    the gate against the REPAIRED gold; the default (legacy) is the original-gold run."""
+    from studies.external_benchmarks.scorers.gold_structure import row_has_gold_structure
+    return row_has_gold_structure(r, gold_column)
 
 
 def main() -> None:

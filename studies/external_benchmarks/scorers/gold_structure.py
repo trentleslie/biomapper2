@@ -23,3 +23,15 @@ def has_gold_structure(inchikey: str | None) -> bool:
         return False
     parts = v.split("-")
     return len(parts) in (2, 3) and len(parts[0]) == 14
+
+
+def row_has_gold_structure(row: dict, gold_column: str = "gold_inchikey") -> bool:
+    """Whether a row carries a usable gold key in the NAMED column.
+
+    The repaired gold is stored in ``repaired_inchikey``, separate from the legacy
+    ``gold_inchikey``. To run the Unit-0 sizing gate against the REPAIRED ruler, pass
+    ``gold_column="repaired_inchikey"``; the default reads the legacy column, so a caller that
+    forgets would silently evaluate the gate against the legacy gold — the exact wrong-column
+    failure this whole repair exists to remove.
+    """
+    return has_gold_structure(row.get(gold_column, ""))
