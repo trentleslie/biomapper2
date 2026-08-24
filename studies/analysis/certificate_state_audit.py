@@ -212,6 +212,7 @@ def _independence(value: Any) -> bool | None:
         raise ValueError(f"{value!r} is not a boolean")
     return INDEPENDENCE_LITERALS[text]
 
+
 # The Tier-B sweep artifact, referenced by a FIXED name rather than a timestamp. A caption cannot
 # cite a timestamped path, and the pinned suite carries no certificate columns, so without a fixed
 # committed name the Tier-B half of the figure has no reproducible provenance.

@@ -209,7 +209,7 @@ def curator_external_ids(row: pd.Series, config: MetLinkRDatasetConfig) -> list[
     return out
 
 
-def prediction_block(row: pd.Series, oracle: "StructureBlockOracle | None") -> str | None:
+def prediction_block(row: pd.Series, oracle: StructureBlockOracle | None) -> str | None:
     """BioMapper's chosen-node InChIKey first-block.
 
     Primary: read the INCHIKEY carried INLINE in the row's ``kg_equivalent_ids`` (already fetched by

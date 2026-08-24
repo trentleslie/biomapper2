@@ -77,17 +77,19 @@ def test_needs_verification_excluded_from_rate_not_counted_as_miss():
 def test_rate_is_over_evaluable_subset_with_partial_coverage():
     # Two rows with a gold id: one adjudicated equivalent, one unresolvable. The rate reflects
     # the judged subset (1/1 = 100%), with coverage exposed via evaluable/needs_verification.
-    df = pd.DataFrame([
-        _row("glucose", "CHEBI:4167", "HMDB:HMDB0000122"),
-        _row("mystery", "CHEBI:99999", "HMDB:HMDB9999999"),
-    ])
+    df = pd.DataFrame(
+        [
+            _row("glucose", "CHEBI:4167", "HMDB:HMDB0000122"),
+            _row("mystery", "CHEBI:99999", "HMDB:HMDB9999999"),
+        ]
+    )
     g1, p1 = frozenset({"HMDB:HMDB0000122"}), frozenset({"CHEBI:4167"})
     g2, p2 = frozenset({"HMDB:HMDB9999999"}), frozenset({"CHEBI:99999"})
     judge = FakeJudge({(g1, p1): True, (g2, p2): None}, {(g1, p1): True, (g2, p2): None})
     result = score_name_hit(df, METABOLITEANNOTATOR_POS, id_equivalence_judge=judge)
     uci = result["id_concordance_uci_equivalence"]
-    assert uci["scored"] == 2           # full strict population (both have a gold id)
-    assert uci["evaluable"] == 1        # one row UniChem could adjudicate
+    assert uci["scored"] == 2  # full strict population (both have a gold id)
+    assert uci["evaluable"] == 1  # one row UniChem could adjudicate
     assert uci["concordant"] == 1
     assert uci["needs_verification"] == 1
     assert uci["concordance_rate"] == pytest.approx(1.0)  # over the judged subset, not 0.5
@@ -95,10 +97,12 @@ def test_rate_is_over_evaluable_subset_with_partial_coverage():
 
 def test_equivalence_denominator_matches_strict_id_scored():
     # Row with a hit but NO gold id is NOT in the equivalence denominator (same as strict).
-    df = pd.DataFrame([
-        _row("glucose", "CHEBI:4167", "HMDB:HMDB0000122"),
-        _row("ATP", "CHEBI:15422", ""),  # hit, no gold -> excluded
-    ])
+    df = pd.DataFrame(
+        [
+            _row("glucose", "CHEBI:4167", "HMDB:HMDB0000122"),
+            _row("ATP", "CHEBI:15422", ""),  # hit, no gold -> excluded
+        ]
+    )
     gold = frozenset({"HMDB:HMDB0000122"})
     pred = frozenset({"CHEBI:4167"})
     judge = FakeJudge({(gold, pred): True}, {(gold, pred): True})
@@ -109,10 +113,12 @@ def test_equivalence_denominator_matches_strict_id_scored():
 
 def test_namespace_confusion_matrix_counts_divergent_rows():
     # Two glucose-like rows: gold HMDB, prediction CHEBI, bridge-credited but strict-discordant.
-    df = pd.DataFrame([
-        _row("glucose", "CHEBI:4167", "HMDB:HMDB0000122"),
-        _row("fructose", "CHEBI:28757", "HMDB:HMDB0000660"),
-    ])
+    df = pd.DataFrame(
+        [
+            _row("glucose", "CHEBI:4167", "HMDB:HMDB0000122"),
+            _row("fructose", "CHEBI:28757", "HMDB:HMDB0000660"),
+        ]
+    )
     judge = FakeJudge(
         uci_map={
             (frozenset({"HMDB:HMDB0000122"}), frozenset({"CHEBI:4167"})): False,

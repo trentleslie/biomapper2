@@ -58,10 +58,9 @@ def _summarize(result: dict[str, Any], persisted_strict: dict[str, Any] | None) 
     if persisted_strict is not None:
         # A faithful reproduction must match BOTH the scored population and the concordant
         # count — matching concordant alone would certify a changed strict rate as identical.
-        sanity = (
-            int(persisted_strict.get("scored", -1)) == int(strict["scored"])
-            and int(persisted_strict.get("concordant", -1)) == int(strict["concordant"])
-        )
+        sanity = int(persisted_strict.get("scored", -1)) == int(strict["scored"]) and int(
+            persisted_strict.get("concordant", -1)
+        ) == int(strict["concordant"])
     return {
         "strict": {k: strict[k] for k in ("scored", "concordant", "concordance_rate")},
         "uci_equivalence": uci,
@@ -168,8 +167,10 @@ def main(argv: list[str] | None = None) -> None:
         if mode in summary:
             a = summary[mode]["uci_equivalence"]
             b = summary[mode]["inchikey_bridge"]
-            print(f"  {mode}: strict={_pct(summary[mode]['strict']['concordance_rate'])} "
-                  f"UCI={_pct(a['concordance_rate'])} bridge={_pct(b['concordance_rate'])}")
+            print(
+                f"  {mode}: strict={_pct(summary[mode]['strict']['concordance_rate'])} "
+                f"UCI={_pct(a['concordance_rate'])} bridge={_pct(b['concordance_rate'])}"
+            )
 
 
 if __name__ == "__main__":

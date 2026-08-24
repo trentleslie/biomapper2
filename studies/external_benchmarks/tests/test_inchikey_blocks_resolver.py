@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from biomapper2.core.structure_resolver import StructureResolver
-
 from studies.external_benchmarks.oracle import KGStructureOracle
 
 

@@ -1275,7 +1275,6 @@ def orchestrate_metabench(
         METABENCH,
         CurieDatasetConfig,
         MetaBenchDatasetConfig,
-        ProvidedIdDatasetConfig,
     )
     from .report.metabench import assemble_metabench_report
     from .runner import run_provided_id, run_vocab

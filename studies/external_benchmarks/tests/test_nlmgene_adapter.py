@@ -23,8 +23,8 @@ def test_nlmgene_config_shape():
     assert NLMGENE_REGISTRY["nlm-gene"] is NLMGENE
 
 
-from studies.external_benchmarks.adapters import nlmgene
-from studies.external_benchmarks.adapters.nlmgene import GeneMention, parse_bioc_documents
+from studies.external_benchmarks.adapters import nlmgene  # noqa: E402
+from studies.external_benchmarks.adapters.nlmgene import GeneMention, parse_bioc_documents  # noqa: E402
 
 # Minimal BioC XML doc: one Gene mention, one multi-gene (ambiguous) Gene mention, one GeneRIF
 # (must be skipped), one Gene mention with a blank id (skipped).
@@ -36,7 +36,7 @@ _BIOC_DOC = """<?xml version='1.0' encoding='UTF-8'?>
 <annotation id="2"><infon key="NCBI Gene identifier">12458,12772,12775</infon><infon key="type">Gene</infon><location offset="27" length="18"/><text>chemokine receptor</text></annotation>
 <annotation id="3"><infon key="NCBI Gene identifier">7157</infon><infon key="type">GeneRIF</infon><location offset="0" length="4"/><text>TP53</text></annotation>
 <annotation id="4"><infon key="NCBI Gene identifier"></infon><infon key="type">Gene</infon><location offset="0" length="0"/><text>ghost</text></annotation>
-</passage></document></collection>"""
+</passage></document></collection>"""  # noqa: E501
 
 
 def test_parse_bioc_extracts_gene_mentions_skips_generif_and_blank():
@@ -60,7 +60,7 @@ _SEMICOLON_DOC = """<?xml version='1.0' encoding='UTF-8'?>
 <collection><document><id>333</id>
 <passage><infon key="type">title</infon><offset>0</offset><text>ERK1/2 signaling.</text>
 <annotation id="0"><infon key="NCBI Gene identifier">5595;5594</infon><infon key="type">Gene</infon><location offset="0" length="6"/><text>ERK1/2</text></annotation>
-</passage></document></collection>"""
+</passage></document></collection>"""  # noqa: E501
 
 
 def test_parse_bioc_splits_semicolon_multi_gene_span():
@@ -80,7 +80,7 @@ def test_semicolon_span_lands_in_ambiguous_partition():
     assert set(row["gold_ncbigene"].split("|")) == {"NCBIGene:5595", "NCBIGene:5594"}
 
 
-from studies.external_benchmarks.adapters.nlmgene import (
+from studies.external_benchmarks.adapters.nlmgene import (  # noqa: E402
     AMBIGUOUS,
     UNAMBIGUOUS,
     aggregate_surface_forms,
@@ -122,7 +122,7 @@ def test_build_input_df_dedupes_labels_partition_and_prefixes_curies():
     assert df["mention"].is_unique
 
 
-from studies.external_benchmarks.adapters.nlmgene import (
+from studies.external_benchmarks.adapters.nlmgene import (  # noqa: E402
     NlmGeneBundle,
     load_nlmgene,
     persist_input_df,
@@ -154,6 +154,7 @@ def test_persist_input_df_roundtrips_sha(tmp_path):
     assert path.exists()
     # persisted bytes re-hash to the card's recorded SHA (reconstructable regardless of upstream drift)
     from studies.external_benchmarks.adapters.backbones import sha256_bytes
+
     assert sha256_bytes(path.read_bytes()) == bundle.card["subsample_sha256"]
 
 

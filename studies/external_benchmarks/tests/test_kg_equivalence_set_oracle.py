@@ -108,9 +108,7 @@ def test_equivalence_set_is_superset_of_strict_never_below():
     result = score_structure_oracle(_one_row(), HAJJAR, oracle, vocab="CHEBI")
     assert result["comparable_core"]["correct"] == 1
     assert result["comparable_core_kg_equivalence_set"]["correct"] == 1
-    assert (
-        result["comparable_core_kg_equivalence_set"]["correct"] >= result["comparable_core"]["correct"]
-    )
+    assert result["comparable_core_kg_equivalence_set"]["correct"] >= result["comparable_core"]["correct"]
 
 
 def test_strict_number_identical_with_and_without_set_capability():

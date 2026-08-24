@@ -117,12 +117,22 @@ def test_provided_config_marks_kegg_source_direction_as_known_gap():
     # known_source_gap so a genuine zero mapping is scored 0/n, not refused as a broken run. An
     # HMDB-source direction is a normal run (the guard stays armed).
     kegg = metabench.MetaBenchSubgroup(
-        key="metabench-grounding-kegg2hmdb", pair_type="id2id", source_namespace="KEGG",
-        target_namespace="HMDB", source_id_column="kegg", vocab="HMDB", input_df=pd.DataFrame(),
+        key="metabench-grounding-kegg2hmdb",
+        pair_type="id2id",
+        source_namespace="KEGG",
+        target_namespace="HMDB",
+        source_id_column="kegg",
+        vocab="HMDB",
+        input_df=pd.DataFrame(),
     )
     hmdb = metabench.MetaBenchSubgroup(
-        key="metabench-grounding-hmdb2kegg", pair_type="id2id", source_namespace="HMDB",
-        target_namespace="KEGG", source_id_column="hmdb", vocab="KEGG", input_df=pd.DataFrame(),
+        key="metabench-grounding-hmdb2kegg",
+        pair_type="id2id",
+        source_namespace="HMDB",
+        target_namespace="KEGG",
+        source_id_column="hmdb",
+        vocab="KEGG",
+        input_df=pd.DataFrame(),
     )
     assert metabench.provided_config_for_subgroup(kegg, METABENCH).known_source_gap is True
     assert metabench.provided_config_for_subgroup(hmdb, METABENCH).known_source_gap is False

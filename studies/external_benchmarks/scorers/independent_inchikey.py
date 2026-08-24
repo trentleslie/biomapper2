@@ -72,8 +72,6 @@ class PubChemInChIKeyResolver:
         key = f"hmdb:{hmdb}"
         if key in self._cache:
             return self._cache[key]
-        block = self._get_txt_inchikey(
-            f"compound/xref/RegistryID/{quote(hmdb)}/property/InChIKey/TXT"
-        )
+        block = self._get_txt_inchikey(f"compound/xref/RegistryID/{quote(hmdb)}/property/InChIKey/TXT")
         self._cache[key] = block
         return block

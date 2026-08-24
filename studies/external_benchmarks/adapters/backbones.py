@@ -253,7 +253,7 @@ def subsample_csv_bytes(input_df: pd.DataFrame) -> bytes:
     return input_df.to_csv(index=False).encode("utf-8")
 
 
-def persist_subsample(bundle: "BackboneBundle", out_dir: Path | str) -> Path:
+def persist_subsample(bundle: BackboneBundle, out_dir: Path | str) -> Path:
     """Write the exact scored subsample beside the dataset card so the run is reconstructable
     regardless of upstream `current_release` drift. Returns the written path.
 
@@ -328,7 +328,5 @@ def load_backbone(
     lines: Iterable[str] = stream_source_lines(source) if isinstance(source, str) else source
     input_df, n_scanned = subsample_from_lines(lines, config)
     sha = sha256_bytes(subsample_csv_bytes(input_df))
-    card = build_card(
-        input_df, n_scanned=n_scanned, source_sha=sha, config=config, source_version=source_version
-    )
+    card = build_card(input_df, n_scanned=n_scanned, source_sha=sha, config=config, source_version=source_version)
     return BackboneBundle(input_df=input_df, card=card)

@@ -93,7 +93,9 @@ def run_arm_a(
     out: list[ArmACall] = []
     if max_workers and max_workers > 1:
         with ThreadPoolExecutor(max_workers=max_workers) as ex:
-            futures = [ex.submit(_one_arm_a_call, call, spec, query, decode, repeat) for spec, decode, query, repeat in units]
+            futures = [
+                ex.submit(_one_arm_a_call, call, spec, query, decode, repeat) for spec, decode, query, repeat in units
+            ]  # noqa: E501
             for fut in as_completed(futures):
                 result = fut.result()
                 out.append(result)

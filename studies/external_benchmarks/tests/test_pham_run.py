@@ -21,9 +21,7 @@ def test_main_dispatches_pham_ambiguous_only(monkeypatch, tmp_path, capsys):
     local = tmp_path / "pham.csv"
     local.write_bytes(b"metabolite_name,metanetx_id\ntmp,MNXM1\n")
     calls: list[dict] = []
-    monkeypatch.setattr(
-        run_mod, "orchestrate_pham", lambda **k: (calls.append(k), {"out_dir": "d", "report": "r"})[1]
-    )
+    monkeypatch.setattr(run_mod, "orchestrate_pham", lambda **k: (calls.append(k), {"out_dir": "d", "report": "r"})[1])
     monkeypatch.setattr("sys.argv", ["run", "pham", "--source", str(local), "--no-gate", "--ambiguous-only"])
     run_mod.main()
 
@@ -38,9 +36,7 @@ def test_main_pham_defaults_to_full_population(monkeypatch, tmp_path):
     local = tmp_path / "pham.csv"
     local.write_bytes(b"metabolite_name,metanetx_id\ntmp,MNXM1\n")
     calls: list[dict] = []
-    monkeypatch.setattr(
-        run_mod, "orchestrate_pham", lambda **k: (calls.append(k), {"out_dir": "d", "report": "r"})[1]
-    )
+    monkeypatch.setattr(run_mod, "orchestrate_pham", lambda **k: (calls.append(k), {"out_dir": "d", "report": "r"})[1])
     monkeypatch.setattr("sys.argv", ["run", "pham", "--source", str(local), "--no-gate"])
     run_mod.main()
 
