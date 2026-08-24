@@ -47,7 +47,7 @@ def _has_stereo(smiles: str | None) -> bool:
     return bool(_STEREO_MARKER.search(smiles or ""))
 
 
-def _rdkit_hint(legacy_smiles: str, modern_smiles: str) -> str:
+def _rdkit_hint(legacy_smiles: str | None, modern_smiles: str | None) -> str:
     """Non-authoritative preliminary class for a kind_b row. NEVER the final verdict."""
     if sc.same_canonical(legacy_smiles, modern_smiles) is True:
         return "tautomer_or_charge?"
@@ -168,7 +168,7 @@ _ARBITER_KEY = {"legacy": "gold_inchikey", "modern": "gold_inchikey_standard"}
 _NEEDS_ANCHOR = frozenset({"kind_b_structure", "stereo_conflict", "stereo_odd"})
 
 
-def _repair_one(row: dict[str, Any]) -> dict[str, Any]:
+def _repair_one(row: dict) -> dict[str, Any]:
     """Decide the repaired gold key + provenance for ONE row. Total: every row gets a state."""
     lk = str(row.get("gold_inchikey", "") or "").strip()
     mk = str(row.get("gold_inchikey_standard", "") or "").strip()
@@ -262,9 +262,9 @@ def apply_anchor_resolutions(repaired_df: pd.DataFrame, anchor_map: dict[str, st
             continue
         key = anchor_map.get(str(row["chemical_name"]))
         if key:
-            out.at[idx, "repaired_inchikey"] = key
-            out.at[idx, "repair_state"] = "resolved_anchor"
-            out.at[idx, "repair_rule"] = "external name/CID anchor selected this structure"
+            out.at[idx, "repaired_inchikey"] = key  # type: ignore[index]
+            out.at[idx, "repair_state"] = "resolved_anchor"  # type: ignore[index]
+            out.at[idx, "repair_rule"] = "external name/CID anchor selected this structure"  # type: ignore[index]
     return out
 
 

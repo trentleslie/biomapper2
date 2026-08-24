@@ -22,7 +22,7 @@ from rdkit import Chem, RDLogger
 from rdkit.Chem import rdMolDescriptors
 from rdkit.Chem.MolStandardize import rdMolStandardize
 
-RDLogger.DisableLog("rdApp.*")
+RDLogger.DisableLog("rdApp.*")  # type: ignore[attr-defined]
 
 _TAUTOMER = rdMolStandardize.TautomerEnumerator()
 _UNCHARGER = rdMolStandardize.Uncharger()

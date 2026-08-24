@@ -46,6 +46,7 @@ def score_both_golds(per_row: list[dict[str, Any]], repaired_map: dict[str, str]
         gold_o = _b1(r.get("gold_block"))
 
         has_orig = bool(gold_o)
+        orig_correct = False
         if has_orig:
             orig_den += 1
             orig_correct = pred == gold_o
