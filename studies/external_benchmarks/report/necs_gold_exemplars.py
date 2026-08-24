@@ -40,23 +40,24 @@ def build_exemplar_set(input_df: pd.DataFrame) -> dict[str, Any]:
         mk = str(r.get("gold_inchikey_standard", "") or "").strip()
         if not lk or not mk or _adj(lk) == _adj(mk):
             continue  # not a disagreement at the adjudication key
-        res = classify_row(lk, r.get("gold_smiles"), mk, r.get("gold_smiles_standard"),
-                           r.get("gold_formula"))
-        exemplars.append({
-            "chemical_name": str(r.get("chemical_name", "")),
-            "legacy_inchikey": lk,
-            "modern_inchikey": mk,
-            "legacy_smiles": str(r.get("gold_smiles", "") or ""),
-            "modern_smiles": str(r.get("gold_smiles_standard", "") or ""),
-            "formula": str(r.get("gold_formula", "") or ""),
-            "kind": res["kind"],
-            "klass": res["klass"],
-            "arbiter": res["arbiter"],
-            "offline_resolved": res["offline_resolved"],
-            "rdkit_hint": res["rdkit_hint"],
-            "reason": res["reason"],
-            "comparison_rule": COMPARISON_RULE,
-        })
+        res = classify_row(lk, r.get("gold_smiles"), mk, r.get("gold_smiles_standard"), r.get("gold_formula"))
+        exemplars.append(
+            {
+                "chemical_name": str(r.get("chemical_name", "")),
+                "legacy_inchikey": lk,
+                "modern_inchikey": mk,
+                "legacy_smiles": str(r.get("gold_smiles", "") or ""),
+                "modern_smiles": str(r.get("gold_smiles_standard", "") or ""),
+                "formula": str(r.get("gold_formula", "") or ""),
+                "kind": res["kind"],
+                "klass": res["klass"],
+                "arbiter": res["arbiter"],
+                "offline_resolved": res["offline_resolved"],
+                "rdkit_hint": res["rdkit_hint"],
+                "reason": res["reason"],
+                "comparison_rule": COMPARISON_RULE,
+            }
+        )
     kind_counts = dict(Counter(e["kind"] for e in exemplars))
     summary = {
         "n_disagreements": len(exemplars),
@@ -92,9 +93,13 @@ def render_markdown(bundle: dict[str, Any]) -> str:
     ]
     for kind, n in sorted(s["kind_counts"].items(), key=lambda kv: -kv[1]):
         lines.append(f"| {kind} | {n} |")
-    lines += ["", "## Exemplars", "",
-              "| name | legacy key | modern key | formula | kind | arbiter |",
-              "|---|---|---|---|---|---|"]
+    lines += [
+        "",
+        "## Exemplars",
+        "",
+        "| name | legacy key | modern key | formula | kind | arbiter |",
+        "|---|---|---|---|---|---|",
+    ]
     for e in bundle["exemplars"]:
         lines.append(
             f"| {e['chemical_name']} | `{e['legacy_inchikey']}` | `{e['modern_inchikey']}` | "

@@ -82,11 +82,21 @@ def classify_row(
 
     # Corrupt placeholder cells: the other vintage wins outright.
     if lk == "4000" and mk and mk != "4000":
-        return _result("corrupt", arbiter="modern", offline_resolved=True,
-                       klass="corrupt_legacy_cell", reason="legacy cell is the 4000 placeholder")
+        return _result(
+            "corrupt",
+            arbiter="modern",
+            offline_resolved=True,
+            klass="corrupt_legacy_cell",
+            reason="legacy cell is the 4000 placeholder",
+        )
     if mk == "4000" and lk and lk != "4000":
-        return _result("corrupt", arbiter="legacy", offline_resolved=True,
-                       klass="corrupt_modern_cell", reason="modern cell is the 4000 placeholder")
+        return _result(
+            "corrupt",
+            arbiter="legacy",
+            offline_resolved=True,
+            klass="corrupt_modern_cell",
+            reason="modern cell is the 4000 placeholder",
+        )
     if not lk or not mk:
         return _result("undecidable", reason="a vintage key is absent")
 
@@ -103,11 +113,21 @@ def classify_row(
 
     # KIND A — a key contradicts its own SMILES. That key is the defect; the SMILES is the arbiter.
     if legacy_selfconsistent and not modern_selfconsistent:
-        return _result("kind_a_bad_key", arbiter="legacy", offline_resolved=True,
-                       klass="modern_key_wrong", reason="modern key contradicts its own SMILES")
+        return _result(
+            "kind_a_bad_key",
+            arbiter="legacy",
+            offline_resolved=True,
+            klass="modern_key_wrong",
+            reason="modern key contradicts its own SMILES",
+        )
     if modern_selfconsistent and not legacy_selfconsistent:
-        return _result("kind_a_bad_key", arbiter="modern", offline_resolved=True,
-                       klass="legacy_key_wrong", reason="legacy key contradicts its own SMILES")
+        return _result(
+            "kind_a_bad_key",
+            arbiter="modern",
+            offline_resolved=True,
+            klass="legacy_key_wrong",
+            reason="legacy key contradicts its own SMILES",
+        )
     if not legacy_selfconsistent and not modern_selfconsistent:
         return _result("undecidable", reason="neither key matches its own SMILES")
 
@@ -116,20 +136,23 @@ def classify_row(
         # Connectivity agrees; the disagreement is stereo-only.
         l_stereo, m_stereo = _has_stereo(legacy_smiles), _has_stereo(modern_smiles)
         if l_stereo and m_stereo:
-            return _result("stereo_conflict", klass="genuine_stereo",
-                           reason="both vintages specify stereo and disagree — needs anchor")
+            return _result(
+                "stereo_conflict",
+                klass="genuine_stereo",
+                reason="both vintages specify stereo and disagree — needs anchor",
+            )
         if l_stereo and not m_stereo:
-            return _result("completeness", arbiter="legacy", offline_resolved=True,
-                           klass="modern_stereo_unspecified")
+            return _result("completeness", arbiter="legacy", offline_resolved=True, klass="modern_stereo_unspecified")
         if m_stereo and not l_stereo:
-            return _result("completeness", arbiter="modern", offline_resolved=True,
-                           klass="legacy_stereo_unspecified")
-        return _result("stereo_odd",
-                       reason="stereo keys differ but neither SMILES carries stereo markers")
+            return _result("completeness", arbiter="modern", offline_resolved=True, klass="legacy_stereo_unspecified")
+        return _result("stereo_odd", reason="stereo keys differ but neither SMILES carries stereo markers")
 
     # Connectivity differs -> KIND B. RDKit is not authoritative; attach a hint, route to anchor.
-    return _result("kind_b_structure", rdkit_hint=_rdkit_hint(legacy_smiles, modern_smiles),
-                   reason="two self-consistent vintages with different connectivity — needs anchor")
+    return _result(
+        "kind_b_structure",
+        rdkit_hint=_rdkit_hint(legacy_smiles, modern_smiles),
+        reason="two self-consistent vintages with different connectivity — needs anchor",
+    )
 
 
 def classify_rows(rows: list[dict[str, Any]]) -> dict[str, Any]:
@@ -154,29 +177,64 @@ def _repair_one(row: dict[str, Any]) -> dict[str, Any]:
     formula = row.get("gold_formula", "")
 
     if not lk and not mk:
-        return {"repaired_inchikey": "", "repair_state": "no_gold", "repair_kind": "",
-                "repair_arbiter": "", "repair_rule": "no gold InChIKey in either vintage"}
+        return {
+            "repaired_inchikey": "",
+            "repair_state": "no_gold",
+            "repair_kind": "",
+            "repair_arbiter": "",
+            "repair_rule": "no gold InChIKey in either vintage",
+        }
     if lk and not mk:
-        return {"repaired_inchikey": lk, "repair_state": "legacy_only", "repair_kind": "",
-                "repair_arbiter": "legacy", "repair_rule": "only the legacy vintage carries a key"}
+        return {
+            "repaired_inchikey": lk,
+            "repair_state": "legacy_only",
+            "repair_kind": "",
+            "repair_arbiter": "legacy",
+            "repair_rule": "only the legacy vintage carries a key",
+        }
     if mk and not lk:
-        return {"repaired_inchikey": mk, "repair_state": "modern_only", "repair_kind": "",
-                "repair_arbiter": "modern", "repair_rule": "only the modern vintage carries a key"}
+        return {
+            "repaired_inchikey": mk,
+            "repair_state": "modern_only",
+            "repair_kind": "",
+            "repair_arbiter": "modern",
+            "repair_rule": "only the modern vintage carries a key",
+        }
 
     res = classify_row(lk, ls, mk, ms, formula)
     kind = res["kind"]
     if kind == "agree":
-        return {"repaired_inchikey": mk, "repair_state": "agreed", "repair_kind": kind,
-                "repair_arbiter": "modern", "repair_rule": f"keys agree at {COMPARISON_RULE}; standard form kept"}
+        return {
+            "repaired_inchikey": mk,
+            "repair_state": "agreed",
+            "repair_kind": kind,
+            "repair_arbiter": "modern",
+            "repair_rule": f"keys agree at {COMPARISON_RULE}; standard form kept",
+        }
     if res["offline_resolved"] and res["arbiter"] in _ARBITER_KEY:
         chosen = lk if res["arbiter"] == "legacy" else mk
-        return {"repaired_inchikey": chosen, "repair_state": "resolved_offline", "repair_kind": kind,
-                "repair_arbiter": res["arbiter"], "repair_rule": res["reason"] or kind}
+        return {
+            "repaired_inchikey": chosen,
+            "repair_state": "resolved_offline",
+            "repair_kind": kind,
+            "repair_arbiter": res["arbiter"],
+            "repair_rule": res["reason"] or kind,
+        }
     if kind in _NEEDS_ANCHOR:
-        return {"repaired_inchikey": "", "repair_state": "pending_anchor", "repair_kind": kind,
-                "repair_arbiter": "", "repair_rule": f"{kind}: awaiting external name/CID anchor"}
-    return {"repaired_inchikey": "", "repair_state": "undecidable", "repair_kind": kind,
-            "repair_arbiter": "", "repair_rule": res["reason"] or "undecidable"}
+        return {
+            "repaired_inchikey": "",
+            "repair_state": "pending_anchor",
+            "repair_kind": kind,
+            "repair_arbiter": "",
+            "repair_rule": f"{kind}: awaiting external name/CID anchor",
+        }
+    return {
+        "repaired_inchikey": "",
+        "repair_state": "undecidable",
+        "repair_kind": kind,
+        "repair_arbiter": "",
+        "repair_rule": res["reason"] or "undecidable",
+    }
 
 
 def build_repaired_gold(input_df: pd.DataFrame) -> pd.DataFrame:
@@ -191,9 +249,7 @@ def pending_anchor_names(repaired_df: pd.DataFrame) -> list[str]:
     return repaired_df.loc[mask, "chemical_name"].astype(str).tolist()
 
 
-def apply_anchor_resolutions(
-    repaired_df: pd.DataFrame, anchor_map: dict[str, str]
-) -> pd.DataFrame:
+def apply_anchor_resolutions(repaired_df: pd.DataFrame, anchor_map: dict[str, str]) -> pd.DataFrame:
     """Apply external name/CID -> InChIKey resolutions to pending_anchor rows.
 
     A name absent from ``anchor_map`` (the anchor could not resolve it) STAYS pending — never
@@ -216,6 +272,7 @@ def apply_anchor_resolutions(
 # The DECISION logic (anchor_choice) and the map application (apply_anchor_resolutions) are pure
 # and offline-tested. Only fetch_anchor_resolutions touches the network, and it is a SUPERVISED
 # OPERATOR STEP — never call it inside an automated pipeline tail.
+
 
 def anchor_choice(resolved_key: str | None, legacy_key: str, modern_key: str) -> str | None:
     """Given an INDEPENDENTLY resolved key (from name/CID, not from either vintage's SMILES),
@@ -251,8 +308,7 @@ def fetch_anchor_resolutions(pending_df: pd.DataFrame, resolver) -> dict[str, st
         name = str(row["chemical_name"])
         cid = str(row.get("gold_pubchem", "") or "")
         resolved = resolver(name, cid)
-        choice = anchor_choice(resolved, str(row.get("gold_inchikey", "")),
-                               str(row.get("gold_inchikey_standard", "")))
+        choice = anchor_choice(resolved, str(row.get("gold_inchikey", "")), str(row.get("gold_inchikey_standard", "")))
         if choice == "legacy":
             out[name] = str(row["gold_inchikey"])
         elif choice == "modern":

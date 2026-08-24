@@ -9,7 +9,7 @@ _PER_ROW = [
     {"name": "a", "predicted_block": "AAAAAAAAAAAAAA", "gold_block": "AAAAAAAAAAAAAA"},  # correct
     {"name": "b", "predicted_block": "BBBBBBBBBBBBBB", "gold_block": "XXXXXXXXXXXXXX"},  # orig wrong
     {"name": "c", "predicted_block": "CCCCCCCCCCCCCC", "gold_block": "CCCCCCCCCCCCCC"},  # correct
-    {"name": "d", "predicted_block": "DDDDDDDDDDDDDD", "gold_block": ""},               # no orig gold
+    {"name": "d", "predicted_block": "DDDDDDDDDDDDDD", "gold_block": ""},  # no orig gold
 ]
 
 
@@ -42,8 +42,7 @@ def test_abstention_is_costly_triple_and_pessimistic():
 
 def test_newly_covered_is_separated_not_folded_into_delta():
     """Row d (no original gold) gains a repaired gold — must land in newly_covered, not intersection."""
-    repaired = {"a": "AAAAAAAAAAAAAA-Z", "b": "XXXXXXXXXXXXXX-Z",
-                "c": "CCCCCCCCCCCCCC-Z", "d": "DDDDDDDDDDDDDD-Z"}
+    repaired = {"a": "AAAAAAAAAAAAAA-Z", "b": "XXXXXXXXXXXXXX-Z", "c": "CCCCCCCCCCCCCC-Z", "d": "DDDDDDDDDDDDDD-Z"}
     out = score_both_golds(_PER_ROW, repaired)
     assert out["newly_covered"] == {"numerator": 1, "denominator": 1}
     assert out["intersection"]["denominator"] == 3  # a, b, c — not d

@@ -35,8 +35,9 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parent.parent
 LLFS_XLSX = REPO / "data" / "NIHMS2038904-supplement-2.xlsx"
-NECS_TSV = Path(os.path.expanduser(
-    "~/external_benchmark_runs/scorer_rerun_20260723/necs/necs-metabolon_CHEBI_MAPPED.tsv"))
+NECS_TSV = Path(
+    os.path.expanduser("~/external_benchmark_runs/scorer_rerun_20260723/necs/necs-metabolon_CHEBI_MAPPED.tsv")
+)
 OUT = Path(os.path.expanduser("~/external_benchmark_runs/cohort_panels_20260804"))
 CACHE = OUT / "necs_refmet_convert_cache.tsv"
 
@@ -85,16 +86,18 @@ def refmet_convert(names: list[str]) -> dict[str, str]:
         force_ipv4()
         print(f"  RefMet: converting {len(todo)} uncached names in batches of {BATCH}...", flush=True)
         for i in range(0, len(todo), BATCH):
-            chunk = todo[i:i + BATCH]
+            chunk = todo[i : i + BATCH]
             body = ("\n".join(chunk)).encode("utf-8")
             # multipart/form-data with a single field, matching the service's HTML form
             boundary = "----refmetbatch"
             payload = (
-                f"--{boundary}\r\nContent-Disposition: form-data; name=\"metabolite_name\"\r\n\r\n"
-            ).encode() + body + f"\r\n--{boundary}--\r\n".encode()
+                (f'--{boundary}\r\nContent-Disposition: form-data; name="metabolite_name"\r\n\r\n').encode()
+                + body
+                + f"\r\n--{boundary}--\r\n".encode()
+            )
             req = urllib.request.Request(
-                REFMET_BULK, data=payload,
-                headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+                REFMET_BULK, data=payload, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}
+            )
             with urllib.request.urlopen(req, timeout=180) as resp:
                 text = resp.read().decode("utf-8", errors="replace")
             lines = [ln for ln in text.splitlines() if ln.strip()]
@@ -118,6 +121,7 @@ def necs_has_structure(r: dict, gold_column: str = "gold_inchikey") -> bool:
     two-block and the standard three-block forms. Pass ``gold_column="repaired_inchikey"`` to run
     the gate against the REPAIRED gold; the default (legacy) is the original-gold run."""
     from studies.external_benchmarks.scorers.gold_structure import row_has_gold_structure
+
     return row_has_gold_structure(r, gold_column)
 
 
@@ -144,8 +148,10 @@ def main() -> None:
     print(f"LLFS panel: {len(ann)} metabolites   (Monti states 188 lipid / 220 polar)")
     print(f"  sum-composition lipid species : {n_sum:4d}  ({n_sum/len(ann):.0%})")
     print(f"  discrete molecules            : {len(ann)-n_sum:4d}  ({(len(ann)-n_sum)/len(ann):.0%})")
-    print("  top sum-composition classes:", ", ".join(
-        f"{k}={v}" for k, v in Counter(ann.loc[ann.sum_comp, "main_class"]).most_common(5)))
+    print(
+        "  top sum-composition classes:",
+        ", ".join(f"{k}={v}" for k, v in Counter(ann.loc[ann.sum_comp, "main_class"]).most_common(5)),
+    )
     print()
 
     # ---- 2. reproduce Monti's 163 ---------------------------------------------------------------
@@ -164,13 +170,17 @@ def main() -> None:
             llfs_by_refmet.setdefault(r["refmet"].lower(), []).append(r)
 
     print("RefMet standardized-name coverage")
-    print(f"  LLFS with a RefMet name : {len(ann[ann.refmet != '']):4d} of {len(ann)}"
-          f"   ({len(ann[ann.refmet != ''])/len(ann):.0%})")
+    print(
+        f"  LLFS with a RefMet name : {len(ann[ann.refmet != '']):4d} of {len(ann)}"
+        f"   ({len(ann[ann.refmet != ''])/len(ann):.0%})"
+    )
     n_necs_rm = sum(1 for n in necs_names if n and clean(conv.get(n, "")))
     print(f"  NECS with a RefMet name : {n_necs_rm:4d} of {len(necs)}   ({n_necs_rm/len(necs):.0%})")
     shared = sorted(set(necs_by_refmet) & set(llfs_by_refmet))
-    print(f"  shared RefMet names     : {len(shared):4d}   (Monti reports {MONTI_REPORTED_OVERLAP},"
-          f" delta {len(shared)-MONTI_REPORTED_OVERLAP:+d})")
+    print(
+        f"  shared RefMet names     : {len(shared):4d}   (Monti reports {MONTI_REPORTED_OVERLAP},"
+        f" delta {len(shared)-MONTI_REPORTED_OVERLAP:+d})"
+    )
     print()
 
     if not shared:
@@ -180,6 +190,7 @@ def main() -> None:
     # Fail loud if the selected ruler column is absent/empty on every NECS row, rather than
     # silently scoring an all-missing (degenerate) verdict.
     from studies.external_benchmarks.scorers.gold_structure import assert_gold_column_present
+
     assert_gold_column_present([r for rs in necs_by_refmet.values() for r in rs], _gate_gold_column())
     counts = Counter()
     rows = []
@@ -188,22 +199,35 @@ def main() -> None:
         nrs = necs_by_refmet[key]
         llfs_ok = not lr["sum_comp"]
         necs_ok = any(necs_has_structure(r, _gate_gold_column()) for r in nrs)
-        verdict = ("adjudicable" if (llfs_ok and necs_ok)
-                   else "blocked_both" if (not llfs_ok and not necs_ok)
-                   else "blocked_llfs_sum_composition" if not llfs_ok
-                   else "blocked_necs_no_structure")
+        verdict = (
+            "adjudicable"
+            if (llfs_ok and necs_ok)
+            else (
+                "blocked_both"
+                if (not llfs_ok and not necs_ok)
+                else "blocked_llfs_sum_composition" if not llfs_ok else "blocked_necs_no_structure"
+            )
+        )
         counts[verdict] += 1
-        rows.append({"refmet": key, "llfs_name": lr["name"],
-                     "necs_name": (nrs[0].get("chemical_name") or "").strip(),
-                     "llfs_sum_composition": not llfs_ok, "necs_has_structure": necs_ok,
-                     "verdict": verdict})
+        rows.append(
+            {
+                "refmet": key,
+                "llfs_name": lr["name"],
+                "necs_name": (nrs[0].get("chemical_name") or "").strip(),
+                "llfs_sum_composition": not llfs_ok,
+                "necs_has_structure": necs_ok,
+                "verdict": verdict,
+            }
+        )
 
     adj = counts["adjudicable"]
-    print(f"GATE (gold column = {_gate_gold_column()}): of the overlapping pairs their method finds, "
-          "how many can structure adjudicate?")
+    print(
+        f"GATE (gold column = {_gate_gold_column()}): of the overlapping pairs their method finds, "
+        "how many can structure adjudicate?"
+    )
     for k in ("adjudicable", "blocked_llfs_sum_composition", "blocked_necs_no_structure", "blocked_both"):
         print(f"  {k:32s} {counts[k]:4d}  ({counts[k]/len(shared):.0%})")
-    print(f"\n  BLSA comparison: 93 of 497 analytes (19%) were discrete")
+    print("\n  BLSA comparison: 93 of 497 analytes (19%) were discrete")
     print()
     for label, v in (("adjudicable", "adjudicable"), ("blocked by lipid", "blocked_llfs_sum_composition")):
         print(f"  sample {label} pairs:")
@@ -212,13 +236,25 @@ def main() -> None:
         print()
 
     pd.DataFrame(rows).to_csv(OUT / "llfs_step1_overlap_triage.csv", index=False)
-    (OUT / "llfs_step1_sizing.json").write_text(json.dumps({
-        "llfs_n": len(ann), "llfs_sum_composition": n_sum, "llfs_discrete": len(ann) - n_sum,
-        "llfs_with_refmet": int((ann.refmet != "").sum()), "necs_with_refmet": n_necs_rm,
-        "refmet_overlap": len(shared), "monti_reported_overlap": MONTI_REPORTED_OVERLAP,
-        "gate": dict(counts), "adjudicable": adj,
-        "source_llfs": str(LLFS_XLSX), "source_necs": str(NECS_TSV), "refmet_service": REFMET_BULK,
-    }, indent=2))
+    (OUT / "llfs_step1_sizing.json").write_text(
+        json.dumps(
+            {
+                "llfs_n": len(ann),
+                "llfs_sum_composition": n_sum,
+                "llfs_discrete": len(ann) - n_sum,
+                "llfs_with_refmet": int((ann.refmet != "").sum()),
+                "necs_with_refmet": n_necs_rm,
+                "refmet_overlap": len(shared),
+                "monti_reported_overlap": MONTI_REPORTED_OVERLAP,
+                "gate": dict(counts),
+                "adjudicable": adj,
+                "source_llfs": str(LLFS_XLSX),
+                "source_necs": str(NECS_TSV),
+                "refmet_service": REFMET_BULK,
+            },
+            indent=2,
+        )
+    )
     print(f"saved -> {OUT}")
 
 

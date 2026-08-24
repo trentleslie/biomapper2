@@ -28,9 +28,7 @@ def _b1(key: str | None) -> str:
     return (key or "").strip().split("-")[0].upper() if key else ""
 
 
-def score_both_golds(
-    per_row: list[dict[str, Any]], repaired_map: dict[str, str]
-) -> dict[str, Any]:
+def score_both_golds(per_row: list[dict[str, Any]], repaired_map: dict[str, str]) -> dict[str, Any]:
     """Score predictions against original and repaired gold (block-1).
 
     ``per_row``: [{name, predicted_block, gold_block}, ...] from the fresh/persisted run.
@@ -68,9 +66,17 @@ def score_both_golds(
             newly_covered_den += 1
             newly_covered_num += int(rep_correct)
         elif gold_r != gold_o:  # the gold row actually changed
-            changed[("fixed" if rep_correct and not orig_correct
-                     else "broke" if orig_correct and not rep_correct
-                     else "still_correct" if rep_correct else "still_wrong")] += 1
+            changed[
+                (
+                    "fixed"
+                    if rep_correct and not orig_correct
+                    else (
+                        "broke"
+                        if orig_correct and not rep_correct
+                        else "still_correct" if rep_correct else "still_wrong"
+                    )
+                )
+            ] += 1
 
     # intersection population: rows scored under BOTH golds (exclude newly-covered)
     inter_rep_num = rep_num - newly_covered_num
@@ -79,7 +85,8 @@ def score_both_golds(
         "original": {"numerator": orig_num, "denominator": orig_den},
         "repaired": {"numerator": rep_num, "denominator": rep_den, "abstained": rep_abstain},
         "repaired_pessimistic": {
-            "numerator": rep_num, "denominator": rep_den + rep_abstain,
+            "numerator": rep_num,
+            "denominator": rep_den + rep_abstain,
         },
         "intersection": {"numerator": inter_rep_num, "denominator": inter_rep_den},
         "newly_covered": {"numerator": newly_covered_num, "denominator": newly_covered_den},

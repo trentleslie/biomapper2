@@ -8,7 +8,13 @@ reliable side.
 So: resolve the COMPOUND NAME independently through PubChem (a third path, used by neither side of
 the original comparison) and see which side it agrees with.
 """
-import csv, os, re, socket, sys, time, urllib.parse, urllib.request
+
+import csv
+import os
+import socket
+import time
+import urllib.parse
+import urllib.request
 
 _real = socket.getaddrinfo
 socket.getaddrinfo = lambda h, p, f=0, t=0, pr=0, fl=0: _real(h, p, socket.AF_INET, t, pr, fl)
@@ -25,7 +31,7 @@ def name_to_keys(name):
             with urllib.request.urlopen(url, timeout=45) as r:
                 body = r.read().decode("utf-8", "replace").strip()
             if body:
-                return [l.strip() for l in body.splitlines() if l.strip()], "ok"
+                return [ln.strip() for ln in body.splitlines() if ln.strip()], "ok"
             time.sleep(1.5 * attempt)  # empty body: throttle, not absence
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -66,8 +72,15 @@ for r in rows:
         tally["neither"] += 1
     shown = sorted(blocks)[0] if blocks else "-"
     print(f"{name[:33]:34s} {necs_b:16s} {sorted(ariv_b)[0] if ariv_b else '-':16s} {shown:16s} {v}")
-    detail.append({"name": name, "necs": necs_b, "arivale": "|".join(sorted(ariv_b)),
-                   "pubchem_name": "|".join(sorted(blocks)), "verdict": v})
+    detail.append(
+        {
+            "name": name,
+            "necs": necs_b,
+            "arivale": "|".join(sorted(ariv_b)),
+            "pubchem_name": "|".join(sorted(blocks)),
+            "verdict": v,
+        }
+    )
 
 print()
 for k, n in tally.items():

@@ -73,16 +73,26 @@ def test_xylose_is_kind_b_needs_anchor_not_connectivity_defect():
 
 
 def test_corrupt_legacy_cell_resolves_to_modern():
-    r = classify_row(legacy_key="4000", legacy_smiles="", modern_key=_XYLOSE["modern_key"],
-                     modern_smiles=_XYLOSE["modern_smiles"], formula="C5H10O5")
+    r = classify_row(
+        legacy_key="4000",
+        legacy_smiles="",
+        modern_key=_XYLOSE["modern_key"],
+        modern_smiles=_XYLOSE["modern_smiles"],
+        formula="C5H10O5",
+    )
     assert r["kind"] == "corrupt"
     assert r["arbiter"] == "modern"
     assert r["offline_resolved"] is True
 
 
 def test_unparseable_smiles_is_undecidable_with_reason():
-    r = classify_row(legacy_key="AAAAAAAAAAAAAA-BBBBBBBBBB", legacy_smiles="$$bad$$",
-                     modern_key="CCCCCCCCCCCCCC-DDDDDDDDDD", modern_smiles="$$bad$$", formula="")
+    r = classify_row(
+        legacy_key="AAAAAAAAAAAAAA-BBBBBBBBBB",
+        legacy_smiles="$$bad$$",
+        modern_key="CCCCCCCCCCCCCC-DDDDDDDDDD",
+        modern_smiles="$$bad$$",
+        formula="",
+    )
     assert r["kind"] == "undecidable"
     assert "smiles" in r["reason"].lower()
 
@@ -109,11 +119,24 @@ def test_positive_control_every_kind_reachable():
     can only emit one bucket is indistinguishable from a broken one."""
     from studies.external_benchmarks.scorers.necs_gold_repair import classify_rows
 
-    rows = [_CORTISONE, _CHOLINE,
-            dict(legacy_key="4000", legacy_smiles="", modern_key=_XYLOSE["modern_key"],
-                 modern_smiles=_XYLOSE["modern_smiles"], formula=""),
-            dict(legacy_key="AAAAAAAAAAAAAA-BBBBBBBBBB", legacy_smiles="$$bad$$",
-                 modern_key="CCCCCCCCCCCCCC-DDDDDDDDDD", modern_smiles="$$bad$$", formula="")]
+    rows = [
+        _CORTISONE,
+        _CHOLINE,
+        dict(
+            legacy_key="4000",
+            legacy_smiles="",
+            modern_key=_XYLOSE["modern_key"],
+            modern_smiles=_XYLOSE["modern_smiles"],
+            formula="",
+        ),
+        dict(
+            legacy_key="AAAAAAAAAAAAAA-BBBBBBBBBB",
+            legacy_smiles="$$bad$$",
+            modern_key="CCCCCCCCCCCCCC-DDDDDDDDDD",
+            modern_smiles="$$bad$$",
+            formula="",
+        ),
+    ]
     kinds = {classify_row(**r)["kind"] for r in rows}
     assert {"kind_a_bad_key", "kind_b_structure", "corrupt", "undecidable"} <= kinds
     # classify_rows returns a per-kind tally usable as the classifier_positive_control

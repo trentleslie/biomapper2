@@ -1,5 +1,10 @@
 """Verify the three decisive review findings against data already in hand. No network."""
-import csv, os, re, collections
+
+import collections
+import csv
+import os
+import re
+
 import pandas as pd
 
 RUNS = os.path.expanduser("~/external_benchmark_runs")
@@ -8,13 +13,17 @@ ARIV = f"{RUNS}/arivale_public_panel_20260804/watanabe2023_supp_data2_analytes.x
 LLFS = os.path.expanduser("~/worktrees/cross-cohort/data/NIHMS2038904-supplement-2.xlsx")
 CACHE = f"{RUNS}/cohort_panels_20260804/necs_refmet_convert_cache.tsv"
 
+
 def clean(v):
     s = "" if v is None else str(v).strip()
     return "" if s.lower() in ("", "-", "na", "nan", "none", "null") else s
 
+
 def has_struct(r, gold_column="gold_inchikey"):
     from studies.external_benchmarks.scorers.gold_structure import row_has_gold_structure
+
     return row_has_gold_structure(r, gold_column)
+
 
 print("=" * 72)
 print("FINDING 2 (feasibility, P0): does LLFS carry ANY registry identifier?")
@@ -44,7 +53,7 @@ print(f"     of those, unnamed 'x-NNNNN' codes: {u_x:5d}  ({u_x/len(unstd):.0%})
 print(f"  NECS rows RefMet CAN standardize    : {len(std):5d}")
 print(f"     of those, carrying gold structure: {s_struct:5d}  ({s_struct/len(std):.0%})")
 print()
-print(f"  >>> The recall claim needs reference pairs the baseline MISSES.")
+print("  >>> The recall claim needs reference pairs the baseline MISSES.")
 print(f"  >>> Ceiling on NECS side = {u_struct} rows (structure-bearing AND RefMet-invisible).")
 
 print()
@@ -77,6 +86,8 @@ for ns, col in (("CAS", "CAS_ID"), ("KEGG", "KEGG_ID"), ("HMDB", "HMDB_ID"), ("P
     for k, v in idx.items():
         if len(v) > 1:
             n_any |= v
-print(f"\n  >>> Arivale analytes whose vendor id is shared with another analyte: {len(n_any)} of {len(ariv)}"
-      f"  ({len(n_any)/len(ariv):.0%})")
+print(
+    f"\n  >>> Arivale analytes whose vendor id is shared with another analyte: {len(n_any)} of {len(ariv)}"
+    f"  ({len(n_any)/len(ariv):.0%})"
+)
 print("  >>> Every one of these is a row where an id-derived reference key may name the WRONG molecule.")

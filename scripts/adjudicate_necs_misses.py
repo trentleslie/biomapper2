@@ -70,7 +70,7 @@ def _lookup_one(q: str) -> tuple[list[str], str]:
             with urllib.request.urlopen(url, timeout=45) as r:
                 body = r.read().decode("utf-8", "replace").strip()
             if body:
-                return [l.strip() for l in body.splitlines() if l.strip()], "ok"
+                return [ln.strip() for ln in body.splitlines() if ln.strip()], "ok"
             time.sleep(1.5 * attempt)  # empty body is a throttle, never a negative
         except urllib.error.HTTPError as e:
             if e.code == 404:
@@ -132,10 +132,11 @@ def main() -> None:
     print()
     if adjudicable:
         print(f"  adjudicable misses          : {adjudicable}")
-        print(f"  of those, GOLD was WRONG    : {tally['GOLD_DEFECT']} "
-              f"({tally['GOLD_DEFECT']/adjudicable:.0%})")
-        print(f"  of those, BioMapper was wrong: {tally['GOLD_CONFIRMED']} "
-              f"({tally['GOLD_CONFIRMED']/adjudicable:.0%})")
+        print(f"  of those, GOLD was WRONG    : {tally['GOLD_DEFECT']} " f"({tally['GOLD_DEFECT']/adjudicable:.0%})")
+        print(
+            f"  of those, BioMapper was wrong: {tally['GOLD_CONFIRMED']} "
+            f"({tally['GOLD_CONFIRMED']/adjudicable:.0%})"
+        )
 
     print("\n  by shipped disposition:")
     hdr = ["GOLD_DEFECT", "GOLD_CONFIRMED", "BOTH", "NEITHER", "UNRESOLVED"]
@@ -145,18 +146,28 @@ def main() -> None:
 
     print("\n  examples where the GOLD was wrong and BioMapper was right:")
     for r in [x for x in out_rows if x["adjudication"] == "GOLD_DEFECT"][:12]:
-        print(f"    {r['name'][:34]:36s} gold={r['gold_block']}  biomapper={r['predicted_block']}"
-              f"  [{r['disposition']}]")
+        print(
+            f"    {r['name'][:34]:36s} gold={r['gold_block']}  biomapper={r['predicted_block']}"
+            f"  [{r['disposition']}]"
+        )
 
     with open(OUT / "necs_miss_adjudication.csv", "w", newline="") as fh:
         w = csv.DictWriter(fh, fieldnames=list(out_rows[0]))
         w.writeheader()
         w.writerows(out_rows)
-    (OUT / "necs_miss_adjudication.json").write_text(json.dumps(
-        {"n_misses_total": len(rows), "n_adjudicated": len(todo), "tally": dict(tally),
-         "by_disposition": {d: dict(c) for d, c in per_disp.items()},
-         "source": str(SRC), "method": "PubChem name lookup, independent of both BioMapper and gold"},
-        indent=2))
+    (OUT / "necs_miss_adjudication.json").write_text(
+        json.dumps(
+            {
+                "n_misses_total": len(rows),
+                "n_adjudicated": len(todo),
+                "tally": dict(tally),
+                "by_disposition": {d: dict(c) for d, c in per_disp.items()},
+                "source": str(SRC),
+                "method": "PubChem name lookup, independent of both BioMapper and gold",
+            },
+            indent=2,
+        )
+    )
     print(f"\nsaved -> {OUT}")
 
 

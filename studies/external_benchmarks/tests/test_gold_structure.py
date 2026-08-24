@@ -24,6 +24,7 @@ def test_positive_control_old_predicate_would_reject_three_block():
     """The prior predicate (two-block only) is detectably degenerate on repaired (three-block) keys.
     This is the bug Unit 7 fixes: assert the OLD logic rejects what the new one accepts, so a
     regression to the old form cannot pass silently."""
+
     def _old_predicate(v: str) -> bool:  # the recovered scripts' original necs_has_structure
         parts = (v or "").strip().split("-")
         return len(parts) == 2 and len(parts[0]) == 14

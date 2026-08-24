@@ -30,11 +30,19 @@ def test_anchor_matching_neither_vintage_is_none_not_defaulted():
 
 
 def test_fetch_uses_injected_resolver_and_omits_unresolved():
-    df = pd.DataFrame([{
-        "chemical_name": "choline", "gold_inchikey": _CHOLINE_L, "gold_smiles": "[O-]CC[N+](C)(C)C",
-        "gold_inchikey_standard": _CHOLINE_M, "gold_smiles_standard": "C[N+](C)(C)CCO",
-        "gold_formula": "C5H14NO", "gold_pubchem": "305",
-    }])
+    df = pd.DataFrame(
+        [
+            {
+                "chemical_name": "choline",
+                "gold_inchikey": _CHOLINE_L,
+                "gold_smiles": "[O-]CC[N+](C)(C)C",
+                "gold_inchikey_standard": _CHOLINE_M,
+                "gold_smiles_standard": "C[N+](C)(C)CCO",
+                "gold_formula": "C5H14NO",
+                "gold_pubchem": "305",
+            }
+        ]
+    )
     repaired = build_repaired_gold(df)
     # A stand-in resolver returning the modern-corroborating key (no network).
     resolved = fetch_anchor_resolutions(repaired, resolver=lambda name, cid: _CHOLINE_M)

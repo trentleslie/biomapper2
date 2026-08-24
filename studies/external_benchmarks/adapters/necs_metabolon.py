@@ -92,9 +92,7 @@ def _norm(value: Any) -> str:
     return "" if value is None else str(value).strip()
 
 
-def _resolve_column(
-    raw_df: pd.DataFrame, candidates: tuple[str, ...], *, exact_only: bool = False
-) -> str | None:
+def _resolve_column(raw_df: pd.DataFrame, candidates: tuple[str, ...], *, exact_only: bool = False) -> str | None:
     """First raw header matching any candidate.
 
     Exact (case-sensitive) match is tried first, so vintage columns that differ ONLY by case
