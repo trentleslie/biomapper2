@@ -13,8 +13,8 @@ def clean(v):
     return "" if s.lower() in ("", "-", "na", "nan", "none", "null") else s
 
 def has_struct(r):
-    v = (r.get("gold_inchikey") or "").strip().split("-")
-    return len(v) == 2 and len(v[0]) == 14
+    from studies.external_benchmarks.scorers.gold_structure import has_gold_structure
+    return has_gold_structure(r.get("gold_inchikey"))
 
 print("=" * 72)
 print("FINDING 2 (feasibility, P0): does LLFS carry ANY registry identifier?")

@@ -114,10 +114,10 @@ def refmet_convert(names: list[str]) -> dict[str, str]:
 
 
 def necs_has_structure(r: dict) -> bool:
-    """NECS row carries a usable gold InChIKey: the legacy 14-10 form, excluding corrupt cells."""
-    v = (r.get("gold_inchikey") or "").strip()
-    parts = v.split("-")
-    return len(parts) == 2 and len(parts[0]) == 14
+    """NECS row carries a usable gold InChIKey. Accepts BOTH the legacy two-block and the standard
+    three-block forms (a repaired gold carries three-block keys) — see scorers.gold_structure."""
+    from studies.external_benchmarks.scorers.gold_structure import has_gold_structure
+    return has_gold_structure(r.get("gold_inchikey"))
 
 
 def main() -> None:
