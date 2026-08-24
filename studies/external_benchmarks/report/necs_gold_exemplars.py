@@ -24,6 +24,13 @@ import pandas as pd
 
 from ..scorers.necs_gold_repair import COMPARISON_RULE, _adj, classify_row
 
+ATTRIBUTION = (
+    "Source values (compound name, InChIKeys, SMILES, formula) are extracted from the supplement "
+    "of Monti et al. 2026, GeroScience, doi:10.1007/s11357-026-02174-2 (Table S1 / MOESM5), "
+    "licensed CC BY-NC-ND 4.0. Reproduced with attribution for non-commercial research; the "
+    "KIND/defect classification and repair verdicts are this work's own analysis."
+)
+
 
 def build_exemplar_set(input_df: pd.DataFrame) -> dict[str, Any]:
     """Return {'exemplars': [...one per disagreement...], 'summary': {...}} from a built input_df."""
@@ -60,6 +67,7 @@ def build_exemplar_set(input_df: pd.DataFrame) -> dict[str, Any]:
             1 for e in exemplars if e["kind"] in ("kind_b_structure", "stereo_conflict", "stereo_odd")
         ),
     }
+    summary["attribution"] = ATTRIBUTION
     return {"exemplars": exemplars, "summary": summary}
 
 
@@ -68,6 +76,8 @@ def render_markdown(bundle: dict[str, Any]) -> str:
     s = bundle["summary"]
     lines = [
         "# NECS gold-disagreement exemplar set",
+        "",
+        f"> {s['attribution']}",
         "",
         f"Disagreements at `{s['comparison_rule']}`: **{s['n_disagreements']}** "
         f"(offline-resolved {s['n_offline_resolved']}, pending external anchor {s['n_pending_anchor']}).",
