@@ -253,18 +253,19 @@ def run_experiment(
     arm_a: list[ArmACall] = resumed_arm_a if resumed_arm_a is not None else []
     arm_b: list[ArmBCall] = resumed_arm_b if resumed_arm_b is not None else []
     write_a = None if resumed_arm_a is not None else _IncrementalWriter(arm_a_path)
-    write_b = (
-        _IncrementalWriter(arm_b_path)
-        if (config.run_arm_b and resumed_arm_b is None)
-        else None
-    )
+    write_b = _IncrementalWriter(arm_b_path) if (config.run_arm_b and resumed_arm_b is None) else None
     try:
         # Arm A calls are independent -> run concurrently to keep a large N sweep from
         # taking ~10h sequentially. Each result streams to disk on completion.
         if write_a is not None:
             arm_a = arms.run_arm_a(
-                queries, config.models, decodings, config.n_repeats,
-                call_fn=call_fn, on_result=write_a, max_workers=config.arm_a_workers,
+                queries,
+                config.models,
+                decodings,
+                config.n_repeats,
+                call_fn=call_fn,
+                on_result=write_a,
+                max_workers=config.arm_a_workers,
             )
         # Asymmetric N: Arm B is deterministic given pinned refs, so a few repeats suffice
         # to *demonstrate* byte-identical variance=0. Kept sequential (one Kestrel pipeline)

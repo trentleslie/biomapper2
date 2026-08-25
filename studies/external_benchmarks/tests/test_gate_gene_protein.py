@@ -58,10 +58,22 @@ def test_partial_coverage_within_floor_proceeds():
     obs = _obs(
         per_vocab={
             "ENSEMBL": _probe(
-                {"TP53": {"ENSEMBL"}, "BRCA1": {"ENSEMBL"}, "EGFR": {"ENSEMBL"}, "INS": {"ENSEMBL"}, "TNF": {"NCBIGENE"}}
+                {
+                    "TP53": {"ENSEMBL"},
+                    "BRCA1": {"ENSEMBL"},
+                    "EGFR": {"ENSEMBL"},
+                    "INS": {"ENSEMBL"},
+                    "TNF": {"NCBIGENE"},
+                }  # noqa: E501
             ),
             "UniProtKB": _probe(
-                {"TP53": {"UNIPROTKB"}, "BRCA1": {"UNIPROTKB"}, "EGFR": {"UNIPROTKB"}, "INS": {"UNIPROTKB"}, "TNF": {"NCBIGENE"}}
+                {
+                    "TP53": {"UNIPROTKB"},
+                    "BRCA1": {"UNIPROTKB"},
+                    "EGFR": {"UNIPROTKB"},
+                    "INS": {"UNIPROTKB"},
+                    "TNF": {"NCBIGENE"},
+                }  # noqa: E501
             ),
             "NCBIGene": _probe({s: {"NCBIGENE"} for s in ("TP53", "BRCA1", "EGFR", "INS", "TNF")}),
         }

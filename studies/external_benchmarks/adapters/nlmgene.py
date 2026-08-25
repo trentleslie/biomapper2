@@ -191,17 +191,13 @@ def persist_input_df(bundle: NlmGeneBundle, out_dir: Path | str) -> Path:
     return path
 
 
-def load_nlmgene(
-    docs: Iterable[tuple[str, str]], config: CurieDatasetConfig = NLMGENE
-) -> NlmGeneBundle:
+def load_nlmgene(docs: Iterable[tuple[str, str]], config: CurieDatasetConfig = NLMGENE) -> NlmGeneBundle:
     """Parse (pmid, xml_text) docs -> mentions -> deduped/partitioned input_df + card (with SHA pin)."""
     docs = list(docs)
     mentions = list(parse_bioc_documents(docs))
     input_df = build_nlmgene_input_df(mentions)
     sha = sha256_bytes(subsample_csv_bytes(input_df))
-    card = build_card(
-        input_df, n_mentions=len(mentions), n_documents=len(docs), source_sha=sha, config=config
-    )
+    card = build_card(input_df, n_mentions=len(mentions), n_documents=len(docs), source_sha=sha, config=config)
     return NlmGeneBundle(input_df=input_df, card=card)
 
 

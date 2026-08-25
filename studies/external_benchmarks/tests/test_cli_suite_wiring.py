@@ -6,10 +6,6 @@ the right orchestrator with the right source construction — plus the manifest 
 
 from __future__ import annotations
 
-from pathlib import Path
-
-import pytest
-
 import studies.external_benchmarks.run as run_mod
 import studies.external_benchmarks.runner as runner_mod
 from studies.external_benchmarks.config import HGNC, NAME_HIT_REGISTRY, NECS

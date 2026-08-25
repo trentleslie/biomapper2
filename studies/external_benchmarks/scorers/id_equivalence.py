@@ -31,10 +31,7 @@ from ..adapters.metlinkr import force_ipv4
 from .curie_scorer import normalize_curie
 
 _UNICHEM = "https://www.ebi.ac.uk/unichem/api/v1"
-_BROWSER_UA = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
-    "Chrome/124.0 Safari/537.36"
-)
+_BROWSER_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " "Chrome/124.0 Safari/537.36"
 # Our canonical CURIE prefixes (post normalize_curie) -> UniChem source short names.
 _PREFIX_TO_UNICHEM: dict[str, str] = {
     "CHEBI": "chebi",
@@ -107,9 +104,7 @@ class UniChemClient:
             return self._src_ids
         try:
             with force_ipv4():
-                resp = self._session.get(
-                    f"{_UNICHEM}/sources/", timeout=self._timeout, headers=self._headers
-                )
+                resp = self._session.get(f"{_UNICHEM}/sources/", timeout=self._timeout, headers=self._headers)
             if resp.status_code != 200:
                 return {}  # transient — leave uncached so a later lookup retries the registry
             body = resp.json()
@@ -189,9 +184,7 @@ class UniChemClient:
                         # registry unavailable/incomplete for a known source — treat as
                         # transient so a later run can retry rather than cache the miss.
                         raise _TransientLookupError(f"no source id for {short}")
-                    rec = self._post_compounds(
-                        {"type": "sourceID", "compound": local, "sourceID": sid}
-                    )
+                    rec = self._post_compounds({"type": "sourceID", "compound": local, "sourceID": sid})
         except _TransientLookupError:
             return None  # fail-soft, but do NOT poison the cache — allow a later retry
         self._cache[norm] = rec

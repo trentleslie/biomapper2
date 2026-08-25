@@ -154,9 +154,7 @@ def parse_grounding(raw: bytes, config: MetaBenchDatasetConfig = METABENCH) -> p
                 }
             )
         else:
-            raise MetaBenchParseError(
-                f"grounding question does not match any known template (id2id / name2id): {q!r}"
-            )
+            raise MetaBenchParseError(f"grounding question does not match any known template (id2id / name2id): {q!r}")
     return pd.DataFrame(rows, columns=list(rows[0].keys()) if rows else None)
 
 

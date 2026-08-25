@@ -124,7 +124,9 @@ def main() -> None:
         print(f"\n[{fam}]  n={n}")
         print(f"  A NCBI-name -> KG OrganismTaxon node : {s['A']}/{n}  ({100*s['A']//n}%)")
         print(f"  B NCBITaxon id -> KG node exists     : {s['B_node']}/{n}  ({100*s['B_node']//n}%)")
-        print(f"  B node carries GTDB/SILVA/GG equiv   : {s['B_bridge']}/{n}  ({100*s['B_bridge']//n}%)  <-- cross-namespace bridge")
+        print(
+            f"  B node carries GTDB/SILVA/GG equiv   : {s['B_bridge']}/{n}  ({100*s['B_bridge']//n}%)  <-- cross-namespace bridge"  # noqa: E501
+        )
         print(f"  C other-system name -> any KG node   : {s['C']}/{n}  ({100*s['C']//n}%)")
         print(f"  C  ...lands on SAME anchor as NCBI   : {s['C_same']}/{n}  ({100*s['C_same']//n}%)")
     print(f"\nsaved -> {out}")

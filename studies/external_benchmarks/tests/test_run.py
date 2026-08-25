@@ -110,9 +110,7 @@ def _install_fakes(
 def _ok_run(tmp_path, vocab: str) -> VocabRun:
     """A successful VocabRun backed by a real (tiny) MAPPED tsv on disk."""
     tsv = tmp_path / f"{vocab}_MAPPED.tsv"
-    pd.DataFrame({HAJJAR.name_column: ["D-Glucose"], "chosen_kg_id": [f"{vocab}:1"]}).to_csv(
-        tsv, sep="\t", index=False
-    )
+    pd.DataFrame({HAJJAR.name_column: ["D-Glucose"], "chosen_kg_id": [f"{vocab}:1"]}).to_csv(tsv, sep="\t", index=False)
     return VocabRun(vocab=vocab, ok=True, output_tsv=str(tsv), stats={"mapped_to_kg_assigned": 1}, manifest={})
 
 
@@ -122,9 +120,7 @@ PARITY = (0.83, 0.84, 0.02)  # (reproduced, published, tolerance)
 def test_failed_primary_surfaces_recorded_mapper_error_not_keyerror(monkeypatch, tmp_path):
     # Greptile P1 (run.py:126): the primary (CHEBI) run failed; scoring omits it. The old code
     # then hit an opaque KeyError at the figure stage. Fix: raise with the RECORDED mapper error.
-    failed = VocabRun(
-        vocab="CHEBI", ok=False, output_tsv=None, stats=None, manifest=None, error="Kestrel 503 on CHEBI"
-    )
+    failed = VocabRun(vocab="CHEBI", ok=False, output_tsv=None, stats=None, manifest=None, error="Kestrel 503 on CHEBI")
     _install_fakes(monkeypatch, tmp_path, runs={"CHEBI": failed})
     with pytest.raises(RuntimeError) as exc:
         run_mod.orchestrate(
@@ -197,7 +193,9 @@ def test_local_and_url_paths_validate_identically(monkeypatch, tmp_path):
             validate_calls=validate_calls,
         )
         run_mod.orchestrate(
-            source=source, out_dir=tmp_path / f"out_{isinstance(source, str)}", run_gate_first=False,
+            source=source,
+            out_dir=tmp_path / f"out_{isinstance(source, str)}",
+            run_gate_first=False,
             published_parity_cell=PARITY,
         )
         assert validate_calls[0]["source_df"] is not None
@@ -211,14 +209,22 @@ def test_local_and_url_paths_validate_identically(monkeypatch, tmp_path):
 def _pham_result() -> dict:
     """A minimal Pham-shaped score result carrying every key the inline report reads."""
     stratum = {
-        "ambiguous_subset": {"referent_membership_rate": 0.5, "member": 1, "scored_denominator": 2,
-                             "ambiguous_min_referents": 2},
+        "ambiguous_subset": {
+            "referent_membership_rate": 0.5,
+            "member": 1,
+            "scored_denominator": 2,
+            "ambiguous_min_referents": 2,
+        },
         "structural_precision": {"precision": 0.5, "member": 1, "predicted_denominator": 2},
     }
     return {
         "comparable_core": {"referent_membership_rate": 0.6, "member": 3, "scored_denominator": 5},
-        "ambiguous_subset": {"referent_membership_rate": 0.5, "member": 2, "scored_denominator": 4,
-                             "ambiguous_min_referents": 2},
+        "ambiguous_subset": {
+            "referent_membership_rate": 0.5,
+            "member": 2,
+            "scored_denominator": 4,
+            "ambiguous_min_referents": 2,
+        },
         "structural_precision": {"precision": 0.75, "member": 3, "predicted_denominator": 4},
         "ambiguity": {"mean_gold_referents": 2.25, "collapse_rate": 1.0},
         "coverage": {"n_predicted": 5, "total": 6},
@@ -248,8 +254,9 @@ def _install_pham_fakes(monkeypatch, tmp_path):
             C.stratum_column: ["non_lipid", "non_lipid"],
         }
     )
-    bundle = SimpleNamespace(input_df=input_df, card={"source_sha256": "deadbeef", "source_status": "resolved",
-                                                      "strata": {}})
+    bundle = SimpleNamespace(
+        input_df=input_df, card={"source_sha256": "deadbeef", "source_status": "resolved", "strata": {}}
+    )
     monkeypatch.setattr(pham_mod, "load_pham", lambda src, cfg: bundle)
     monkeypatch.setattr(pham_mod, "subsample_within_strata", lambda df, cfg, **kw: (df, {"seed": 42}))
     monkeypatch.setattr(pham_mod, "persist_stratified_subsample", lambda df, key, out: str(out))
@@ -274,13 +281,14 @@ def test_pham_report_states_real_crosscheck_numbers(monkeypatch, tmp_path):
         }
 
     out = tmp_path / "out"
-    result = run_mod.orchestrate_pham(
-        source=b"raw", out_dir=out, run_gate_first=False, crosscheck_fn=fake_crosscheck
-    )
+    result = run_mod.orchestrate_pham(source=b"raw", out_dir=out, run_gate_first=False, crosscheck_fn=fake_crosscheck)
     # The cross-check was fed the SCORED subsample's names (with non-empty referent sets).
     assert seen["names"] == {"suc", "tmp"}
-    report = (out / "pham_report.md").read_text() if (out / "pham_report.md").exists() else \
-        Path(result["report"]).read_text()
+    report = (
+        (out / "pham_report.md").read_text()
+        if (out / "pham_report.md").exists()
+        else Path(result["report"]).read_text()
+    )
     # Real numbers appear; no unqualified "cross-checked against PubChem" claim.
     assert "2 scored names' MetaNetX referents: 1 agreed, 1 disagreed" in report
     assert "0 inconclusive" in report

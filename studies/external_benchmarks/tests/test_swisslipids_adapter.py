@@ -7,9 +7,7 @@ import pytest
 from studies.external_benchmarks.adapters import swisslipids as sl
 from studies.external_benchmarks.config import SWISSLIPIDS
 
-HEADER = "\t".join(
-    ["Lipid ID", "Name", "Abbreviation*", "InChI key (pH7.3)", "SMILES (pH7.3)", "HMDB", "PubChem CID"]
-)
+HEADER = "\t".join(["Lipid ID", "Name", "Abbreviation*", "InChI key (pH7.3)", "SMILES (pH7.3)", "HMDB", "PubChem CID"])
 
 
 def _row(*, sl_id, name="", abbrev="", inchikey="", smiles="", hmdb="", pubchem=""):

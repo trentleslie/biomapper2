@@ -199,7 +199,9 @@ def score_pham_disambiguation(
         has_pred = _has_prediction(chosen)
         predicted_block = oracle.resolved_block(str(chosen).strip()) if has_pred else None
         stratum_val = row.get(stratum_col)
-        stratum = str(stratum_val).strip() if stratum_val not in (None, "") and not pd.isna(stratum_val) else UNSTRATIFIED
+        stratum = (
+            str(stratum_val).strip() if stratum_val not in (None, "") and not pd.isna(stratum_val) else UNSTRATIFIED
+        )  # noqa: E501
         records.append(
             {
                 "name": row.get(config.name_column),

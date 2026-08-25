@@ -82,9 +82,7 @@ def test_orchestrate_metabench_offline_one_number_and_report(monkeypatch, tmp_pa
         lambda mapper, input_df, config, out_dir, **k: writer(mapper, input_df, config, "provided", out_dir),
     )
 
-    out = run_mod.orchestrate_metabench(
-        source=_RAW, config=_UNPINNED, out_dir=tmp_path / "out", run_gate_first=False
-    )
+    out = run_mod.orchestrate_metabench(source=_RAW, config=_UNPINNED, out_dir=tmp_path / "out", run_gate_first=False)
     assert out["dataset"] == "metabench-grounding"
     results_json = tmp_path / "out" / "metabench-grounding_results.json"
     report_md = tmp_path / "out" / "metabench-grounding_report.md"

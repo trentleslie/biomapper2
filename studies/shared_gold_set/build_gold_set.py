@@ -74,6 +74,7 @@ def _resolution_canary(resolver: StructureResolver) -> None:
             f"(check network / MW_INCHIKEY_URL / PUBCHEM_INCHIKEY_URL)."
         )
 
+
 # Independent hand-check labels (step 4: independence demonstration). Each auto-labeled sample
 # row was re-adjudicated by structure-from-nomenclature reasoning — a *different* signal than the
 # InChIKey first-block connectivity the auto label uses — keyed by query_name -> (gold, rationale).

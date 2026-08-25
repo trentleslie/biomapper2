@@ -57,9 +57,12 @@ dev = [
 
 [tool.black]
 line-length = 120
+force-exclude = "(?<!tests/)studies/"
 
 [tool.ruff]
 line-length = 120
+# studies/ is exploratory benchmarking code, not the shipped package (see [tool.pyright]).
+extend-exclude = ["studies/**"]
 
 [tool.ruff.lint]
 select = [
@@ -76,6 +79,10 @@ known-first-party = ["biomapper2"]
 [tool.pyright]
 # Standalone study modules live outside the installed package; make them resolvable.
 extraPaths = ["studies/shared_gold_set"]
+# studies/ is exploratory benchmarking code (fork-only; never promoted to org, so org CI never
+# type-checks it). Hold the fork to the same scope: the shipped package src/ + tests/ are gated,
+# the research tree is not. Its correctness is covered by its own pytest suite, which still runs.
+exclude = ["studies/**"]
 
 [tool.pytest.ini_options]
 # Repo root on the path so standalone studies import as real packages

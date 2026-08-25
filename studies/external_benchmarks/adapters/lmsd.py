@@ -323,7 +323,5 @@ def load_lmsd(
     lines: Iterable[str] = stream_sdf_lines(source) if isinstance(source, str) else source
     input_df, n_scanned = subsample_from_lines(lines, config)
     sha = sha256_bytes(subsample_csv_bytes(input_df))
-    card = build_card(
-        input_df, n_scanned=n_scanned, source_sha=sha, config=config, source_version=source_version
-    )
+    card = build_card(input_df, n_scanned=n_scanned, source_sha=sha, config=config, source_version=source_version)
     return LMSDBundle(input_df=input_df, card=card)

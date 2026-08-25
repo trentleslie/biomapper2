@@ -38,7 +38,12 @@ def test_six_accessions_resolved_to_real_mtbls_ids():
     # (PMID 41691569). No placeholder should remain, and the status flips to "resolved".
     assert len(METABOLITEANNOTATOR_ACCESSIONS) == 6
     assert set(METABOLITEANNOTATOR_ACCESSIONS) == {
-        "MTBLS12997", "MTBLS13105", "MTBLS12764", "MTBLS11733", "MTBLS12636", "MTBLS13039"
+        "MTBLS12997",
+        "MTBLS13105",
+        "MTBLS12764",
+        "MTBLS11733",
+        "MTBLS12636",
+        "MTBLS13039",
     }
     assert not any(a.startswith(NEEDS_FETCHING_SENTINEL) for a in METABOLITEANNOTATOR_ACCESSIONS)
     assert METABOLITEANNOTATOR_POS.accessions_status == "resolved"

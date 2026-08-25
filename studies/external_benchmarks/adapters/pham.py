@@ -462,9 +462,7 @@ class ReferentPopulation:
         """Normalized names with >= ``ambiguous_min`` distinct structural referents (deterministic order)."""
         return [k for k, g in self.groups.items() if len(g.block_ik) >= ambiguous_min]
 
-    def names_in_stratum(
-        self, stratum: str, *, ambiguous_min: int | None = None
-    ) -> list[str]:
+    def names_in_stratum(self, stratum: str, *, ambiguous_min: int | None = None) -> list[str]:
         """Normalized names in ``stratum`` (``"lipid"``/``"non_lipid"``), deterministic order.
 
         ``ambiguous_min`` restricts to names with >= that many distinct referents (the ambiguous
@@ -591,8 +589,13 @@ def population_to_raw_table(
     return pd.DataFrame(
         rows,
         columns=[
-            "metabolite_name", "source_database", "candidate_id", "metanetx_id", "compound_name",
-            "inchikey", "is_lipid_referent",
+            "metabolite_name",
+            "source_database",
+            "candidate_id",
+            "metanetx_id",
+            "compound_name",
+            "inchikey",
+            "is_lipid_referent",
         ],
     )
 
@@ -994,9 +997,7 @@ def stratified_subsample_filename(key: str) -> str:
     return f"{key}_stratified_subsample.csv"
 
 
-def persist_stratified_subsample(
-    subsampled_df: pd.DataFrame, key: str, out_dir: Any
-) -> Any:
+def persist_stratified_subsample(subsampled_df: pd.DataFrame, key: str, out_dir: Any) -> Any:
     """Write the exact within-strata subsample beside the card (the scored input, reproducible)."""
     import os
 

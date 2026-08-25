@@ -156,8 +156,12 @@ def main(argv: list[str] | None = None) -> None:
         default=None,
         help="Arm-B (BioMapper) repeats; defaults to the preset's value, else --n-repeats (asymmetric-N)",
     )
-    parser.add_argument("--max-tokens", type=int, default=None, help="per-call output cap (default 256; 64 is plenty for JSON answers)")
-    parser.add_argument("--arm-a-workers", type=int, default=None, help="concurrent Arm-A LLM calls (default 8; 1=sequential)")
+    parser.add_argument(
+        "--max-tokens", type=int, default=None, help="per-call output cap (default 256; 64 is plenty for JSON answers)"
+    )  # noqa: E501
+    parser.add_argument(
+        "--arm-a-workers", type=int, default=None, help="concurrent Arm-A LLM calls (default 8; 1=sequential)"
+    )  # noqa: E501
     parser.add_argument("--limit", type=int, default=None, help="cap query set size (smoke)")
     parser.add_argument("--no-arm-b", action="store_true", help="skip BioMapper arm (Arm A only)")
     parser.add_argument("--out", type=Path, default=None, help="override output dir (default: runs/<UTC-stamp>)")

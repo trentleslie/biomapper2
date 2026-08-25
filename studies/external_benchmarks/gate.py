@@ -386,9 +386,7 @@ def run_gene_protein_gate(
 
     low = {ns: (h, n) for ns, (h, n) in stats.items() if n == 0 or (h / n) < min_namespace_coverage}
     if low:
-        detail = ", ".join(
-            f"{ns} {(h / n if n else 0.0):.0%} ({h}/{n})" for ns, (h, n) in sorted(low.items())
-        )
+        detail = ", ".join(f"{ns} {(h / n if n else 0.0):.0%} ({h}/{n})" for ns, (h, n) in sorted(low.items()))
         return GeneProteinGateResult(
             "stop",
             f"batch path resolved probe symbols to required namespace(s) below the "
