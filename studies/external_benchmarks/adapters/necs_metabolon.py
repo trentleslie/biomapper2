@@ -54,7 +54,19 @@ GOLD_CANDIDATES: dict[str, tuple[str, ...]] = {
     "gold_cas": ("CAS", "CAS_ID", "CAS Registry", "CAS_REGISTRY"),
     "gold_chemspider": ("CHEMSPIDER", "ChemSpider", "CSID"),
     "gold_refmet": ("REFMET", "RefMet", "REFMET_NAME", "RefMet Name"),
+    # Second annotation vintage + molecular fields, needed by the gold-repair classifier
+    # (Unit 4). Optional: a delivery without them yields honest-empty columns.
+    "gold_inchikey_standard": ("inchi_key",),
+    "gold_smiles_standard": ("smiles",),
+    "gold_formula": ("formula", "FORMULA", "Formula"),
+    "gold_exactmass": ("exactmass", "EXACTMASS", "exact_mass", "Exact Mass"),
 }
+
+# Modern-vintage columns are bound by EXACT header only: they must be honestly empty when the
+# second vintage is absent, never silently fall back to the legacy column via a case-fold.
+_VINTAGE_EXACT: frozenset[str] = frozenset(
+    {"gold_inchikey_standard", "gold_smiles_standard", "gold_formula", "gold_exactmass"}
+)
 
 
 def sha256_bytes(raw: bytes) -> str:
@@ -80,11 +92,27 @@ def _norm(value: Any) -> str:
     return "" if value is None else str(value).strip()
 
 
-def _resolve_column(raw_df: pd.DataFrame, candidates: tuple[str, ...]) -> str | None:
-    """First raw header matching any candidate (case-insensitive, exact after strip)."""
-    lookup = {str(c).strip().lower(): c for c in raw_df.columns}
+def _resolve_column(raw_df: pd.DataFrame, candidates: tuple[str, ...], *, exact_only: bool = False) -> str | None:
+    """First raw header matching any candidate.
+
+    Exact (case-sensitive) match is tried first, so vintage columns that differ ONLY by case
+    -- ``SMILES`` (legacy) vs ``smiles`` (modern), ``INCHIKEY`` vs ``inchi_key`` -- bind to the
+    intended column instead of colliding. A case-insensitive fallback (FIRST column wins, not
+    last) then handles delivery-header variants for datasets that ship only one vintage.
+    """
+    cols = list(raw_df.columns)
+    for cand in candidates:  # exact, case-sensitive
+        if cand in cols:
+            return cand
+    if exact_only:
+        # Vintage-specific columns (modern inchi_key/smiles/formula) must NOT fall back to the
+        # legacy column on a case-fold, or a single-vintage delivery would bind both roles to it.
+        return None
+    lower: dict[str, str] = {}
+    for c in cols:  # case-insensitive fallback, first occurrence wins (deterministic)
+        lower.setdefault(str(c).strip().lower(), c)
     for cand in candidates:
-        hit = lookup.get(cand.strip().lower())
+        hit = lower.get(cand.strip().lower())
         if hit is not None:
             return hit
     return None
@@ -107,7 +135,7 @@ def build_input_df(raw_df: pd.DataFrame, config: DatasetConfig = NECS) -> pd.Dat
     out[config.name_column] = raw_df[query_raw].map(_norm)
 
     for canonical, candidates in GOLD_CANDIDATES.items():
-        raw_col = _resolve_column(raw_df, candidates)
+        raw_col = _resolve_column(raw_df, candidates, exact_only=canonical in _VINTAGE_EXACT)
         out[canonical] = raw_df[raw_col].map(_norm) if raw_col is not None else ""
 
     # A row missing gold InChIKey is retained (still counted in coverage) but marked

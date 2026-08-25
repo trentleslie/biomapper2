@@ -178,6 +178,9 @@ NECS = DatasetConfig(
     gold_coverage_columns=(
         ("INCHIKEY", "gold_inchikey"),
         ("SMILES", "gold_smiles"),
+        ("inchi_key", "gold_inchikey_standard"),
+        ("smiles", "gold_smiles_standard"),
+        ("formula", "gold_formula"),
         ("HMDB", "gold_hmdb"),
         ("KEGG", "gold_kegg"),
         ("PUBCHEM", "gold_pubchem"),
