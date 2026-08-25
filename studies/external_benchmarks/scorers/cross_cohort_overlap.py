@@ -18,29 +18,37 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass
+from typing import Any
 
-from .curie_scorer import normalize_curie
+import pandas as pd
 
-CURIE_DELIM = "|"
+from .curie_scorer import CHOSEN_COL, EQUIV_COL, predicted_curies
+
+# Structure-encoding namespaces are EXCLUDED from the linker: linking two metabolites via a shared
+# InChIKey (a structure hash) would make the linker structural, which R6 forbids — and would make
+# the later independent-structure certificate circular. The linker is IDENTIFIER-only (CHEBI/KEGG/
+# HMDB/PUBCHEM/CAS/…); structure is the certificate's job (Unit 5), from a KG-independent oracle.
+_STRUCTURAL_NAMESPACES: frozenset[str] = frozenset({"INCHIKEY", "INCHI", "SMILES"})
 
 
-def curie_set(chosen: str | None, equivalents: str | None) -> frozenset[str]:
-    """Normalized CURIE set for one metabolite = normalize(chosen) ∪ normalize(each equivalent).
+def curie_set(chosen: Any = None, equivalents: Any = None) -> frozenset[str]:
+    """Identifier-only CURIE set for one metabolite = chosen_kg_id ∪ kg_equivalent_ids, MINUS any
+    structure-encoding namespace (InChIKey/InChI/SMILES).
 
-    Empty/None inputs and un-normalizable tokens drop out; an empty result means the metabolite
-    did not resolve — a refusal candidate downstream, not a link.
+    Delegates to ``curie_scorer.predicted_curies`` so the REAL ``kg_equivalent_ids`` shape is
+    handled: a ``{prefix: [local_id, ...]}`` dict (or its dict-repr string from a TSV), NOT a
+    ``|``-delimited list. An empty result means the metabolite did not resolve — a refusal
+    candidate downstream, not a link.
     """
-    raw: list[str] = []
-    if chosen:
-        raw.append(chosen)
-    if equivalents:
-        raw.extend(equivalents.split(CURIE_DELIM))
-    out: set[str] = set()
-    for token in raw:
-        norm = normalize_curie(token)
-        if norm:
-            out.add(norm)
-    return frozenset(out)
+    row = pd.Series({CHOSEN_COL: chosen, EQUIV_COL: equivalents})
+    return frozenset(
+        c for c in predicted_curies(row) if c.split(":", 1)[0] not in _STRUCTURAL_NAMESPACES
+    )
+
+
+def row_curie_set(row: pd.Series) -> frozenset[str]:
+    """Identifier-only CURIE set straight from a BioMapper output row (the live-run path)."""
+    return curie_set(row.get(CHOSEN_COL), row.get(EQUIV_COL))
 
 
 @dataclass(frozen=True)

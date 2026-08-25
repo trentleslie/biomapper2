@@ -9,7 +9,7 @@ from studies.external_benchmarks.scorers.cross_cohort_overlap import (
 
 
 def test_shared_curie_links_disjoint_does_not():
-    a = {"glucose": curie_set("CHEBI:17234", "KEGG:C00031")}
+    a = {"glucose": curie_set("CHEBI:17234", {"KEGG": ["C00031"]})}
     b = {"glc": curie_set("KEGG:C00031", None), "urea": curie_set("CHEBI:16199", None)}
     res = link_by_intersection(a, b)
     assert res.n_links == 1
@@ -42,8 +42,8 @@ def test_comparable_denominator_counts_resolved_rows_only():
 
 
 def test_multiple_shared_curies_yield_one_link_with_all():
-    a = {"m": curie_set("CHEBI:17234", "KEGG:C00031")}
-    b = {"n": curie_set("CHEBI:17234", "KEGG:C00031")}
+    a = {"m": curie_set("CHEBI:17234", {"KEGG": ["C00031"]})}
+    b = {"n": curie_set("CHEBI:17234", {"KEGG": ["C00031"]})}
     res = link_by_intersection(a, b)
     assert res.n_links == 1
     assert res.links[0].shared == frozenset({"CHEBI:17234", "KEGG:C00031"})
@@ -56,9 +56,16 @@ def test_one_a_links_multiple_b():
     assert res.n_links == 2 and res.n_a_linked == 1 and res.n_b_linked == 2
 
 
-def test_curie_set_splits_equivalents_and_drops_empties():
-    s = curie_set("CHEBI:17234", "KEGG:C00031|PUBCHEM.COMPOUND:5793|")
-    assert s == frozenset({"CHEBI:17234", "KEGG:C00031", "PUBCHEM:5793"})
+def test_curie_set_parses_dict_and_excludes_structural_namespaces():
+    # real kg_equivalent_ids shape: {prefix: [local_id, ...]} (dict) or its repr string from a TSV.
+    # INCHIKEY is a STRUCTURE hash — it must NOT enter the identifier-only linker set (R6).
+    as_dict = curie_set(
+        "CHEBI:17234",
+        {"KEGG": ["C00031"], "PUBCHEM.COMPOUND": ["5793", ""], "INCHIKEY": ["WQZGKKKJIJFFOK-GASJEMHNSA-N"]},
+    )
+    assert as_dict == frozenset({"CHEBI:17234", "KEGG:C00031", "PUBCHEM:5793"})  # no INCHIKEY
+    as_str = curie_set("CHEBI:17234", "{'KEGG': ['C00031'], 'PUBCHEM.COMPOUND': ['5793']}")
+    assert as_str == frozenset({"CHEBI:17234", "KEGG:C00031", "PUBCHEM:5793"})
 
 
 def test_no_links_when_both_sides_empty():
