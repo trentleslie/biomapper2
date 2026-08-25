@@ -27,6 +27,15 @@ RESULTS = {
     "BLSA": (99, 79, 65, 1182, 453, 468),
 }
 
+# (what differs in the InChIKey, verdict, verdict-class, meaning, example)
+CERTIFICATE_VERDICTS = [
+    ("Block 1 — connectivity", "REFUTED", "refute", "Wrong molecule — different molecular skeleton", "DPA (22:5) vs DHA (22:6); indolebutyrate vs indolepropionate"),
+    ("Block 2 — stereo (block 1 matches)", "REFUTED", "refute", "Stereoisomer — same skeleton, different stereochemistry", "D- vs L-glucose"),
+    ("Only block 3 — protonation", "CERTIFIED", "certify", "Same molecule — acid vs conjugate base", "trans-urocanate acid vs anion (the RefMet-latch splits)"),
+    ("Nothing — both blocks match", "CERTIFIED", "certify", "Confirmed same molecule", "—"),
+    ("No independent structure on a side", "REFUSED", "refuse", "Cannot be checked — not a disagreement", "BLSA sum-composition lipids; PubChem lookup failure"),
+]
+
 ARIVALE_BREAKDOWN = [
     ("BioMapper agrees with name-match", 501, "#2e7d32"),
     ("Same molecule, sibling ChEBI (structure-recoverable)", 36, "#f9a825"),
@@ -127,6 +136,29 @@ def results_table() -> str:
     return f"<table>{head}{''.join(rows)}</table>"
 
 
+def inchikey_anatomy_svg() -> str:
+    return (
+        '<div class="inchi">'
+        '<span class="blk b1">WQZGKKKJIJFFOK</span><span class="dash">-</span>'
+        '<span class="blk b2">GASJEMHN</span><span class="blk b2b">SA</span><span class="dash">-</span>'
+        '<span class="blk b3">N</span>'
+        '</div>'
+        '<div class="inchi-key"><span class="sw" style="background:#1e88e5"></span>Block 1 — connectivity (skeleton)'
+        '<span class="sw" style="background:#f9a825;margin-left:14px"></span>Block 2[:8] — stereochemistry'
+        '<span class="sw" style="background:#cfd8dc;margin-left:14px"></span>Block 3 — protonation (ignored)</div>'
+        '<p class="sub" style="margin-top:6px">Certificate key = <b>block 1 + block 2[:8]</b> — enforces connectivity &amp; stereo, '
+        '<b>ignores protonation</b> (so acid/base variants certify as the same molecule).</p>'
+    )
+
+
+def certificate_verdict_table() -> str:
+    head = "<tr><th>What differs in the InChIKey</th><th>Verdict</th><th>Meaning</th><th>Example</th></tr>"
+    rows = []
+    for diff, verdict, cls, meaning, ex in CERTIFICATE_VERDICTS:
+        rows.append(f"<tr><td>{esc(diff)}</td><td><span class='pill {cls}'>{verdict}</span></td><td>{esc(meaning)}</td><td class='muted'>{esc(ex)}</td></tr>")
+    return f"<table>{head}{''.join(rows)}</table>"
+
+
 def build() -> str:
     css = """
     body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#222;max-width:860px;margin:24px auto;padding:0 18px;line-height:1.5}
@@ -141,6 +173,11 @@ def build() -> str:
     .pipe{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;margin:10px 0}
     .box{border:1px solid #cfd8dc;border-radius:6px;padding:8px 10px;background:#fafafa} .arw{color:#90a4ae;font-weight:700}
     code{background:#f0f0f3;padding:1px 4px;border-radius:3px;font-size:12px} .tag{display:inline-block;background:#eceff1;border-radius:10px;padding:1px 9px;font-size:12px;color:#455a64;margin-left:6px}
+    .pill{display:inline-block;border-radius:10px;padding:1px 10px;font-size:12px;font-weight:700;color:#fff}
+    .pill.certify{background:#2e7d32} .pill.refute{background:#c62828} .pill.refuse{background:#78909c}
+    .inchi{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:22px;letter-spacing:1px;margin:8px 0 4px}
+    .blk{padding:2px 4px;border-radius:3px;color:#fff} .b1{background:#1e88e5} .b2{background:#f9a825} .b2b{background:#f9a825;opacity:.5} .b3{background:#cfd8dc;color:#37474f} .dash{color:#90a4ae;padding:0 2px}
+    .inchi-key{font-size:12px;color:#455a64;margin-bottom:2px}
     """
     pipe = """
     <div class="pipe">
@@ -200,7 +237,15 @@ def build() -> str:
 <li><b>20 coverage misses</b> — names that did not resolve at all.</li>
 </ul>
 
-<h2>5 · Status &amp; next steps</h2>
+<h2>5 · The structure certificate — how disagreements are adjudicated</h2>
+<p>Coverage counts <i>which</i> pairs link; the certificate decides <i>whether a link is real</i> by comparing the two metabolites' structures — each resolved from a source <b>independent of the knowledge graph</b> — at the level of the InChIKey blocks. This is the mechanism that separates the genuine part of BioMapper's Xu <b>+217</b> from the over-links.</p>
+{inchikey_anatomy_svg()}
+<p>When the two structures <b>disagree</b>, the link is <b>refuted</b>, and <i>which block</i> differs classifies the reason:</p>
+{certificate_verdict_table()}
+<div class="callout"><b>Why this is the spine, not an add-on.</b> The same rule that <span class="pill certify">CERTIFIED</span> recovers the RefMet-latch acid/base splits on Arivale (protonation-only difference) also <span class="pill refute">REFUTED</span> the Xu near-isomer over-links (DPA 22:5 vs DHA 22:6 differ at block 1). A refuted link is not discarded — it becomes a <b>certificate-triaged discrepancy</b> routed to expert review (the EITL campaign).</div>
+<p class="sub">Caveats: when one side resolves to a first-block-only InChIKey, the check runs at connectivity and flags stereo as unverified; InChIKey block 1 is not invariant to ring-chain tautomerism (e.g. xylose), a documented edge case.</p>
+
+<h2>6 · Status &amp; next steps</h2>
 <div class="callout ok"><b>Done:</b> instrument built (5 offline units, 48 tests, no regressions); Monti baseline locked &amp; reproduced (583/470/144/79); first live BioMapper run executed end-to-end with pinned provenance; failure mode diagnosed.</div>
 <ul>
 <li><b>Re-run Arm-M with RefMet restored</b> (cache the RefMet responses / rate-limit) — the honest number should rise materially above 546.</li>
