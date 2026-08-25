@@ -194,13 +194,56 @@ ARIVALE = CohortPanelConfig(
     monti_panel_size=626,  # Monti used a 626 subset of the 766 public panel; gap surfaced on the card
 )
 
-# Tian 2023 BLSA (Biocrates) Supp Table S2 "Metabolite" column — names only, no vendor structure
-# IDs, and ~81% sum-composition lipid species. Not structurally certifiable: counts-only context.
+# --- Spreadsheet-sourced cohorts (the 4-cohort metabolite spreadsheet: one sheet, columns
+# blsa/llfs/necs/xuetal, NAMES ONLY). These are the canonical source for BLSA/LLFS/NECS/Xu; each
+# config's name_column IS the cohort's column, so the generic loader picks it straight out of the
+# spreadsheet frame. No vendor IDs => certifiable=False for all four => structural certification is
+# DEFERRED (coverage-first); the certificate (Unit 5) is built but not wired to these until an
+# independent structure source is chosen. Arivale is NOT in this spreadsheet (see ARIVALE above).
+
+# BLSA (Biocrates) — spreadsheet column = 468 names, matches Monti Table 2. ~81% sum-composition
+# lipid species (Tian 2023): counts-only context, never a structural-precision claim.
 BLSA = CohortPanelConfig(
     key="blsa",
-    name_column="name",
+    name_column="blsa",
     id_columns={},
     source_doi="10.1038/s43587-023-00514-x",
     license="See Tian et al. 2023 supplement terms.",
-    monti_panel_size=468,  # Monti Table 2; staged list is 497 — gap surfaced, not silently filtered
+    monti_panel_size=468,  # Monti Table 2 — spreadsheet column matches
 )
+
+# LLFS (MS) — spreadsheet column = 364, the RefMet-standardizable SUBSET. The published panel is
+# 408 (Sebastiani 2024); the 364-vs-408 gap is the pre-filtering and is surfaced, so a later switch
+# to the full panel (needed to show recovery on the non-standardizing names) is an explicit choice.
+LLFS = CohortPanelConfig(
+    key="llfs",
+    name_column="llfs",
+    id_columns={},
+    source_doi="10.1016/j.xgen.2024.100601",
+    license="See Sebastiani et al. 2024 supplement terms.",
+    monti_panel_size=408,  # published panel; spreadsheet ships the 364 RefMet subset — gap surfaced
+)
+
+# NECS (Metabolon) — spreadsheet column = 1495 (incl. unnamed X- features, excluded here → 1213
+# named, matching Monti's "1213 named"). The structure-oracle NECS work uses the MOESM5 supplement.
+NECS = CohortPanelConfig(
+    key="necs",
+    name_column="necs",
+    id_columns={},
+    source_doi="10.1007/s11357-026-02174-2",
+    license="See Monti et al. 2026 supplement terms.",
+    monti_panel_size=1213,  # named metabolites (Table 2); 282 unnamed X- excluded at load
+)
+
+# Xu et al. 2022 (Metabolon) — spreadsheet column = 821 names.
+XU = CohortPanelConfig(
+    key="xuetal",
+    name_column="xuetal",
+    id_columns={},
+    source_doi="10.1038/s42003-022-03323-x",
+    license="See Xu et al. 2022 supplement terms.",
+    monti_panel_size=821,
+)
+
+# The 4-cohort spreadsheet's columns, for the spreadsheet loader.
+SPREADSHEET_COHORTS: dict[str, CohortPanelConfig] = {c.key: c for c in (BLSA, LLFS, NECS, XU)}

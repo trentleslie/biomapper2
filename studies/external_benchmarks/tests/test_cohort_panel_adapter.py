@@ -42,9 +42,18 @@ def test_exclusions_counted_not_silent():
     assert panel.card["n_raw"] == 5 and panel.card["n_rows"] == 2
 
 
-def test_blsa_names_only_not_certifiable():
-    frame = pd.DataFrame({"name": ["Alanine", "Arginine", "PC aa C34:2"]})
+def test_spreadsheet_cohort_picks_its_column_names_only():
+    # The 4-cohort spreadsheet: one frame, columns blsa/llfs/necs/xuetal; BLSA config picks "blsa".
+    frame = pd.DataFrame(
+        {
+            "blsa": ["Alanine", "Arginine", "PC aa C34:2"],
+            "llfs": ["1 Methyluric acid", "", ""],
+            "necs": ["spermidine", "X - 12345", ""],
+            "xuetal": ["palmitate", "", ""],
+        }
+    )
     panel = load_cohort_panel(frame, BLSA)
+    assert panel.names == ["Alanine", "Arginine", "PC aa C34:2"]
     assert panel.certifiable is False  # names only → counts-only, never certified off the KG
     assert panel.id_columns == ()
 
@@ -79,5 +88,6 @@ def test_kegg_only_is_not_certifiable():
 
 
 def test_name_list_parsing_strips_and_drops_blanks():
-    panel = load_cohort_panel(b"Alanine\n\n  Arginine  \nAlanine\n", BLSA, name_list=True)
+    cfg = CohortPanelConfig(key="nl", name_column="name")  # parse_name_list emits a "name" column
+    panel = load_cohort_panel(b"Alanine\n\n  Arginine  \nAlanine\n", cfg, name_list=True)
     assert panel.names == ["Alanine", "Arginine"]  # blank dropped, whitespace stripped, dup collapsed
