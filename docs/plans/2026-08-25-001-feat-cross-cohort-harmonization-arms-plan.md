@@ -189,7 +189,7 @@ slice, not across all-pairs code. Four-pair final scope is unchanged.
 
 **Verification:** Panels load to expected sizes; independent-structure availability flagged per row; SHAs pinned at load.
 
-- [ ] **Unit 2: Cross-cohort overlap scorer (Arm M / M+ID linking)**
+- [x] **Unit 2: Cross-cohort overlap scorer (Arm M / M+ID linking)**
 
 **Goal:** Given two panels resolved to per-name CURIE sets, compute Arm-M links by CURIE-set intersection on an identical, explicit row set.
 
@@ -211,7 +211,7 @@ slice, not across all-pairs code. Four-pair final scope is unchanged.
 
 **Verification:** Link count + denominator match hand-computed fixtures; canonicalization control both links the alias and rejects the non-alias.
 
-- [ ] **Unit 3: Arm-B baseline reconstruction, locked pre-run**
+- [x] **Unit 3: Arm-B baseline reconstruction, locked pre-run**
 
 **Goal:** Recompute Monti's per-pair overlap on the identical row set and **freeze it as a characterization test at a recorded commit** before any live run; report Monti-published as primary.
 
@@ -254,7 +254,7 @@ slice, not across all-pairs code. Four-pair final scope is unchanged.
 
 **Verification:** An offline pair run emits the three-number table, both frozen metrics, self-referential count separate, and a manifest that fails loud on any missing provenance field.
 
-- [ ] **Unit 5: KG-independent structural certificate + refusal**
+- [x] **Unit 5: KG-independent structural certificate + refusal**
 
 **Goal:** For each asserted link, issue a certificate only when **both** structures are resolved independently of the KG node that formed the link; otherwise refuse. Emit the per-side verdict state table.
 
