@@ -43,6 +43,13 @@ STAGES = [
     ("3 · Adjudicate", "Structure certificate", "Each merged link is checked by structure (InChIKey blocks) from a KG-<b>independent</b> source → certified / refuted / refused."),
 ]
 
+# Where Metabolomics Workbench / RefMet touches each stage (stage, role, status, note)
+MW_TOUCHPOINTS = [
+    ("Stage 1 · Resolve", "RefMet <i>match</i> API → node vote<br><span class='muted'>(1 of 3 annotators; also baked into the KG)</span>", "down", "circuit breaker latched → 0% cohort RefMet"),
+    ("Stage 2 · Merge", "Monti Arm-B merge key<br><span class='muted'>(LLFS / BLSA RefMet-name join only)</span>", "na", "baseline side; not BioMapper's merge key"),
+    ("Stage 3 · Adjudicate", "structure source (KG→MW→PubChem)<br><span class='muted'>+ optional Tier-B corroboration</span>", "down", "MW name-lookups failed; Tier B disabled"),
+]
+
 # BioMapper's per-metabolite certificate: the 17 output columns, grouped
 CERT_FIELD_GROUPS = [
     ("Verdict", ["certificate_state <span class='muted'>— corroborated / uncorroborated / unavailable</span>"]),
@@ -190,6 +197,24 @@ def three_stages_html() -> str:
     return f'<div class="stages">{"".join(cards)}</div>'
 
 
+def mw_touchpoints_html() -> str:
+    chip = {"down": ("#c62828", "✕ down this run"), "na": ("#90a4ae", "n/a"), "ok": ("#2e7d32", "✓ ok")}
+    cols = []
+    for stage, role, status, note in MW_TOUCHPOINTS:
+        col, label = chip[status]
+        cols.append(
+            f'<div class="mwcol"><div class="mwstage">{esc(stage)}</div>'
+            f'<div class="mwrole">{role}</div>'
+            f'<div class="mwstat" style="background:{col}">{esc(label)}</div>'
+            f'<div class="mwnote">{esc(note)}</div></div>'
+        )
+    return (
+        '<div class="mwband">Metabolomics Workbench / RefMet — one external dependency</div>'
+        f'<div class="mwgrid">{"".join(cols)}</div>'
+        '<div class="callout warn" style="margin-top:8px"><b>Single point of failure.</b> RefMet feeds <b>Stage 1</b> (resolution votes) <i>and</i> <b>Stage 3</b> (structure lookups), so one outage starved both. BioMapper already guards the resulting circularity (<code>_independent_of_selection</code> flags a RefMet-selected node corroborated by RefMet as <code>divergent_refmet</code>). <b>Fix decouples the stages:</b> cached RefMet for Stage 1, <b>PubChem</b> (not MW) for Stage 3 Tier-B — so no single API compromises both resolution and the independence check.</div>'
+    )
+
+
 def certificate_output_html() -> str:
     ex = "".join(f'  <span class="ck">{esc(k)}</span>{" "*(38-len(k))}{esc(v)}\n' for k, v in CERT_EXAMPLE)
     groups = []
@@ -231,6 +256,11 @@ def build() -> str:
     .cgroups{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0} .cgrp{flex:1;min-width:190px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 10px}
     .cgrp-h{font-weight:700;font-size:13px;color:#37474f;margin-bottom:2px} .cgrp ul{margin:4px 0;padding-left:16px} .cgrp li{font-size:11.5px;margin:2px 0}
     pre.cert{background:#263238;color:#eceff1;padding:10px 12px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.45} pre.cert .ck{color:#80cbc4}
+    .mwband{background:#5e35b1;color:#fff;text-align:center;font-weight:700;font-size:13px;padding:5px;border-radius:6px 6px 0 0}
+    .mwgrid{display:flex;gap:0;border:1px solid #d1c4e9;border-top:none;border-radius:0 0 6px 6px;overflow:hidden}
+    .mwcol{flex:1;padding:8px 10px;border-right:1px solid #ede7f6;text-align:center} .mwcol:last-child{border-right:none}
+    .mwstage{font-weight:700;color:#4527a0;font-size:13px} .mwrole{font-size:12px;margin:6px 0;min-height:44px} .mwnote{font-size:11px;color:#607d8b;margin-top:6px}
+    .mwstat{display:inline-block;color:#fff;font-size:11px;font-weight:700;border-radius:10px;padding:1px 10px}
     """
     pipe = """
     <div class="pipe">
@@ -275,6 +305,8 @@ def build() -> str:
 <h3>Three separable stages: resolve → merge → adjudicate</h3>
 <p>BioMapper resolves each cohort independently; the harmonization is a <b>merge on the two outputs</b>, done in the benchmark harness, not inside the mapper.</p>
 {three_stages_html()}
+<h3>Where Metabolomics Workbench / RefMet touches each stage</h3>
+{mw_touchpoints_html()}
 <div class="callout"><b>KG snapshot pinned:</b> {esc(KG)}.</div>
 
 <h2>3 · Current results</h2>
