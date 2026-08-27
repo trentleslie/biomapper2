@@ -36,6 +36,29 @@ CERTIFICATE_VERDICTS = [
     ("No independent structure on a side", "REFUSED", "refuse", "Cannot be checked — not a disagreement", "BLSA sum-composition lipids; PubChem lookup failure"),
 ]
 
+# Three separable stages (title, owner, description)
+STAGES = [
+    ("1 · Resolve", "BioMapper (the mapper)", "Each cohort's names → KG nodes, <b>one dataset per call</b>. The mapper has no cross-cohort awareness; it emits, per metabolite, a chosen node + cross-ref CURIEs + a certificate."),
+    ("2 · Merge", "Benchmark harness (external)", "The two per-cohort outputs are joined on shared KG identity (CURIE-set intersection ≈ same node) → cross-cohort <b>links</b>. <b>This is the harmonization</b> — done externally, not inside the mapper, exactly parallel to Monti's name / RefMet-name join."),
+    ("3 · Adjudicate", "Structure certificate", "Each merged link is checked by structure (InChIKey blocks) from a KG-<b>independent</b> source → certified / refuted / refused."),
+]
+
+# BioMapper's per-metabolite certificate: the 17 output columns, grouped
+CERT_FIELD_GROUPS = [
+    ("Verdict", ["certificate_state <span class='muted'>— corroborated / uncorroborated / unavailable</span>"]),
+    ("Structure", ["certificate_structure_status", "certificate_node_inchikey_blocks <span class='muted'>— the node's InChIKey first-blocks</span>", "certificate_comparison_rule <span class='muted'>— inchikey_first_block_set_intersection/v1</span>"]),
+    ("Independence (Tier B)", ["certificate_independent_source", "certificate_independent_inchikey_block", "certificate_independent_of_selection", "certificate_tier_b_outcome", "certificate_refusal_reason", "certificate_selection_conflict", "certificate_equivalent_ids_lookup_ok"]),
+    ("Provenance / cache", ["certificate_provenance_tier_b_enabled", "certificate_provenance_tier_b_cache_state", "certificate_provenance_kestrel_cache_store", "certificate_provenance_kestrel_cache_expiry", "certificate_provenance_structure_cache_store", "certificate_provenance_structure_cache_expiry"]),
+]
+CERT_EXAMPLE = [
+    ("name", "trans-urocanate"), ("chosen_kg_id", "CHEBI:30817"),
+    ("certificate_state", "uncorroborated"), ("certificate_structure_status", "structure_present"),
+    ("certificate_node_inchikey_blocks", "LOIYMIARKYCTBW"),
+    ("certificate_comparison_rule", "inchikey_first_block_set_intersection/v1"),
+    ("certificate_tier_b_outcome", "off"), ("certificate_provenance_tier_b_enabled", "False"),
+]
+CERT_STATE_DIST = [("uncorroborated", 805), ("unavailable", 408), ("corroborated", 0)]
+
 ARIVALE_BREAKDOWN = [
     ("BioMapper agrees with name-match", 501, "#2e7d32"),
     ("Same molecule, sibling ChEBI (structure-recoverable)", 36, "#f9a825"),
@@ -159,6 +182,30 @@ def certificate_verdict_table() -> str:
     return f"<table>{head}{''.join(rows)}</table>"
 
 
+def three_stages_html() -> str:
+    cards = []
+    for i, (title, owner, desc) in enumerate(STAGES):
+        arrow = '<span class="arw">→</span>' if i else ""
+        cards.append(f'{arrow}<div class="stage"><div class="stage-t">{esc(title)}</div><div class="stage-o">{owner}</div><div class="stage-d">{desc}</div></div>')
+    return f'<div class="stages">{"".join(cards)}</div>'
+
+
+def certificate_output_html() -> str:
+    ex = "".join(f'  <span class="ck">{esc(k)}</span>{" "*(38-len(k))}{esc(v)}\n' for k, v in CERT_EXAMPLE)
+    groups = []
+    for gname, fields in CERT_FIELD_GROUPS:
+        items = "".join(f"<li><code>{f}</code></li>" for f in fields)
+        groups.append(f'<div class="cgrp"><div class="cgrp-h">{esc(gname)}</div><ul>{items}</ul></div>')
+    dist = " · ".join(f'<b>{n}</b> {esc(state)}' for state, n in CERT_STATE_DIST)
+    return (
+        '<p>Beyond the cross-cohort link certificate, BioMapper emits a <b>per-metabolite certificate inline in every mapped row</b> — a 17-column family:</p>'
+        f'<div class="cgroups">{"".join(groups)}</div>'
+        '<p>A real row from this run:</p>'
+        f'<pre class="cert">{ex}</pre>'
+        f'<div class="callout warn"><b>Two-tier, and Tier B was OFF this run.</b> <b>Tier A</b> checks the node\'s own InChIKey blocks agree (KG-internal); <b>Tier B</b> corroborates against an <b>independent</b> external source (PubChem) — the <code>independent_*</code> fields. Tier B was disabled (<code>tier_b_enabled=False</code>), so no row could reach <span class="pill certify">corroborated</span>. State distribution: {dist}. The KG-independence Unit 5 needs already exists as Tier B — it just needs enabling (+ the same network fix).</div>'
+    )
+
+
 def build() -> str:
     css = """
     body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#222;max-width:860px;margin:24px auto;padding:0 18px;line-height:1.5}
@@ -178,6 +225,12 @@ def build() -> str:
     .inchi{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:22px;letter-spacing:1px;margin:8px 0 4px}
     .blk{padding:2px 4px;border-radius:3px;color:#fff} .b1{background:#1e88e5} .b2{background:#f9a825} .b2b{background:#f9a825;opacity:.5} .b3{background:#cfd8dc;color:#37474f} .dash{color:#90a4ae;padding:0 2px}
     .inchi-key{font-size:12px;color:#455a64;margin-bottom:2px}
+    .stages{display:flex;align-items:stretch;gap:6px;flex-wrap:wrap;margin:12px 0}
+    .stage{flex:1;min-width:200px;border:1px solid #cfd8dc;border-radius:6px;padding:8px 10px;background:#fafafa}
+    .stage-t{font-weight:700;color:#3949ab} .stage-o{font-size:12px;color:#607d8b;margin:2px 0 4px} .stage-d{font-size:12.5px}
+    .cgroups{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0} .cgrp{flex:1;min-width:190px;border:1px solid #e0e0e0;border-radius:6px;padding:6px 10px}
+    .cgrp-h{font-weight:700;font-size:13px;color:#37474f;margin-bottom:2px} .cgrp ul{margin:4px 0;padding-left:16px} .cgrp li{font-size:11.5px;margin:2px 0}
+    pre.cert{background:#263238;color:#eceff1;padding:10px 12px;border-radius:6px;font-size:12px;overflow-x:auto;line-height:1.45} pre.cert .ck{color:#80cbc4}
     """
     pipe = """
     <div class="pipe">
@@ -219,6 +272,9 @@ def build() -> str:
 <li><b>Arm-M — BioMapper:</b> each name resolves to a Kraken knowledge-graph node; two metabolites link when they resolve to the <b>same node</b>. Identifier-based, structure excluded from linking.</li>
 <li><b>Deferred — structural certificate:</b> validate each link by InChIKey connectivity from a KG-independent source. This is also the right <i>comparison vocabulary</i>: it unifies acid/base ChEBI variants that identifier strings split.</li>
 </ul>
+<h3>Three separable stages: resolve → merge → adjudicate</h3>
+<p>BioMapper resolves each cohort independently; the harmonization is a <b>merge on the two outputs</b>, done in the benchmark harness, not inside the mapper.</p>
+{three_stages_html()}
 <div class="callout"><b>KG snapshot pinned:</b> {esc(KG)}.</div>
 
 <h2>3 · Current results</h2>
@@ -244,6 +300,8 @@ def build() -> str:
 {certificate_verdict_table()}
 <div class="callout"><b>Why this is the spine, not an add-on.</b> The same rule that <span class="pill certify">CERTIFIED</span> recovers the RefMet-latch acid/base splits on Arivale (protonation-only difference) also <span class="pill refute">REFUTED</span> the Xu near-isomer over-links (DPA 22:5 vs DHA 22:6 differ at block 1). A refuted link is not discarded — it becomes a <b>certificate-triaged discrepancy</b> routed to expert review (the EITL campaign).</div>
 <p class="sub">Caveats: when one side resolves to a first-block-only InChIKey, the check runs at connectivity and flags stereo as unverified; InChIKey block 1 is not invariant to ring-chain tautomerism (e.g. xylose), a documented edge case.</p>
+<h3>What the certificate looks like in the output</h3>
+{certificate_output_html()}
 
 <h2>6 · Status &amp; next steps</h2>
 <div class="callout ok"><b>Done:</b> instrument built (5 offline units, 48 tests, no regressions); Monti baseline locked &amp; reproduced (583/470/144/79); first live BioMapper run executed end-to-end with pinned provenance; failure mode diagnosed.</div>
