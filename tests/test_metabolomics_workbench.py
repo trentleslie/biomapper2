@@ -244,7 +244,7 @@ def test_a_slash_in_the_query_name_is_percent_encoded():
             return _Resp()
 
     annotator = MetabolomicsWorkbenchAnnotator.__new__(MetabolomicsWorkbenchAnnotator)
-    annotator._session = _Session()
+    annotator._session = _Session()  # type: ignore[assignment]  # captures the outbound URL only
     annotator._do_refmet_request("PC 16:0/18:1")
 
     url = calls[0]

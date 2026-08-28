@@ -83,6 +83,7 @@ def _lookup_one(q: str) -> tuple[list[str], str]:
 
 def resolve(name: str, cache: dict) -> tuple[set[str], str]:
     """First variant that resolves wins. Only complete successes are cached."""
+    status = "UNRESOLVED"  # no name variant produced a lookup
     for q in query_names(name):
         if q in cache:
             keys, status = cache[q]["keys"], cache[q]["status"]

@@ -73,8 +73,10 @@ def _stub_mapper(
     model; this suite must stay offline.
     """
     mapper = Mapper.__new__(Mapper)
-    mapper.biolink_client = _StubBiolink()
-    mapper.linker = _StubLinker(equiv if equiv is not None else {}, lookup_ok)
+    mapper.biolink_client = _StubBiolink()  # pyright: ignore[reportAttributeAccessIssue]
+    mapper.linker = _StubLinker(  # pyright: ignore[reportAttributeAccessIssue]
+        equiv if equiv is not None else {}, lookup_ok
+    )
     mapper.tier_b = tier_b
 
     resolved = {
@@ -111,9 +113,9 @@ def _stub_mapper(
                 return pd.DataFrame([fields] * len(item), index=item.index)
             return pd.Series(fields)
 
-    mapper.resolver = _StubResolver()
-    mapper.annotation_engine = _StubAnnotation()
-    mapper.normalizer = _StubNormalizer()
+    mapper.resolver = _StubResolver()  # pyright: ignore[reportAttributeAccessIssue]
+    mapper.annotation_engine = _StubAnnotation()  # pyright: ignore[reportAttributeAccessIssue]
+    mapper.normalizer = _StubNormalizer()  # pyright: ignore[reportAttributeAccessIssue]
     # kg_ids_assigned is threaded through the linker stub's output for the dataset path.
     mapper.linker.link = _patched_link(assigned)  # type: ignore[method-assign]
     return mapper
@@ -250,7 +252,7 @@ def test_mapped_tsv_carries_flat_scalar_certificate_columns(tmp_path) -> None:
     frame = _dataset_path(_stub_mapper(chosen_kg_id=NODE, equiv=WITH_KEY), SMALL_MOLECULE, tmp_path)
     assert frame.loc[0, "certificate_state"] == "uncorroborated"
     assert frame.loc[0, "certificate_node_inchikey_blocks"] == "BSYNRYMUTXBXSQ"
-    assert frame.loc[0, "certificate_comparison_rule"].startswith("inchikey_first_block_set_intersection")
+    assert str(frame.loc[0, "certificate_comparison_rule"]).startswith("inchikey_first_block_set_intersection")
     # No object column may survive to the writer: it would emit ResolutionCertificate(state=...) and
     # reintroduce the ast.literal_eval-only column this design exists to eliminate.
     assert not any("ResolutionCertificate" in str(v) for v in frame.iloc[0].tolist())

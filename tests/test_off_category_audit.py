@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "studies" / "analysis"))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+
 from off_category_audit import (  # noqa: E402
     ACCEPTANCE_ROOT,
     EXPECTED_ACCEPTANCE_SET,
@@ -179,11 +180,13 @@ class TestAuditMirrorsTheShippedValidator:
     )
     def test_is_off_category_is_the_exact_complement_of_is_on_category(self, categories):
         node = {"categories": categories}
-        assert is_off_category(node, CHEMICAL) is not is_on_category({"categories": categories}, CHEMICAL)
+        assert is_off_category(node, CHEMICAL) is not is_on_category(
+            {"categories": categories}, CHEMICAL  # pyright: ignore[reportArgumentType]
+        )
 
     def test_missing_categories_key_is_treated_as_on_category_by_both(self):
         assert is_off_category({}, CHEMICAL) is False
-        assert is_on_category({}, CHEMICAL) is True
+        assert is_on_category({}, CHEMICAL) is True  # pyright: ignore[reportArgumentType]
 
     @pytest.mark.parametrize(
         ("categories", "expected"),
@@ -264,10 +267,10 @@ class TestNamespaceComposition:
 class TestGoldCurieExtraction:
     def test_reads_configured_gold_columns_and_prefixes_them(self):
         row = {"gold_chebi": "1234", "gold_hmdb": "HMDB0000001", "unrelated": "x"}
-        out = gold_curies(row, set(row))
+        out = gold_curies(row, set(row))  # pyright: ignore[reportArgumentType]
         assert "CHEBI:1234" in out
         assert "HMDB:HMDB0000001" in out
 
     def test_ignores_absent_and_null_gold_columns(self):
-        assert gold_curies({"gold_chebi": None}, {"gold_chebi"}) == set()
-        assert gold_curies({}, set()) == set()
+        assert gold_curies({"gold_chebi": None}, {"gold_chebi"}) == set()  # pyright: ignore[reportArgumentType]
+        assert gold_curies({}, set()) == set()  # pyright: ignore[reportArgumentType]

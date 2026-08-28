@@ -39,11 +39,13 @@ class TestWilsonInterval:
     def test_boundary_k_zero_stays_inside_unit_interval(self):
         """Wald would emit a zero-width interval at k=0; Wilson must not, and must not go negative."""
         lo, hi = wilson_interval(0, 20)
+        assert lo is not None and hi is not None
         assert lo == 0.0
         assert 0.0 < hi < 1.0
 
     def test_boundary_k_equals_n_stays_inside_unit_interval(self):
         lo, hi = wilson_interval(20, 20)
+        assert lo is not None and hi is not None
         assert hi == 1.0
         assert 0.0 < lo < 1.0
 
@@ -56,11 +58,13 @@ class TestWilsonInterval:
     def test_small_n_interval_is_wide(self):
         """A tiny denominator must produce a visibly wide interval, not a falsely precise one."""
         lo, hi = wilson_interval(1, 3)
+        assert lo is not None and hi is not None
         assert hi - lo > 0.5
 
     def test_interval_contains_point_estimate(self):
         for k, n in ((255, 1500), (189, 451), (66, 1049), (1319, 1500), (411, 983)):
             lo, hi = wilson_interval(k, n)
+            assert lo is not None and hi is not None
             assert lo <= k / n <= hi
 
     def test_zero_denominator_is_undefined_not_a_crash(self):
@@ -75,6 +79,7 @@ class TestWilsonInterval:
         """A wider z must widen the interval; the parameter is real, not decorative."""
         lo95, hi95 = wilson_interval(255, 1500, z=1.959963984540054)
         lo99, hi99 = wilson_interval(255, 1500, z=2.5758293035489004)
+        assert lo95 is not None and hi95 is not None and lo99 is not None and hi99 is not None
         assert (hi99 - lo99) > (hi95 - lo95)
 
 
@@ -308,6 +313,7 @@ class TestMathematicalSanity:
         """
         lo1, hi1 = wilson_interval(170, 1000)
         lo2, hi2 = wilson_interval(680, 4000)
+        assert lo1 is not None and hi1 is not None and lo2 is not None and hi2 is not None
         ratio = (hi1 - lo1) / (hi2 - lo2)
         assert ratio == pytest.approx(2.0, rel=0.05)
 
@@ -319,16 +325,18 @@ class TestMathematicalSanity:
         by roughly a factor of two on half-width, which is why the report emits regime rows
         separately rather than one blended row.
         """
-        overall = wilson_interval(255, 1500)
-        systematic = wilson_interval(189, 451)
-        hw_overall = (overall[1] - overall[0]) / 2
-        hw_systematic = (systematic[1] - systematic[0]) / 2
+        o_lo, o_hi = wilson_interval(255, 1500)
+        s_lo, s_hi = wilson_interval(189, 451)
+        assert o_lo is not None and o_hi is not None and s_lo is not None and s_hi is not None
+        hw_overall = (o_hi - o_lo) / 2
+        hw_systematic = (s_hi - s_lo) / 2
         assert hw_systematic > 2 * hw_overall
 
     def test_no_nan_anywhere_on_the_lattice(self):
         for n in (1, 7, 100, 1500):
             for k in (0, 1, n // 2, n):
                 lo, hi = wilson_interval(k, n)
+                assert lo is not None and hi is not None
                 assert not math.isnan(lo) and not math.isnan(hi)
 
 

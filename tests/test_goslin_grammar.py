@@ -33,6 +33,7 @@ def test_formula_and_mass_are_reasonable_for_fa_16_0():
     assert parsed is not None
     # palmitic acid: C16H32O2, monoisotopic ~256.24
     assert parsed.sum_formula == "C16H32O2"
+    assert parsed.monoisotopic_mass is not None
     assert math.isclose(parsed.monoisotopic_mass, 256.24, abs_tol=0.1)
 
 

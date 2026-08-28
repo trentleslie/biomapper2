@@ -231,7 +231,7 @@ def test_structure_resolver_name_fallback_encodes_slashes() -> None:
 
     resolver = StructureResolver.__new__(StructureResolver)
     session = _FakeSession({"refmet/name": _FakeResponse({"inchi_key": MW_KEY})})
-    resolver._session = session
+    resolver._session = session  # type: ignore[assignment]  # fake session, records the outbound URL only
 
     resolver._fetch_mw_inchikey("GlcCer 16:0;O3/10:0")
     assert "%2F" in session.calls[0], f"the slash was not encoded: {session.calls[0]}"

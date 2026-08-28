@@ -31,17 +31,21 @@ def _certificate(**overrides) -> dict[str, Any]:
         selection_conflict=None,
     )
     kwargs.update(overrides)
-    return issue(**kwargs).to_api_dict()
+    return issue(**kwargs).to_api_dict()  # pyright: ignore[reportArgumentType]
 
 
 def test_response_model_accepts_the_emitted_dict() -> None:
-    result = EntityMappingResult(name="glucose", resolution_certificate=_certificate())
+    result = EntityMappingResult(
+        name="glucose", resolution_certificate=_certificate()  # pyright: ignore[reportArgumentType]
+    )
     assert result.resolution_certificate is not None
     assert result.resolution_certificate.state == "uncorroborated"
 
 
 def test_response_model_round_trips_to_json() -> None:
-    result = EntityMappingResult(name="glucose", resolution_certificate=_certificate())
+    result = EntityMappingResult(
+        name="glucose", resolution_certificate=_certificate()  # pyright: ignore[reportArgumentType]
+    )
     payload = json.loads(result.model_dump_json())
     assert payload["resolution_certificate"]["structure_status"] == "structure_present"
     assert payload["resolution_certificate"]["node_inchikey_blocks"] == ["BSYNRYMUTXBXSQ"]

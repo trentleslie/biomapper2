@@ -49,7 +49,7 @@ def _issue(**overrides):
         selection_conflict=None,
     )
     kwargs.update(overrides)
-    return issue(**kwargs)
+    return issue(**kwargs)  # pyright: ignore[reportArgumentType]
 
 
 # --------------------------------------------------------------------------------------------
