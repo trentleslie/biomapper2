@@ -78,11 +78,11 @@ known-first-party = ["biomapper2"]
 
 [tool.pyright]
 # Standalone study modules live outside the installed package; make them resolvable.
-extraPaths = ["studies/shared_gold_set"]
+extraPaths = ["studies/shared_gold_set", "studies/analysis"]
 # studies/ is exploratory benchmarking code (fork-only; never promoted to org, so org CI never
 # type-checks it). Hold the fork to the same scope: the shipped package src/ + tests/ are gated,
 # the research tree is not. Its correctness is covered by its own pytest suite, which still runs.
-exclude = ["studies/**"]
+exclude = ["studies/**", "tests/studies/**", "**/node_modules", "**/__pycache__", "**/.*"]
 
 [tool.pytest.ini_options]
 # Repo root on the path so standalone studies import as real packages

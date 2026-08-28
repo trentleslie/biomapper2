@@ -6,6 +6,10 @@ there raises ``TypeError`` mid-stream, after a 200 has already been sent to the 
 hypothetical: they are the default behaviour of the code as it stands.
 """
 
+# Cases are table rows: a dict of valid issue() kwargs spread into the call. pyright widens the
+# dict's value type to the union of all columns; the runtime values are each the correct type.
+# pyright: reportArgumentType=false
+
 from __future__ import annotations
 
 import json

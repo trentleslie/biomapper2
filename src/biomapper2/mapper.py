@@ -400,7 +400,12 @@ class Mapper:
         df = df.join(pd.DataFrame([c.to_flat_columns() for c in certificate_rows], index=df.index))
         # The legacy flag is now DERIVED from the certificate (C4/L20) rather than passed through,
         # so the two can never disagree. Identical for one release; deprecation is a follow-up.
-        df["chosen_kg_id_review"] = [derive_chosen_kg_id_review(c) for c in certificate_rows]
+        # object dtype and an explicit index: the review is str | None per row, and a bare list with
+        # Nones is both rejected by pandas' typed __setitem__ and, at runtime, coerced to a float NaN
+        # column that later identity checks (`is None`) would silently miss.
+        df["chosen_kg_id_review"] = pd.Series(
+            [derive_chosen_kg_id_review(c) for c in certificate_rows], index=df.index, dtype=object
+        )
         logging.info(f"After step 6 (resolution certificate), df is: \n{df}")
 
         # Do a little validation of results dataframe

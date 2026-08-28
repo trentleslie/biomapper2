@@ -25,6 +25,11 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT / "studies" / "analysis"))
 sys.path.insert(0, str(REPO_ROOT / "src"))
 
+# Fixtures duck-type the audit's declared params: category constants are frozensets passed
+# where set[str] is annotated, and fake gold rows are plain dicts passed where a Series is.
+# Runtime accepts both; the type widening is fixture noise, scoped to this file.
+# pyright: reportArgumentType=false
+
 from off_category_audit import (  # noqa: E402
     ACCEPTANCE_ROOT,
     EXPECTED_ACCEPTANCE_SET,

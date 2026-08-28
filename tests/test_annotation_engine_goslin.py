@@ -16,7 +16,9 @@ class _FakeBiolink:
 
 
 def _engine():
-    return AnnotationEngine(biolink_client=_FakeBiolink())
+    # _FakeBiolink duck-types the one method the engine touches (get_descendants); a real
+    # BiolinkClient would hit the network at construction.
+    return AnnotationEngine(biolink_client=_FakeBiolink())  # type: ignore[arg-type]
 
 
 def test_goslin_registered_in_registry():

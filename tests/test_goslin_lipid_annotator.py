@@ -1,3 +1,8 @@
+# _FakeBinder is a duck-typed stand-in for the RefMet/MW name binder — it implements only
+# get_annotations, the one method GoslinLipidAnnotator calls. Subclassing BaseAnnotator to satisfy
+# the checker would drag in its constructor and abstract surface for no test value. Scoped to this
+# file and to the argument-type rule alone.
+# pyright: reportArgumentType=false
 import pandas as pd
 
 from biomapper2.core.annotators.goslin_lipid import GoslinLipidAnnotator

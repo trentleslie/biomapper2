@@ -13,6 +13,10 @@ the certificate most needs to describe -- the ones with no committed node -- wou
 certificate at all, and the two surfaces would disagree precisely there.
 """
 
+# Tests inject stub collaborators onto a real Mapper (mapper.linker = _StubLinker(), etc.).
+# Building the real ones would hit Kestrel; the stubs implement only the surface each path calls.
+# pyright: reportAttributeAccessIssue=false
+
 from __future__ import annotations
 
 import json
@@ -250,7 +254,7 @@ def test_mapped_tsv_carries_flat_scalar_certificate_columns(tmp_path) -> None:
     frame = _dataset_path(_stub_mapper(chosen_kg_id=NODE, equiv=WITH_KEY), SMALL_MOLECULE, tmp_path)
     assert frame.loc[0, "certificate_state"] == "uncorroborated"
     assert frame.loc[0, "certificate_node_inchikey_blocks"] == "BSYNRYMUTXBXSQ"
-    assert frame.loc[0, "certificate_comparison_rule"].startswith("inchikey_first_block_set_intersection")
+    assert str(frame.loc[0, "certificate_comparison_rule"]).startswith("inchikey_first_block_set_intersection")
     # No object column may survive to the writer: it would emit ResolutionCertificate(state=...) and
     # reintroduce the ast.literal_eval-only column this design exists to eliminate.
     assert not any("ResolutionCertificate" in str(v) for v in frame.iloc[0].tolist())
