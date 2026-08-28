@@ -75,3 +75,25 @@ def test_get_with_retry_raises_when_every_attempt_fails(monkeypatch):
     monkeypatch.setattr(requests, "get", _always_fail)
     with pytest.raises(requests.exceptions.ConnectionError):
         _get_with_retry("http://example/x")
+
+
+def test_atomic_write_publishes_full_content(tmp_path):
+    target = tmp_path / "schema.yaml"
+    bc._atomic_write_text(str(target), "complete")
+    assert target.read_text() == "complete"
+    assert not list(tmp_path.glob("*.tmp"))  # no temp file left behind
+
+
+def test_atomic_write_leaves_no_partial_on_failure(tmp_path, monkeypatch):
+    # If the rename is interrupted, the target must never appear as a partial file (which the cache
+    # would then trust forever); only the temp is touched, and it is cleaned up.
+    target = tmp_path / "schema.yaml"
+
+    def _fail_replace(src, dst):
+        raise OSError("simulated interruption before rename")
+
+    monkeypatch.setattr(bc.os, "replace", _fail_replace)
+    with pytest.raises(OSError):
+        bc._atomic_write_text(str(target), "partial content")
+    assert not target.exists()
+    assert not list(tmp_path.glob("*.tmp"))

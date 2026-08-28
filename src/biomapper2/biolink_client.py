@@ -1,5 +1,8 @@
+import contextlib
 import json
 import logging
+import os
+import tempfile
 import time
 from collections.abc import Iterable
 from functools import lru_cache
@@ -35,6 +38,26 @@ def _get_with_retry(url: str, attempts: int = 3, backoff: float = 1.5, timeout: 
                 time.sleep(backoff * attempt)
     assert last_exc is not None
     raise last_exc
+
+
+def _atomic_write_text(path: str, text: str) -> None:
+    """Publish file contents atomically: write a temp file in the same dir, then rename.
+
+    A direct write can leave a truncated file if two workers race at startup or a write is
+    interrupted; because the cache trusts any path that exists, a partial file would poison every
+    later build. os.replace() is atomic on one filesystem, so readers see either no file or the
+    complete one -- never a partial.
+    """
+    directory = os.path.dirname(path) or "."
+    fd, tmp = tempfile.mkstemp(dir=directory, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as handle:
+            handle.write(text)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.remove(tmp)
+        raise
 
 
 @lru_cache(maxsize=8)
@@ -126,7 +149,7 @@ class BiolinkClient:
             try:
                 response = _get_with_retry(url)
                 CACHE_DIR.mkdir(parents=True, exist_ok=True)
-                local_path.write_text(response.text)
+                _atomic_write_text(str(local_path), response.text)
             except requests.RequestException as exc:
                 logging.warning(f"Could not cache Biolink schema from {url} ({exc}); loading from URL this run.")
                 return url
@@ -156,10 +179,9 @@ class BiolinkClient:
             else:
                 response_json = response.json()
 
-            # Cache the response
+            # Cache the response atomically so a partial write cannot poison the cache.
             CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            with open(local_path, "w+") as cache_file:
-                json.dump(response_json, cache_file, indent=2)
+            _atomic_write_text(str(local_path), json.dumps(response_json, indent=2))
 
         # Read and return the cached JSON
         with open(local_path) as cache_file:
