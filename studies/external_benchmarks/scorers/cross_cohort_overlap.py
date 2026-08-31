@@ -23,6 +23,7 @@ from typing import Any
 import pandas as pd
 
 from .curie_scorer import CHOSEN_COL, EQUIV_COL, predicted_curies
+from .link_certificate import CertificateKey, certificate_key
 
 # Structure-encoding namespaces are EXCLUDED from the linker: linking two metabolites via a shared
 # InChIKey (a structure hash) would make the linker structural, which R6 forbids — and would make
@@ -49,6 +50,33 @@ def curie_set(chosen: Any = None, equivalents: Any = None) -> frozenset[str]:
 def row_curie_set(row: pd.Series) -> frozenset[str]:
     """Identifier-only CURIE set straight from a BioMapper output row (the live-run path)."""
     return curie_set(row.get(CHOSEN_COL), row.get(EQUIV_COL))
+
+
+def stability_descriptor_set(chosen: Any = None, equivalents: Any = None) -> frozenset[CertificateKey]:
+    """⚠️ NON-AUTHORITATIVE, KG-DERIVED. block1+block2[:8] keys from the node's OWN InChIKeys.
+
+    This reads ``kg_equivalent_ids['INCHIKEY']`` — the InChIKey of the SAME KG node the resolver chose.
+    That is deliberately CIRCULAR for trust purposes (a shared KG node mechanically shares its
+    KG-InChIKey; see ``link_certificate.py``), so this set must **NEVER** gate a promotion or stand as
+    an independent correctness metric. Its ONLY use is to *describe* how much the identifier-only CURIE
+    overlap (``curie_set``/``link_by_intersection``) swings vs a charge/tautomer-collapsing key — i.e.
+    to quantify the CURIE metric's fragility. The trust instrument is the KG-INDEPENDENT ``certify_link``
+    (Unit C), which resolves structure from PubChem/LIPID MAPS, not the KG node.
+    """
+    row = pd.Series({CHOSEN_COL: chosen, EQUIV_COL: equivalents})
+    keys: set[CertificateKey] = set()
+    for c in predicted_curies(row):
+        prefix, _, local = c.partition(":")
+        if prefix == "INCHIKEY":
+            key = certificate_key(local)
+            if key is not None:
+                keys.add(key)
+    return frozenset(keys)
+
+
+def row_stability_descriptor_set(row: pd.Series) -> frozenset[CertificateKey]:
+    """``stability_descriptor_set`` straight from a BioMapper output row. NON-AUTHORITATIVE (see above)."""
+    return stability_descriptor_set(row.get(CHOSEN_COL), row.get(EQUIV_COL))
 
 
 @dataclass(frozen=True)
