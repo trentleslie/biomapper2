@@ -20,18 +20,26 @@ QUERY_ANCHOR = "KILNVBDSWZSGLL-KXQOOQHDSA-N"  # the query's independent structur
 
 
 class _FakeStructureResolver:
-    """Maps a node id -> its FULL structural InChIKey (what StructureResolver.structural_inchikey does)."""
+    """Maps a node id -> its FULL structural InChIKey(s). A value may be a single key or a list of
+    graph-asserted keys (StructureResolver.structural_inchikeys returns all of them)."""
 
-    def __init__(self, keys: dict[str, str | None]) -> None:
+    def __init__(self, keys: dict[str, str | list[str] | None]) -> None:
         self._keys = keys
         self.asked: list[str] = []
 
     def structural_inchikey(self, node_id, node_name=None, records=None):
+        val = self._keys.get(node_id)
+        return val[0] if isinstance(val, list) else val
+
+    def structural_inchikeys(self, node_id, node_name=None, records=None):
         self.asked.append(node_id)
-        return self._keys.get(node_id)
+        val = self._keys.get(node_id)
+        if val is None:
+            return []
+        return list(val) if isinstance(val, list) else [val]
 
 
-def _resolver(struct_keys: dict[str, str | None], names: dict[str, str] | None = None) -> Resolver:
+def _resolver(struct_keys: dict[str, str | list[str] | None], names: dict[str, str] | None = None) -> Resolver:
     linker = MagicMock()
     linker.get_node_records.return_value = {nid: {"name": (names or {}).get(nid)} for nid in struct_keys}
     r = Resolver(linker=linker, biolink_client=MagicMock())
@@ -64,9 +72,7 @@ def test_the_committed_node_is_never_the_comparison_anchor():
     # that matches it is itself, and re-resolution would spuriously "confirm" the committed node.
     # The anchor is the QUERY key, which matches a different candidate — so we must switch, and the
     # committed node's structure must not be consulted as the anchor.
-    struct = _FakeStructureResolver(
-        {"CHEBI:committed": "CCCCCCCCCCCCCC-YYYYYYYYYY-N", "CHEBI:other": QUERY_ANCHOR}
-    )
+    struct = _FakeStructureResolver({"CHEBI:committed": "CCCCCCCCCCCCCC-YYYYYYYYYY-N", "CHEBI:other": QUERY_ANCHOR})
     r = _resolver({"CHEBI:other": QUERY_ANCHOR})
     r.structure_resolver = struct
     new_id, reason = r.reresolve_on_contradiction(
@@ -135,3 +141,21 @@ def test_positive_control_a_wrong_candidate_key_does_not_match():
         committed_kg_id="CHEBI:committed",
     )
     assert reason == "reresolution_refused_no_match"
+
+
+def test_candidate_matched_on_a_non_first_inchikey():
+    # A candidate carries several graph-asserted InChIKeys and only the SECOND matches the anchor.
+    # Matching on the first key alone would miss it; structural_inchikeys must accept ANY key.
+    r = _resolver(
+        {
+            "CHEBI:committed": "WRONGWRONGWRNG-XXXXXXXXXX-N",
+            "CHEBI:correct": ["DECOYDECOYDEC-YYYYYYYYYY-N", QUERY_ANCHOR],
+        }
+    )
+    new_id, reason = r.reresolve_on_contradiction(
+        candidates=["CHEBI:committed", "CHEBI:correct"],
+        query_independent_inchikey=QUERY_ANCHOR,
+        committed_kg_id="CHEBI:committed",
+    )
+    assert new_id == "CHEBI:correct"
+    assert reason == "reresolved"

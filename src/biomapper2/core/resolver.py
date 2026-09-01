@@ -234,8 +234,10 @@ class Resolver:
         matches: set[str] = set()
         for candidate in others:
             name = (records.get(candidate) or {}).get("name")
-            candidate_key = self.structure_resolver.structural_inchikey(candidate, name, records)
-            if candidate_key and structural_agree(anchor, candidate_key):
+            # A candidate may carry several graph-asserted InChIKeys; accept a match against ANY of
+            # them, so the correct candidate is not missed when its match is a non-first key.
+            candidate_keys = self.structure_resolver.structural_inchikeys(candidate, name, records)
+            if any(structural_agree(anchor, ck) for ck in candidate_keys):
                 matches.add(candidate)
 
         if len(matches) == 1:

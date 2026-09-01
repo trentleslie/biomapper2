@@ -104,6 +104,35 @@ class StructureResolver:
         self._name_full_cache[node_name] = full
         return full
 
+    def structural_inchikeys(
+        self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None
+    ) -> list[str]:
+        """ALL FULL InChIKeys graph-asserted for a node, else the single name-resolved key.
+
+        A candidate node may carry SEVERAL graph-asserted InChIKeys, and the query's independent
+        structure can match any one of them. :meth:`structural_inchikey` returns only the first, so
+        re-resolution matching on it would reject a valid candidate whose match is a non-first key.
+        This companion returns the full set (order-preserving, de-duplicated, upper-cased) so the
+        caller can accept a match against ANY asserted structure. Falls back to the name-resolved key.
+        """
+        records = records if records is not None else self.linker.get_node_records([node_id])
+        keys = ((records.get(node_id) or {}).get("equivalent_ids") or {}).get("INCHIKEY") or []
+        out: list[str] = []
+        seen: set[str] = set()
+        for k in keys:
+            if k:
+                ku = str(k).upper()
+                if ku not in seen:
+                    seen.add(ku)
+                    out.append(ku)
+        if out:
+            return out
+        if not node_name:
+            return []
+        # Reuse the single-key name hop (and its cache); a name resolves to at most one structure.
+        one = self.structural_inchikey(node_id, node_name, records)
+        return [one] if one else []
+
     def _resolve_name_key(self, node_name: str) -> str | None:
         """Full InChIKey for a NAME via MW -> PubChem -> lipid hop. Fail-soft (``None`` on error)."""
         try:

@@ -108,6 +108,7 @@ def structural_agree(a: str | None, b: str | None) -> bool:
         return a2 == b2
     return True
 
+
 # Cache provenance. The confound that motivated recording this (a cold cache returning a wrong
 # node) lives in the KESTREL store, which expires; the structure store does not expire at all. Both
 # are recorded because a certificate read months later cannot otherwise tell which one it depended
