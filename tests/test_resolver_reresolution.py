@@ -9,6 +9,7 @@ resolver — no network.
 
 from __future__ import annotations
 
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -43,7 +44,7 @@ def _resolver(struct_keys: dict[str, str | list[str] | None], names: dict[str, s
     linker = MagicMock()
     linker.get_node_records.return_value = {nid: {"name": (names or {}).get(nid)} for nid in struct_keys}
     r = Resolver(linker=linker, biolink_client=MagicMock())
-    r.structure_resolver = _FakeStructureResolver(struct_keys)
+    r.structure_resolver = cast(Any, _FakeStructureResolver(struct_keys))
     return r
 
 
@@ -74,7 +75,7 @@ def test_the_committed_node_is_never_the_comparison_anchor():
     # committed node's structure must not be consulted as the anchor.
     struct = _FakeStructureResolver({"CHEBI:committed": "CCCCCCCCCCCCCC-YYYYYYYYYY-N", "CHEBI:other": QUERY_ANCHOR})
     r = _resolver({"CHEBI:other": QUERY_ANCHOR})
-    r.structure_resolver = struct
+    r.structure_resolver = cast(Any, struct)
     new_id, reason = r.reresolve_on_contradiction(
         candidates=["CHEBI:committed", "CHEBI:other"],
         query_independent_inchikey=QUERY_ANCHOR,
