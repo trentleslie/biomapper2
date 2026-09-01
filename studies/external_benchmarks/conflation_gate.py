@@ -111,18 +111,32 @@ class GateResult:
 # --- Unit 1: noise floor from replicates -----------------------------------------------------------
 
 
-def noise_floor(arm: ArmReplicates) -> dict[str, int]:
+def noise_floor(arm: ArmReplicates, kept_pairs: Iterable[Pair] | None = None) -> dict[str, int]:
     """Per-metric noise floor = replicate range (max-min) over the arm's >=3 replicates.
 
     A delta no larger than this run-to-run jitter is not a signal. Fewer than 3 replicates cannot
     establish a floor, so this RAISES (the caller maps that to ABSTAIN — never a fabricated 0 floor).
+
+    ``kept_pairs`` MUST be the same RefMet-parity-retained population the deltas are measured over
+    (``decide``). When RefMet parity excludes links, those excluded links can carry replicate
+    variability of their own; a floor taken from the complete ``CertifiedOverlap`` totals would then be
+    compared against deltas restricted to the retained links — a population mismatch that can inflate the
+    floor and report a real retained-link regression/improvement as NOOP. So when a non-empty
+    ``kept_pairs`` is supplied the range is computed over each replicate's retained-link counts only. An
+    empty/``None`` ``kept_pairs`` means no parity mask was applied (the no-mask contract) and the floor
+    falls back to the full aggregate, matching ``decide``'s own fallback.
     """
     reps = arm.replicates
     if len(reps) < 3:
         raise ValueError(f"noise floor needs >=3 replicates, arm {arm.name!r} has {len(reps)}")
+    kept = set(kept_pairs) if kept_pairs is not None else set()
+    if kept:
+        rep_counts = [_counts_over(r.certified.per_link, kept) for r in reps]
+    else:
+        rep_counts = [{m: getattr(r.certified, m) for m in _METRICS} for r in reps]
     floor: dict[str, int] = {}
     for m in _METRICS:
-        vals = [getattr(r.certified, m) for r in reps]
+        vals = [c[m] for c in rep_counts]
         floor[m] = max(vals) - min(vals)
     return floor
 
@@ -328,9 +342,15 @@ def positive_control_selftest(
 # --- Unit 7: orchestration -------------------------------------------------------------------------
 
 
-def _pooled_floor(baseline: ArmReplicates, treatment: ArmReplicates) -> dict[str, int]:
-    """Conservative floor = elementwise max of each arm's replicate range (the noisier arm wins)."""
-    fb, ft = noise_floor(baseline), noise_floor(treatment)
+def _pooled_floor(
+    baseline: ArmReplicates, treatment: ArmReplicates, kept_pairs: Iterable[Pair] | None = None
+) -> dict[str, int]:
+    """Conservative floor = elementwise max of each arm's replicate range (the noisier arm wins).
+
+    ``kept_pairs`` threads through to ``noise_floor`` so the floor is measured over the SAME
+    RefMet-parity-retained population as ``decide``'s deltas (avoids the aggregate-vs-kept mismatch).
+    """
+    fb, ft = noise_floor(baseline, kept_pairs), noise_floor(treatment, kept_pairs)
     return {m: max(fb[m], ft[m]) for m in _METRICS}
 
 
@@ -348,7 +368,7 @@ def evaluate_conflation_gate(prereg: Prereg, arms: Mapping[str, ArmReplicates]) 
     if abstain is not None:
         return abstain
 
-    floor = _pooled_floor(baseline, treatment)
+    floor = _pooled_floor(baseline, treatment, kept)
     b_rep = representative(baseline)
     t_rep = representative(treatment)
     control_rep = representative(arms[prereg.positive_control_arm])

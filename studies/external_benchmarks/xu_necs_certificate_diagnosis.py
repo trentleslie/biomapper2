@@ -40,15 +40,26 @@ def _resolve_out_dir() -> Path:
 
     The dev-API and PubChem caches are keyed by files under this directory. A fresh timestamp on every
     process start would point both cache readers at an empty directory, silently re-issuing every
-    (paid, rate-limited) dev-API + PubChem request an interrupted run had already completed. So an
-    operator resuming an interrupted diagnosis points ``XU_NECS_OUT`` at the prior run's directory;
-    only a genuinely fresh run gets a new timestamped path.
+    (paid, rate-limited) dev-API + PubChem request an interrupted run had already completed — which
+    defeats the resume this module advertises, since the *natural* way to resume is simply to re-run the
+    script. So a bare restart AUTO-RESUMES: it reuses the most recent prior run directory that holds
+    on-disk caches. Only a genuinely fresh start gets a new timestamped path — either because no prior
+    cached run exists, or because the operator opts out with ``XU_NECS_FRESH=1``. ``XU_NECS_OUT`` still
+    pins an exact directory when an operator wants to target a specific prior run.
     """
     override = os.environ.get("XU_NECS_OUT")
     if override:
         return Path(override).expanduser()
+    runs_root = Path.home() / "external_benchmark_runs"
+    if not os.environ.get("XU_NECS_FRESH"):
+        prior = sorted(
+            (p for p in runs_root.glob(f"{_PREFIX}*") if p.is_dir() and any(p.glob("*.jsonl"))),
+            key=lambda p: p.name,  # timestamp names sort lexicographically == chronologically
+        )
+        if prior:
+            return prior[-1]
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return Path.home() / f"external_benchmark_runs/{_PREFIX}{ts}"
+    return runs_root / f"{_PREFIX}{ts}"
 
 
 OUT = _resolve_out_dir()
@@ -109,7 +120,8 @@ def main() -> None:
     resuming = any(OUT.glob("*.jsonl"))
     print(f"[run] {OUT} ({'RESUMING — reusing on-disk caches' if resuming else 'fresh run'})", flush=True)
     if not os.environ.get("XU_NECS_OUT"):
-        print(f"[run] to resume this run after an interrupt: XU_NECS_OUT={OUT}", flush=True)
+        print("[run] re-running this script auto-resumes the latest cached run; "
+              "XU_NECS_FRESH=1 forces a new run, XU_NECS_OUT pins a specific one", flush=True)
     panels = load_panels()
     necs = _resolve_panel("necs", panels["necs"])
     xu = _resolve_panel("xuetal", panels["xuetal"])

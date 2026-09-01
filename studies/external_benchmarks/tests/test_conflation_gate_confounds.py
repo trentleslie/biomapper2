@@ -81,6 +81,23 @@ def test_noise_floor_raises_below_three_replicates():
         noise_floor(_arm("baseline", [_score(10, 1, 0), _score(11, 1, 0)]))
 
 
+def test_noise_floor_scoped_to_kept_links_ignores_excluded_link_variability():
+    # The retained link (a1,b1) is certified in every replicate (0 range); the RefMet-EXCLUDED x-links
+    # swing the aggregate certified count. A floor over the full CertifiedOverlap totals inflates to 2
+    # and would mask a real retained-link move as run-to-run noise (NOOP); scoped to the kept links it
+    # is 0 — the same population decide's deltas are measured over. Positive control for the
+    # aggregate-vs-kept parity fix: assert the two floors actually differ so a regression to full-totals
+    # floors fails here.
+    reps = [
+        _score(2, 0, 0, per_link=(("a1", "b1", "certified"), ("x1", "x2", "certified"))),
+        _score(3, 0, 0, per_link=(("a1", "b1", "certified"), ("x1", "x2", "certified"), ("x3", "x4", "certified"))),
+        _score(1, 0, 0, per_link=(("a1", "b1", "certified"),)),
+    ]
+    arm = _arm("baseline", reps)
+    assert noise_floor(arm)["certified"] == 2  # full aggregate — inflated by excluded links
+    assert noise_floor(arm, kept_pairs={("a1", "b1")})["certified"] == 0  # scoped to the retained link
+
+
 # --- Unit 2: RefMet parity filter ------------------------------------------------------------------
 
 
