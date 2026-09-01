@@ -19,6 +19,7 @@ the live loop is `# pragma: no cover`. Resumable per-arm/per-name caches on disk
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from dataclasses import dataclass
@@ -101,12 +102,25 @@ def render_table(rows: list[dict]) -> str:
         )
         lines.append(" ".join(cells))
     lines.append("-" * len(header))
+
+    def _agg_rate(certified: int, refuted: int) -> float | None:
+        adj = certified + refuted
+        return certified / adj if adj else None
+
+    rate_base = _agg_rate(tot["certified_base"], tot["refuted_base"])
+    rate_treat = _agg_rate(tot["certified_treat"], tot["refuted_treat"])
+    rate_delta = None if (rate_base is None or rate_treat is None) else round(rate_treat - rate_base, 4)
     total_cells = (
         "TOTAL".ljust(widths[0]),
         _btd(tot["links_base"], tot["links_treat"]).rjust(widths[1]),
         _btd(tot["certified_base"], tot["certified_treat"]).rjust(widths[2]),
         _btd(tot["refuted_base"], tot["refuted_treat"]).rjust(widths[3]),
         _btd(tot["refused_base"], tot["refused_treat"]).rjust(widths[4]),
+        _rate_cell(
+            None if rate_base is None else round(rate_base, 4),
+            None if rate_treat is None else round(rate_treat, 4),
+            rate_delta,
+        ).rjust(widths[5]),
     )
     lines.append(" ".join(total_cells))
     return "\n".join(lines)
@@ -128,10 +142,38 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
     baseline_api = os.environ["BASELINE_API"]
     treatment_api = os.environ["TREATMENT_API"]
     key = Path("/tmp/.bmk").read_text().strip()
+
+    # Restart-resumable: key the output dir on the two endpoints so a bare re-run reuses the matching
+    # prior dir's on-disk caches instead of re-issuing every dev-API + PubChem request. CHARAC_FRESH=1
+    # forces a new dir; CHARAC_OUT pins one.
+    run_key = hashlib.sha256(f"{baseline_api}\n{treatment_api}".encode()).hexdigest()[:16]
+    runs_root = Path.home() / "external_benchmark_runs"
+    out = None
+    if os.environ.get("CHARAC_OUT"):
+        out = Path(os.environ["CHARAC_OUT"]).expanduser()
+    elif not os.environ.get("CHARAC_FRESH"):
+        for p in sorted(runs_root.glob("cross_cohort_characterization_*"), key=lambda p: p.name, reverse=True):
+            mf = p / "manifest.json"
+            try:
+                if mf.exists() and json.loads(mf.read_text()).get("run_key") == run_key:
+                    out = p
+                    break
+            except (ValueError, OSError):
+                continue
     ts = _now_ts()
-    out = Path.home() / f"external_benchmark_runs/cross_cohort_characterization_{ts}"
+    if out is None:
+        out = runs_root / f"cross_cohort_characterization_{ts}"
     out.mkdir(parents=True, exist_ok=True)
+    manifest = out / "manifest.json"
+    if not manifest.exists():
+        manifest.write_text(
+            json.dumps(
+                {"run_key": run_key, "baseline_api": baseline_api, "treatment_api": treatment_api, "created": ts},
+                indent=2,
+            )
+        )
     print(f"[run] {out}\n[arms] baseline={baseline_api}\n       treatment={treatment_api}", flush=True)
+    errors: dict[str, int] = {}  # "arm:label" -> count of per-entity mapping errors surfaced
 
     def resolve_panel(arm: str, api: str, label: str, names: list[str]) -> dict[str, dict]:
         cache_path = out / f"{arm}__{label}_devapi.jsonl"
@@ -155,10 +197,18 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
                         "name": r["name"],
                         "chosen_kg_id": r.get("chosen_kg_id"),
                         "kg_equivalent_ids": r.get("kg_equivalent_ids") or {},
+                        "error": r.get("error"),  # keep the API's per-entity error, don't silently drop it
                     }
                     cache[r["name"]] = rec
                     fh.write(json.dumps(rec) + "\n")
                 fh.flush()
+        # A per-entity error is NOT a genuine "no match" — count and surface it so a partial panel is
+        # never reported as a clean arm result (Greptile #63). Errored names still carry chosen_kg_id
+        # None, so they do not link; the count makes that visible rather than silent.
+        n_err = sum(1 for rec in cache.values() if rec.get("error"))
+        if n_err:
+            errors[f"{arm}:{label}"] = n_err
+            print(f"[{arm}:{label}] WARNING: {n_err} names returned a mapping error (excluded from links)", flush=True)
         return cache
 
     def independent(names: set[str], resolver: PubChemInChIKeyResolver) -> dict[str, str | None]:
@@ -207,7 +257,13 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
 
     (out / "characterization.json").write_text(
         json.dumps(
-            {"run_timestamp": ts, "baseline_api": baseline_api, "treatment_api": treatment_api, "rows": rows},
+            {
+                "run_timestamp": ts,
+                "baseline_api": baseline_api,
+                "treatment_api": treatment_api,
+                "rows": rows,
+                "mapping_errors": errors,  # arm:label -> count; non-empty means treat deltas with caution
+            },
             indent=2,
         )
     )
@@ -215,6 +271,11 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
     (out / "characterization_table.txt").write_text(table + "\n")
     print("\n=== Arm-M cross-cohort certificate characterization (baseline vs treatment) ===")
     print(table)
+    if errors:
+        print(
+            f"\n[caution] per-entity mapping errors (excluded from links): {errors} — "
+            "deltas on affected pairs are partial."
+        )
     print(
         "\n[note] CHARACTERIZATION, not a gate verdict; certified/refuted signal is "
         "small-molecule-dominated (lipids refused)."

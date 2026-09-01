@@ -71,6 +71,8 @@ def test_render_table_total_sums_and_signs_delta():
     total = [ln for ln in out if ln.startswith("TOTAL")][0]
     assert "150/162/+12" in total  # links 150 -> 162
     assert "120/129/+9" in total  # certified 120 -> 129
+    # aggregate cert-rate over totals: base 120/(120+8)=0.938, treat 129/(129+5)=0.963 (6th cell present)
+    assert "0.938/0.963" in total
 
 
 def test_render_table_negative_delta_shows_minus():
