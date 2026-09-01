@@ -41,15 +41,25 @@ def _now_ts() -> str:
 
 
 def _run_key(panels: dict[str, list[str]]) -> str:
-    """Stable identity of THIS diagnosis run: the dev-API endpoint + the exact panels being resolved.
+    """Stable identity of THIS diagnosis run: dev-API endpoint + KG build tag + the exact panels.
 
     A resumed run may only reuse caches produced by an identical run. Keying on the sorted NECS + Xu
     name lists and the API base means that changing a panel (added/removed analytes) or pointing at a
     different dev API yields a different key, so stale caches from a prior, different run are never
     silently adopted as the current diagnosis.
+
+    ONE case the endpoint URL alone cannot distinguish: the dev API (or its underlying KG) is REDEPLOYED
+    behind the SAME ``localhost`` endpoint while the panels are unchanged — same URL + same panels would
+    otherwise resume the pre-redeploy caches. The biomapper dev API's ``/health`` reports only its own
+    API_VERSION, not the KG build (that lives on Kestrel's ``/health``, reached only indirectly here), so
+    the build cannot be probed automatically from this script. Instead the operator stamps the build via
+    ``XU_NECS_KG_BUILD`` (e.g. the Kestrel/KG version) and it becomes part of the key — a redeploy with a
+    new tag starts fresh. When it is unset the tag is empty (endpoint+panels identity only); after a
+    same-endpoint redeploy without a tag, force a clean run with ``XU_NECS_FRESH=1``.
     """
     h = hashlib.sha256()
     h.update(API_BATCH.encode())
+    h.update(f"\n[kg_build]{os.environ.get('XU_NECS_KG_BUILD', '')}\n".encode())
     for label in ("necs", "xuetal"):
         h.update(f"\n[{label}]\n".encode())
         h.update("\n".join(sorted(panels.get(label, []))).encode())
@@ -156,8 +166,8 @@ def main() -> None:
     if not manifest.exists():  # stamp provenance on a fresh dir; a resumed dir already carries its own
         manifest.write_text(
             json.dumps(
-                {"run_key": run_key, "api_batch": API_BATCH, "necs_n": len(panels["necs"]),
-                 "xu_n": len(panels["xuetal"]), "created": TS},
+                {"run_key": run_key, "api_batch": API_BATCH, "kg_build": os.environ.get("XU_NECS_KG_BUILD", ""),
+                 "necs_n": len(panels["necs"]), "xu_n": len(panels["xuetal"]), "created": TS},
                 indent=2,
             )
         )
