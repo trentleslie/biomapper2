@@ -75,3 +75,19 @@ class PubChemInChIKeyResolver:
         block = self._get_txt_inchikey(f"compound/xref/RegistryID/{quote(hmdb)}/property/InChIKey/TXT")
         self._cache[key] = block
         return block
+
+    def block_for_name(self, name: str) -> str | None:
+        """Independent structure by NAME (PubChem name index) — for name-only panels (e.g. Xu).
+
+        KG-independent: PubChem's name index is a different service than the KG node, so this never
+        reads the linking KG node's InChIKey. Returns connectivity-only (block 1), like the id lookups,
+        so certification degrades to connectivity — which is what catches wrong-molecule / generic-node
+        false positives. Name resolution is fuzzier than id resolution: an ambiguous/absent name yields
+        None, so the link is REFUSED (counts-only), never certified off a guess.
+        """
+        key = f"name:{name}"
+        if key in self._cache:
+            return self._cache[key]
+        block = self._get_txt_inchikey(f"compound/name/{quote(name, safe='')}/property/InChIKey/TXT")
+        self._cache[key] = block
+        return block
