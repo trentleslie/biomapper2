@@ -104,6 +104,30 @@ def test_per_pair_refuted_regression_fails_under_a_flat_aggregate():
     assert any("regression" in r for r in res.reasons)
 
 
+def test_changes_confined_to_excluded_links_do_not_move_the_verdict():
+    # Only ("a1","b1") survives RefMet parity; the a2/a3/a4 links are EXCLUDED. All the movement is on
+    # the excluded links (three refuted -> certified "fixes"); the retained link is unchanged. The
+    # verdict must be NOOP — an aggregate that counted the excluded links would wrongly PASS on a
+    # coverage swing that says nothing about the links we are allowed to compare.
+    base = _score(
+        1, 3, 0,
+        per_link=(
+            ("a1", "b1", "certified"),
+            ("a2", "b2", "refuted"), ("a3", "b3", "refuted"), ("a4", "b4", "refuted"),
+        ),
+    )
+    treat = _score(
+        4, 0, 0,
+        per_link=(
+            ("a1", "b1", "certified"),
+            ("a2", "b2", "certified"), ("a3", "b3", "certified"), ("a4", "b4", "certified"),
+        ),
+    )
+    res = decide(base, treat, _FLOOR, kept_pairs={("a1", "b1")}, thresholds=Thresholds())
+    assert res.decision == "NOOP"
+    assert res.deltas == {"certified": 0, "refuted": 0, "refused": 0}
+
+
 # --- Unit 6: positive-control self-test ------------------------------------------------------------
 
 

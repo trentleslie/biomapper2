@@ -18,6 +18,7 @@ per-name dev-API + oracle caches on disk. Persist-by-default (R23). This is a SU
 from __future__ import annotations
 
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -31,9 +32,29 @@ from studies.external_benchmarks.scorers.independent_link_certificate_overlap im
 API_BATCH = "http://localhost:8003/api/v1/map/batch"
 KEY = Path("/tmp/.bmk").read_text().strip()
 CHUNK = 25
-TS = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-OUT = Path.home() / f"external_benchmark_runs/xu_necs_certificate_diagnosis_{TS}"
+_PREFIX = "xu_necs_certificate_diagnosis_"
+
+
+def _resolve_out_dir() -> Path:
+    """Resolve the run/output directory — STABLE across restarts so a resumed run finds its caches.
+
+    The dev-API and PubChem caches are keyed by files under this directory. A fresh timestamp on every
+    process start would point both cache readers at an empty directory, silently re-issuing every
+    (paid, rate-limited) dev-API + PubChem request an interrupted run had already completed. So an
+    operator resuming an interrupted diagnosis points ``XU_NECS_OUT`` at the prior run's directory;
+    only a genuinely fresh run gets a new timestamped path.
+    """
+    override = os.environ.get("XU_NECS_OUT")
+    if override:
+        return Path(override).expanduser()
+    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return Path.home() / f"external_benchmark_runs/{_PREFIX}{ts}"
+
+
+OUT = _resolve_out_dir()
 OUT.mkdir(parents=True, exist_ok=True)
+# Recover the original timestamp when resuming the canonical directory; else stamp this run.
+TS = OUT.name[len(_PREFIX):] if OUT.name.startswith(_PREFIX) else datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
 def _resolve_panel(label: str, names: list[str]) -> dict[str, dict]:
@@ -85,7 +106,10 @@ def _independent_by_name(names: set[str], resolver: PubChemInChIKeyResolver) -> 
 
 
 def main() -> None:
-    print(f"[run] {OUT}", flush=True)
+    resuming = any(OUT.glob("*.jsonl"))
+    print(f"[run] {OUT} ({'RESUMING — reusing on-disk caches' if resuming else 'fresh run'})", flush=True)
+    if not os.environ.get("XU_NECS_OUT"):
+        print(f"[run] to resume this run after an interrupt: XU_NECS_OUT={OUT}", flush=True)
     panels = load_panels()
     necs = _resolve_panel("necs", panels["necs"])
     xu = _resolve_panel("xuetal", panels["xuetal"])

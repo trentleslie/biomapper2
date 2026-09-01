@@ -219,6 +219,15 @@ def representative(arm: ArmReplicates) -> ArmScore:
     return ordered[(len(ordered) - 1) // 2]
 
 
+def _counts_over(per_link: Iterable[tuple[str, str, str]], kept: set[Pair]) -> dict[str, int]:
+    """Tally per-link verdicts restricted to the retained links ``kept`` (RefMet-parity survivors)."""
+    counts = {m: 0 for m in _METRICS}
+    for a, bn, v in per_link:
+        if (a, bn) in kept and v in counts:
+            counts[v] += 1
+    return counts
+
+
 def decide(
     baseline: ArmScore,
     treatment: ArmScore,
@@ -233,21 +242,35 @@ def decide(
     certified->refuted FAILs before it can be credited with an improvement. Only then can an
     improvement (refuted down / refused down / certified up, each beyond the floor) earn a PASS; when
     nothing moves beyond the floor it is a NOOP.
+
+    The aggregate deltas AND the absolute-threshold backstops are measured over the RETAINED links
+    (``kept_pairs``) only, not the full ``CertifiedOverlap`` totals. Otherwise a change confined to
+    RefMet-parity-EXCLUDED links (a coverage swing, not a correctness one) could flip the verdict even
+    though no retained link moved — the same aggregate-pooling failure the per-link guard exists to
+    catch. An empty ``kept_pairs`` means no parity mask was applied (``confound_gate`` already ABSTAINs
+    when a mask excludes *every* comparable link, before ``decide`` runs), so it falls back to the full
+    aggregate — preserving the no-mask contract the pure decision tests exercise.
     """
-    b, t = baseline.certified, treatment.certified
-    deltas = {m: getattr(t, m) - getattr(b, m) for m in _METRICS}
     fc, fr, fu = floor["certified"], floor["refuted"], floor["refused"]
 
-    b_verdict = {(a, bn): v for (a, bn, v) in b.per_link}
-    t_verdict = {(a, bn): v for (a, bn, v) in t.per_link}
+    b_verdict = {(a, bn): v for (a, bn, v) in baseline.certified.per_link}
+    t_verdict = {(a, bn): v for (a, bn, v) in treatment.certified.per_link}
     kept = set(kept_pairs)
     regressed = sorted(p for p in kept if b_verdict.get(p) == "certified" and t_verdict.get(p) == "refuted")
 
+    if kept:
+        b_counts = _counts_over(baseline.certified.per_link, kept)
+        t_counts = _counts_over(treatment.certified.per_link, kept)
+    else:
+        b_counts = {m: getattr(baseline.certified, m) for m in _METRICS}
+        t_counts = {m: getattr(treatment.certified, m) for m in _METRICS}
+    deltas = {m: t_counts[m] - b_counts[m] for m in _METRICS}
+
     fails: list[str] = []
-    if thresholds.min_certified is not None and t.certified < thresholds.min_certified:
-        fails.append(f"certified {t.certified} below hard floor {thresholds.min_certified}")
-    if thresholds.max_refuted is not None and t.refuted > thresholds.max_refuted:
-        fails.append(f"refuted {t.refuted} above hard ceiling {thresholds.max_refuted}")
+    if thresholds.min_certified is not None and t_counts["certified"] < thresholds.min_certified:
+        fails.append(f"certified {t_counts['certified']} below hard floor {thresholds.min_certified}")
+    if thresholds.max_refuted is not None and t_counts["refuted"] > thresholds.max_refuted:
+        fails.append(f"refuted {t_counts['refuted']} above hard ceiling {thresholds.max_refuted}")
     if regressed:
         fails.append(f"per-link refuted regression (certified->refuted) on {regressed}")
     if deltas["certified"] < -fc:
