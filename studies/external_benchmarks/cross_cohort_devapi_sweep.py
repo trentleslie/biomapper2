@@ -88,9 +88,10 @@ def resolve_and_persist(*args, **kwargs):  # pragma: no cover - supervised live 
     ``score_arm``, and persist a manifest (deployed commit, /metagraph fingerprint, annotators, RefMet
     probe, cache canary, replicate index) under a timestamped path (R23).
 
-    Deliberately unimplemented in the committable module: wiring it to the live dev API belongs in the
-    gated Unit E/F operator runs, not in importable library code that a test could accidentally trip.
+    Delegates to the gated operator harness (``run_conflation_gate_live.resolve_and_persist_live``); the
+    local import keeps THIS module import-pure so a test can never trip the network by importing it. A
+    no-config call raises a clear operator error before any network.
     """
-    raise NotImplementedError(
-        "resolve_and_persist is a supervised live step; run it from the gated Unit E/F operator harness"
-    )
+    from .run_conflation_gate_live import resolve_and_persist_live  # local import: keep module pure
+
+    return resolve_and_persist_live(*args, **kwargs)

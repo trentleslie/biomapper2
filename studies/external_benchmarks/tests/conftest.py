@@ -2,14 +2,48 @@
 
 Everything is network-isolated: fixtures build in-memory DataFrames / fake resolvers so
 the suite runs offline and deterministically. No live Kestrel/MW/PubChem calls.
+
+Network isolation is now ENFORCED, not conventional: ``_deny_external_network`` is an autouse
+fixture that raises on any ``socket.socket.connect`` to a non-local host. A study test that
+forgets to inject a fake resolver and reaches for live PubChem/Kestrel fails loudly here instead
+of silently hitting the network (or, for fail-soft resolvers, silently degrading). Local/AF_UNIX
+connects are still allowed so in-process fakes and any local fixtures keep working. Tests inject
+fakes via DI/monkeypatch as before — this is a backstop, not the primary isolation mechanism.
 """
 
 from __future__ import annotations
+
+import socket
 
 import pandas as pd
 import pytest
 
 from studies.external_benchmarks.config import HAJJAR
+
+_LOCAL_HOSTS = frozenset({"127.0.0.1", "::1", "localhost", "0.0.0.0"})
+
+
+class ExternalNetworkDenied(RuntimeError):
+    """Raised when a study test attempts to connect to a non-local host."""
+
+
+@pytest.fixture(autouse=True)
+def _deny_external_network(monkeypatch):
+    """Deny external ``socket.socket.connect`` for every studies test (enforced isolation).
+
+    AF_UNIX (str address) and local AF_INET connects pass through so in-process fixtures still
+    work; any external host raises ``ExternalNetworkDenied``. This is the guard R-Core asks for:
+    an un-mocked live call fails the test instead of silently escaping.
+    """
+    real_connect = socket.socket.connect
+
+    def guarded(self, address, *args, **kwargs):
+        host = address[0] if isinstance(address, tuple) else None
+        if host is None or host in _LOCAL_HOSTS:
+            return real_connect(self, address, *args, **kwargs)
+        raise ExternalNetworkDenied(f"external network denied in tests: {address!r}")
+
+    monkeypatch.setattr(socket.socket, "connect", guarded)
 
 
 @pytest.fixture(autouse=True)
