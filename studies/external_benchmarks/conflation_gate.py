@@ -223,13 +223,29 @@ def confound_gate(
 # --- Unit 5: improvement decision ------------------------------------------------------------------
 
 
-def representative(arm: ArmReplicates) -> ArmScore:
+def representative(arm: ArmReplicates, kept_pairs: Iterable[Pair] | None = None) -> ArmScore:
     """Deterministic representative replicate = the (lower-)median by (certified, refuted, refused).
 
     Median rather than mean so a single anomalous replicate cannot drag the reading, and deterministic
     tie-breaking so the pure decision is reproducible across runs.
+
+    ``kept_pairs`` MUST be the same RefMet-parity-retained population the floor and deltas are measured
+    over (``noise_floor`` / ``decide``). Ranking replicates by their FULL ``CertifiedOverlap`` totals
+    while the gate then scores them over the retained links only is a population mismatch:
+    parity-excluded variability could reorder the replicates and select a different median than the one
+    the retained-link decision is taken on. So when a non-empty ``kept_pairs`` is supplied the median is
+    chosen over each replicate's retained-link counts; an empty/``None`` set keeps the full-total order
+    (the no-mask contract the pure tests exercise).
     """
-    ordered = sorted(arm.replicates, key=lambda s: (s.certified.certified, s.certified.refuted, s.certified.refused))
+    kept = set(kept_pairs) if kept_pairs is not None else set()
+
+    def _key(s: ArmScore) -> tuple[int, int, int]:
+        if kept:
+            c = _counts_over(s.certified.per_link, kept)
+            return (c["certified"], c["refuted"], c["refused"])
+        return (s.certified.certified, s.certified.refuted, s.certified.refused)
+
+    ordered = sorted(arm.replicates, key=_key)
     return ordered[(len(ordered) - 1) // 2]
 
 
@@ -369,9 +385,9 @@ def evaluate_conflation_gate(prereg: Prereg, arms: Mapping[str, ArmReplicates]) 
         return abstain
 
     floor = _pooled_floor(baseline, treatment, kept)
-    b_rep = representative(baseline)
-    t_rep = representative(treatment)
-    control_rep = representative(arms[prereg.positive_control_arm])
+    b_rep = representative(baseline, kept)
+    t_rep = representative(treatment, kept)
+    control_rep = representative(arms[prereg.positive_control_arm], kept)
 
     abort = positive_control_selftest(prereg, b_rep, control_rep, floor, kept, prereg.thresholds)
     if abort is not None:

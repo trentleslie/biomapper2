@@ -17,6 +17,7 @@ per-name dev-API + oracle caches on disk. Persist-by-default (R23). This is a SU
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 from datetime import datetime, timezone
@@ -35,17 +36,36 @@ CHUNK = 25
 _PREFIX = "xu_necs_certificate_diagnosis_"
 
 
-def _resolve_out_dir() -> Path:
+def _now_ts() -> str:
+    return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+
+
+def _run_key(panels: dict[str, list[str]]) -> str:
+    """Stable identity of THIS diagnosis run: the dev-API endpoint + the exact panels being resolved.
+
+    A resumed run may only reuse caches produced by an identical run. Keying on the sorted NECS + Xu
+    name lists and the API base means that changing a panel (added/removed analytes) or pointing at a
+    different dev API yields a different key, so stale caches from a prior, different run are never
+    silently adopted as the current diagnosis.
+    """
+    h = hashlib.sha256()
+    h.update(API_BATCH.encode())
+    for label in ("necs", "xuetal"):
+        h.update(f"\n[{label}]\n".encode())
+        h.update("\n".join(sorted(panels.get(label, []))).encode())
+    return h.hexdigest()[:16]
+
+
+def _resolve_out_dir(run_key: str) -> Path:
     """Resolve the run/output directory — STABLE across restarts so a resumed run finds its caches.
 
-    The dev-API and PubChem caches are keyed by files under this directory. A fresh timestamp on every
-    process start would point both cache readers at an empty directory, silently re-issuing every
-    (paid, rate-limited) dev-API + PubChem request an interrupted run had already completed — which
-    defeats the resume this module advertises, since the *natural* way to resume is simply to re-run the
-    script. So a bare restart AUTO-RESUMES: it reuses the most recent prior run directory that holds
-    on-disk caches. Only a genuinely fresh start gets a new timestamped path — either because no prior
-    cached run exists, or because the operator opts out with ``XU_NECS_FRESH=1``. ``XU_NECS_OUT`` still
-    pins an exact directory when an operator wants to target a specific prior run.
+    A fresh timestamp on every process start would point both cache readers at an empty directory,
+    silently re-issuing every (paid, rate-limited) dev-API + PubChem request an interrupted run had
+    already completed. So a bare restart AUTO-RESUMES: it reuses the most recent prior run directory
+    whose ``manifest.json`` records the SAME ``run_key`` (identical endpoint + panels). A prior dir with
+    no manifest or a mismatched key is skipped — never adopted — so a changed panel or endpoint starts
+    fresh instead of resuming stale mappings as if current. ``XU_NECS_FRESH=1`` forces a new run;
+    ``XU_NECS_OUT`` pins an exact directory (operator-trusted, provenance not re-checked).
     """
     override = os.environ.get("XU_NECS_OUT")
     if override:
@@ -55,17 +75,22 @@ def _resolve_out_dir() -> Path:
         prior = sorted(
             (p for p in runs_root.glob(f"{_PREFIX}*") if p.is_dir() and any(p.glob("*.jsonl"))),
             key=lambda p: p.name,  # timestamp names sort lexicographically == chronologically
+            reverse=True,
         )
-        if prior:
-            return prior[-1]
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return runs_root / f"{_PREFIX}{ts}"
+        for p in prior:
+            manifest = p / "manifest.json"
+            try:
+                if manifest.exists() and json.loads(manifest.read_text()).get("run_key") == run_key:
+                    return p  # same endpoint + panels -> safe to resume
+            except (ValueError, OSError):
+                continue  # unreadable/corrupt manifest -> treat as non-matching
+    return runs_root / f"{_PREFIX}{_now_ts()}"
 
 
-OUT = _resolve_out_dir()
-OUT.mkdir(parents=True, exist_ok=True)
-# Recover the original timestamp when resuming the canonical directory; else stamp this run.
-TS = OUT.name[len(_PREFIX):] if OUT.name.startswith(_PREFIX) else datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+# Set in main() once the panels (and thus the run_key) are known — resolving at import would have no
+# panels to key provenance on, and would side-effect a mkdir on mere import.
+OUT: Path = Path.home() / "external_benchmark_runs"
+TS: str = ""
 
 
 def _resolve_panel(label: str, names: list[str]) -> dict[str, dict]:
@@ -86,7 +111,11 @@ def _resolve_panel(label: str, names: list[str]) -> dict[str, dict]:
             resp = requests.post(API_BATCH, headers={"X-API-Key": KEY}, json=body, timeout=300)
             resp.raise_for_status()
             for r in resp.json()["results"]:
-                rec = {"name": r["name"], "chosen_kg_id": r.get("chosen_kg_id"), "kg_equivalent_ids": r.get("kg_equivalent_ids") or {}}
+                rec = {
+                    "name": r["name"],
+                    "chosen_kg_id": r.get("chosen_kg_id"),
+                    "kg_equivalent_ids": r.get("kg_equivalent_ids") or {},
+                }
                 cache[r["name"]] = rec
                 fh.write(json.dumps(rec) + "\n")
             fh.flush()
@@ -117,12 +146,26 @@ def _independent_by_name(names: set[str], resolver: PubChemInChIKeyResolver) -> 
 
 
 def main() -> None:
+    global OUT, TS
+    panels = load_panels()
+    run_key = _run_key(panels)
+    OUT = _resolve_out_dir(run_key)
+    OUT.mkdir(parents=True, exist_ok=True)
+    TS = OUT.name[len(_PREFIX):] if OUT.name.startswith(_PREFIX) else _now_ts()
+    manifest = OUT / "manifest.json"
+    if not manifest.exists():  # stamp provenance on a fresh dir; a resumed dir already carries its own
+        manifest.write_text(
+            json.dumps(
+                {"run_key": run_key, "api_batch": API_BATCH, "necs_n": len(panels["necs"]),
+                 "xu_n": len(panels["xuetal"]), "created": TS},
+                indent=2,
+            )
+        )
     resuming = any(OUT.glob("*.jsonl"))
     print(f"[run] {OUT} ({'RESUMING — reusing on-disk caches' if resuming else 'fresh run'})", flush=True)
     if not os.environ.get("XU_NECS_OUT"):
-        print("[run] re-running this script auto-resumes the latest cached run; "
+        print("[run] re-running this script auto-resumes the matching cached run; "
               "XU_NECS_FRESH=1 forces a new run, XU_NECS_OUT pins a specific one", flush=True)
-    panels = load_panels()
     necs = _resolve_panel("necs", panels["necs"])
     xu = _resolve_panel("xuetal", panels["xuetal"])
 
