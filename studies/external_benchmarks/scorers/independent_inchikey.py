@@ -51,6 +51,9 @@ class ProvidedBlock:
     block: str | None
     source: str  # provided-inchikey | provided-hmdb | provided-pubchem | pubchem-name | none
     status: str  # success | clean_miss | lookup_failed
+    record_id: str | None = None  # "{source_file}:{key}" — two sides sharing it are the SAME curator
+    # record (not two independent derivations); the certificate refuses those. Set by the caller that
+    # knows which source file/dict produced the block (the operator driver); None for the id lookups.
 
 
 class PubChemInChIKeyResolver:

@@ -63,6 +63,7 @@ from datetime import datetime, timezone  # noqa: E402
 from pathlib import Path  # noqa: E402
 
 import requests  # noqa: E402
+from dataclasses import replace  # noqa: E402
 
 from studies.external_benchmarks.ab_transition_matrix import BASE, BOTH, FILTER_ONLY, ORACLE_ONLY, build_report  # noqa: E402
 from studies.external_benchmarks.cross_cohort_run import ARIVALE_XLSX, load_panels  # noqa: E402
@@ -106,10 +107,20 @@ def _arivale_source() -> dict[str, dict[str, str]]:  # pragma: no cover
     return out
 
 
-def _run_key(baseline_api: str, treatment_api: str) -> str:  # pragma: no cover
+def _run_key(baseline_api: str, treatment_api: str, panels: dict[str, list[str]], gold_path: Path) -> str:  # pragma: no cover
+    """Identity of THIS run: endpoints + build tag + the exact panels + the provided-id source file.
+
+    Changing a panel (added/removed analytes) or the gold tsv changes the key, so a resumed run can never
+    silently mix caches built from different benchmark inputs.
+    """
     h = hashlib.sha256()
     for a in (baseline_api, treatment_api, os.environ.get("AB_KG_BUILD", "")):
         h.update((a + "\n").encode())
+    for label in ("necs", "arivale", "xuetal"):
+        h.update(f"\n[{label}]\n".encode())
+        h.update("\n".join(sorted(panels.get(label, []))).encode())
+    h.update(b"\n[gold]\n")
+    h.update(hashlib.sha256(gold_path.read_bytes()).hexdigest().encode())
     return h.hexdigest()[:16]
 
 
@@ -117,7 +128,18 @@ def _resolve_out_dir(run_key: str) -> Path:  # pragma: no cover
     """Stable run dir: AB_OUT pins it; else auto-resume the newest prior dir whose manifest run_key
     matches (identical endpoints + build tag), never a mismatched/manifest-less one; AB_FRESH forces new."""
     if os.environ.get("AB_OUT"):
-        return Path(os.environ["AB_OUT"]).expanduser()
+        p = Path(os.environ["AB_OUT"]).expanduser()
+        if p.exists() and any(p.glob("*.jsonl")):
+            manifest = p / "manifest.json"
+            if not manifest.exists():
+                raise SystemExit(f"AB_OUT {p} holds caches but no manifest — refuse to reuse; set AB_FRESH=1")
+            try:
+                cached_key = json.loads(manifest.read_text()).get("run_key")
+            except (ValueError, OSError) as exc:
+                raise SystemExit(f"AB_OUT {p} manifest unreadable ({exc}) — refuse to reuse") from exc
+            if cached_key != run_key:
+                raise SystemExit(f"AB_OUT {p} run_key {cached_key} != current {run_key} — refuse to mix stale caches")
+        return p
     runs_root = Path.home() / "external_benchmark_runs"
     if not os.environ.get("AB_FRESH"):
         prior = sorted(
@@ -161,22 +183,25 @@ def _resolve_panel(api: str, key: str, out_dir: Path, arm: str, label: str, name
     return cache
 
 
-def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: PubChemInChIKeyResolver, out_dir: Path, tag: str) -> dict[str, ProvidedBlock]:  # pragma: no cover
-    """oracle-ON map for ONE side: block_for_provided from THAT side's curator ids (name fallback), cached."""
+def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: PubChemInChIKeyResolver, out_dir: Path, tag: str, src_tag: str) -> dict[str, ProvidedBlock]:  # pragma: no cover
+    """oracle-ON map for ONE side: block_for_provided from THAT side's curator ids (name fallback), cached.
+
+    ``src_tag`` names the source FILE ("gold" | "arivale") so record_id = "{src_tag}:{name}"; two sides
+    sharing a record_id are the same curator record and the certificate refuses that self-comparison."""
     cache_path = out_dir / f"oracle_provided_{tag}.jsonl"
     out: dict[str, ProvidedBlock] = {}
     if cache_path.exists():
         for line in cache_path.open():
             r = json.loads(line)
-            out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"])
+            out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"], r.get("record_id"))
     with cache_path.open("a") as fh:
         for n in sorted(names):
             if n in out:
                 continue
             kw = provided_id_kwargs(src.get(n.strip().lower(), {}))
-            pb = resolver.block_for_provided(name=n, **kw)
+            pb = replace(resolver.block_for_provided(name=n, **kw), record_id=f"{src_tag}:{n.strip().lower()}")
             out[n] = pb
-            fh.write(json.dumps({"name": n, "block": pb.block, "source": pb.source, "status": pb.status}) + "\n")
+            fh.write(json.dumps({"name": n, "block": pb.block, "source": pb.source, "status": pb.status, "record_id": pb.record_id}) + "\n")
         fh.flush()
     return out
 
@@ -189,15 +214,16 @@ def _oracle_name_only(names: set[str], resolver: PubChemInChIKeyResolver, out_di
     if cache_path.exists():
         for line in cache_path.open():
             r = json.loads(line)
-            out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"])
+            out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"], r.get("record_id"))
     with cache_path.open("a") as fh:
         for n in sorted(names):
             if n in out:
                 continue
             blk = resolver.block_for_name(n)
-            pb = ProvidedBlock(blk, "pubchem-name" if blk else "none", "success" if blk else "clean_miss")
+            pb = ProvidedBlock(blk, "pubchem-name" if blk else "none", "success" if blk else "clean_miss",
+                               f"pubchem-name:{n.strip().lower()}")
             out[n] = pb
-            fh.write(json.dumps({"name": n, "block": pb.block, "source": pb.source, "status": pb.status}) + "\n")
+            fh.write(json.dumps({"name": n, "block": pb.block, "source": pb.source, "status": pb.status, "record_id": pb.record_id}) + "\n")
         fh.flush()
     return out
 
@@ -229,7 +255,7 @@ def main() -> None:  # pragma: no cover
     arivale_src = _arivale_source()
     panels = load_panels()
 
-    run_key = _run_key(baseline_api, treatment_api)
+    run_key = _run_key(baseline_api, treatment_api, panels, Path(os.environ["NECS_GOLD_TSV"]).expanduser())
     out_dir = _resolve_out_dir(run_key)
     out_dir.mkdir(parents=True, exist_ok=True)
     resuming = any(out_dir.glob("*.jsonl"))
@@ -277,8 +303,8 @@ def main() -> None:  # pragma: no cover
         coh_names = {lk.b_name for arm in links_by_arm for lk in links_by_arm[arm]}
 
         # DISTINCT per-side maps: NECS side from gold, cohort side from its OWN ids (never one map for both).
-        prov_necs = _oracle_provided(necs_names, gold_src, resolver, out_dir, f"{cohort}_necs")
-        prov_coh = _oracle_provided(coh_names, coh_src, resolver, out_dir, f"{cohort}_coh")
+        prov_necs = _oracle_provided(necs_names, gold_src, resolver, out_dir, f"{cohort}_necs", "gold")
+        prov_coh = _oracle_provided(coh_names, coh_src, resolver, out_dir, f"{cohort}_coh", "arivale" if cohort == "arivale" else "gold")
         name_map = _oracle_name_only(necs_names | coh_names, resolver, out_dir, cohort)
 
         cells: dict = {}

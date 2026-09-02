@@ -88,10 +88,18 @@ def certify_links_tagged(
         b = b_provided.get(lk.b_name)
         a_block, a_src = (a.block, a.source) if a is not None else (None, None)
         b_block, b_src = (b.block, b.source) if b is not None else (None, None)
+        a_rec = a.record_id if a is not None else None
+        b_rec = b.record_id if b is not None else None
         if a_src is None:
             untagged_sides += 1
         if b_src is None:
             untagged_sides += 1
+        if a_rec is not None and a_rec == b_rec:
+            # Both sides are the SAME curator record (same source file + key) — not two independent
+            # derivations, so agreement is tautological. REFUSE rather than certify off a self-comparison.
+            counts["refused"] += 1
+            per.append((lk.a_name, lk.b_name, "refused"))
+            continue
         cert = certify_link(
             a_block, b_block, necs_source=a_src, cohort_source=b_src, require_tags=require_tags
         )

@@ -57,6 +57,19 @@ def test_certify_links_tagged_counts_and_canary():
     assert untagged == 1  # the absent b-side is counted for the canary
 
 
+def test_certify_links_tagged_record_independence():
+    # SAME curator record on both sides (Xu via one gold file) -> self-comparison -> refused, even though
+    # the structures match; DISTINCT source records (Arivale's own ids vs gold) -> a legitimate cert.
+    same = [_link("glucose", "glucose")]
+    a_same = {"glucose": ProvidedBlock(_IK, "provided-hmdb", "success", record_id="gold:glucose")}
+    b_same = {"glucose": ProvidedBlock(_IK, "provided-hmdb", "success", record_id="gold:glucose")}
+    ov_same, _ = certify_links_tagged(same, a_same, b_same)
+    assert ov_same.certified == 0 and ov_same.refused == 1
+    b_distinct = {"glucose": ProvidedBlock(_IK, "provided-hmdb", "success", record_id="arivale:glucose")}
+    ov_distinct, _ = certify_links_tagged(same, a_same, b_distinct)
+    assert ov_distinct.certified == 1
+
+
 def test_certify_links_tagged_kg_block_refused():
     links = [_link("n", "c")]
     a = {"n": ProvidedBlock(_IK, "kg", "success")}  # KG-derived -> must not certify
