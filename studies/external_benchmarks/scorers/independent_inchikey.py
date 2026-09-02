@@ -14,10 +14,19 @@ block via **PubChem PUG-REST**, an external source independent of the KG. It is:
 PubChem endpoints used (property/InChIKey, TXT for a single bare value):
   - PubChem CID:  ``/compound/cid/{cid}/property/InChIKey/TXT``
   - HMDB accession (xref RegistryID): ``/compound/xref/RegistryID/{hmdb}/property/InChIKey/TXT``
+
+Lipid oracle (provided-id path). Metabolon shorthand lipid NAMES do not resolve via PubChem-by-name
+(and are neither a pygoslin dialect nor a LIPID MAPS abbreviation -- both probed at 0% coverage on the
+real refused names). But the cohort source carries curator cross-reference ids (HMDB / PubChem CID /
+InChIKey). ``block_for_provided`` resolves those ids -- KG-independent, since BioMapper commits via
+name / RM / CHEBI, not via these HMDB/PubChem ids -- and tags each result with its provenance so the
+certificate can enforce disjointness (Unit 2). It also distinguishes a transient ``lookup_failed`` from
+a genuine ``clean_miss`` so a network blip is never silently counted as ``refused``.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import quote
 
@@ -28,6 +37,20 @@ _PUG_REST = "https://pubchem.ncbi.nlm.nih.gov/rest/pug"
 
 def _first_block(inchikey: str | None) -> str | None:
     return inchikey.split("-")[0] if inchikey else None
+
+
+@dataclass(frozen=True)
+class ProvidedBlock:
+    """An independent InChIKey first-block with its resolution provenance and status.
+
+    ``source`` tags the KG-independent origin (never ``kg``); the certificate uses it to enforce
+    disjointness. ``status`` distinguishes a clean miss (no such id / absent) from a transient
+    ``lookup_failed`` (network / 5xx), so a lookup failure is never silently counted as ``refused``.
+    """
+
+    block: str | None
+    source: str  # provided-inchikey | provided-hmdb | provided-pubchem | pubchem-name | none
+    status: str  # success | clean_miss | lookup_failed
 
 
 class PubChemInChIKeyResolver:
@@ -43,22 +66,31 @@ class PubChemInChIKeyResolver:
         self._timeout = timeout
         self._session = session or requests.Session()
         self._cache: dict[str, str | None] = {}
+        self._status_cache: dict[str, tuple[str | None, str]] = {}
 
-    def _get_txt_inchikey(self, path: str) -> str | None:
-        """GET a PUG-REST property/InChIKey/TXT path; return the first InChIKey block, or None.
+    def _resolve_txt(self, path: str) -> tuple[str | None, str]:
+        """GET a PUG-REST .../InChIKey/TXT path -> ``(first_block_or_None, status)``.
 
-        Fail-soft: a 404 (unknown id), any HTTP error, network failure, or empty body -> None.
+        status: ``success`` (block found), ``clean_miss`` (404 / empty body = no such structure),
+        ``lookup_failed`` (5xx / network error = transient; must NOT be read as absence).
         """
         url = f"{_PUG_REST}/{path}"
         try:
             with force_ipv4():
                 resp = self._session.get(url, timeout=self._timeout)
-            if resp.status_code != 200:
-                return None
-            first_line = resp.text.strip().splitlines()[0].strip() if resp.text.strip() else ""
-            return _first_block(first_line) if first_line else None
         except Exception:
-            return None
+            return None, "lookup_failed"
+        if resp.status_code == 404:
+            return None, "clean_miss"
+        if resp.status_code != 200:
+            return None, "lookup_failed"
+        first_line = resp.text.strip().splitlines()[0].strip() if resp.text.strip() else ""
+        block = _first_block(first_line) if first_line else None
+        return block, ("success" if block else "clean_miss")
+
+    def _get_txt_inchikey(self, path: str) -> str | None:
+        """Backward-compatible fail-soft accessor: first InChIKey block, or ``None`` on any failure."""
+        return self._resolve_txt(path)[0]
 
     def block_for_pubchem(self, cid: str) -> str | None:
         key = f"pubchem:{cid}"
@@ -91,3 +123,49 @@ class PubChemInChIKeyResolver:
         block = self._get_txt_inchikey(f"compound/name/{quote(name, safe='')}/property/InChIKey/TXT")
         self._cache[key] = block
         return block
+
+    def _cached_resolve(self, cache_key: str, path: str) -> tuple[str | None, str]:
+        if cache_key in self._status_cache:
+            return self._status_cache[cache_key]
+        result = self._resolve_txt(path)
+        self._status_cache[cache_key] = result
+        return result
+
+    def block_for_provided(
+        self,
+        *,
+        inchikey: str | None = None,
+        hmdb: str | None = None,
+        pubchem: str | None = None,
+        name: str | None = None,
+    ) -> ProvidedBlock:
+        """Resolve a name's INDEPENDENT structure from curator-provided ids, tagged with provenance.
+
+        Order, first success wins: provided InChIKey (offline) -> provided HMDB -> provided PubChem CID
+        -> PubChem-by-name. Every source is KG-independent (BioMapper commits via name / RM / CHEBI, not
+        via these ids). A transient network failure on any attempted source surfaces as ``lookup_failed``
+        when nothing succeeds — never silently ``clean_miss`` — so it cannot masquerade as new coverage.
+        """
+        # 1) Provided InChIKey — offline, no network, most authoritative.
+        if inchikey:
+            blk = _first_block(inchikey)
+            if blk:
+                return ProvidedBlock(blk, "provided-inchikey", "success")
+
+        any_lookup_failed = False
+        attempts: list[tuple[str, str, str]] = []  # (source, cache_key, path)
+        if hmdb:
+            attempts.append(("provided-hmdb", f"hmdb:{hmdb}", f"compound/xref/RegistryID/{quote(hmdb)}/property/InChIKey/TXT"))
+        if pubchem:
+            attempts.append(("provided-pubchem", f"pubchem:{pubchem}", f"compound/cid/{quote(pubchem)}/property/InChIKey/TXT"))
+        if name:
+            attempts.append(("pubchem-name", f"name:{name}", f"compound/name/{quote(name, safe='')}/property/InChIKey/TXT"))
+
+        for source, cache_key, path in attempts:
+            block, status = self._cached_resolve(cache_key, path)
+            if status == "success" and block:
+                return ProvidedBlock(block, source, "success")
+            if status == "lookup_failed":
+                any_lookup_failed = True
+
+        return ProvidedBlock(None, "none", "lookup_failed" if any_lookup_failed else "clean_miss")
