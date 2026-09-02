@@ -13,16 +13,21 @@ necs<->xuetal; llfs/blsa are coverage-limited, Unit 0). Two axes, nothing else c
                  under baseline but absent under treatment is ``filter_eliminated`` (kept in the
                  denominator, never an improvement).
   - oracle axis: how each side's INDEPENDENT structure is built — ``block_for_name`` only (oracle-off;
-                 lipids refuse) vs ``block_for_provided`` from the curator ids (oracle-on). Structure is
-                 name/id-based, so the oracle maps are shared across both APIs.
+                 lipids refuse) vs ``block_for_provided`` from the curator ids (oracle-on).
 
-Independence: the provided-id source is the Metabolon curator cross-reference (gold InChIKey / HMDB /
-PubChem), independent of the Kraken KG (biomapper commits via name/RM/CHEBI). The reported number ABORTS
-if any block feeding it is untagged (the certify_links_tagged canary). Persist-by-default (R23) to
-~/external_benchmark_runs/ab_lipid_oracle_<ts>/ with a version-pinned manifest; the API key (from
-/tmp/.bmk) is header-only and never written to any artifact.
+Independence (KD3): each side is resolved from ITS OWN curator cross-reference — the NECS side from the
+Metabolon gold tsv, the cohort side from the cohort's OWN vendor ids (Arivale's HMDB/PubChem columns;
+Xu, which publishes none, from the Metabolon-name join to the same gold tsv). The two sides therefore
+carry DISTINCT provided-id maps — never one map reused for both — and neither is the Kraken KG. The
+reported number ABORTS if any block feeding it is untagged (the certify_links_tagged canary).
 
-Env: BASELINE_API, TREATMENT_API (full /api/v1/map/batch URLs); NECS_GOLD_TSV (provided-id source tsv);
+Resume/provenance: the run dir is keyed by a ``run_key`` over the two API endpoints + the KG-build tag;
+a bare restart auto-resumes ONLY a prior dir whose manifest records the same key (else it starts fresh),
+and ``AB_FRESH=1`` forces a new run. Persist-by-default (R23); the API key (from /tmp/.bmk) is header-only
+and never written to any artifact; internal endpoints are recorded for reproduction and must be scrubbed
+before any external publication.
+
+Env: BASELINE_API, TREATMENT_API (full /api/v1/map/batch URLs); NECS_GOLD_TSV (Metabolon provided-id tsv);
 AB_KG_BUILD (build tag folded into the run key); AB_OUT / AB_FRESH (pin / force a run dir).
 """
 
@@ -60,7 +65,7 @@ from pathlib import Path  # noqa: E402
 import requests  # noqa: E402
 
 from studies.external_benchmarks.ab_transition_matrix import BASE, BOTH, FILTER_ONLY, ORACLE_ONLY, build_report  # noqa: E402
-from studies.external_benchmarks.cross_cohort_run import load_panels  # noqa: E402
+from studies.external_benchmarks.cross_cohort_run import ARIVALE_XLSX, load_panels  # noqa: E402
 from studies.external_benchmarks.scorers.cross_cohort_overlap import curie_set, link_by_intersection  # noqa: E402
 from studies.external_benchmarks.scorers.independent_inchikey import ProvidedBlock, PubChemInChIKeyResolver  # noqa: E402
 from studies.external_benchmarks.scorers.independent_link_certificate_overlap import certify_links_tagged  # noqa: E402
@@ -74,14 +79,60 @@ def _now_ts() -> str:  # pragma: no cover
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
-def _load_provided_source() -> dict[str, dict[str, str]]:  # pragma: no cover
-    """name.lower() -> {gold_inchikey, gold_hmdb, gold_pubchem} from the Metabolon curator tsv."""
+def _gold_source() -> dict[str, dict[str, str]]:  # pragma: no cover
+    """name.lower() -> {gold_inchikey, gold_hmdb, gold_pubchem} from the Metabolon curator tsv.
+
+    Used for the NECS side and for the Xu side (Metabolon-name join; Xu publishes no vendor ids)."""
     path = Path(os.environ["NECS_GOLD_TSV"]).expanduser()
     out: dict[str, dict[str, str]] = {}
     with path.open() as fh:
         for row in csv.DictReader(fh, delimiter="\t"):
             out[row["chemical_name"].strip().lower()] = row
     return out
+
+
+def _arivale_source() -> dict[str, dict[str, str]]:  # pragma: no cover
+    """name.lower() -> its OWN HMDB/PubChem vendor ids, from the Arivale supplement (not NECS gold)."""
+    import pandas as pd
+
+    df = pd.read_excel(ARIVALE_XLSX, sheet_name="Arivale_Metabolomics", dtype=str).fillna("")
+    out: dict[str, dict[str, str]] = {}
+    for _, r in df.iterrows():
+        out[str(r.get("BiochemicalName", "")).strip().lower()] = {
+            "gold_hmdb": str(r.get("HMDB_ID", "")),
+            "gold_pubchem": str(r.get("PubChem_ID", "")),
+            "gold_inchikey": "",
+        }
+    return out
+
+
+def _run_key(baseline_api: str, treatment_api: str) -> str:  # pragma: no cover
+    h = hashlib.sha256()
+    for a in (baseline_api, treatment_api, os.environ.get("AB_KG_BUILD", "")):
+        h.update((a + "\n").encode())
+    return h.hexdigest()[:16]
+
+
+def _resolve_out_dir(run_key: str) -> Path:  # pragma: no cover
+    """Stable run dir: AB_OUT pins it; else auto-resume the newest prior dir whose manifest run_key
+    matches (identical endpoints + build tag), never a mismatched/manifest-less one; AB_FRESH forces new."""
+    if os.environ.get("AB_OUT"):
+        return Path(os.environ["AB_OUT"]).expanduser()
+    runs_root = Path.home() / "external_benchmark_runs"
+    if not os.environ.get("AB_FRESH"):
+        prior = sorted(
+            (p for p in runs_root.glob(f"{_PREFIX}*") if p.is_dir() and any(p.glob("*.jsonl"))),
+            key=lambda p: p.name,
+            reverse=True,
+        )
+        for p in prior:
+            manifest = p / "manifest.json"
+            try:
+                if manifest.exists() and json.loads(manifest.read_text()).get("run_key") == run_key:
+                    return p
+            except (ValueError, OSError):
+                continue
+    return runs_root / f"{_PREFIX}{_now_ts()}"
 
 
 def _resolve_panel(api: str, key: str, out_dir: Path, arm: str, label: str, names: list[str]) -> dict[str, dict]:  # pragma: no cover
@@ -110,9 +161,9 @@ def _resolve_panel(api: str, key: str, out_dir: Path, arm: str, label: str, name
     return cache
 
 
-def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: PubChemInChIKeyResolver, out_dir: Path) -> dict[str, ProvidedBlock]:  # pragma: no cover
-    """oracle-ON map: block_for_provided from the curator ids (falls back to name), tagged + cached."""
-    cache_path = out_dir / "oracle_provided.jsonl"
+def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: PubChemInChIKeyResolver, out_dir: Path, tag: str) -> dict[str, ProvidedBlock]:  # pragma: no cover
+    """oracle-ON map for ONE side: block_for_provided from THAT side's curator ids (name fallback), cached."""
+    cache_path = out_dir / f"oracle_provided_{tag}.jsonl"
     out: dict[str, ProvidedBlock] = {}
     if cache_path.exists():
         for line in cache_path.open():
@@ -130,9 +181,10 @@ def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: 
     return out
 
 
-def _oracle_name_only(names: set[str], resolver: PubChemInChIKeyResolver, out_dir: Path) -> dict[str, ProvidedBlock]:  # pragma: no cover
-    """oracle-OFF map: PubChem-by-name only (current refused-heavy behavior), tagged."""
-    cache_path = out_dir / "oracle_name_only.jsonl"
+def _oracle_name_only(names: set[str], resolver: PubChemInChIKeyResolver, out_dir: Path, tag: str) -> dict[str, ProvidedBlock]:  # pragma: no cover
+    """oracle-OFF map: PubChem-by-name only (current refused-heavy behavior), tagged. Name-keyed, so one
+    map legitimately serves both sides (a_name/b_name each resolve by their own name)."""
+    cache_path = out_dir / f"oracle_name_{tag}.jsonl"
     out: dict[str, ProvidedBlock] = {}
     if cache_path.exists():
         for line in cache_path.open():
@@ -157,15 +209,15 @@ def _cell_verdicts(links, a_map, b_map, all_keys: set[str]) -> tuple[dict[str, s
     verdicts: dict[str, str] = {}
     present: set[str] = set()
     for a, b, v in overlap.per_link:
-        key = f"{a}||{b}"
-        present.add(key)
+        klk = f"{a}||{b}"
+        present.add(klk)
         a_pb, b_pb = a_map.get(a), b_map.get(b)
         if (a_pb and a_pb.status == "lookup_failed") or (b_pb and b_pb.status == "lookup_failed"):
-            verdicts[key] = "lookup_failed"
+            verdicts[klk] = "lookup_failed"
         else:
-            verdicts[key] = v
-    for key in all_keys - present:
-        verdicts[key] = "filter_eliminated"
+            verdicts[klk] = v
+    for klk in all_keys - present:
+        verdicts[klk] = "filter_eliminated"
     return verdicts, untagged
 
 
@@ -173,19 +225,17 @@ def main() -> None:  # pragma: no cover
     baseline_api = os.environ["BASELINE_API"]
     treatment_api = os.environ["TREATMENT_API"]
     key = Path("/tmp/.bmk").read_text().strip()
-    src = _load_provided_source()
+    gold_src = _gold_source()
+    arivale_src = _arivale_source()
     panels = load_panels()
 
-    h = hashlib.sha256()
-    for a in (baseline_api, treatment_api, os.environ.get("AB_KG_BUILD", "")):
-        h.update((a + "\n").encode())
-    run_key = h.hexdigest()[:16]
-    runs_root = Path.home() / "external_benchmark_runs"
-    out_dir = Path(os.environ["AB_OUT"]).expanduser() if os.environ.get("AB_OUT") else runs_root / f"{_PREFIX}{_now_ts()}"
+    run_key = _run_key(baseline_api, treatment_api)
+    out_dir = _resolve_out_dir(run_key)
     out_dir.mkdir(parents=True, exist_ok=True)
+    resuming = any(out_dir.glob("*.jsonl"))
+    print(f"[run] {out_dir} ({'RESUMING matching run_key' if resuming else 'fresh run'}); AB_FRESH forces new", flush=True)
     manifest = out_dir / "manifest.json"
     if not manifest.exists():
-        import pygoslin  # noqa: F401
         import rdkit
 
         manifest.write_text(
@@ -197,7 +247,7 @@ def main() -> None:  # pragma: no cover
                     "kg_build": os.environ.get("AB_KG_BUILD", ""),
                     "rdkit": rdkit.__version__,
                     "created": _now_ts(),
-                    "note": "provided-id oracle 2x2; api key NOT recorded; internal endpoints scrub before publish",
+                    "note": "provided-id oracle 2x2; api key NOT recorded; scrub internal endpoints before publish",
                 },
                 indent=2,
             )
@@ -206,7 +256,7 @@ def main() -> None:  # pragma: no cover
     resolver = PubChemInChIKeyResolver()
     reports: dict[str, dict] = {}
     for cohort in PAIRS:
-        # Resolve necs + cohort through BOTH apis (name-only).
+        coh_src = arivale_src if cohort == "arivale" else gold_src  # each side from ITS OWN curator ids
         res = {
             "baseline": (
                 _resolve_panel(baseline_api, key, out_dir, "baseline", "necs", panels["necs"]),
@@ -223,21 +273,23 @@ def main() -> None:  # pragma: no cover
             cc = {n: curie_set(r["chosen_kg_id"], r["kg_equivalent_ids"]) for n, r in coh.items()}
             links_by_arm[arm] = link_by_intersection(nc, cc).links
         all_keys = {f"{lk.a_name}||{lk.b_name}" for arm in links_by_arm for lk in links_by_arm[arm]}
-        linked_names = {lk.a_name for arm in links_by_arm for lk in links_by_arm[arm]} | {
-            lk.b_name for arm in links_by_arm for lk in links_by_arm[arm]
-        }
-        provided = _oracle_provided(linked_names, src, resolver, out_dir)
-        name_only = _oracle_name_only(linked_names, resolver, out_dir)
+        necs_names = {lk.a_name for arm in links_by_arm for lk in links_by_arm[arm]}
+        coh_names = {lk.b_name for arm in links_by_arm for lk in links_by_arm[arm]}
+
+        # DISTINCT per-side maps: NECS side from gold, cohort side from its OWN ids (never one map for both).
+        prov_necs = _oracle_provided(necs_names, gold_src, resolver, out_dir, f"{cohort}_necs")
+        prov_coh = _oracle_provided(coh_names, coh_src, resolver, out_dir, f"{cohort}_coh")
+        name_map = _oracle_name_only(necs_names | coh_names, resolver, out_dir, cohort)
 
         cells: dict = {}
         canary = 0
-        for cell, arm, omap in (
-            (BASE, "baseline", name_only),
-            (FILTER_ONLY, "treatment", name_only),
-            (ORACLE_ONLY, "baseline", provided),
-            (BOTH, "treatment", provided),
+        for cell, arm, a_map, b_map in (
+            (BASE, "baseline", name_map, name_map),
+            (FILTER_ONLY, "treatment", name_map, name_map),
+            (ORACLE_ONLY, "baseline", prov_necs, prov_coh),
+            (BOTH, "treatment", prov_necs, prov_coh),
         ):
-            verdicts, untagged = _cell_verdicts(links_by_arm[arm], omap, omap, all_keys)
+            verdicts, untagged = _cell_verdicts(links_by_arm[arm], a_map, b_map, all_keys)
             cells[cell] = verdicts
             canary += untagged
         if canary:
