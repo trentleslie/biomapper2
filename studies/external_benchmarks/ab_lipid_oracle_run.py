@@ -21,9 +21,11 @@ Xu, which publishes none, from the Metabolon-name join to the same gold tsv). Th
 carry DISTINCT provided-id maps — never one map reused for both — and neither is the Kraken KG. The
 reported number ABORTS if any block feeding it is untagged (the certify_links_tagged canary).
 
-Resume/provenance: the run dir is keyed by a ``run_key`` over the two API endpoints + the KG-build tag;
-a bare restart auto-resumes ONLY a prior dir whose manifest records the same key (else it starts fresh),
-and ``AB_FRESH=1`` forces a new run. Persist-by-default (R23); the API key (from /tmp/.bmk) is header-only
+Resume/provenance: the run dir is keyed by a ``run_key`` over the two API endpoints, the REQUIRED
+``AB_KG_BUILD`` tag, the exact panels, and a hash of both provided-id source files; a bare restart
+auto-resumes ONLY a prior dir whose manifest records the same key (else it starts fresh), and
+``AB_FRESH=1`` forces a new run. The KG build cannot be auto-probed via the biomapper batch API, so the
+operator must bump ``AB_KG_BUILD`` on any same-endpoint KG redeploy — it is required, not optional. Persist-by-default (R23); the API key (from /tmp/.bmk) is header-only
 and never written to any artifact; internal endpoints are recorded for reproduction and must be scrubbed
 before any external publication.
 
@@ -262,6 +264,17 @@ def main() -> None:  # pragma: no cover
     arivale_src = _arivale_source()
     panels = load_panels()
 
+    # A KG redeployed behind the SAME url with an unchanged build tag would let run_key match and reuse
+    # stale panel caches. The biomapper batch API exposes only its API version + per-result Tier-B cache
+    # state, NOT the KG build (build_run_provenance needs the server-only kestrel_url), so the build cannot
+    # be auto-probed here — the operator MUST stamp it. Requiring it closes the silent default-empty path;
+    # bump it (e.g. to the Kestrel /metagraph build + node/edge fingerprint) on every KG redeploy.
+    if not os.environ.get("AB_KG_BUILD", "").strip():
+        raise SystemExit(
+            "AB_KG_BUILD is required — the KG build identity (the batch API can't expose it). Set it to the "
+            "current Kestrel /metagraph build+fingerprint and bump it on any KG redeploy, else same-endpoint "
+            "reruns would reuse stale caches."
+        )
     run_key = _run_key(baseline_api, treatment_api, panels, Path(os.environ["NECS_GOLD_TSV"]).expanduser())
     out_dir = _resolve_out_dir(run_key)
     out_dir.mkdir(parents=True, exist_ok=True)
