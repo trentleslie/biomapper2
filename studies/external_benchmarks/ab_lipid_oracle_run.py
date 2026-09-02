@@ -119,17 +119,24 @@ def _run_key(baseline_api: str, treatment_api: str, panels: dict[str, list[str]]
     for label in ("necs", "arivale", "xuetal"):
         h.update(f"\n[{label}]\n".encode())
         h.update("\n".join(sorted(panels.get(label, []))).encode())
-    h.update(b"\n[gold]\n")
-    h.update(hashlib.sha256(gold_path.read_bytes()).hexdigest().encode())
+    for src_path in (gold_path, ARIVALE_XLSX):  # a changed provided-id workbook must change the key
+        h.update(f"\n[src:{src_path.name}]\n".encode())
+        h.update(hashlib.sha256(src_path.read_bytes()).hexdigest().encode())
     return h.hexdigest()[:16]
 
 
 def _resolve_out_dir(run_key: str) -> Path:  # pragma: no cover
     """Stable run dir: AB_OUT pins it; else auto-resume the newest prior dir whose manifest run_key
     matches (identical endpoints + build tag), never a mismatched/manifest-less one; AB_FRESH forces new."""
+    fresh = bool(os.environ.get("AB_FRESH"))
     if os.environ.get("AB_OUT"):
         p = Path(os.environ["AB_OUT"]).expanduser()
-        if p.exists() and any(p.glob("*.jsonl")):
+        has_caches = p.exists() and any(p.glob("*.jsonl"))
+        if fresh and has_caches:
+            # AB_FRESH means start clean; a pinned dir that still holds caches is contradictory — refuse
+            # rather than silently let stale records enter a run requested as fresh.
+            raise SystemExit(f"AB_OUT {p} holds caches but AB_FRESH=1 — contradictory; clear the dir or drop one flag")
+        if has_caches:
             manifest = p / "manifest.json"
             if not manifest.exists():
                 raise SystemExit(f"AB_OUT {p} holds caches but no manifest — refuse to reuse; set AB_FRESH=1")
