@@ -259,7 +259,7 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
             batch_field="search_text",
             batch_items=search_list,
             batch_size=KESTREL_BATCH_SIZE_SEARCH,
-            json={"limit": limit, "category_filter": category, "prefix_filter": prefixes},
+            json={"limit": limit, "category": category, **({"prefix": prefixes} if prefixes else {})},
         )
         # Filter out very low-scoring results (hybrid search scores range from 0-5)
         return {s: [match for match in matches if match["score"] >= 0.5] for s, matches in results.items()}

@@ -271,8 +271,7 @@ def fetch_hybrid_candidates(
                 json={
                     "search_text": batch,
                     "limit": limit,
-                    "category_filter": HYBRID_SCAN_CATEGORY,
-                    "prefix_filter": None,
+                    "category": HYBRID_SCAN_CATEGORY,
                 },
                 timeout=GET_NODES_TIMEOUT_S,
             )

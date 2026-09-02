@@ -36,8 +36,8 @@ class KestrelVectorSearchAnnotator(BaseAnnotator):
                 term_results = results[search_term]
 
             annotations: dict[str, dict[str, dict[str, Any]]] = {}
-            # Commit-point category validator, same as kestrel-hybrid. `category_filter` is advisory:
-            # the endpoint returns rows outside the requested category, and an off-category row can land
+            # Commit-point category validator, same as kestrel-hybrid. The server-side `category` filter
+            # narrows the pool, but an off-category row can still surface (scoring blend) and land
             # at rank 1 (e.g. a CHV/GO/UMLS node named like the query). Scan the ranked window for the
             # first ON-category candidate instead of committing/refusing on rank 1 alone; the guard still
             # refuses when NOTHING in the window is on-category. `annotators` is API-exposed
@@ -114,5 +114,5 @@ class KestrelVectorSearchAnnotator(BaseAnnotator):
             batch_field="search_text",
             batch_items=search_list,
             batch_size=KESTREL_BATCH_SIZE_SEARCH,
-            json={"limit": limit, "category_filter": category, "prefix_filter": prefixes},
+            json={"limit": limit, "category": category, **({"prefix": prefixes} if prefixes else {})},
         )
