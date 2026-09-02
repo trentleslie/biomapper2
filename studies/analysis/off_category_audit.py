@@ -253,7 +253,11 @@ def fetch_hybrid_candidates(
     Cached beside the node cache under a key that encodes the limit and category, so changing
     either cannot silently reuse rows fetched under the old shape.
     """
-    scan_cache_path = cache_path.with_name(cache_path.stem + f"_hybrid_l{limit}.json")
+    # Key on limit AND the category slug (+ a semantics version) so a pre-fix cache built when the
+    # request was effectively unfiltered (the ignored ``category_filter`` field) is never reused now
+    # that ``category`` actually filters server-side.
+    cat_slug = HYBRID_SCAN_CATEGORY.replace(":", "-")
+    scan_cache_path = cache_path.with_name(cache_path.stem + f"_hybrid_l{limit}_{cat_slug}_v2.json")
     cache: dict[str, Any] = {}
     if scan_cache_path.exists():
         cache = json.loads(scan_cache_path.read_text())
@@ -271,8 +275,7 @@ def fetch_hybrid_candidates(
                 json={
                     "search_text": batch,
                     "limit": limit,
-                    "category_filter": HYBRID_SCAN_CATEGORY,
-                    "prefix_filter": None,
+                    "category": HYBRID_SCAN_CATEGORY,
                 },
                 timeout=GET_NODES_TIMEOUT_S,
             )
