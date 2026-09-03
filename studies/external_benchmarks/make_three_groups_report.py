@@ -265,6 +265,16 @@ ul.ex{{margin:0;padding-left:16px}} ul.ex li{{margin:1px 0;color:#333}}
   <p>Three groups per NECS-cohort pair: <b>overlap</b> (both), <b>discrepancy</b> (one only, structurally adjudicated), <b>neither</b> (performance ceiling). Independent-structure certificate · Kestrel v2.1.0/kg2 2.10.2 · run {RUN.name}</p>
   <div class="legend"><span><i class="dot" style="background:{C['overlap']}"></i>Overlap / correct</span><span><i class="dot" style="background:{C['biomapper_only']}"></i>BioMapper</span><span><i class="dot" style="background:{C['monti_only']}"></i>Monti</span><span><i class="dot" style="background:{C['neither']}"></i>Neither (ceiling)</span></div>
 </header>
+<section class="slide" style="background:#fff8e1"><h2 style="color:#e65100">\u26a0 Monti replication caveat \u2014 read the Monti numbers as a conservative lower bound</h2>
+<div class="card" style="max-width:900px">
+  <p class="note" style="font-size:13px">The <b>Monti</b> figures in this deck are an <b>Arm-B replication that matches on the RefMet-standardized name</b>. That is <b>stricter than Monti\u2019s published method</b> (name-based string matching), so it undercounts:</p>
+  <table class="ex" style="font-size:13px">
+    <tr><td>My Arm-B (RefMet-standardized name) \u2014 <i>shown in this deck</i></td><td style="font-weight:700">550</td></tr>
+    <tr><td>Exact normalized-name matching (same panels)</td><td style="font-weight:700">583</td></tr>
+    <tr><td>Monti as <b>published</b> (paper)</td><td style="font-weight:700;color:#2e7d32">615</td></tr>
+  </table>
+  <p class="note">Why lower: only 84% of the arivale panel RefMet-standardizes, so ~<b>34 names that match by exact name are dropped</b> \u2014 a systematic class (steroid sulfates/glucuronides, e.g. <i>androstenediol monosulfate</i>, <i>11beta-hydroxyandrosterone glucuronide</i>) RefMet doesn\u2019t cover. The residual 583\u2192615 gap is panel/normalization differences vs the paper that can\u2019t be closed without its exact metabolite lists and matching code. <b>Fix pending:</b> switch the Monti arm to name-based matching and re-run \u2014 that raises Monti (\u2192~583), and correspondingly grows the overlap and Monti-only groups, narrowing the apparent BioMapper advantage.</p>
+</div></section>
 {slides}
 {cert_slides}
 <section class="slide"><h2>Bottom line</h2><div class="card" style="max-width:900px">
