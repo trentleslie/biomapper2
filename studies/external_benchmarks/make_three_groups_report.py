@@ -175,6 +175,22 @@ def slide(pair_key, r):
 
 
 
+def _reach615():
+    # necs<->arivale worked example, four comparable bars including the published 615.
+    bars = _bars([
+        ("BioMapper\n(verified)", 550, "#1565c0"),
+        ("+certified\nbridge", 555, "#2e7d32"),
+        ("accept\nunverified", 608, "#607d8b"),
+        ("Monti\npublished", 615, "#e65100"),
+    ], 660, w=560, h=210)
+    return f"""<section class="slide"><h2>How we reach Monti\u2019s 615 \u2014 verified vs on faith</h2>
+    <div class="card" style="max-width:720px">
+      {bars}
+      <p class="note" style="font-size:13px">On the necs&#8596;arivale panel: BioMapper links <b>550</b>; the certificate-gated bridge adds <b>5 it could structurally confirm</b> &#8594; <b>555</b>. Accepting the remaining <b>53 name matches on faith</b> (no structure to check) reaches <b>608</b> \u2014 essentially Monti\u2019s published <b>615</b>. <b>The gap is verification, not certificate strictness:</b> the certificate refuted <i>none</i> of those 53 \u2014 there was simply no structure to compare.</p>
+      <p class="note">The <b style="color:#607d8b">accept-unverified</b> bar (608) is Monti\u2019s policy \u2014 count a name match without confirming the molecules are the same. The right way to close the gap is to give those 53 (mostly lipids) a structure via the oracle, let the certificate rule, and adopt only the confirmed ones.</p>
+    </div></section>"""
+
+
 def _bridge_section(bridge, data):
     cards = ""
     for cohort in ("arivale", "xuetal"):
@@ -239,7 +255,7 @@ def main() -> None:  # pragma: no cover
     adj = json.loads((RUN / "certificate_adjudication.json").read_text())
     slides = "".join(slide(k, v) for k, v in data.items())
     bridge = json.loads((RUN / "refmet_bridge.json").read_text())
-    cert_slides = _cert_diagram_section(adj) + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge, data)
+    cert_slides = _cert_diagram_section(adj) + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge, data) + _reach615()
     tot_either = sum(v["panel_coverage"]["either"] for v in data.values())
     tot_panel = sum(v["panel_coverage"]["panel_total"] for v in data.values())
     tot_neither = sum(v["panel_coverage"]["neither"] for v in data.values())
