@@ -63,10 +63,10 @@ def _cert_diagram():
   <path d="M170 164 C 220 214, 250 234, 300 234" fill="none" stroke="#ef6c00" stroke-width="2" marker-end="url(#a)"/>
   <rect x="300" y="46" width="220" height="48" rx="6" fill="#e3f2fd" stroke="#1565c0"/>
   <text x="410" y="68" text-anchor="middle" font-size="12" font-weight="600">necs independent structure</text>
-  <text x="410" y="84" text-anchor="middle" font-size="11" fill="#555">curator HMDB/PubChem -&gt; InChIKey (NOT the KG)</text>
+  <text x="410" y="84" text-anchor="middle" font-size="11" fill="#555">curator id &#8594; InChIKey via PubChem</text>
   <rect x="300" y="210" width="220" height="48" rx="6" fill="#fff3e0" stroke="#ef6c00"/>
   <text x="410" y="232" text-anchor="middle" font-size="12" font-weight="600">cohort independent structure</text>
-  <text x="410" y="248" text-anchor="middle" font-size="11" fill="#555">curator HMDB/PubChem -&gt; InChIKey (NOT the KG)</text>
+  <text x="410" y="248" text-anchor="middle" font-size="11" fill="#555">curator id &#8594; InChIKey via PubChem</text>
   <path d="M520 70 C 580 90, 600 130, 610 145" fill="none" stroke="#607d8b" stroke-width="2"/>
   <path d="M520 234 C 580 214, 600 174, 610 159" fill="none" stroke="#607d8b" stroke-width="2"/>
   <rect x="560" y="128" width="180" height="48" rx="6" fill="#fff" stroke="#607d8b"/>
@@ -114,6 +114,7 @@ def _cert_overview(cohort, adj):
   <h2>{r['pair']} — certificate adjudication</h2>
   <div class="grid">
     <div class="card"><h3>Correctness by group <span class="sub">(certified / refuted / refused)</span></h3>
+      <p class="note" style="margin-top:0">Of the links we could check against independent structure, how many held up (green), disagreed (red), or had no structure to check (grey):</p>
       <table class="ex"><tr><td></td><td><span style="color:#2e7d32">■</span> certified &nbsp; <span style="color:#c62828">■</span> refuted &nbsp; <span style="color:#9e9e9e">■</span> no structure</td><td></td></tr>{rows}</table>
       <p class="note">Agreement is <b>not</b> proof: the overlap's refuted count is where <b>both</b> methods link a pair the independent structures say are different.</p>
     </div>
@@ -199,13 +200,37 @@ def _bridge_section(bridge, data):
 </section>"""
 
 
-def _cert_diagram_section():
+def _worked(adj):
+    a = adj["arivale"]["examples"]["overlap"]
+    cert = a["certified"][0]
+    ref = a["refuted"][0]
+
+    def case(title, name, b1, b2, verdict, col, note):
+        eq = "=" if b1 == b2 else "\u2260"
+        return f'''<div class="card" style="flex:1;min-width:260px">
+      <div style="font-weight:700;color:{col}">{title}</div>
+      <div style="font-size:13px;margin:6px 0"><b>{name}</b></div>
+      <div style="font-family:monospace;font-size:12px;line-height:1.5">necs&nbsp;&nbsp; {b1}<br>cohort&nbsp;{b2}</div>
+      <div style="text-align:center;font-size:15px;margin:8px 0;font-family:monospace">{b1} <b style="color:{col}">{eq}</b> {b2}</div>
+      <div style="color:{col};font-weight:700">{verdict}</div>
+      <div class="note">{note}</div></div>'''
+
+    c = case("Structures agree", cert["name"], cert["necs_block"], cert["necs_block"], "\u2713 CERTIFIED",
+             "#2e7d32", "Both cohorts\u2019 curator ids resolve (via PubChem) to the same connectivity skeleton \u2014 the link is confirmed.")
+    r = case("Structures disagree", ref["name"], ref["necs_block"], ref["partner_block"], "\u2717 REFUTED",
+             "#c62828", "Same name, but the two cohorts recorded different structures \u2014 a cross-cohort curation discrepancy the certificate surfaces.")
+    return f'<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:12px">{c}{r}</div>'
+
+
+def _cert_diagram_section(adj):
     return f"""
 <section class="slide"><h2>How the certificate works</h2>
-<div class="card" style="max-width:820px">
-  <p class="note" style="font-size:13px">Two cohort names are LINKED by a harmonizer (Monti via shared RefMet name, BioMapper via shared KG node). The certificate then checks that link with structures resolved <b>independently of the KG</b> — each side's curator HMDB/PubChem id → InChIKey — and compares the connectivity skeleton (block-1):</p>
+<div class="card" style="max-width:860px">
+  <p class="note" style="font-size:13px">Two cohort names are LINKED by a harmonizer (Monti via shared RefMet name, BioMapper via shared KG node). The certificate then checks that link with each side\u2019s structure resolved <b>independently of the Kraken graph</b>, and compares the connectivity skeleton (InChIKey block-1):</p>
   {_cert_diagram()}
-  <p class="note"><b>CERTIFIED</b> the two independent structures agree (link confirmed). <b>REFUTED</b> they disagree (wrong link, or a cross-cohort curation discrepancy). <b>REFUSED</b> a side has no independent structure — counts-only, never scored. It never reads the KG node's own structure, so it cannot rubber-stamp the KG.</p>
+  <p class="note"><b>Where does the InChIKey come from?</b> Each cohort supplies a curator cross-reference id (HMDB accession / PubChem CID / a gold InChIKey). The oracle resolves that id to an InChIKey through <b>PubChem\u2019s PUG-REST service</b> (or reads the curator\u2019s own gold InChIKey directly). It is an <b>external structure database</b> \u2014 NOT the Kraken node that formed the link. That independence is the whole point: reading the graph node\u2019s own InChIKey to check a graph-made link would be circular.</p>
+  <p class="note"><b>CERTIFIED</b> the two independent structures agree (link confirmed). <b>REFUTED</b> they disagree (wrong link, or a curation discrepancy). <b>REFUSED</b> a side has no independent structure \u2014 counts-only, never scored.</p>
+  {_worked(adj)}
 </div></section>"""
 
 
@@ -214,7 +239,7 @@ def main() -> None:  # pragma: no cover
     adj = json.loads((RUN / "certificate_adjudication.json").read_text())
     slides = "".join(slide(k, v) for k, v in data.items())
     bridge = json.loads((RUN / "refmet_bridge.json").read_text())
-    cert_slides = _cert_diagram_section() + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge, data)
+    cert_slides = _cert_diagram_section(adj) + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge, data)
     tot_either = sum(v["panel_coverage"]["either"] for v in data.values())
     tot_panel = sum(v["panel_coverage"]["panel_total"] for v in data.values())
     tot_neither = sum(v["panel_coverage"]["neither"] for v in data.values())
