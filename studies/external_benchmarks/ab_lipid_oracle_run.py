@@ -205,7 +205,10 @@ def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: 
             out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"], r.get("record_id"))
     with cache_path.open("a") as fh:
         for n in sorted(names):
-            if n in out:
+            # Resume retries a transient failure: skip only names whose cached outcome is TERMINAL
+            # (success / clean_miss), never a persisted ``lookup_failed`` — else a recovered service is
+            # never re-queried and the report stays stale.
+            if n in out and out[n].status != "lookup_failed":
                 continue
             kw = provided_id_kwargs(src.get(n.strip().lower(), {}))
             pb = replace(resolver.block_for_provided(name=n, **kw), record_id=f"{src_tag}:{n.strip().lower()}")
@@ -226,7 +229,10 @@ def _oracle_name_only(names: set[str], resolver: PubChemInChIKeyResolver, out_di
             out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"], r.get("record_id"))
     with cache_path.open("a") as fh:
         for n in sorted(names):
-            if n in out:
+            # Resume retries a transient failure: skip only names whose cached outcome is TERMINAL
+            # (success / clean_miss), never a persisted ``lookup_failed`` — else a recovered service is
+            # never re-queried and the report stays stale.
+            if n in out and out[n].status != "lookup_failed":
                 continue
             blk = resolver.block_for_name(n)
             pb = ProvidedBlock(blk, "pubchem-name" if blk else "none", "success" if blk else "clean_miss",

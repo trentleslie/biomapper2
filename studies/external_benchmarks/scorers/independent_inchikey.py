@@ -131,7 +131,10 @@ class PubChemInChIKeyResolver:
         if cache_key in self._status_cache:
             return self._status_cache[cache_key]
         result = self._resolve_txt(path)
-        self._status_cache[cache_key] = result
+        # Cache only TERMINAL outcomes. A transient ``lookup_failed`` (5xx / network) is never cached, so a
+        # later call retries it once the service recovers — a failure is not a sticky verdict.
+        if result[1] != "lookup_failed":
+            self._status_cache[cache_key] = result
         return result
 
     def block_for_provided(

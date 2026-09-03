@@ -74,6 +74,23 @@ def test_name_is_last_fallback():
     assert (out.block, out.source) == ("WHUUTDBJXJRKMK", "pubchem-name")
 
 
+def test_lookup_failed_is_not_cached_and_retries():
+    # A transient 5xx must NOT be cached: a second call after the service "recovers" retries and succeeds.
+    class _Flaky:
+        def __init__(self):
+            self.n = 0
+
+        def get(self, url, timeout=None):
+            self.n += 1
+            return _Resp(500, "") if self.n == 1 else _Resp(200, "FHQVHHIBKUMWTI-OTMQOFQ-N\n")
+
+    r = PubChemInChIKeyResolver(session=_Flaky())
+    first = r.block_for_provided(hmdb="HMDB0005320")
+    assert first.status == "lookup_failed" and first.block is None
+    second = r.block_for_provided(hmdb="HMDB0005320")
+    assert second.status == "success" and second.block == "FHQVHHIBKUMWTI"
+
+
 def test_provided_resolution_is_cached():
     sess = _RoutedSession({"xref/RegistryID": _Resp(200, "FHQVHHIBKUMWTI-OTMQOFQ-N\n")})
     r = PubChemInChIKeyResolver(session=sess)
