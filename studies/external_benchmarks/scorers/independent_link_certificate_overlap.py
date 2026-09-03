@@ -19,6 +19,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 
 from .cross_cohort_overlap import Link
+from .independent_inchikey import ProvidedBlock
 from .link_certificate import certify_link
 
 
@@ -63,3 +64,51 @@ def certify_links(
         refused=counts["refused"],
         per_link=tuple(per),
     )
+
+
+def certify_links_tagged(
+    links: Iterable[Link],
+    a_provided: Mapping[str, ProvidedBlock | None],
+    b_provided: Mapping[str, ProvidedBlock | None],
+    *,
+    require_tags: bool = True,
+) -> tuple[CertifiedOverlap, int]:
+    """Certify links over PROVENANCE-TAGGED independent structures (``ProvidedBlock``), fail-closed.
+
+    Each side carries a ``source`` tag; a KG-derived (``"kg"``) or — in strict mode — untagged side
+    refuses rather than certifies (R4/KD2). Returns ``(overlap, untagged_sides)``: ``untagged_sides`` is
+    the canary the reported-metric driver aborts on if nonzero, so no untagged block can silently feed
+    the certified/refused number. A missing entry for a link's name counts as an untagged side.
+    """
+    counts: Counter[str] = Counter()
+    per: list[tuple[str, str, str]] = []
+    untagged_sides = 0
+    for lk in links:
+        a = a_provided.get(lk.a_name)
+        b = b_provided.get(lk.b_name)
+        a_block, a_src = (a.block, a.source) if a is not None else (None, None)
+        b_block, b_src = (b.block, b.source) if b is not None else (None, None)
+        a_rec = a.record_id if a is not None else None
+        b_rec = b.record_id if b is not None else None
+        if a_src is None:
+            untagged_sides += 1
+        if b_src is None:
+            untagged_sides += 1
+        if a_rec is not None and a_rec == b_rec:
+            # Both sides are the SAME curator record (same source file + key) — not two independent
+            # derivations, so agreement is tautological. REFUSE rather than certify off a self-comparison.
+            counts["refused"] += 1
+            per.append((lk.a_name, lk.b_name, "refused"))
+            continue
+        cert = certify_link(
+            a_block, b_block, necs_source=a_src, cohort_source=b_src, require_tags=require_tags
+        )
+        counts[cert.verdict] += 1
+        per.append((lk.a_name, lk.b_name, cert.verdict))
+    overlap = CertifiedOverlap(
+        certified=counts["certified"],
+        refuted=counts["refuted"],
+        refused=counts["refused"],
+        per_link=tuple(per),
+    )
+    return overlap, untagged_sides

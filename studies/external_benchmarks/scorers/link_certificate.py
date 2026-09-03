@@ -74,8 +74,18 @@ def certificate_key(inchikey: str | None) -> CertificateKey | None:
 def certify_link(
     necs_inchikey: str | None,
     cohort_independent_inchikey: str | None,
+    *,
+    necs_source: str | None = None,
+    cohort_source: str | None = None,
+    require_tags: bool = False,
 ) -> LinkCertificate:
     """Certify a link from two KG-INDEPENDENT structures. NEVER pass the linking CURIE's KG node.
+
+    Fail-closed provenance guard (R4): ``necs_source``/``cohort_source`` tag each structure's origin.
+    A side tagged ``"kg"`` is KG-derived and NOT independent → REFUSED (never certified off it). In
+    strict mode (``require_tags=True``, used by the reported metric) an untagged side (source ``None``)
+    also REFUSES — independence is enforced here, not assumed by the caller. Legacy callers omit the
+    tags and keep the prior behavior.
 
     - either side has no independent structure → REFUSED (counts-only; reported separately, R6b).
     - block-1 (connectivity) differs → REFUTED (wrong molecule — the co-derivation catch).
@@ -83,6 +93,25 @@ def certify_link(
     - block-1 same and (block2[:8] same OR not checkable on a side) → CERTIFIED
       (with ``stereo_checked`` recording whether the stereo layer was actually compared).
     """
+    for side, src in (("NECS", necs_source), ("cohort", cohort_source)):
+        if src == "kg":
+            return LinkCertificate(
+                verdict="refused",
+                stereo_checked=False,
+                reason=f"{side}-side structure is KG-derived (source='kg') — not independent; refused",
+                necs_key=None,
+                cohort_key=None,
+            )
+    if require_tags and (necs_source is None or cohort_source is None):
+        missing = "NECS" if necs_source is None else "cohort"
+        return LinkCertificate(
+            verdict="refused",
+            stereo_checked=False,
+            reason=f"{missing}-side block is untagged and provenance is required — refused (fail-closed)",
+            necs_key=None,
+            cohort_key=None,
+        )
+
     nk = certificate_key(necs_inchikey)
     ck = certificate_key(cohort_independent_inchikey)
 
