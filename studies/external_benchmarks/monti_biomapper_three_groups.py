@@ -100,13 +100,15 @@ def characterize(cohort: str, refmet: dict[str, str]) -> dict:
             groups["overlap"].append(n)
         elif has_bm:
             groups["biomapper_only"].append(n)
-            if gblk:
-                ok = any(coh_blk.get(c) == gblk for c in bm)
+            partner_blocks = [coh_blk.get(c) for c in bm if coh_blk.get(c)]
+            if gblk and partner_blocks:  # only adjudicate when BOTH sides have a structure; else unverifiable
+                ok = any(b == gblk for b in partner_blocks)
                 adjudication["biomapper_only_correct" if ok else "biomapper_only_wrong"] += 1
         elif has_mo:
             groups["monti_only"].append(n)
-            if gblk:
-                ok = any(coh_blk.get(c) == gblk for c in mo)
+            partner_blocks = [coh_blk.get(c) for c in mo if coh_blk.get(c)]
+            if gblk and partner_blocks:
+                ok = any(b == gblk for b in partner_blocks)
                 adjudication["monti_only_correct" if ok else "monti_only_wrong"] += 1
         else:
             groups["neither"].append(n)
