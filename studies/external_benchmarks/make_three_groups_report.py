@@ -153,12 +153,12 @@ def slide(pair_key, r):
     <div class="card">
       <h3>Three groups <span class="sub">(present-in-both universe = {uni})</span></h3>
       {disc}
-      <p class="note">Overlap {c['overlap']} ({100*c['overlap']//uni}%) · BioMapper-only {c['biomapper_only']} · Monti-only {c['monti_only']} · Neither {c['neither']}</p>
+      <p class="note">Overlap {c['overlap']} ({round(100*c['overlap']/uni)}%) · BioMapper-only {c['biomapper_only']} · Monti-only {c['monti_only']} · Neither {c['neither']}</p>
     </div>
     <div class="card">
       <h3>Performance ceiling <span class="sub">(harmonized to NECS, panel = {cov['panel_total']})</span></h3>
       {cover}
-      <p class="note"><b>Union {cov['either']} ({100*cov['either']//cov['panel_total']}%) &gt; either alone</b> — complementary. The certificate-gated bridge lifts BioMapper {cov['biomapper']}&rarr;<b>{cov.get('biomapper_bridge', cov['biomapper'])}</b> (pure-correct). Ceiling headroom: <b>{cov['neither']} ({ceil_pct:.1f}%)</b> harmonized by neither.</p>
+      <p class="note"><b>Union {cov['either']} ({round(100*cov['either']/cov['panel_total'])}%) &gt; either alone</b> — complementary. The certificate-gated bridge lifts BioMapper {cov['biomapper']}&rarr;<b>{cov.get('biomapper_bridge', cov['biomapper'])}</b> (pure-correct). Ceiling headroom: <b>{cov['neither']} ({ceil_pct:.1f}%)</b> harmonized by neither.</p>
     </div>
     <div class="card">
       <h3>Discrepancy adjudicated <span class="sub">(by independent structure)</span></h3>
@@ -174,19 +174,22 @@ def slide(pair_key, r):
 
 
 
-def _bridge_section(bridge):
+def _bridge_section(bridge, data):
     cards = ""
     for cohort in ("arivale", "xuetal"):
         o = bridge[cohort]
-        base, gain, rej, pend = o["biomapper_harmonized"], o["bridge_certified_gain"], o["bridge_refuted_rejected"], o["bridge_refused_pending"]
-        mx = base + gain
+        cov = data[cohort]["panel_coverage"]
+        # cohort-panel coverage (same basis as the ceiling chart), not the NECS-side count, so the two
+        # sections agree on the BioMapper baseline.
+        base, mx = cov["biomapper"], cov["biomapper_bridge"]
+        gain, rej, pend = mx - base, o["bridge_refuted_rejected"], o["bridge_refused_pending"]
         wf = _bars([("BioMapper\nbaseline", base, "#1565c0"), ("+ certified\nbridge", mx, "#2e7d32")], mx, w=300, h=150)
         side = _bars([("rejected\n(errors)", rej, "#c62828"), ("pending\n(no struct.)", pend, "#9e9e9e")], max(pend, 1), w=240, h=150)
         ex = "".join(f"<li>{e}</li>" for e in o["examples_added"][:6])
         cards += f"""
     <div class="card"><h3>{o['pair']}</h3>
       <div style="display:flex;gap:12px;align-items:flex-end"><div>{wf}</div><div>{side}</div></div>
-      <p class="note"><b>+{gain} confirmed-correct links</b> ({o['gain_pct']}% gain) BioMapper's CURIE match missed; the gate <b>rejected {rej}</b> Monti errors; <b>{pend} pending</b> need an independent structure (the lipid-oracle frontier).</p>
+      <p class="note"><b>+{gain} confirmed-correct links</b> ({round(100*gain/base,1)}% gain) BioMapper's CURIE match missed; the gate <b>rejected {rej}</b> Monti errors; <b>{pend} pending</b> need an independent structure (the lipid-oracle frontier).</p>
       <p class="note">Added: <ul class="ex">{ex}</ul></p>
     </div>"""
     return f"""
@@ -211,7 +214,7 @@ def main() -> None:  # pragma: no cover
     adj = json.loads((RUN / "certificate_adjudication.json").read_text())
     slides = "".join(slide(k, v) for k, v in data.items())
     bridge = json.loads((RUN / "refmet_bridge.json").read_text())
-    cert_slides = _cert_diagram_section() + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge)
+    cert_slides = _cert_diagram_section() + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge, data)
     tot_either = sum(v["panel_coverage"]["either"] for v in data.values())
     tot_panel = sum(v["panel_coverage"]["panel_total"] for v in data.values())
     tot_neither = sum(v["panel_coverage"]["neither"] for v in data.values())
@@ -242,8 +245,8 @@ ul.ex{{margin:0;padding-left:16px}} ul.ex li{{margin:1px 0;color:#333}}
 <section class="slide"><h2>Bottom line</h2><div class="card" style="max-width:900px">
 <ul style="font-size:14px;line-height:1.6">
 <li><b>The methods agree on the core.</b> ~83–85% of establishably-co-present metabolites are harmonized identically by both Monti and BioMapper.</li>
-<li><b>They are complementary, not redundant.</b> Union coverage {tot_either}/{tot_panel} ({100*tot_either//tot_panel}%) exceeds either method alone — each catches links the other misses; where structurally checkable, both are mostly correct.</li>
-<li><b>The performance ceiling is real and small.</b> {tot_neither} metabolites (~{100*tot_neither//tot_panel}% across both panels) harmonize by <i>neither</i> method — the headroom a next-generation harmonizer must close, concentrated in structurally-unresolvable lipids/unknowns.</li>
+<li><b>They are complementary, not redundant.</b> Union coverage {tot_either}/{tot_panel} ({round(100*tot_either/tot_panel)}%) exceeds either method alone — each catches links the other misses; where structurally checkable, both are mostly correct.</li>
+<li><b>The performance ceiling is real and small.</b> {tot_neither} metabolites (~{round(100*tot_neither/tot_panel)}% across both panels) harmonize by <i>neither</i> method — the headroom a next-generation harmonizer must close. Its composition differs by cohort: arivale's ceiling is ~84% structurally-unresolvable lipids, while Xu's is mostly non-lipid small molecules that share no cross-cohort identifier or standardized name (conjugates, name variants, obscure metabolites).</li>
 </ul></div></section>
 </body></html>"""
     out = RUN / "three_groups_report.html"
