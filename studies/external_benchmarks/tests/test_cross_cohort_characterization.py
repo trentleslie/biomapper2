@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from studies.external_benchmarks.cross_cohort_certificate_characterization import (
     ArmPairResult,
+    _metagraph_fingerprint,
     delta_row,
     render_table,
 )
@@ -79,3 +80,10 @@ def test_render_table_negative_delta_shows_minus():
     rows = [delta_row("necs↔xu", _arm(100, 80, 10, 10), _arm(100, 78, 12, 10))]
     out = render_table(rows)
     assert "80/78/-2" in out  # certified fell -> signed negative delta visible
+
+
+def test_metagraph_fingerprint_moves_on_any_reported_change():
+    base = {"graph": "kraken", "version": "2.0.1", "triples": [["A", "r", "B"]]}
+    assert _metagraph_fingerprint(base) == _metagraph_fingerprint(dict(base))  # deterministic
+    assert _metagraph_fingerprint({**base, "version": "2.0.2"}) != _metagraph_fingerprint(base)
+    assert _metagraph_fingerprint({**base, "triples": [["A", "r", "C"]]}) != _metagraph_fingerprint(base)

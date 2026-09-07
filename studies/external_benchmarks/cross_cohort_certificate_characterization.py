@@ -129,6 +129,40 @@ def render_table(rows: list[dict]) -> str:
 # --- LIVE, SUPERVISED (never in pytest) ------------------------------------------------------------
 
 
+def _metagraph_fingerprint(payload: dict) -> str:
+    """Pure: a stable short hash of a Kestrel ``/metagraph`` payload (the graph's own build account).
+
+    Hashes the ENTIRE payload (identity, per-prefix counts, knowledge sources, category/triple lists),
+    so any change the graph reports — including edge rewiring on a same-endpoint redeploy — moves the
+    hash. Folded into the run_key so a resumed run cannot reuse another deployment's cached CURIEs.
+    """
+    return "mg:" + hashlib.sha256(json.dumps(payload, sort_keys=True, default=str).encode()).hexdigest()[:16]
+
+
+def _kg_fingerprint() -> str:  # pragma: no cover - live network
+    """Live KG build identity from Kestrel ``/metagraph`` when a Kestrel URL is set, else "".
+
+    Returns "" when no Kestrel URL is configured (caller then requires CHARAC_KG_BUILD). A configured but
+    unreachable URL aborts: keying the run on an unverified build is the stale-cache hole this closes.
+    """
+    import os as _os
+
+    import requests
+
+    url = (_os.environ.get("CHARAC_KESTREL_URL") or _os.environ.get("KESTREL_API_URL") or "").strip()
+    if not url:
+        return ""
+    try:
+        r = requests.get(f"{url.rstrip('/')}/metagraph", timeout=20)
+        r.raise_for_status()
+        return _metagraph_fingerprint(r.json())
+    except Exception as exc:
+        raise SystemExit(
+            f"Kestrel /metagraph probe failed for {url} ({type(exc).__name__}: {exc}) — refuse to key the "
+            "run on an unverified build; fix CHARAC_KESTREL_URL/KESTREL_API_URL or set CHARAC_KG_BUILD."
+        ) from exc
+
+
 def _now_ts() -> str:  # pragma: no cover - trivial, live only
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
@@ -143,10 +177,20 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
     treatment_api = os.environ["TREATMENT_API"]
     key = Path("/tmp/.bmk").read_text().strip()
 
-    # Restart-resumable: key the output dir on the two endpoints so a bare re-run reuses the matching
-    # prior dir's on-disk caches instead of re-issuing every dev-API + PubChem request. CHARAC_FRESH=1
-    # forces a new dir; CHARAC_OUT pins one.
-    run_key = hashlib.sha256(f"{baseline_api}\n{treatment_api}".encode()).hexdigest()[:16]
+    # Restart-resumable: key the output dir on the two endpoints AND the KG build identity, so a bare
+    # re-run reuses a prior dir's caches only when the DEPLOYMENT matches — a same-endpoint KG/dev-API
+    # redeploy changes the /metagraph fingerprint and forces a fresh run instead of silently combining
+    # stale resolutions (Greptile #63). CHARAC_FRESH=1 forces a new dir; CHARAC_OUT pins one. The build
+    # identity is the live /metagraph fingerprint (CHARAC_KESTREL_URL/KESTREL_API_URL) or a manual
+    # CHARAC_KG_BUILD; one is required so the deployment is always pinned.
+    kg_build = _kg_fingerprint() or os.environ.get("CHARAC_KG_BUILD", "").strip()
+    if not kg_build:
+        raise SystemExit(
+            "KG build identity required: set CHARAC_KESTREL_URL (or KESTREL_API_URL) for the live "
+            "/metagraph fingerprint, or set CHARAC_KG_BUILD and bump it on every KG/dev-API redeploy — "
+            "else a same-endpoint redeploy would reuse stale caches."
+        )
+    run_key = hashlib.sha256(f"{baseline_api}\n{treatment_api}\n{kg_build}".encode()).hexdigest()[:16]
     runs_root = Path.home() / "external_benchmark_runs"
     out = None
     if os.environ.get("CHARAC_OUT"):
@@ -183,6 +227,7 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
                 r = json.loads(line)
                 cache[r["name"]] = r
         todo = [n for n in names if n not in cache]
+        run_errors = 0
         print(f"[{arm}:{label}] {len(names)} names, {len(todo)} to fetch", flush=True)
         with cache_path.open("a") as fh:
             for i in range(0, len(todo), 25):
@@ -193,22 +238,29 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
                 resp = requests.post(api, headers={"X-API-Key": key}, json=body, timeout=300)
                 resp.raise_for_status()
                 for r in resp.json()["results"]:
+                    if r.get("error"):
+                        # A transient per-entity error is NOT a completed result: do NOT cache it, so a
+                        # resumed run RETRIES the name instead of inheriting a permanent failure
+                        # (Greptile #63). It is surfaced in the run count below, not silently dropped.
+                        run_errors += 1
+                        continue
                     rec = {
                         "name": r["name"],
                         "chosen_kg_id": r.get("chosen_kg_id"),
                         "kg_equivalent_ids": r.get("kg_equivalent_ids") or {},
-                        "error": r.get("error"),  # keep the API's per-entity error, don't silently drop it
                     }
                     cache[r["name"]] = rec
                     fh.write(json.dumps(rec) + "\n")
                 fh.flush()
-        # A per-entity error is NOT a genuine "no match" — count and surface it so a partial panel is
-        # never reported as a clean arm result (Greptile #63). Errored names still carry chosen_kg_id
-        # None, so they do not link; the count makes that visible rather than silent.
-        n_err = sum(1 for rec in cache.values() if rec.get("error"))
-        if n_err:
-            errors[f"{arm}:{label}"] = n_err
-            print(f"[{arm}:{label}] WARNING: {n_err} names returned a mapping error (excluded from links)", flush=True)
+        # Errored names are NOT cached (so they retry on resume) and NOT linked this run. Surfacing the
+        # count keeps a partial panel from being read as a clean arm result rather than silent.
+        if run_errors:
+            errors[f"{arm}:{label}"] = run_errors
+            print(
+                f"[{arm}:{label}] WARNING: {run_errors} names returned a transient mapping error "
+                "(NOT cached; retried on resume; excluded from links this run)",
+                flush=True,
+            )
         return cache
 
     def independent(names: set[str], resolver: PubChemInChIKeyResolver) -> dict[str, str | None]:
