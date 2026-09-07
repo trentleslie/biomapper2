@@ -259,7 +259,12 @@ def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: 
     if cache_path.exists():
         for line in cache_path.open():
             r = json.loads(line)
-            out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"], r.get("record_id"))
+            # RECOMPUTE record_id from the current source data, never trust the persisted value: a cache
+            # written before the record_id fix carries a NAME-based id, which would let Xu/NECS aliases
+            # bypass the same-record guard on resume and re-inflate results (Greptile #65). Derivation is
+            # deterministic from src, so legacy and fresh caches adjudicate identically.
+            rid = _provided_record_id(src_tag, provided_id_kwargs(src.get(r["name"].strip().lower(), {})), r["name"])
+            out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"], rid)
     with cache_path.open("a") as fh:
         for n in sorted(names):
             # Resume retries a transient failure: skip only names whose cached outcome is TERMINAL
