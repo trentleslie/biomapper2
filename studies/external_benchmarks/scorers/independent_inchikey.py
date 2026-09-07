@@ -127,6 +127,16 @@ class PubChemInChIKeyResolver:
         self._cache[key] = block
         return block
 
+    def block_for_name_status(self, name: str) -> tuple[str | None, str]:
+        """Name resolution WITH provenance status: ``(block, success|clean_miss|lookup_failed)``.
+
+        Unlike ``block_for_name`` (block-or-None, which cannot tell a transient PubChem failure from a
+        genuine miss), this routes through the status-aware, non-sticky ``_cached_resolve`` so a
+        ``lookup_failed`` (5xx / network) is never cached as a terminal ``clean_miss`` — a resumed run
+        retries it after the service recovers instead of banking a stale refusal.
+        """
+        return self._cached_resolve(f"name:{name}", f"compound/name/{quote(name, safe='')}/property/InChIKey/TXT")
+
     def _cached_resolve(self, cache_key: str, path: str) -> tuple[str | None, str]:
         if cache_key in self._status_cache:
             return self._status_cache[cache_key]

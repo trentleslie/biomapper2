@@ -278,9 +278,10 @@ def _oracle_name_only(names: set[str], resolver: PubChemInChIKeyResolver, out_di
             # never re-queried and the report stays stale.
             if n in out and out[n].status != "lookup_failed":
                 continue
-            blk = resolver.block_for_name(n)
-            pb = ProvidedBlock(blk, "pubchem-name" if blk else "none", "success" if blk else "clean_miss",
-                               f"pubchem-name:{n.strip().lower()}")
+            # Status-aware: a transient PubChem failure is lookup_failed (retried on resume via the guard
+            # above), never persisted as a terminal clean_miss that would bank a stale refusal (Greptile #65).
+            blk, status = resolver.block_for_name_status(n)
+            pb = ProvidedBlock(blk, "pubchem-name" if blk else "none", status, f"pubchem-name:{n.strip().lower()}")
             out[n] = pb
             fh.write(json.dumps({"name": n, "block": pb.block, "source": pb.source, "status": pb.status, "record_id": pb.record_id}) + "\n")
         fh.flush()
