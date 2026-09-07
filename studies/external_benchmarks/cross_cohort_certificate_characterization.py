@@ -183,11 +183,15 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
     # stale resolutions (Greptile #63). CHARAC_FRESH=1 forces a new dir; CHARAC_OUT pins one. The build
     # identity is the live /metagraph fingerprint (CHARAC_KESTREL_URL/KESTREL_API_URL) or a manual
     # CHARAC_KG_BUILD; one is required so the deployment is always pinned.
-    kg_build = _kg_fingerprint() or os.environ.get("CHARAC_KG_BUILD", "").strip()
+    # Combine BOTH the live /metagraph fingerprint AND a manual CHARAC_KG_BUILD (not `or`): if a KG
+    # redeploy changes mapping behavior WITHOUT changing the metagraph JSON, the live fingerprint stays
+    # the same, so a bumped CHARAC_KG_BUILD must still move the run_key rather than be discarded
+    # (Greptile #63). At least one must be present so the deployment is always pinned.
+    kg_build = "|".join(x for x in (_kg_fingerprint(), os.environ.get("CHARAC_KG_BUILD", "").strip()) if x)
     if not kg_build:
         raise SystemExit(
             "KG build identity required: set CHARAC_KESTREL_URL (or KESTREL_API_URL) for the live "
-            "/metagraph fingerprint, or set CHARAC_KG_BUILD and bump it on every KG redeploy — "
+            "/metagraph fingerprint, and/or set CHARAC_KG_BUILD and bump it on every KG redeploy — "
             "else a same-endpoint redeploy would reuse stale caches."
         )
     # A KG fingerprint does NOT capture the MAPPING API's own deployment: a dev-API redeployed behind an
@@ -211,6 +215,18 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
     out = None
     if os.environ.get("CHARAC_OUT"):
         out = Path(os.environ["CHARAC_OUT"]).expanduser()
+        # A pinned dir must belong to THIS run: if it holds caches, its manifest run_key must match, else
+        # we would load another endpoint/deployment's resolutions under a mismatched manifest (Greptile #63).
+        if out.exists() and any(out.glob("*.jsonl")):
+            mf = out / "manifest.json"
+            if not mf.exists():
+                raise SystemExit(f"CHARAC_OUT {out} holds caches but no manifest — refuse to reuse; set CHARAC_FRESH=1")
+            try:
+                cached_key = json.loads(mf.read_text()).get("run_key")
+            except (ValueError, OSError) as exc:
+                raise SystemExit(f"CHARAC_OUT {out} manifest unreadable ({exc}) — refuse to reuse") from exc
+            if cached_key != run_key:
+                raise SystemExit(f"CHARAC_OUT {out} run_key {cached_key} != current {run_key} — refuse to mix stale caches")
     elif not os.environ.get("CHARAC_FRESH"):
         for p in sorted(runs_root.glob("cross_cohort_characterization_*"), key=lambda p: p.name, reverse=True):
             mf = p / "manifest.json"
@@ -225,7 +241,18 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
         out = runs_root / f"cross_cohort_characterization_{ts}"
     out.mkdir(parents=True, exist_ok=True)
     manifest = out / "manifest.json"
-    if not manifest.exists():
+
+    def _manifest_run_key(m: Path) -> str | None:
+        try:
+            return json.loads(m.read_text()).get("run_key")
+        except (ValueError, OSError):
+            return None
+
+    # Rewrite a STALE manifest (run_key differs) as well as a missing one: a pinned dir whose caches were
+    # cleared but whose manifest survived would otherwise keep describing another run. The CHARAC_OUT +
+    # auto-resume paths above already refuse a dir whose CACHES mismatch, so reaching here with a stale
+    # manifest means no protective caches remain — rewriting is safe.
+    if not manifest.exists() or _manifest_run_key(manifest) != run_key:
         manifest.write_text(
             json.dumps(
                 {"run_key": run_key, "baseline_api": baseline_api, "treatment_api": treatment_api,
@@ -312,12 +339,27 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
         "baseline": resolve_panel("baseline", baseline_api, "necs", panels["necs"]),
         "treatment": resolve_panel("treatment", treatment_api, "necs", panels["necs"]),
     }
+    # Resolve ALL panels FIRST, then gate on completeness: a comparison must never be produced from a
+    # partial population (Greptile #63).
+    coh_panels: dict[str, dict[str, dict]] = {}
+    for coh in COHORTS:
+        coh_panels[coh] = {
+            "baseline": resolve_panel("baseline", baseline_api, coh, panels[coh]),
+            "treatment": resolve_panel("treatment", treatment_api, coh, panels[coh]),
+        }
+    # If any panel still has UNRESOLVED mapping errors, do NOT emit a characterization from an incomplete
+    # population — abort so the operator re-runs (resume retries the errored names from the persisted
+    # caches) until the panels are clean. This prevents a distorted partial comparison rather than merely
+    # annotating one.
+    if errors:
+        raise SystemExit(
+            f"{sum(errors.values())} mapping error(s) remain {dict(errors)} — panels incomplete; re-run to "
+            f"resume and retry them (caches at {out}) before the comparison is produced"
+        )
     rows: list[dict] = []
     for coh in COHORTS:
-        b_coh = resolve_panel("baseline", baseline_api, coh, panels[coh])
-        t_coh = resolve_panel("treatment", treatment_api, coh, panels[coh])
-        b = arm_pair("baseline", baseline_api, necs_by_arm["baseline"], b_coh, resolver)
-        t = arm_pair("treatment", treatment_api, necs_by_arm["treatment"], t_coh, resolver)
+        b = arm_pair("baseline", baseline_api, necs_by_arm["baseline"], coh_panels[coh]["baseline"], resolver)
+        t = arm_pair("treatment", treatment_api, necs_by_arm["treatment"], coh_panels[coh]["treatment"], resolver)
         rows.append(delta_row(f"necs↔{coh}", b, t))
         print(
             f"[pair] necs↔{coh}: links {b.n_links}->{t.n_links}  "
