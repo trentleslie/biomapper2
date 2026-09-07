@@ -187,10 +187,26 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
     if not kg_build:
         raise SystemExit(
             "KG build identity required: set CHARAC_KESTREL_URL (or KESTREL_API_URL) for the live "
-            "/metagraph fingerprint, or set CHARAC_KG_BUILD and bump it on every KG/dev-API redeploy — "
+            "/metagraph fingerprint, or set CHARAC_KG_BUILD and bump it on every KG redeploy — "
             "else a same-endpoint redeploy would reuse stale caches."
         )
-    run_key = hashlib.sha256(f"{baseline_api}\n{treatment_api}\n{kg_build}".encode()).hexdigest()[:16]
+    # A KG fingerprint does NOT capture the MAPPING API's own deployment: a dev-API redeployed behind an
+    # unchanged URL with different mapping code/config, while the KG metagraph is unchanged, would still
+    # match run_key and reuse stale resolutions (Greptile #63). So pin each arm's operator-attested
+    # dev-API build too (the deployer is the source of truth — a config change need not bump any probe-
+    # able version). Bump these on any same-endpoint dev-API redeploy, or use CHARAC_FRESH=1.
+    baseline_build = os.environ.get("CHARAC_BASELINE_BUILD", "").strip()
+    treatment_build = os.environ.get("CHARAC_TREATMENT_BUILD", "").strip()
+    if not (baseline_build and treatment_build):
+        raise SystemExit(
+            "Per-arm dev-API deployment identity required: set CHARAC_BASELINE_BUILD and "
+            "CHARAC_TREATMENT_BUILD (each mapping API's attested build/config) and bump them on any "
+            "same-endpoint redeploy — else a dev-API redeploy behind an unchanged URL+KG would reuse "
+            "stale caches."
+        )
+    run_key = hashlib.sha256(
+        f"{baseline_api}\n{treatment_api}\n{kg_build}\n{baseline_build}\n{treatment_build}".encode()
+    ).hexdigest()[:16]
     runs_root = Path.home() / "external_benchmark_runs"
     out = None
     if os.environ.get("CHARAC_OUT"):
@@ -212,7 +228,9 @@ def main() -> None:  # pragma: no cover - supervised live operator step; drives 
     if not manifest.exists():
         manifest.write_text(
             json.dumps(
-                {"run_key": run_key, "baseline_api": baseline_api, "treatment_api": treatment_api, "created": ts},
+                {"run_key": run_key, "baseline_api": baseline_api, "treatment_api": treatment_api,
+                 "kg_build": kg_build, "baseline_build": baseline_build, "treatment_build": treatment_build,
+                 "created": ts},
                 indent=2,
             )
         )
