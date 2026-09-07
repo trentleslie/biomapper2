@@ -215,8 +215,7 @@ def _resolve_panel(api: str, key: str, out_dir: Path, arm: str, label: str, name
     cache_path = out_dir / f"{arm}__{label}_devapi.jsonl"
     cache: dict[str, dict] = {}
     if cache_path.exists():
-        for line in cache_path.open():
-            r = json.loads(line)
+        for r in _read_cache_lines(cache_path):
             cache[r["name"]] = r
     todo = [n for n in names if n not in cache]
     print(f"[devapi {arm}] {label}: {len(names)} names, {len(todo)} to fetch", flush=True)
@@ -236,6 +235,24 @@ def _resolve_panel(api: str, key: str, out_dir: Path, arm: str, label: str, name
     return cache
 
 
+def _read_cache_lines(path: Path):  # pragma: no cover - IO
+    """Yield parsed JSONL cache records, SKIPPING a truncated/malformed line.
+
+    The caches are append-only and flushed per record, but an interruption mid-append can still leave a
+    torn final line. Passing that to ``json.loads`` unconditionally would raise on the next resume and
+    wedge the run (Greptile #65). Skipping the bad line is safe: that name is simply re-resolved.
+    """
+    with path.open() as fh:
+        for line in fh:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                yield json.loads(line)
+            except ValueError:
+                continue
+
+
 def _provided_record_id(src_tag: str, kw: dict, name: str) -> str:
     """record_id identifies the underlying CURATOR RECORD (its own id), NOT the cohort name.
 
@@ -252,13 +269,13 @@ def _provided_record_id(src_tag: str, kw: dict, name: str) -> str:
 def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: PubChemInChIKeyResolver, out_dir: Path, tag: str, src_tag: str) -> dict[str, ProvidedBlock]:  # pragma: no cover
     """oracle-ON map for ONE side: block_for_provided from THAT side's curator ids (name fallback), cached.
 
-    ``src_tag`` names the source FILE ("gold" | "arivale") so record_id = "{src_tag}:{name}"; two sides
-    sharing a record_id are the same curator record and the certificate refuses that self-comparison."""
+    ``src_tag`` names the source FILE ("gold" | "arivale"); record_id identifies the curator RECORD (via
+    _provided_record_id, not the name), so two sides sharing a record_id are the same curator record and
+    the certificate refuses that circular self-comparison."""
     cache_path = out_dir / f"oracle_provided_{tag}.jsonl"
     out: dict[str, ProvidedBlock] = {}
     if cache_path.exists():
-        for line in cache_path.open():
-            r = json.loads(line)
+        for r in _read_cache_lines(cache_path):
             # RECOMPUTE record_id from the current source data, never trust the persisted value: a cache
             # written before the record_id fix carries a NAME-based id, which would let Xu/NECS aliases
             # bypass the same-record guard on resume and re-inflate results (Greptile #65). Derivation is
@@ -286,8 +303,7 @@ def _oracle_name_only(names: set[str], resolver: PubChemInChIKeyResolver, out_di
     cache_path = out_dir / f"oracle_name_{tag}.jsonl"
     out: dict[str, ProvidedBlock] = {}
     if cache_path.exists():
-        for line in cache_path.open():
-            r = json.loads(line)
+        for r in _read_cache_lines(cache_path):
             out[r["name"]] = ProvidedBlock(r["block"], r["source"], r["status"], r.get("record_id"))
     with cache_path.open("a") as fh:
         for n in sorted(names):
