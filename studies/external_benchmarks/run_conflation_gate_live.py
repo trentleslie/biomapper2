@@ -137,6 +137,8 @@ def _independent_maps(a_names, b_names, oracle_resolver):
 def _build_prereg(
     *,
     arms_specs,
+    a_names,
+    b_names,
     masks_by_arm,
     adjudicable_pairs,
     known_conflations_path,
@@ -163,6 +165,7 @@ def _build_prereg(
         thresholds=thresholds,
         cold_canary_expected=cold_canary_expected,
         pair_ids=(pair_id,),
+        panels={"a": list(a_names), "b": list(b_names)},
         fetch=fetch,
     )
     return prereg, manifest, known
@@ -248,6 +251,8 @@ def _run_gate_flow(
     """
     prereg, manifest, known = _build_prereg(
         arms_specs=arms_specs,
+        a_names=a_names,
+        b_names=b_names,
         masks_by_arm=masks_by_arm,
         adjudicable_pairs=adjudicable_pairs,
         known_conflations_path=known_conflations_path,

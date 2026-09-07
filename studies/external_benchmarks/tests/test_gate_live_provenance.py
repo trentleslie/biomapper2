@@ -9,6 +9,8 @@ thresholds or a missing mask declaration raise — no silent default gate.
 
 from __future__ import annotations
 
+from dataclasses import asdict
+
 import pytest
 
 from biomapper2.provenance import KgBuildInfo
@@ -88,3 +90,14 @@ def test_mask_not_covering_adjudicable_raises():
     # is a mask-declaration gap -> raise.
     with pytest.raises(ValueError, match="mask|adjudicable"):
         _build(refmet_masks={"baseline": {("a", "b"): frozenset({"a"})}, "treatment": {}})
+
+
+def test_manifest_records_thresholds_and_panels_and_distinguishes_runs():
+    # Greptile #62: prereg must pin the thresholds + panel population that determine the verdict, so two
+    # runs with different decision contracts / observed populations cannot share an identical prereg.
+    _, m = _build(panels={"a": ["glucose", "xylose"], "b": ["glucose"]})
+    assert m["thresholds"] == asdict(Thresholds())
+    assert m["panels"] == {"a": ["glucose", "xylose"], "b": ["glucose"]}
+    assert m["panel_sizes"] == {"a": 2, "b": 1}
+    _, m2 = _build(panels={"a": ["glucose"], "b": ["glucose"]})
+    assert m2 != m  # a different observed population -> a distinguishable prereg

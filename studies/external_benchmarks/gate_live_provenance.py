@@ -17,7 +17,8 @@ Pure/offline apart from the injected ``fetch``.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import asdict
 
 from biomapper2.provenance import KgBuildInfo, fetch_kg_build_info
 
@@ -43,6 +44,7 @@ def build_prereg(
     thresholds: Thresholds | None,
     cold_canary_expected: str,
     pair_ids: tuple[str, ...],
+    panels: Mapping[str, Sequence[str]] | None = None,
     fetch: FetchFn = fetch_kg_build_info,
 ) -> tuple[Prereg, dict]:
     """Assemble ``(Prereg, manifest)``; raise on a missing threshold posture or mask declaration."""
@@ -102,6 +104,11 @@ def build_prereg(
         "known_conflations": [list(p) for p in known_conflations],
         "baseline_refused_fraction": baseline_refused_fraction,
         "cold_canary_expected": cold_canary_expected,
+        # thresholds + panel population determine the verdict; record them so two runs with different
+        # decision contracts or observed populations cannot share an indistinguishable prereg (#62).
+        "thresholds": asdict(thresholds),
+        "panels": {side: sorted(names) for side, names in (panels or {}).items()},
+        "panel_sizes": {side: len(names) for side, names in (panels or {}).items()},
         "arms": arm_manifest,
     }
     return prereg, manifest
