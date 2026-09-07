@@ -42,6 +42,15 @@ def test_metagraph_fingerprint_changes_when_graph_changes():
     assert _metagraph_fingerprint(new_summary) != fp
 
 
+def test_metagraph_fingerprint_detects_edge_list_changes():
+    # A same-endpoint redeploy that rewires mapping edges changes /metagraph's triple lists even if the
+    # identity + aggregate counts are unchanged; the full-payload hash must move (Greptile #65 r2).
+    base = {"graph": "kraken", "version": "2.0.1", "summary": {"nodes": 10, "edges": 20},
+            "triples": [["A", "rel", "B"], ["C", "rel", "D"]]}
+    rewired = {**base, "triples": [["A", "rel", "B"], ["C", "rel", "E"]]}  # one edge target changed
+    assert _metagraph_fingerprint(rewired) != _metagraph_fingerprint(base)
+
+
 def test_metagraph_fingerprint_tolerates_missing_keys():
     # older builds may omit fields; must not raise and must stay stable for the empty payload
     assert _metagraph_fingerprint({}) == _metagraph_fingerprint({})

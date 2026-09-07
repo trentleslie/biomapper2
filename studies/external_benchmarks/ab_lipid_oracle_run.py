@@ -121,14 +121,13 @@ def _metagraph_fingerprint(payload: dict) -> str:
     edge profile changes this string, so a same-endpoint redeploy invalidates a resumed run's caches
     automatically -- no operator tag bump required. Missing keys are tolerated (older builds).
     """
-    ident = {
-        "graph": payload.get("graph"),
-        "version": payload.get("version"),
-        "summary": payload.get("summary"),
-        "node_prefixes": payload.get("node_prefixes") or {},
-        "knowledge_sources": sorted((payload.get("knowledge_sources") or {})),
-    }
-    blob = json.dumps(ident, sort_keys=True, default=str)
+    # Hash the ENTIRE payload, not a hand-picked subset: /metagraph returns the graph's full account of
+    # the served build (identity, per-prefix node counts, knowledge sources AND the category/triple
+    # lists). Hashing everything it exposes maximizes sensitivity — a same-endpoint redeploy that rewires
+    # mapping edges changes the triple lists and therefore this hash. Residual (documented): a redeploy
+    # that changes mappings WITHOUT changing anything /metagraph reports is invisible from outside — a KG
+    # provenance gap, not one the benchmark can close; AB_KG_BUILD remains as a manual override for it.
+    blob = json.dumps(payload, sort_keys=True, default=str)
     return "mg:" + hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
