@@ -21,16 +21,20 @@ Xu, which publishes none, from the Metabolon-name join to the same gold tsv). Th
 carry DISTINCT provided-id maps — never one map reused for both — and neither is the Kraken KG. The
 reported number ABORTS if any block feeding it is untagged (the certify_links_tagged canary).
 
-Resume/provenance: the run dir is keyed by a ``run_key`` over the two API endpoints, the REQUIRED
-``AB_KG_BUILD`` tag, the exact panels, and a hash of both provided-id source files; a bare restart
-auto-resumes ONLY a prior dir whose manifest records the same key (else it starts fresh), and
-``AB_FRESH=1`` forces a new run. The KG build cannot be auto-probed via the biomapper batch API, so the
-operator must bump ``AB_KG_BUILD`` on any same-endpoint KG redeploy — it is required, not optional. Persist-by-default (R23); the API key (from /tmp/.bmk) is header-only
-and never written to any artifact; internal endpoints are recorded for reproduction and must be scrubbed
-before any external publication.
+Resume/provenance: the run dir is keyed by a ``run_key`` over the two API endpoints, the KG build
+identity, the exact panels, and a hash of both provided-id source files; a bare restart auto-resumes ONLY
+a prior dir whose manifest records the same key (else it starts fresh), and ``AB_FRESH=1`` forces a new
+run. The KG build identity is taken LIVE from the Kestrel ``/metagraph`` build+node/edge fingerprint when
+``AB_KESTREL_URL`` (or ``KESTREL_API_URL``) is set -- so a same-endpoint redeploy that changes the served
+graph auto-invalidates a resumed run's caches with no operator action. When no Kestrel URL is reachable,
+a manually stamped ``AB_KG_BUILD`` is required as a fallback and must be bumped on every redeploy. (The
+biomapper batch API alone cannot expose the KG build; /metagraph is the graph's own account of it.)
+Persist-by-default (R23); the API key (from /tmp/.bmk) is header-only and never written to any artifact;
+internal endpoints are recorded for reproduction and must be scrubbed before any external publication.
 
 Env: BASELINE_API, TREATMENT_API (full /api/v1/map/batch URLs); NECS_GOLD_TSV (Metabolon provided-id tsv);
-AB_KG_BUILD (build tag folded into the run key); AB_OUT / AB_FRESH (pin / force a run dir).
+AB_KESTREL_URL / KESTREL_API_URL (Kestrel base for the live /metagraph fingerprint); AB_KG_BUILD (manual
+build tag, fallback when no Kestrel URL is set); AB_OUT / AB_FRESH (pin / force a run dir).
 """
 
 from __future__ import annotations
@@ -109,14 +113,55 @@ def _arivale_source() -> dict[str, dict[str, str]]:  # pragma: no cover
     return out
 
 
-def _run_key(baseline_api: str, treatment_api: str, panels: dict[str, list[str]], gold_path: Path) -> str:  # pragma: no cover
+def _metagraph_fingerprint(payload: dict) -> str:
+    """Pure: a stable short fingerprint of a Kestrel ``/metagraph`` payload.
+
+    Folds the graph identity (graph, version, summary) and the size profile (per-prefix node counts and
+    the knowledge-source set) into one hash. Any KG redeploy that changes the served build OR its node/
+    edge profile changes this string, so a same-endpoint redeploy invalidates a resumed run's caches
+    automatically -- no operator tag bump required. Missing keys are tolerated (older builds).
+    """
+    ident = {
+        "graph": payload.get("graph"),
+        "version": payload.get("version"),
+        "summary": payload.get("summary"),
+        "node_prefixes": payload.get("node_prefixes") or {},
+        "knowledge_sources": sorted((payload.get("knowledge_sources") or {})),
+    }
+    blob = json.dumps(ident, sort_keys=True, default=str)
+    return "mg:" + hashlib.sha256(blob.encode()).hexdigest()[:16]
+
+
+def _kg_fingerprint() -> str:  # pragma: no cover
+    """Live: derive the KG build identity from Kestrel ``/metagraph`` when a Kestrel URL is configured.
+
+    Returns "" when no Kestrel URL is set (the operator must then stamp ``AB_KG_BUILD``). If a URL IS set
+    but the probe fails, ABORT -- the operator asked to key the run on the live build, and silently
+    degrading to a weaker identity is exactly the stale-cache hole this closes.
+    """
+    url = (os.environ.get("AB_KESTREL_URL") or os.environ.get("KESTREL_API_URL") or "").strip()
+    if not url:
+        return ""
+    try:
+        r = requests.get(f"{url.rstrip('/')}/metagraph", timeout=20)
+        r.raise_for_status()
+        return _metagraph_fingerprint(r.json())
+    except Exception as exc:
+        raise SystemExit(
+            f"Kestrel /metagraph probe failed for {url} ({type(exc).__name__}: {exc}) -- refuse to key the run "
+            "on an unverified build; fix AB_KESTREL_URL/KESTREL_API_URL or set AB_KG_BUILD to the "
+            "/metagraph build+fingerprint."
+        ) from exc
+
+
+def _run_key(baseline_api: str, treatment_api: str, panels: dict[str, list[str]], gold_path: Path, kg_build: str) -> str:  # pragma: no cover
     """Identity of THIS run: endpoints + build tag + the exact panels + the provided-id source file.
 
     Changing a panel (added/removed analytes) or the gold tsv changes the key, so a resumed run can never
     silently mix caches built from different benchmark inputs.
     """
     h = hashlib.sha256()
-    for a in (baseline_api, treatment_api, os.environ.get("AB_KG_BUILD", "")):
+    for a in (baseline_api, treatment_api, kg_build):
         h.update((a + "\n").encode())
     for label in ("necs", "arivale", "xuetal"):
         h.update(f"\n[{label}]\n".encode())
@@ -270,18 +315,20 @@ def main() -> None:  # pragma: no cover
     arivale_src = _arivale_source()
     panels = load_panels()
 
-    # A KG redeployed behind the SAME url with an unchanged build tag would let run_key match and reuse
-    # stale panel caches. The biomapper batch API exposes only its API version + per-result Tier-B cache
-    # state, NOT the KG build (build_run_provenance needs the server-only kestrel_url), so the build cannot
-    # be auto-probed here — the operator MUST stamp it. Requiring it closes the silent default-empty path;
-    # bump it (e.g. to the Kestrel /metagraph build + node/edge fingerprint) on every KG redeploy.
-    if not os.environ.get("AB_KG_BUILD", "").strip():
+    # KG build identity in the run key. Prefer the LIVE Kestrel /metagraph fingerprint (auto-invalidates a
+    # resumed run's caches on ANY same-endpoint redeploy -- build OR node/edge profile); fall back to a
+    # manually stamped AB_KG_BUILD only when no Kestrel URL is reachable. One of the two is required: an
+    # empty identity would let a redeploy silently reuse stale panel caches (the hole Greptile flagged).
+    live_fp = _kg_fingerprint()
+    kg_build = live_fp or os.environ.get("AB_KG_BUILD", "").strip()
+    if not kg_build:
         raise SystemExit(
-            "AB_KG_BUILD is required — the KG build identity (the batch API can't expose it). Set it to the "
-            "current Kestrel /metagraph build+fingerprint and bump it on any KG redeploy, else same-endpoint "
-            "reruns would reuse stale caches."
+            "KG build identity required: set AB_KESTREL_URL (or KESTREL_API_URL) so the run keys on the live "
+            "/metagraph build+fingerprint, or stamp AB_KG_BUILD manually and bump it on every KG redeploy. "
+            "Without it a same-endpoint redeploy would reuse stale caches."
         )
-    run_key = _run_key(baseline_api, treatment_api, panels, Path(os.environ["NECS_GOLD_TSV"]).expanduser())
+    kg_build_source = "metagraph" if live_fp else "manual:AB_KG_BUILD"
+    run_key = _run_key(baseline_api, treatment_api, panels, Path(os.environ["NECS_GOLD_TSV"]).expanduser(), kg_build)
     out_dir = _resolve_out_dir(run_key)
     out_dir.mkdir(parents=True, exist_ok=True)
     resuming = any(out_dir.glob("*.jsonl"))
@@ -296,7 +343,8 @@ def main() -> None:  # pragma: no cover
                     "run_key": run_key,
                     "baseline_api": baseline_api,
                     "treatment_api": treatment_api,
-                    "kg_build": os.environ.get("AB_KG_BUILD", ""),
+                    "kg_build": kg_build,
+                    "kg_build_source": kg_build_source,
                     "rdkit": rdkit.__version__,
                     "created": _now_ts(),
                     "note": "provided-id oracle 2x2; api key NOT recorded; scrub internal endpoints before publish",
