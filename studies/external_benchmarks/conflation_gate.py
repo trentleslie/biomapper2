@@ -411,6 +411,21 @@ def _pooled_floor(
     return {m: max(fb[m], ft[m]) for m in _METRICS}
 
 
+def _arm_pairs(arm: ArmReplicates) -> frozenset[Pair]:
+    """The set of (a, b) link pairs an arm actually carries, over all its replicates.
+
+    Used to scope the positive-control self-test to the PLANT's OWN planted population instead of the
+    baseline/treatment RefMet-parity-kept set — the synthetic plant pairs are generally not members of
+    that set, and filtering the plant through it drops exactly the refutations the control exists to
+    prove are detectable.
+    """
+    pairs: set[Pair] = set()
+    for s in arm.replicates:
+        for a, bn, _v in s.certified.per_link:
+            pairs.add((a, bn))
+    return frozenset(pairs)
+
+
 def evaluate_conflation_gate(
     prereg: Prereg,
     arms: Mapping[str, ArmReplicates],
@@ -438,9 +453,24 @@ def evaluate_conflation_gate(
     floor = _pooled_floor(baseline, treatment, kept)
     b_rep = representative(baseline, kept)
     t_rep = representative(treatment, kept)
-    control_rep = representative(arms[prereg.positive_control_arm], kept)
 
-    abort = positive_control_selftest(prereg, b_rep, control_rep, floor, kept, prereg.thresholds)
+    # Positive-control self-test runs over the PLANT'S OWN planted population, NOT the baseline/treatment
+    # RefMet-parity-kept set `kept`. The plant's forced-conflation pairs are synthetic and generally sit
+    # OUTSIDE `kept`; scoping the control through `kept` would drop the very refutations the control
+    # exists to prove are detectable — making the gate either wrongly ABORT or clear on a spurious
+    # certified-fall instead of the planted refutation (the population-mismatch bug). Baseline carries no
+    # links on those synthetic pairs, so over the plant's population the self-test measures refuted
+    # 0 -> N and correctly requires FAIL. An empty plant population (no per-link data, e.g. the pure
+    # aggregate-only tests) falls back to full-total scoring, matching the prior behavior.
+    control_arm = arms[prereg.positive_control_arm]
+    control_pairs = _arm_pairs(control_arm)
+    control_floor = _pooled_floor(baseline, control_arm, control_pairs)
+    b_rep_control = representative(baseline, control_pairs)
+    control_rep = representative(control_arm, control_pairs)
+
+    abort = positive_control_selftest(
+        prereg, b_rep_control, control_rep, control_floor, control_pairs, prereg.thresholds
+    )
     if abort is not None:
         return dataclasses.replace(abort, excluded_pairs=excluded)
 

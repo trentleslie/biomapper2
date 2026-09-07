@@ -7,24 +7,37 @@ for the A2 byte-identical guard, resolves the source-tagged PubChem-by-name orac
 the baseline, assembles the arms, and runs the HARDENED pure gate WITH caches. It persists
 ``prereg.json`` FIRST, then ``result.json``, under a timestamped path (R23) and prints the path.
 
-Only the config-validation entrypoints are unit-tested (they raise a clear operator error with no
-config, before any network); the resolve/replicate loop itself is never in pytest — its correctness is
-carried by the pure units A1-A4 + B1-B6, exercised through the orchestrator.
+The orchestration is factored into ``_build_gate``, whose network / oracle / KG-fingerprint / canary
+dependencies are ALL injected. ``_execute_gate`` supplies the live providers; a unit test drives the
+same core with monkeypatched fakes (no network) — so the loop is proven to execute end-to-end without
+a live call, closing the "advertised harness cannot execute" gap. The data-source inputs (the pair's
+two panels, the RefMet masks, the pre-registered adjudicable population, and the known-conflation set)
+are OPERATOR/analysis inputs supplied via kwargs, not invented here.
 """
 
 from __future__ import annotations
 
 import json
 import os
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .conflation_gate import GateResult
+from .conflation_gate import GateResult, Pair, Thresholds
+from .cross_cohort_devapi_sweep import ResolvedRows, score_arm
+from .gate_live_assemble import assemble_arms, run_gate
+from .gate_live_canary import attested_canary
 from .gate_live_config import parse_arms_config
+from .gate_live_oracle import enforce_disjoint, oracle_by_name
+from .gate_live_plant import build_plant_rows, load_known_conflations, verify_plant_refutes
+from .gate_live_provenance import build_prereg, fetch_kg_build_info
 
 _PREFIX = "conflation_gate_live_"
+
+# A resolver is (api_base, names) -> ResolvedRows; the live one POSTs the dev-API batch endpoint, a test
+# injects a fake. An oracle resolver exposes block_for_name(name) -> InChIKey block | None.
+ResolveFn = Callable[[str, Sequence[str]], ResolvedRows]
 
 
 def _require_config(config: Mapping | None) -> dict:
@@ -39,6 +52,16 @@ def _require_config(config: Mapping | None) -> dict:
             "({'baseline': {...}, 'treatment': {...}}); refusing to start a live run without it"
         )
     return dict(parse_arms_config(config))  # validates required fields; raises on omission
+
+
+def _require_kwarg(kwargs: Mapping, name: str) -> Any:
+    """Fetch a required operator input, raising a clear error naming what is missing (before network)."""
+    if name not in kwargs or kwargs[name] is None:
+        raise ValueError(
+            f"operator error: the live gate requires '{name}' (analysis input); supply it in the call — "
+            "the harness does not invent panels/masks/adjudicable-population/known-conflations"
+        )
+    return kwargs[name]
 
 
 def run_live(config: Mapping | None = None, **kwargs: Any) -> GateResult:
@@ -63,44 +86,206 @@ def _out_dir() -> Path:  # pragma: no cover - filesystem side effect on the live
     return root / f"{_PREFIX}{_now_ts()}"
 
 
-def _execute_resolve(arms, **kwargs):  # pragma: no cover - supervised live network step
-    """Resolve+persist one arm's panels via the dev API + source-tagged oracle (mirror Unit E)."""
-    raise NotImplementedError(
-        "resolve_and_persist_live is the supervised per-arm live step; run it from the gated operator "
-        "harness with a live COLD dev API + PubChem oracle"
+def _resolve_panel_live(api_base, key, names, *, batch=25, timeout=300):  # pragma: no cover - live network
+    """POST the dev-API batch endpoint for ``names`` -> ResolvedRows {name: {chosen_kg_id, ...}}.
+
+    Mirrors ``cross_cohort_certificate_characterization.resolve_panel``: the API key is header-only and
+    never persisted; a per-entity ``error`` is kept (an errored name carries chosen_kg_id None so it
+    does not link, but the error is not silently dropped).
+    """
+    import requests
+
+    rows: dict[str, dict] = {}
+    names = list(names)
+    for i in range(0, len(names), batch):
+        chunk = names[i : i + batch]
+        resp = requests.post(
+            api_base,
+            headers={"X-API-Key": key},
+            json={
+                "entities": [{"name": n, "entity_type": "metabolite"} for n in chunk],
+                "options": {"annotation_mode": "all"},
+            },
+            timeout=timeout,
+        )
+        resp.raise_for_status()
+        for r in resp.json()["results"]:
+            rows[r["name"]] = {
+                "chosen_kg_id": r.get("chosen_kg_id"),
+                "kg_equivalent_ids": r.get("kg_equivalent_ids") or {},
+                "error": r.get("error"),
+            }
+    return rows
+
+
+def _independent_maps(a_names, b_names, oracle_resolver):
+    """Build the source-tagged oracle ONCE over the union of names, enforce A4 disjointness against the
+    KG candidate source, and split into per-side name->block maps for ``score_arm``.
+
+    The candidate link structures come from the KG (``chosen_kg_id``), so every name's candidate source
+    is ``"kg"``; ``enforce_disjoint`` withholds any oracle block that would grade a name with that same
+    source (never, for a PubChem-by-name oracle — but the guard is applied, not assumed).
+    """
+    names = list(dict.fromkeys([*a_names, *b_names]))
+    sourced = oracle_by_name(names, oracle_resolver)
+    disjoint = enforce_disjoint(sourced, {n: "kg" for n in names})
+    a_independent = {n: disjoint.get(n) for n in a_names}
+    b_independent = {n: disjoint.get(n) for n in b_names}
+    return a_independent, b_independent
+
+
+def _build_gate(
+    *,
+    arms_specs: Mapping,
+    a_names: Sequence[str],
+    b_names: Sequence[str],
+    replicates: int,
+    resolve_fn: ResolveFn,
+    oracle_resolver,
+    masks_by_arm: Mapping[str, Mapping[Pair, frozenset]],
+    adjudicable_pairs: Sequence[Pair],
+    known_conflations_path: str | Path | None,
+    thresholds: Thresholds,
+    cold_canary_expected: str,
+    pair_id: str,
+    fetch=fetch_kg_build_info,
+    shared_prefix: str = "CHEBI",
+):
+    """Testable orchestration core: resolve -> score -> plant -> assemble -> prereg -> gate.
+
+    All I/O is injected (``resolve_fn`` for the dev API, ``oracle_resolver`` for PubChem-by-name,
+    ``fetch`` for the KG build fingerprint), so this runs fully offline under fakes. Returns
+    ``(prereg, manifest, result, caches)``.
+    """
+    a_independent, b_independent = _independent_maps(a_names, b_names, oracle_resolver)
+
+    reps_by_arm: dict[str, list] = {}
+    caches: dict[str, ResolvedRows] = {}
+    canary_by_arm: dict[str, str] = {}
+    baseline_rows: dict[str, dict] = {}
+    for arm_name in ("baseline", "treatment"):
+        spec = arms_specs[arm_name]
+        scores = []
+        for rep in range(replicates):
+            a_rows = resolve_fn(spec.api_base, a_names)
+            b_rows = resolve_fn(spec.api_base, b_names)
+            scores.append(score_arm(a_rows, b_rows, a_independent, b_independent))
+            if rep == 0:
+                caches[arm_name] = {**a_rows, **b_rows}
+                if arm_name == "baseline":
+                    baseline_rows = {**a_rows, **b_rows}
+        reps_by_arm[arm_name] = scores
+        canary_by_arm[arm_name] = attested_canary(spec)
+
+    # Positive-control plant: force known-bad pairs from the BASELINE rows onto a shared non-structural
+    # CURIE so they link, and verify the certificate refutes them under the SAME oracle (raises if the
+    # plant is degenerate — never a silent good self-test).
+    known = load_known_conflations(known_conflations_path)
+    plant_a, plant_b = build_plant_rows(baseline_rows, known, shared_prefix)
+    verify_plant_refutes(plant_a, plant_b, a_independent, b_independent)
+    plant_score = score_arm(plant_a, plant_b, a_independent, b_independent)
+    reps_by_arm["plant"] = [plant_score] * replicates
+    caches["plant"] = {**plant_a, **plant_b}
+    canary_by_arm["plant"] = canary_by_arm["baseline"]  # synthetic, derived from the cold baseline rows
+
+    assembled = assemble_arms(reps_by_arm, canary_by_arm, masks_by_arm)
+
+    b0 = reps_by_arm["baseline"][0].certified
+    total = b0.certified + b0.refuted + b0.refused
+    baseline_refused_fraction = (b0.refused / total) if total else 0.0
+
+    prereg, manifest = build_prereg(
+        arms={k: arms_specs[k] for k in ("baseline", "treatment")},
+        refmet_masks=masks_by_arm,
+        adjudicable_pairs=list(adjudicable_pairs),
+        known_conflations=list(known),
+        baseline_refused_fraction=baseline_refused_fraction,
+        thresholds=thresholds,
+        cold_canary_expected=cold_canary_expected,
+        pair_ids=(pair_id,),
+        fetch=fetch,
     )
+    result = run_gate(prereg, assembled, caches)
+    return prereg, manifest, result, caches
 
 
 def _execute_gate(arms, *, replicates: int = 3, **kwargs) -> GateResult:  # pragma: no cover - live
-    """The supervised resolve/replicate/score/plant/assemble/evaluate/persist loop.
+    """Supervised live gate: wire the injected core to the real dev API + PubChem oracle, then persist.
 
-    Never exercised in pytest (network + filesystem). Sketch of the wiring the operator runs:
-
-      * per arm (fresh deploy, cold by construction) x >=``replicates``: resolve panels via
-        ``{api_base}/api/v1/map/batch`` (mirror ``xu_necs_certificate_diagnosis._resolve_panel``),
-        capture the raw ``ResolvedRows`` as the arm's cache (the A2 guard input);
-      * resolve the source-tagged PubChem-by-name oracle (``gate_live_oracle.oracle_by_name``),
-        enforce A4 disjointness against the candidate source, ``score_arm`` each replicate;
-      * build the plant from the baseline rows + known conflations (``gate_live_plant``) and verify it
-        refutes under the SAME oracle (ABORT-worthy if degenerate);
-      * assemble arms (``gate_live_assemble.assemble_arms``) + build the prereg/manifest
-        (``gate_live_provenance.build_prereg``, pinning per-arm commit + Kestrel fingerprint + masks +
-        attestation + known set + baseline refused fraction);
-      * ``run_gate(prereg, arms, caches=per_arm_rows)`` — the hardened gate WITH the cache guard;
-      * persist ``prereg.json`` FIRST then ``result.json`` under a timestamped dir (R23); print the path.
+    Operator kwargs (analysis inputs): ``a_names``/``b_names`` (the pair's two panels), ``masks_by_arm``,
+    ``adjudicable_pairs``, ``known_conflations_path``, ``thresholds``, ``cold_canary_expected``,
+    ``pair_id``. The API key is read header-only from ``/tmp/.bmk`` and never persisted.
     """
+    from .scorers.independent_inchikey import PubChemInChIKeyResolver
+
+    key = Path("/tmp/.bmk").read_text().strip()
+    resolver = PubChemInChIKeyResolver()
+
+    def _resolve(api_base, names):
+        return _resolve_panel_live(api_base, key, names)
+
+    prereg, manifest, result, _caches = _build_gate(
+        arms_specs=arms,
+        a_names=_require_kwarg(kwargs, "a_names"),
+        b_names=_require_kwarg(kwargs, "b_names"),
+        replicates=replicates,
+        resolve_fn=_resolve,
+        oracle_resolver=resolver,
+        masks_by_arm=_require_kwarg(kwargs, "masks_by_arm"),
+        adjudicable_pairs=_require_kwarg(kwargs, "adjudicable_pairs"),
+        known_conflations_path=kwargs.get("known_conflations_path"),
+        thresholds=_require_kwarg(kwargs, "thresholds"),
+        cold_canary_expected=_require_kwarg(kwargs, "cold_canary_expected"),
+        pair_id=_require_kwarg(kwargs, "pair_id"),
+    )
+    _persist(_out_dir(), manifest, result)
+    return result
+
+
+def _execute_resolve(arms, **kwargs):  # pragma: no cover - supervised live network step
+    """Resolve+persist ONE arm's pair panels via the dev API + source-tagged oracle, score, persist.
+
+    Operator kwargs: ``arm`` (which arm to resolve, default 'treatment'), ``a_names``/``b_names``, plus
+    ``pair_id``. Persists a small manifest + the scored counts under a timestamped dir (R23).
+    """
+    from .scorers.independent_inchikey import PubChemInChIKeyResolver
+
+    key = Path("/tmp/.bmk").read_text().strip()
+    arm_name = kwargs.get("arm", "treatment")
+    spec = arms[arm_name]
+    a_names = _require_kwarg(kwargs, "a_names")
+    b_names = _require_kwarg(kwargs, "b_names")
+    a_independent, b_independent = _independent_maps(a_names, b_names, PubChemInChIKeyResolver())
+
+    a_rows = _resolve_panel_live(spec.api_base, key, a_names)
+    b_rows = _resolve_panel_live(spec.api_base, key, b_names)
+    score = score_arm(a_rows, b_rows, a_independent, b_independent)
+
     out = _out_dir()
     out.mkdir(parents=True, exist_ok=True)
-    # prereg.json is written BEFORE result.json (R23) so the pre-registered contract is on disk even if
-    # the observation step is interrupted.
-    raise NotImplementedError(
-        f"the live resolve/replicate loop is a supervised operator step (out dir {out}); wire it to a "
-        "live COLD dev API per arm + PubChem oracle and it will persist prereg.json then result.json"
+    (out / f"{arm_name}_score.json").write_text(
+        json.dumps(
+            {
+                "arm": arm_name,
+                "pair_id": kwargs.get("pair_id"),
+                "deployed_commit": spec.deployed_commit,
+                "certified": score.certified.certified,
+                "refuted": score.certified.refuted,
+                "refused": score.certified.refused,
+                "note": "api key NOT recorded; scrub internal endpoints before publish",
+            },
+            indent=2,
+        )
     )
+    print(f"[done] {out}/{arm_name}_score.json", flush=True)
+    return score
 
 
 def _persist(out: Path, prereg_manifest: dict, result: GateResult) -> Path:  # pragma: no cover - live
     """Persist prereg.json FIRST, then result.json (R23). Returns the run directory."""
+    out.mkdir(parents=True, exist_ok=True)
+    # prereg.json is written BEFORE result.json (R23) so the pre-registered contract is on disk even if
+    # the observation step is interrupted.
     (out / "prereg.json").write_text(json.dumps(prereg_manifest, indent=2, default=str))
     (out / "result.json").write_text(
         json.dumps(
