@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from studies.external_benchmarks.ab_lipid_oracle_run import _metagraph_fingerprint, provided_id_kwargs
+from studies.external_benchmarks.ab_lipid_oracle_run import _metagraph_fingerprint, _provided_record_id, provided_id_kwargs
 
 
 def test_prefers_gold_inchikey_then_hmdb_then_pubchem():
@@ -55,3 +55,13 @@ def test_metagraph_fingerprint_tolerates_missing_keys():
     # older builds may omit fields; must not raise and must stay stable for the empty payload
     assert _metagraph_fingerprint({}) == _metagraph_fingerprint({})
     assert _metagraph_fingerprint({"version": "x"}) != _metagraph_fingerprint({})
+
+
+def test_provided_record_id_collapses_aliases_to_one_record():
+    kw = {"inchikey": "ABCDEFGHIJKLMN-XYZ", "hmdb": "HMDB1", "pubchem": "5"}
+    # two different names, same gold record -> IDENTICAL record_id (same-record guard fires -> refused)
+    assert _provided_record_id("gold", kw, "D-glucose") == _provided_record_id("gold", kw, "dextrose")
+    # a different record -> a different id (still adjudicable)
+    assert _provided_record_id("gold", {"inchikey": "OTHERKEY-XYZ"}, "x") != _provided_record_id("gold", kw, "y")
+    # no curator id -> falls back to the name
+    assert _provided_record_id("gold", {}, "Z") == "gold:z"

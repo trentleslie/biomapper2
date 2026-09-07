@@ -236,6 +236,19 @@ def _resolve_panel(api: str, key: str, out_dir: Path, arm: str, label: str, name
     return cache
 
 
+def _provided_record_id(src_tag: str, kw: dict, name: str) -> str:
+    """record_id identifies the underlying CURATOR RECORD (its own id), NOT the cohort name.
+
+    When both sides draw from the SAME source file (gold on BOTH necs & xu, since Xu has no vendor ids
+    and is joined to the same gold tsv), two DIFFERENT names that map to the SAME gold record must
+    collapse to ONE record_id, so the same-record guard refuses the circular self-comparison instead of
+    certifying the gold datum against itself and inflating Xu adjudication (Greptile #65). Key on the
+    record's own id (InChIKey > HMDB > PubChem), falling back to the name only when none is provided.
+    """
+    canonical = kw.get("inchikey") or kw.get("hmdb") or kw.get("pubchem") or name.strip().lower()
+    return f"{src_tag}:{canonical}"
+
+
 def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: PubChemInChIKeyResolver, out_dir: Path, tag: str, src_tag: str) -> dict[str, ProvidedBlock]:  # pragma: no cover
     """oracle-ON map for ONE side: block_for_provided from THAT side's curator ids (name fallback), cached.
 
@@ -255,7 +268,7 @@ def _oracle_provided(names: set[str], src: dict[str, dict[str, str]], resolver: 
             if n in out and out[n].status != "lookup_failed":
                 continue
             kw = provided_id_kwargs(src.get(n.strip().lower(), {}))
-            pb = replace(resolver.block_for_provided(name=n, **kw), record_id=f"{src_tag}:{n.strip().lower()}")
+            pb = replace(resolver.block_for_provided(name=n, **kw), record_id=_provided_record_id(src_tag, kw, n))
             out[n] = pb
             fh.write(json.dumps({"name": n, "block": pb.block, "source": pb.source, "status": pb.status, "record_id": pb.record_id}) + "\n")
         fh.flush()
@@ -334,7 +347,19 @@ def main() -> None:  # pragma: no cover
     resuming = any(out_dir.glob("*.jsonl"))
     print(f"[run] {out_dir} ({'RESUMING matching run_key' if resuming else 'fresh run'}); AB_FRESH forces new", flush=True)
     manifest = out_dir / "manifest.json"
-    if not manifest.exists():
+
+    def _manifest_run_key(m: Path) -> str | None:
+        try:
+            return json.loads(m.read_text()).get("run_key")
+        except (ValueError, OSError):
+            return None
+
+    # Rewrite a STALE manifest (different run_key) as well as a missing one: an AB_OUT dir whose JSONL
+    # caches were cleared but whose manifest survived would otherwise keep a manifest describing another
+    # run, and the NEXT invocation would reject the freshly built caches (Greptile #65). _resolve_out_dir
+    # already refuses AB_OUT with MISMATCHED caches, so reaching here with a stale manifest means no
+    # protective caches remain — rewriting is safe.
+    if not manifest.exists() or _manifest_run_key(manifest) != run_key:
         import rdkit
 
         manifest.write_text(
