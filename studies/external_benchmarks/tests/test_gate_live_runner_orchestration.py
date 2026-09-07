@@ -1,10 +1,11 @@
 """Unit B7 — the live gate orchestration runs END-TO-END offline (Greptile #62: harness must execute).
 
-``_build_gate`` is the injectable core of the operator harness: dev-API resolution, the PubChem oracle,
-and the KG-build fetch are all passed in, so this drives the whole resolve -> score -> plant -> assemble
--> prereg -> gate loop with fakes and NO network. It proves the harness executes (no NotImplementedError)
-and that the positive-control plant is detected over its own population. Only the thin live-provider
-wiring in ``_execute_gate`` (the /tmp/.bmk key read + real HTTP) stays ``# pragma: no cover``.
+``_run_gate_flow`` is the injectable core of the operator harness: dev-API resolution, the PubChem
+oracle, and the KG-build fetch are all passed in, so this drives the whole build-prereg -> persist ->
+observe -> gate -> persist-result flow with fakes and NO network. It proves the harness executes (no
+NotImplementedError), that the prereg is persisted BEFORE observation (pre-registration, R4/R23), and
+that the positive-control plant is detected. Only the thin live-provider wiring in ``_execute_gate``
+(the /tmp/.bmk key read + real HTTP) stays ``# pragma: no cover``.
 """
 
 from __future__ import annotations
@@ -51,7 +52,7 @@ def _resolve_fn(api_base, names):
     base = {"alpha": "CHEBI:1", "alpha2": "CHEBI:1", "beta": "CHEBI:2", "beta2": "CHEBI:2"}
     rows = {}
     for n in names:
-        cid = base.get(n) or ("CHEBI:100" if "b" in api_base else "CHEBI:200")  # gamma diverges per arm
+        cid = base.get(n) or ("CHEBI:100" if "base" in api_base else "CHEBI:200")  # gamma diverges per arm
         rows[n] = {"chosen_kg_id": cid, "kg_equivalent_ids": {}, "error": None}
     return rows
 
@@ -75,7 +76,7 @@ def _arms():
     )
 
 
-def _build(tmp_path, **over):
+def _flow(tmp_path, resolve_fn=_resolve_fn, **over):
     known = tmp_path / "refuted_pairs.json"
     known.write_text(json.dumps([["alpha", "beta2"]]))  # planted conflation: distinct blocks -> refuted
     masks = {a: {p: frozenset({f"RM:{i}"}) for i, p in enumerate(_KEPT)} for a in ("baseline", "treatment")}
@@ -84,36 +85,44 @@ def _build(tmp_path, **over):
         a_names=_A_NAMES,
         b_names=_B_NAMES,
         replicates=3,
-        resolve_fn=_resolve_fn,
+        resolve_fn=resolve_fn,
         oracle_resolver=_FakeOracle(),
         masks_by_arm=masks,
         adjudicable_pairs=_KEPT,
         known_conflations_path=str(known),
+        baseline_refused_fraction=0.1,  # PRE-REGISTERED input, not computed from this run's baseline
         thresholds=Thresholds(),
         cold_canary_expected="COLD",
         pair_id="necs__xuetal",
         fetch=_fake_fetch,
     )
     kw.update(over)
-    return R._build_gate(**kw)
+    out = tmp_path / "run"
+    return R._run_gate_flow(out, **kw), out
 
 
-def test_build_gate_runs_offline_and_detects_the_plant(tmp_path):
-    prereg, manifest, result, caches = _build(tmp_path)
+def test_run_gate_flow_runs_offline_and_detects_the_plant(tmp_path):
+    result, out = _flow(tmp_path)
     assert isinstance(result, GateResult)
     assert result.decision not in ("ABORT", "ABSTAIN")  # not invalidated, not confounded
-    assert result.positive_control_ok is True  # the plant's refutation was detected over its own pairs
-    assert set(caches) == {"baseline", "treatment", "plant"}
-    assert prereg.positive_control_arm == "plant"
-
-
-def test_persist_writes_prereg_before_result(tmp_path):
-    _prereg, manifest, result, _caches = _build(tmp_path)
-    out = R._persist(tmp_path / "run", manifest, result)
+    assert result.positive_control_ok is True  # the plant's refutation was detected
     assert (out / "prereg.json").exists() and (out / "result.json").exists()
     loaded = json.loads((out / "result.json").read_text())
     assert loaded["decision"] == result.decision
-    assert loaded["positive_control_ok"] is True
+
+
+def test_prereg_is_persisted_before_any_arm_is_observed(tmp_path):
+    seen = {"prereg_at_first_resolve": None}
+
+    def _checking_resolve(api_base, names):
+        if seen["prereg_at_first_resolve"] is None:
+            # the FIRST network call must find the pre-registration contract already on disk (R4/R23)
+            seen["prereg_at_first_resolve"] = (tmp_path / "run" / "prereg.json").exists()
+        return _resolve_fn(api_base, names)
+
+    result, out = _flow(tmp_path, resolve_fn=_checking_resolve)
+    assert seen["prereg_at_first_resolve"] is True  # prereg persisted BEFORE the first observation
+    assert isinstance(result, GateResult)
 
 
 def test_require_kwarg_raises_naming_the_missing_input():

@@ -24,7 +24,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .conflation_gate import GateResult, Pair, Thresholds
+from .conflation_gate import GateResult
 from .cross_cohort_devapi_sweep import ResolvedRows, score_arm
 from .gate_live_assemble import assemble_arms, run_gate
 from .gate_live_canary import attested_canary
@@ -134,28 +134,57 @@ def _independent_maps(a_names, b_names, oracle_resolver):
     return a_independent, b_independent
 
 
-def _build_gate(
+def _build_prereg(
     *,
-    arms_specs: Mapping,
-    a_names: Sequence[str],
-    b_names: Sequence[str],
-    replicates: int,
-    resolve_fn: ResolveFn,
-    oracle_resolver,
-    masks_by_arm: Mapping[str, Mapping[Pair, frozenset]],
-    adjudicable_pairs: Sequence[Pair],
-    known_conflations_path: str | Path | None,
-    thresholds: Thresholds,
-    cold_canary_expected: str,
-    pair_id: str,
+    arms_specs,
+    masks_by_arm,
+    adjudicable_pairs,
+    known_conflations_path,
+    baseline_refused_fraction,
+    thresholds,
+    cold_canary_expected,
+    pair_id,
     fetch=fetch_kg_build_info,
-    shared_prefix: str = "CHEBI",
 ):
-    """Testable orchestration core: resolve -> score -> plant -> assemble -> prereg -> gate.
+    """Build the pre-registration contract + manifest BEFORE any arm is observed (R4/R23).
 
-    All I/O is injected (``resolve_fn`` for the dev API, ``oracle_resolver`` for PubChem-by-name,
-    ``fetch`` for the KG build fingerprint), so this runs fully offline under fakes. Returns
-    ``(prereg, manifest, result, caches)``.
+    ``baseline_refused_fraction`` is a PRE-REGISTERED input (from a prior characterization), NOT computed
+    from this run's baseline — pinning it here keeps the A1 refused-rise expectation independent of the
+    observation. ``fetch`` reads each arm's KG build identity (a pre-observation pin). Returns
+    ``(prereg, manifest, known_conflations)``.
+    """
+    known = load_known_conflations(known_conflations_path)
+    prereg, manifest = build_prereg(
+        arms={k: arms_specs[k] for k in ("baseline", "treatment")},
+        refmet_masks=masks_by_arm,
+        adjudicable_pairs=list(adjudicable_pairs),
+        known_conflations=list(known),
+        baseline_refused_fraction=baseline_refused_fraction,
+        thresholds=thresholds,
+        cold_canary_expected=cold_canary_expected,
+        pair_ids=(pair_id,),
+        fetch=fetch,
+    )
+    return prereg, manifest, known
+
+
+def _observe_and_gate(
+    prereg,
+    *,
+    arms_specs,
+    a_names,
+    b_names,
+    replicates,
+    resolve_fn,
+    oracle_resolver,
+    masks_by_arm,
+    known,
+    shared_prefix="CHEBI",
+):
+    """Observe (resolve+score) the arms, build+verify the plant, assemble, run the hardened gate.
+
+    Called ONLY after the prereg is built and persisted, so the contract is fixed before observation.
+    Returns ``(result, caches)``.
     """
     a_independent, b_independent = _independent_maps(a_names, b_names, oracle_resolver)
 
@@ -180,7 +209,6 @@ def _build_gate(
     # Positive-control plant: force known-bad pairs from the BASELINE rows onto a shared non-structural
     # CURIE so they link, and verify the certificate refutes them under the SAME oracle (raises if the
     # plant is degenerate — never a silent good self-test).
-    known = load_known_conflations(known_conflations_path)
     plant_a, plant_b = build_plant_rows(baseline_rows, known, shared_prefix)
     verify_plant_refutes(plant_a, plant_b, a_independent, b_independent)
     plant_score = score_arm(plant_a, plant_b, a_independent, b_independent)
@@ -189,32 +217,70 @@ def _build_gate(
     canary_by_arm["plant"] = canary_by_arm["baseline"]  # synthetic, derived from the cold baseline rows
 
     assembled = assemble_arms(reps_by_arm, canary_by_arm, masks_by_arm)
+    result = run_gate(prereg, assembled, caches)
+    return result, caches
 
-    b0 = reps_by_arm["baseline"][0].certified
-    total = b0.certified + b0.refuted + b0.refused
-    baseline_refused_fraction = (b0.refused / total) if total else 0.0
 
-    prereg, manifest = build_prereg(
-        arms={k: arms_specs[k] for k in ("baseline", "treatment")},
-        refmet_masks=masks_by_arm,
-        adjudicable_pairs=list(adjudicable_pairs),
-        known_conflations=list(known),
+def _run_gate_flow(
+    out: Path,
+    *,
+    arms_specs,
+    a_names,
+    b_names,
+    replicates,
+    resolve_fn,
+    oracle_resolver,
+    masks_by_arm,
+    adjudicable_pairs,
+    known_conflations_path,
+    baseline_refused_fraction,
+    thresholds,
+    cold_canary_expected,
+    pair_id,
+    fetch=fetch_kg_build_info,
+):
+    """Ordered flow: build prereg -> PERSIST prereg.json -> observe+gate -> persist result.json.
+
+    Persisting the prereg BEFORE observation is the pre-registration guarantee (R4/R23): the contract is
+    on disk before any arm is resolved, so an interrupted run still leaves its pinned contract, and a
+    successful run's contract cannot have been shaped by what was observed. All I/O is injected, so a
+    test drives the whole ordered flow offline. Returns the GateResult.
+    """
+    prereg, manifest, known = _build_prereg(
+        arms_specs=arms_specs,
+        masks_by_arm=masks_by_arm,
+        adjudicable_pairs=adjudicable_pairs,
+        known_conflations_path=known_conflations_path,
         baseline_refused_fraction=baseline_refused_fraction,
         thresholds=thresholds,
         cold_canary_expected=cold_canary_expected,
-        pair_ids=(pair_id,),
+        pair_id=pair_id,
         fetch=fetch,
     )
-    result = run_gate(prereg, assembled, caches)
-    return prereg, manifest, result, caches
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "prereg.json").write_text(json.dumps(manifest, indent=2, default=str))  # BEFORE observation
+    result, _caches = _observe_and_gate(
+        prereg,
+        arms_specs=arms_specs,
+        a_names=a_names,
+        b_names=b_names,
+        replicates=replicates,
+        resolve_fn=resolve_fn,
+        oracle_resolver=oracle_resolver,
+        masks_by_arm=masks_by_arm,
+        known=known,
+    )
+    _persist_result(out, result)
+    return result
 
 
 def _execute_gate(arms, *, replicates: int = 3, **kwargs) -> GateResult:  # pragma: no cover - live
-    """Supervised live gate: wire the injected core to the real dev API + PubChem oracle, then persist.
+    """Supervised live gate: wire the ordered flow to the real dev API + PubChem oracle.
 
     Operator kwargs (analysis inputs): ``a_names``/``b_names`` (the pair's two panels), ``masks_by_arm``,
-    ``adjudicable_pairs``, ``known_conflations_path``, ``thresholds``, ``cold_canary_expected``,
-    ``pair_id``. The API key is read header-only from ``/tmp/.bmk`` and never persisted.
+    ``adjudicable_pairs``, ``known_conflations_path``, ``baseline_refused_fraction`` (pre-registered from
+    a prior characterization), ``thresholds``, ``cold_canary_expected``, ``pair_id``. The API key is read
+    header-only from ``/tmp/.bmk`` and never persisted.
     """
     from .scorers.independent_inchikey import PubChemInChIKeyResolver
 
@@ -224,7 +290,8 @@ def _execute_gate(arms, *, replicates: int = 3, **kwargs) -> GateResult:  # prag
     def _resolve(api_base, names):
         return _resolve_panel_live(api_base, key, names)
 
-    prereg, manifest, result, _caches = _build_gate(
+    return _run_gate_flow(
+        _out_dir(),
         arms_specs=arms,
         a_names=_require_kwarg(kwargs, "a_names"),
         b_names=_require_kwarg(kwargs, "b_names"),
@@ -234,12 +301,11 @@ def _execute_gate(arms, *, replicates: int = 3, **kwargs) -> GateResult:  # prag
         masks_by_arm=_require_kwarg(kwargs, "masks_by_arm"),
         adjudicable_pairs=_require_kwarg(kwargs, "adjudicable_pairs"),
         known_conflations_path=kwargs.get("known_conflations_path"),
+        baseline_refused_fraction=_require_kwarg(kwargs, "baseline_refused_fraction"),
         thresholds=_require_kwarg(kwargs, "thresholds"),
         cold_canary_expected=_require_kwarg(kwargs, "cold_canary_expected"),
         pair_id=_require_kwarg(kwargs, "pair_id"),
     )
-    _persist(_out_dir(), manifest, result)
-    return result
 
 
 def _execute_resolve(arms, **kwargs):  # pragma: no cover - supervised live network step
@@ -281,12 +347,9 @@ def _execute_resolve(arms, **kwargs):  # pragma: no cover - supervised live netw
     return score
 
 
-def _persist(out: Path, prereg_manifest: dict, result: GateResult) -> Path:  # pragma: no cover - live
-    """Persist prereg.json FIRST, then result.json (R23). Returns the run directory."""
+def _persist_result(out: Path, result: GateResult) -> Path:
+    """Persist result.json (the prereg.json contract is written earlier, before observation). Returns out."""
     out.mkdir(parents=True, exist_ok=True)
-    # prereg.json is written BEFORE result.json (R23) so the pre-registered contract is on disk even if
-    # the observation step is interrupted.
-    (out / "prereg.json").write_text(json.dumps(prereg_manifest, indent=2, default=str))
     (out / "result.json").write_text(
         json.dumps(
             {

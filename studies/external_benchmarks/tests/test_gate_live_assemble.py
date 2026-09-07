@@ -91,9 +91,11 @@ def test_too_few_replicates_abstains():
 
 
 def test_plant_that_abstains_still_aborts():
-    # Edge: a plant whose self-test decision is ABSTAIN (refused rose, certified flat) != required FAIL
-    # -> ABORT (the self-test is conservative: anything but the required verdict invalidates the gate).
-    abstaining_plant = [_score(3, 2, 9)] * 3
+    # Edge: the plant is self-tested against a CLEAN zero reference over its own pairs, so a plant whose
+    # decision is ABSTAIN (refused rose, certified + refuted flat) != required FAIL -> ABORT (the
+    # self-test is conservative: anything but the required verdict invalidates the gate). refuted=0 here,
+    # so it cannot produce the FAIL a valid plant would (verify_plant_refutes enforces refuted>=1 upstream).
+    abstaining_plant = [_score(0, 0, 9)] * 3
     arms = _arms([_score(3, 2, 1)] * 3, [_score(3, 0, 1)] * 3, abstaining_plant)
     assert run_gate(_prereg(), arms, caches=_DISTINCT).decision == "ABORT"
 

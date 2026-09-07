@@ -34,6 +34,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
 from .cross_cohort_devapi_sweep import ArmScore, ResolvedRows, arms_look_confounded
+from .scorers.cross_cohort_overlap import OverlapResult
+from .scorers.independent_link_certificate_overlap import CertifiedOverlap
 
 # A cross-cohort link identifier: (a_name, b_name). Matches ``CertifiedOverlap.per_link`` keys.
 Pair = tuple[str, str]
@@ -426,6 +428,21 @@ def _arm_pairs(arm: ArmReplicates) -> frozenset[Pair]:
     return frozenset(pairs)
 
 
+def _empty_reference() -> ArmScore:
+    """A clean, zero-link reference for the positive-control self-test.
+
+    The positive control compares the KNOWN-BAD plant against a CLEAN reference (no links) over the
+    plant's own pairs, so a planted refutation ALWAYS registers as a rise (FAIL) — even for a
+    baseline-derived plant. The documented plant source (``refuted_pairs.json``) is built FROM baseline
+    refutations, so the OBSERVED baseline already refutes those pairs; comparing plant-vs-baseline over
+    them would zero the delta (NOOP) and force a spurious ABORT on a perfectly valid plant. A clean
+    reference makes the self-test a robust probe of the decision core's FAIL path, independent of the
+    baseline's own conflation state.
+    """
+    empty = OverlapResult(links=(), n_links=0, n_a_linked=0, n_b_linked=0, n_a_comparable=0, n_b_comparable=0)
+    return ArmScore(curie=empty, stability=empty, certified=CertifiedOverlap(certified=0, refuted=0, refused=0, per_link=()))
+
+
 def evaluate_conflation_gate(
     prereg: Prereg,
     arms: Mapping[str, ArmReplicates],
@@ -464,12 +481,16 @@ def evaluate_conflation_gate(
     # aggregate-only tests) falls back to full-total scoring, matching the prior behavior.
     control_arm = arms[prereg.positive_control_arm]
     control_pairs = _arm_pairs(control_arm)
-    control_floor = _pooled_floor(baseline, control_arm, control_pairs)
-    b_rep_control = representative(baseline, control_pairs)
+    control_floor = noise_floor(control_arm, control_pairs)
     control_rep = representative(control_arm, control_pairs)
 
+    # Compare the plant against a CLEAN zero reference over its OWN pairs (not the observed baseline):
+    # the documented plant is built from baseline refutations, so a baseline reference would already
+    # carry those refutations and zero the delta (spurious NOOP -> ABORT). Against a clean reference a
+    # planted refutation always registers as a rise -> FAIL, so the self-test stays a valid probe of the
+    # decision core's FAIL path regardless of the baseline's conflation state.
     abort = positive_control_selftest(
-        prereg, b_rep_control, control_rep, control_floor, control_pairs, prereg.thresholds
+        prereg, _empty_reference(), control_rep, control_floor, control_pairs, prereg.thresholds
     )
     if abort is not None:
         return dataclasses.replace(abort, excluded_pairs=excluded)

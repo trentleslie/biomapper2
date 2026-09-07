@@ -75,3 +75,25 @@ def test_plant_refutation_outside_kept_population_is_still_detected():
     assert res.decision != "ABORT"  # plant detected over its own population; gate not invalidated
     assert res.positive_control_ok is not False
     assert res.decision == "NOOP"  # baseline == treatment over the kept link
+
+
+def test_baseline_derived_plant_is_still_detected_not_aborted():
+    # The documented plant source (refuted_pairs.json) is built FROM baseline refutations, so the
+    # OBSERVED baseline ALSO refutes the plant's pairs. Comparing plant-vs-baseline over those pairs
+    # would see refuted N == N -> NOOP -> spurious ABORT (Greptile #62, round 2). Comparing against a
+    # clean reference registers the planted refutation as a rise -> FAIL -> the run proceeds.
+    prereg = _prereg()
+    mask = {("x", "y"): frozenset({"RM:1"})}  # kept population = the real link, NOT the plant pair
+    # baseline itself refutes the conflation pair (p1,q1) — mirrors a baseline-derived plant source
+    base_reps = tuple(
+        _score(1, 1, 0, per_link=(("x", "y", "certified"), ("p1", "q1", "refuted"))) for _ in range(3)
+    )
+    baseline = ArmReplicates("baseline", base_reps, "COLD_abc", mask)
+    treatment = ArmReplicates("treatment", base_reps, "COLD_abc", mask)  # NOOP over the kept link
+    plant_reps = tuple(_score(0, 1, 0, per_link=(("p1", "q1", "refuted"),)) for _ in range(3))
+    plant = ArmReplicates("kg_reresolution", plant_reps, "COLD_abc", {})
+    arms = {"baseline": baseline, "treatment": treatment, "kg_reresolution": plant}
+
+    res = evaluate_conflation_gate(prereg, arms)
+    assert res.decision != "ABORT"  # plant detected against the clean reference, not zeroed by baseline
+    assert res.positive_control_ok is not False
