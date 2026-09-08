@@ -3,7 +3,8 @@
 The default majority vote (max() over kg_ids_dict) had no stable tie-break, so a count tie
 resolved by dict-iteration order = Kestrel API-response order = batch/process history. These tests
 pin the tie-break to a deterministic total order and assert a genuine tie is logged (the coin-flip
-stays visible in run logs). No network: _choose_best_kg_id is pure over its dict/category args here.
+stays visible in run logs). No network: get_descendants is stubbed and _choose_best_kg_id is pure
+over its dict/category args here.
 """
 
 import logging
@@ -11,9 +12,19 @@ from unittest.mock import MagicMock
 
 from biomapper2.core.resolver import REFMET_ANNOTATOR, Resolver
 
+# Biolink descendant sets the resolver consults: SmallMolecule's subtree includes Drug so a descendant
+# category inherits the canonical-namespace policy; Disease is disjoint.
+_DESCENDANTS = {
+    "biolink:SmallMolecule": {"biolink:SmallMolecule", "biolink:Drug"},
+    "biolink:Disease": {"biolink:Disease"},
+}
 
-def _resolver() -> Resolver:
-    return Resolver(linker=MagicMock(), biolink_client=MagicMock())
+
+def _resolver(descendants: dict[str, set[str]] | None = None) -> Resolver:
+    r = Resolver(linker=MagicMock(), biolink_client=MagicMock())
+    mapping = descendants or {}
+    r.biolink_client.get_descendants.side_effect = lambda c: mapping.get(c, set())
+    return r
 
 
 def test_count_tie_is_order_independent() -> None:
@@ -38,8 +49,10 @@ def test_clear_majority_unchanged_and_unflagged(caplog) -> None:
 
 
 def test_preferred_prefix_wins_cross_namespace_tie() -> None:
-    # T3 (R2): on a tie, a preferred-namespace candidate beats a non-preferred one for the category.
-    r = _resolver()
+    # T3 (R2): on a tie the preferred-namespace candidate beats a non-preferred one. Numeric fallback
+    # alone would also pick CHEBI:500 here, so the point is proven by T_drug below; this pins the
+    # exact-category path.
+    r = _resolver(_DESCENDANTS)
     chosen, flag = r._choose_best_kg_id(
         {"PUBCHEM.COMPOUND:999": ["x"], "CHEBI:500": ["y"]},
         category="biolink:SmallMolecule",
@@ -48,11 +61,22 @@ def test_preferred_prefix_wins_cross_namespace_tie() -> None:
     assert flag is None  # determinism fix does not touch the certificate review-flag channel
 
 
+def test_descendant_category_inherits_preferred_namespace() -> None:
+    # T6 (Greptile #1): a descendant category (biolink:Drug) must inherit SmallMolecule's CHEBI policy.
+    # Numeric fallback would pick PUBCHEM.COMPOUND:1 (local 1 < 500); inheritance must pick CHEBI:500.
+    r = _resolver(_DESCENDANTS)
+    chosen, _ = r._choose_best_kg_id(
+        {"PUBCHEM.COMPOUND:1": ["x"], "CHEBI:500": ["y"]},
+        category="biolink:Drug",
+    )
+    assert chosen == "CHEBI:500"
+
+
 def test_same_namespace_tie_stable_numeric_and_logged(caplog) -> None:
     # T4 (retinol-shaped, honesty): two CHEBI siblings tie -> numeric-lower local id, deterministic
     # across orders, and the coin-flip is logged. String sort would misorder CHEBI:12777 vs CHEBI:983;
     # the numeric key must not.
-    r = _resolver()
+    r = _resolver(_DESCENDANTS)
     with caplog.at_level(logging.WARNING):
         for d in (
             {"CHEBI:132246": ["x"], "CHEBI:12777": ["y"]},
@@ -65,16 +89,17 @@ def test_same_namespace_tie_stable_numeric_and_logged(caplog) -> None:
 
 
 def test_tie_with_refmet_vote_is_determinized() -> None:
-    # T5 (R4): a count-tied small-molecule row WITH a single-node RefMet vote must resolve
-    # identically across insertion orders. RefMet agreeing with a tied candidate keeps the majority,
-    # so the tie-break's stability is what makes the RefMet branch outcome deterministic.
+    # T5 (R4, Greptile #2): descendants are configured so _is_small_molecule is True and the row
+    # ENTERS the RefMet branch (the earlier version left get_descendants an unconfigured MagicMock and
+    # returned before it). RefMet votes for one tied sibling; the stable majority must land on that node
+    # identically across insertion orders, so the RefMet-branch outcome (chosen + flag) is deterministic.
     results = set()
     for d in (
         {"CHEBI:132246": ["x"], "CHEBI:12777": ["y"]},
         {"CHEBI:12777": ["y"], "CHEBI:132246": ["x"]},
     ):
-        r = _resolver()
+        r = _resolver(_DESCENDANTS)
         assigned = {REFMET_ANNOTATOR: {"CHEBI:12777": ["y"]}}
         chosen, flag = r._choose_best_kg_id(d, kg_ids_assigned=assigned, category="biolink:SmallMolecule")
         results.add((chosen, flag))
-    assert len(results) == 1, f"non-deterministic tie x RefMet outcome: {results}"
+    assert results == {("CHEBI:12777", None)}, f"non-deterministic tie x RefMet outcome: {results}"

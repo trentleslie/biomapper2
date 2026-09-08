@@ -127,10 +127,11 @@ class Resolver:
         tied = [kg_id for kg_id, curies in kg_ids_dict.items() if len(curies) == max_count]
         if len(tied) == 1:
             return tied[0]
-        # Prefer a canonical namespace for the row's category when configured. Exact-category lookup only:
-        # subtype-descendant inheritance (which AnnotationEngine derives via biolink_client) is
-        # intentionally omitted here; the numeric fallback keeps the remainder deterministic regardless.
-        preferred = CATEGORY_PREFERRED_NAMESPACES.get(category) if category else None
+        # Prefer a canonical namespace for the row's category when configured, inheriting a configured
+        # ancestor's policy through the Biolink hierarchy (so e.g. biolink:Drug inherits SmallMolecule's
+        # CHEBI/HMDB/RM), matching the annotation path. The numeric fallback keeps ties deterministic when
+        # no policy applies.
+        preferred = self._preferred_prefixes(category)
         pool = [kg_id for kg_id in tied if kg_id.split(":", 1)[0] in preferred] if preferred else []
         chosen = min(pool or tied, key=_curie_sort_key)
         logging.warning(
@@ -227,6 +228,22 @@ class Resolver:
         if self.biolink_client is None:
             return False
         return category in self.biolink_client.get_descendants("biolink:SmallMolecule")
+
+    def _preferred_prefixes(self, category: str | None) -> set[str]:
+        """Preferred namespaces for a category, inheriting configured Biolink ancestors' policy.
+
+        Mirrors ``AnnotationEngine._category_preferred_prefixes``: each configured key in
+        ``CATEGORY_PREFERRED_NAMESPACES`` applies to all its Biolink descendants, so a descendant category
+        (e.g. ``biolink:Drug``) inherits ``biolink:SmallMolecule``'s prefixes. Returns the union on overlap;
+        empty set when no policy applies or ``biolink_client`` is unavailable. Called only on a genuine tie.
+        """
+        if not category or self.biolink_client is None:
+            return set()
+        preferred: set[str] = set()
+        for configured, prefixes in CATEGORY_PREFERRED_NAMESPACES.items():
+            if category in self.biolink_client.get_descendants(configured):
+                preferred |= prefixes
+        return preferred
 
     def _connectivity_match(self, node_a: str, node_b: str) -> bool | None:
         """Delegate the InChIKey-connectivity test to the StructureResolver (None if unavailable)."""

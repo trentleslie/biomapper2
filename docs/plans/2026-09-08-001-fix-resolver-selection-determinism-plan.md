@@ -161,9 +161,11 @@ parity -> PR to fork trentleslie/biomapper2 base dev -> Greptile loop to 5/5 -> 
 straight to org/main.
 
 ## Open questions (implementation-time)
-- O1: Reconstruct the category->preferred-prefix set in Resolver from `CATEGORY_PREFERRED_NAMESPACES` +
-  `self.biolink_client` (matching AnnotationEngine's descendant-expansion semantics), OR ship the
-  numeric/lexicographic floor alone. The floor is a valid fallback; do not block the fix on the wiring.
+- O1 (RESOLVED 2026-09-08, post-Greptile): `_preferred_prefixes` reconstructs the category->preferred
+  set in Resolver from `CATEGORY_PREFERRED_NAMESPACES` + `self.biolink_client.get_descendants`, so a
+  descendant category (e.g. `biolink:Drug`) inherits its configured ancestor's policy — matching
+  AnnotationEngine's semantics. The numeric total-order fallback still guarantees determinism when no
+  policy applies.
 - O2 (RESOLVED by the Unit 1 audit, 2026-09-08): `resolver.py:286 matches.pop()` is safe (guarded by
   `len(matches) == 1`). Two genuine order-dependent sites remain UPSTREAM at the annotator —
   `core/annotators/kestrel_hybrid.py:191/193` (`max(..., key=score)` picks first on a score tie, gene
