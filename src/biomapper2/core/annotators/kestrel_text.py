@@ -5,7 +5,7 @@ import pandas as pd
 
 from ...config import HYBRID_SEARCH_LIMIT, KESTREL_BATCH_SIZE_SEARCH
 from ...utils import AssignedIDsDict, kestrel_request, text_is_not_empty
-from .base import BaseAnnotator, is_on_category
+from .base import BaseAnnotator, is_on_category, stable_result_order
 
 
 class KestrelTextSearchAnnotator(BaseAnnotator):
@@ -34,6 +34,10 @@ class KestrelTextSearchAnnotator(BaseAnnotator):
             else:
                 results = self._kestrel_text_search(search_term, category, prefixes, limit=HYBRID_SEARCH_LIMIT)
                 term_results = results[search_term]
+
+            # Deterministic candidate order before the first-on-category scan: an exact score tie must
+            # not be resolved by Kestrel's run-varying response order (Axis 3).
+            term_results = stable_result_order(term_results)
 
             annotations: dict[str, dict[str, dict[str, Any]]] = {}
             # Commit-point category validator, same as kestrel-hybrid. The server-side `category` filter
