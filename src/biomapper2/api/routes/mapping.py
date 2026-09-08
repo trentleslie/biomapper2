@@ -11,6 +11,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
+from ...core.annotators.metabolomics_workbench import MetabolomicsWorkbenchAnnotator
 from ..auth import validate_api_key
 from ..models import (
     BatchMappingRequest,
@@ -53,6 +54,7 @@ def extract_mapping_result(mapped_item: dict[str, Any] | pd.Series, original_nam
         chosen_kg_id=mapped_item.get("chosen_kg_id"),
         chosen_kg_id_review=mapped_item.get("chosen_kg_id_review"),
         resolution_certificate=certificate,
+        refmet_availability=mapped_item.get("refmet_availability") or "not_queried",
         kg_equivalent_ids=mapped_item.get("kg_equivalent_ids", {}) or {},
         kg_ids=mapped_item.get("kg_ids", {}) or {},
         assigned_ids=mapped_item.get("assigned_ids", {}) or {},
@@ -147,47 +149,56 @@ async def map_batch(
     successful = 0
     failed = 0
 
-    for entity_req in body.entities:
-        try:
-            # Build entity dict
-            entity: dict[str, Any] = {"name": entity_req.name}
-            provided_id_fields = []
+    # Arm the shared RefMet per-batch wall-clock deadline across the WHOLE per-entity loop, so a
+    # slow-but-succeeding endpoint cannot make an N-row batch scale unbounded (the single-entity
+    # path never arms it). Disarmed in finally so it never leaks into the next request.
+    mw_annotator = mapper.annotation_engine.annotator_registry.get(MetabolomicsWorkbenchAnnotator.slug)
+    armed_batch_deadline = mw_annotator.arm_batch_deadline() if mw_annotator is not None else False
+    try:
+        for entity_req in body.entities:
+            try:
+                # Build entity dict
+                entity: dict[str, Any] = {"name": entity_req.name}
+                provided_id_fields = []
 
-            for vocab, ids in entity_req.identifiers.items():
-                field_name = vocab.lower()
-                if isinstance(ids, list):
-                    entity[field_name] = ",".join(str(i) for i in ids)
-                else:
-                    entity[field_name] = str(ids)
-                provided_id_fields.append(field_name)
+                for vocab, ids in entity_req.identifiers.items():
+                    field_name = vocab.lower()
+                    if isinstance(ids, list):
+                        entity[field_name] = ",".join(str(i) for i in ids)
+                    else:
+                        entity[field_name] = str(ids)
+                    provided_id_fields.append(field_name)
 
-            # Run mapping
-            mapped_item = mapper.map_entity_to_kg(
-                item=entity,
-                name_field="name",
-                provided_id_fields=provided_id_fields,
-                entity_type=entity_req.entity_type,
-                vocab=entity_req.options.vocab,
-                array_delimiters=entity_req.options.array_delimiters,
-                annotation_mode=entity_req.options.annotation_mode,
-                annotators=entity_req.options.annotators,
-                prefer_human=entity_req.options.prefer_human,
-                prefer_canonical=entity_req.options.prefer_canonical,
-            )
-
-            result = extract_mapping_result(mapped_item, entity_req.name)
-            results.append(result)
-            successful += 1
-
-        except Exception as e:
-            logger.exception(f"Error mapping entity '{entity_req.name}': {e}")
-            results.append(
-                EntityMappingResult(
-                    name=entity_req.name,
-                    error=str(e),
+                # Run mapping
+                mapped_item = mapper.map_entity_to_kg(
+                    item=entity,
+                    name_field="name",
+                    provided_id_fields=provided_id_fields,
+                    entity_type=entity_req.entity_type,
+                    vocab=entity_req.options.vocab,
+                    array_delimiters=entity_req.options.array_delimiters,
+                    annotation_mode=entity_req.options.annotation_mode,
+                    annotators=entity_req.options.annotators,
+                    prefer_human=entity_req.options.prefer_human,
+                    prefer_canonical=entity_req.options.prefer_canonical,
                 )
-            )
-            failed += 1
+
+                result = extract_mapping_result(mapped_item, entity_req.name)
+                results.append(result)
+                successful += 1
+
+            except Exception as e:
+                logger.exception(f"Error mapping entity '{entity_req.name}': {e}")
+                results.append(
+                    EntityMappingResult(
+                        name=entity_req.name,
+                        error=str(e),
+                    )
+                )
+                failed += 1
+    finally:
+        if mw_annotator is not None and armed_batch_deadline:
+            mw_annotator.disarm_batch_deadline()
 
     processing_time = (time.time() - start_time) * 1000
 
@@ -201,6 +212,10 @@ async def map_batch(
             "total": len(body.entities),
             "successful": successful,
             "failed": failed,
+            # Run-level RefMet availability metric (D5): rows a degraded RefMet service left
+            # uncovered. Cold-run-attributable only — the RefMet HTTP cache serves successes, so a
+            # warm rerun understates this count.
+            "refmet_unavailable": sum(1 for r in results if r.refmet_availability == "unavailable"),
         },
     )
 
