@@ -56,6 +56,13 @@ _EXTRA_FIELDS = (
 
 _WS = re.compile(r"\s+")
 
+# The only statuses a well-formed freeze row may carry (they mirror the AVAILABILITY_* values the
+# builder writes). A row outside this set — or a `voted` row with no refmet_id — means the freeze is
+# corrupt; `_parse` rejects the WHOLE freeze so it is not silently trusted as authoritative (a
+# malformed row would otherwise resolve to a spurious no_match and drop a real vote). A rejected
+# freeze reports NOT present, so resolution falls back to live RefMet with a loud warning.
+_VALID_STATUSES = frozenset({"voted", "no_match", "unavailable"})
+
 
 def _normalize(name: str) -> str:
     """Secondary lookup key: lower-case, stripped, internal whitespace collapsed to one space."""
@@ -98,7 +105,9 @@ def reset() -> None:
 
 
 def _parse(path: Path) -> _LoadedSnapshot:
-    """Read and index the freeze TSV. Raises on an unreadable file or a missing header."""
+    """Read and index the freeze TSV. Raises on an unreadable file, a missing header, or a malformed
+    row (unknown status, or a ``voted`` row with no ``refmet_id``) — a corrupt freeze must be rejected,
+    not trusted as authoritative."""
     version = config.derive_refmet_snapshot_version(path)
     by_exact: dict[str, FreezeHit] = {}
     by_normalized: dict[str, FreezeHit] = {}
@@ -112,6 +121,10 @@ def _parse(path: Path) -> _LoadedSnapshot:
                 continue
             status = (row.get("status") or "").strip()
             refmet_id = (row.get("refmet_id") or "").strip() or None
+            if status not in _VALID_STATUSES:
+                raise ValueError(f"RefMet freeze {path} has an unknown status {status!r} for {query_name!r}")
+            if status == "voted" and not refmet_id:
+                raise ValueError(f"RefMet freeze {path} has a 'voted' row with no refmet_id for {query_name!r}")
             extra = {f: (row.get(f) or "").strip() for f in _EXTRA_FIELDS}
             hit = FreezeHit(status=status, refmet_id=refmet_id, version=version, extra=extra)
             # First occurrence wins on a duplicate key; the freeze is expected to be unique per name.

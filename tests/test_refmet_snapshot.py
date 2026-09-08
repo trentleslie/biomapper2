@@ -72,3 +72,36 @@ def test_normalized_fallback_matches_case_and_whitespace(loaded):
     hit = loaded.lookup("  cholic   ACID ")
     assert hit is not None
     assert hit.refmet_id == "RM0041813"
+
+
+def test_malformed_freeze_is_rejected_not_trusted(monkeypatch, tmp_path):
+    # A 'voted' row with no refmet_id (and an unknown status) makes the freeze corrupt. It must be
+    # REJECTED (is_present False -> live fallback), never silently served as an authoritative no_match
+    # that drops a real vote.
+    cols = [
+        "query_name",
+        "status",
+        "refmet_id",
+        "refmet_name",
+        "inchi_key",
+        "formula",
+        "exactmass",
+        "pubchem_cid",
+        "super_class",
+        "main_class",
+        "sub_class",
+        "panels",
+    ]
+    header = "\t".join(cols) + "\n"
+
+    def _row(name, status, rid):
+        cells = [name, status, rid] + [""] * (len(cols) - 3)
+        return "\t".join(cells) + "\n"
+
+    for bad_row in (_row("Cholic acid", "voted", ""), _row("Cholic acid", "bogus", "RM0041813")):
+        freeze = tmp_path / "bad_freeze.tsv"
+        freeze.write_text(header + bad_row, encoding="utf-8")
+        monkeypatch.setenv("REFMET_SNAPSHOT_PATH", str(freeze))
+        refmet_snapshot.reset()
+        assert refmet_snapshot.is_present() is False
+        assert refmet_snapshot.lookup("Cholic acid") is None

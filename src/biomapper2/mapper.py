@@ -671,8 +671,12 @@ class Mapper:
         # Run-level RefMet availability metric (D5). Cold-run-attributable only (see the count above).
         stats_summary["refmet_unavailable_rows"] = refmet_unavailable_rows
         stats_summary["refmet_total_rows"] = len(certificate_rows)
-        # Run-level RefMet source provenance (counts by source) + which freeze served the run.
+        # Run-level RefMet source provenance (counts by source) + which freeze served the run. Stamp the
+        # freeze version ONLY when the run actually used/consulted the snapshot (a snapshot-attributable
+        # source has a nonzero count); otherwise a non-small-molecule or live-fallback run would name a
+        # freeze that served no row, contradicting refmet_source_counts.
         stats_summary["refmet_source_counts"] = refmet_source_counts
-        stats_summary["refmet_snapshot_version"] = refmet_snapshot.version()
+        snapshot_used = any(refmet_source_counts.get(s, 0) for s in _SNAPSHOT_ATTRIBUTABLE_SOURCES)
+        stats_summary["refmet_snapshot_version"] = refmet_snapshot.version() if snapshot_used else None
 
         return str(output_tsv_path), stats_summary
