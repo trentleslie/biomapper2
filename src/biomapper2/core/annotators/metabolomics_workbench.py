@@ -69,6 +69,9 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     MAX_RETRIES: int = 1
     RETRY_BACKOFF_S: float = 0.5
     BATCH_DEADLINE_S: float = 120.0
+    # Class-level default so an instance built via __new__ (some tests bypass __init__) still has a
+    # safe unarmed value; the deadline branches then no-op without touching the injectable clock.
+    _batch_deadline: float | None = None
 
     def __init__(
         self,
@@ -99,6 +102,21 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
             self.RETRY_BACKOFF_S = retry_backoff_s
         if batch_deadline_s is not None:
             self.BATCH_DEADLINE_S = batch_deadline_s
+
+    def arm_batch_deadline(self) -> None:
+        """Start the shared per-batch wall-clock bound. Idempotent: only the FIRST arm sets the
+        clock, so an API /batch loop that maps one entity at a time bounds the WHOLE loop, not each
+        row. Pair with ``disarm_batch_deadline`` in a finally.
+        """
+        if self._batch_deadline is None:
+            self._batch_deadline = self._clock() + self.BATCH_DEADLINE_S
+
+    def disarm_batch_deadline(self) -> None:
+        """Clear the shared per-batch deadline so the next batch (or a single lookup) is unbounded."""
+        self._batch_deadline = None
+
+    def _past_batch_deadline(self) -> bool:
+        return self._batch_deadline is not None and self._clock() >= self._batch_deadline
 
     def get_annotations(
         self,
@@ -212,14 +230,13 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     def _fetch_all(self, names: list[str]) -> dict[str, RefMetResult]:
         """Fetch each name into a RefMetResult, stopping network work at the hard batch deadline."""
         cache: dict[str, RefMetResult] = {}
-        deadline = self._clock() + self.BATCH_DEADLINE_S
-        for name in names:
-            if self._clock() >= deadline:
-                # Past the deadline: mark the tail UNAVAILABLE with NO network call. This bounds
-                # worst-case wall-clock without loosening the breaker and without serial pacing.
-                cache[name] = RefMetResult(AVAILABILITY_UNAVAILABLE)
-            else:
+        self.arm_batch_deadline()
+        try:
+            for name in names:
+                # _fetch_refmet_data marks names past the armed deadline UNAVAILABLE with no network.
                 cache[name] = self._fetch_refmet_data(name)
+        finally:
+            self.disarm_batch_deadline()
         return cache
 
     def _fetch_refmet_data(self, metabolite_name: str) -> RefMetResult:
@@ -229,6 +246,9 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         service did not answer. A 200 whose refmet_id is "-" (or a non-dict body) is NO_MATCH — the
         service answered "no such metabolite". Data is VOTED.
         """
+        if self._past_batch_deadline():
+            # Past the shared batch deadline: mark UNAVAILABLE with NO network call.
+            return RefMetResult(AVAILABILITY_UNAVAILABLE)
         try:
             data = self._do_refmet_request(metabolite_name)
         except CircuitBreakerError:
@@ -258,7 +278,8 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
             try:
                 return self._request_once(metabolite_name)
             except requests.RequestException:
-                if attempt + 1 >= attempts:
+                # Do not spend another attempt+backoff once the shared batch deadline has passed.
+                if attempt + 1 >= attempts or self._past_batch_deadline():
                     raise
                 self._sleep(self.RETRY_BACKOFF_S)
         return None  # unreachable: the loop returns or raises
@@ -278,7 +299,12 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         """
         url = f"{self.BASE_URL}/{quote(metabolite_name, safe='')}"
 
-        response = self._session.get(url, timeout=self.REQUEST_TIMEOUT_S)
+        # When a batch deadline is armed, cap this attempt's timeout by the remaining budget so a
+        # lookup started just before the deadline cannot run a full timeout past it.
+        timeout = self.REQUEST_TIMEOUT_S
+        if self._batch_deadline is not None:
+            timeout = max(0.1, min(timeout, self._batch_deadline - self._clock()))
+        response = self._session.get(url, timeout=timeout)
         response.raise_for_status()
         data = response.json()
 
@@ -288,4 +314,7 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
                 return None
             return data
 
-        return None
+        # A 200 whose body is not a dict (null, an array, a proxy-injected blob) is a DEGRADED
+        # response, not RefMet's refmet_id == "-" negative. Surface it as UNAVAILABLE (raise ->
+        # classified UNAVAILABLE by _fetch_refmet_data), never a genuine no-match.
+        raise requests.RequestException(f"non-dict RefMet response for '{metabolite_name}'")

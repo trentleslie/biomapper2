@@ -12,6 +12,7 @@ fails if the annotator change is reverted.
 from __future__ import annotations
 
 import itertools
+from unittest.mock import MagicMock
 
 import pandas as pd
 import pytest
@@ -145,3 +146,34 @@ def test_voted_result_carries_the_id_in_both_the_vote_and_availability():
     assert ann.get_availability(df.iloc[0], "name", cache=cache) == {SLUG: AVAILABILITY_VOTED}
     # A row with no name is never queried.
     assert ann.get_availability(pd.Series({"name": None}), "name", cache=cache) == {SLUG: AVAILABILITY_NOT_QUERIED}
+
+
+def test_non_dict_success_is_unavailable_not_no_match():
+    # A 200 whose JSON body is not a dict (null/array/proxy blob) is a DEGRADED response, not RefMet's
+    # dash negative — it must classify UNAVAILABLE, never a genuine no-match.
+    ann = _annotator(max_retries=0)
+    resp = MagicMock()
+    resp.raise_for_status = lambda: None
+    resp.json = lambda: []  # valid JSON, wrong shape
+    ann._session = MagicMock()
+    ann._session.get = lambda url, timeout: resp
+    result = ann._fetch_refmet_data("weird")
+    assert result.status == AVAILABILITY_UNAVAILABLE
+
+
+def test_armed_deadline_bounds_a_per_entity_loop_without_network():
+    # The API /batch route arms the shared deadline once, then maps entities one at a time. Once the
+    # deadline passes, each subsequent per-entity fetch is UNAVAILABLE with NO network call.
+    ticks = itertools.chain([0.0, 0.0, 100.0, 100.0], itertools.repeat(100.0))
+    ann = _annotator(batch_deadline_s=10.0, clock=lambda: next(ticks))
+    called: list[str] = []
+    ann._request_once = lambda metabolite_name: (called.append(metabolite_name), {"refmet_id": "RM"})[1]
+    ann.arm_batch_deadline()  # arm read: 0.0 -> deadline 10.0
+    try:
+        first = ann._fetch_refmet_data("a")  # clock 0.0 < 10 -> network
+        second = ann._fetch_refmet_data("b")  # clock 100 >= 10 -> UNAVAILABLE, no network
+    finally:
+        ann.disarm_batch_deadline()
+    assert first.status == AVAILABILITY_VOTED
+    assert second.status == AVAILABILITY_UNAVAILABLE
+    assert called == ["a"]

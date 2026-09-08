@@ -11,6 +11,7 @@ import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
+from ...core.annotators.metabolomics_workbench import MetabolomicsWorkbenchAnnotator
 from ..auth import validate_api_key
 from ..models import (
     BatchMappingRequest,
@@ -148,47 +149,57 @@ async def map_batch(
     successful = 0
     failed = 0
 
-    for entity_req in body.entities:
-        try:
-            # Build entity dict
-            entity: dict[str, Any] = {"name": entity_req.name}
-            provided_id_fields = []
+    # Arm the shared RefMet per-batch wall-clock deadline across the WHOLE per-entity loop, so a
+    # slow-but-succeeding endpoint cannot make an N-row batch scale unbounded (the single-entity
+    # path never arms it). Disarmed in finally so it never leaks into the next request.
+    mw_annotator = mapper.annotation_engine.annotator_registry.get(MetabolomicsWorkbenchAnnotator.slug)
+    if mw_annotator is not None:
+        mw_annotator.arm_batch_deadline()
+    try:
+        for entity_req in body.entities:
+            try:
+                # Build entity dict
+                entity: dict[str, Any] = {"name": entity_req.name}
+                provided_id_fields = []
 
-            for vocab, ids in entity_req.identifiers.items():
-                field_name = vocab.lower()
-                if isinstance(ids, list):
-                    entity[field_name] = ",".join(str(i) for i in ids)
-                else:
-                    entity[field_name] = str(ids)
-                provided_id_fields.append(field_name)
+                for vocab, ids in entity_req.identifiers.items():
+                    field_name = vocab.lower()
+                    if isinstance(ids, list):
+                        entity[field_name] = ",".join(str(i) for i in ids)
+                    else:
+                        entity[field_name] = str(ids)
+                    provided_id_fields.append(field_name)
 
-            # Run mapping
-            mapped_item = mapper.map_entity_to_kg(
-                item=entity,
-                name_field="name",
-                provided_id_fields=provided_id_fields,
-                entity_type=entity_req.entity_type,
-                vocab=entity_req.options.vocab,
-                array_delimiters=entity_req.options.array_delimiters,
-                annotation_mode=entity_req.options.annotation_mode,
-                annotators=entity_req.options.annotators,
-                prefer_human=entity_req.options.prefer_human,
-                prefer_canonical=entity_req.options.prefer_canonical,
-            )
-
-            result = extract_mapping_result(mapped_item, entity_req.name)
-            results.append(result)
-            successful += 1
-
-        except Exception as e:
-            logger.exception(f"Error mapping entity '{entity_req.name}': {e}")
-            results.append(
-                EntityMappingResult(
-                    name=entity_req.name,
-                    error=str(e),
+                # Run mapping
+                mapped_item = mapper.map_entity_to_kg(
+                    item=entity,
+                    name_field="name",
+                    provided_id_fields=provided_id_fields,
+                    entity_type=entity_req.entity_type,
+                    vocab=entity_req.options.vocab,
+                    array_delimiters=entity_req.options.array_delimiters,
+                    annotation_mode=entity_req.options.annotation_mode,
+                    annotators=entity_req.options.annotators,
+                    prefer_human=entity_req.options.prefer_human,
+                    prefer_canonical=entity_req.options.prefer_canonical,
                 )
-            )
-            failed += 1
+
+                result = extract_mapping_result(mapped_item, entity_req.name)
+                results.append(result)
+                successful += 1
+
+            except Exception as e:
+                logger.exception(f"Error mapping entity '{entity_req.name}': {e}")
+                results.append(
+                    EntityMappingResult(
+                        name=entity_req.name,
+                        error=str(e),
+                    )
+                )
+                failed += 1
+    finally:
+        if mw_annotator is not None:
+            mw_annotator.disarm_batch_deadline()
 
     processing_time = (time.time() - start_time) * 1000
 
