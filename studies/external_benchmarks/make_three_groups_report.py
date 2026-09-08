@@ -250,12 +250,38 @@ def _cert_diagram_section(adj):
 </div></section>"""
 
 
+def _lipid_limitation(adj):
+    """Two-tier framing + honest lipid limitation (species-level lipids are refused, not certified)."""
+    rows = []
+    for c in ("arivale", "xuetal"):
+        rl = adj.get(c, {}).get("refused_species_lipid", {})
+        n = sum(rl.values()) if rl else 0
+        rows.append(f"<li><b>necs↔{c}</b>: {n} refused links are species-level lipids "
+                    "(name-harmonized only, not independently verifiable)</li>")
+    return f"""
+<section class="slide"><h2>Two-tier resolution certificate <span class="sub">(and the honest lipid limit)</span></h2>
+  <p><b>Tier 1 — structural certificate</b> (small molecules): KG-independent InChIKey; real verification
+     (certified / refuted / refused). <b>Tier 2 — name-level harmonization</b> (lipids): reported at the
+     RefMet/Goslin species level as <b>coverage, not verification</b>. The tiers carry different evidential
+     labels so the strong one never launders the weak one.</p>
+  <p class="note"><b>Why lipids can't be structure-verified:</b> a sum-composition lipid (PC 34:1, TG 54:2)
+     is an isobaric mixture with no unique structure; and Kraken already ingests LIPID MAPS + SwissLipids,
+     so any LIPID-MAPS check is circular, and the KG node exposes no independent formula/mass. So these are
+     honestly <b>refused</b> — refusing what has no independent structure is a rigor feature, not a gap.</p>
+  <ul>{''.join(rows)}</ul>
+  <p class="note">Field standard for lipid harmonization is name-level (cite + differentiate: RefMet,
+     Goslin 2.0, metLinkR, LipidLynxX). Real name-level harmonization becomes non-tautological only for a
+     cross-platform (non-Metabolon) cohort — the trigger for future Tier-2 work.</p>
+</section>
+"""
+
+
 def main() -> None:  # pragma: no cover
     data = json.loads((RUN / "three_groups.json").read_text())
     adj = json.loads((RUN / "certificate_adjudication.json").read_text())
     slides = "".join(slide(k, v) for k, v in data.items())
     bridge = json.loads((RUN / "refmet_bridge.json").read_text())
-    cert_slides = _cert_diagram_section(adj) + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge, data) + _reach615()
+    cert_slides = _cert_diagram_section(adj) + "".join(_cert_overview(c, adj) for c in ("arivale", "xuetal")) + _bridge_section(bridge, data) + _reach615() + _lipid_limitation(adj)
     tot_either = sum(v["panel_coverage"]["either"] for v in data.values())
     tot_panel = sum(v["panel_coverage"]["panel_total"] for v in data.values())
     tot_neither = sum(v["panel_coverage"]["neither"] for v in data.values())

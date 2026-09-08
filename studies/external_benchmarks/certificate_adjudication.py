@@ -10,13 +10,14 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import os
 from collections import defaultdict
 from pathlib import Path
 
 from studies.external_benchmarks.scorers.cross_cohort_overlap import curie_set
 
-RUN = Path(os.environ["AB_RUN_DIR"]).expanduser()
+RUN = Path(os.environ["AB_RUN_DIR"]).expanduser() if os.environ.get("AB_RUN_DIR") else None  # main() requires it; import stays safe for pure-helper tests
 PAIRS = ("arivale", "xuetal")
 
 
@@ -49,6 +50,17 @@ def _refmet():
         if rm and r["chemical_name"].strip().lower() not in m:
             m[r["chemical_name"].strip().lower()] = rm
     return m
+
+
+# A sum-composition ("species-level") lipid carries a C:U token (e.g. 34:1). These are isobaric mixtures
+# with no unique structure, so the independent-structure certificate cannot verify them (they land in
+# `refused`) — reported as a labeled sub-category, name-harmonized only, NOT independently verifiable.
+_SUM_COMPOSITION = re.compile(r"(?<![.\d])\d{1,3}:\d{1,2}(?![.\d])")
+
+
+def is_species_level_lipid(name: str) -> bool:
+    """True when the name is a sum-composition / species-level lipid shorthand (has a C:U token)."""
+    return bool(_SUM_COMPOSITION.search(name or ""))
 
 
 def main():  # pragma: no cover
@@ -97,6 +109,9 @@ def main():  # pragma: no cover
         out[cohort] = {
             "pair": f"necs<->{cohort}",
             "counts": {g: {v: len(groups[g][v]) for v in groups[g]} for g in groups},
+            # honest sub-label: of the refused, how many are species-level lipids (name-harmonized only,
+            # not independently verifiable) vs other refused. NOT a positive "certified/harmonized" count.
+            "refused_species_lipid": {g: sum(1 for e in groups[g]["refused"] if is_species_level_lipid(e["name"])) for g in groups},
             "examples": {g: {v: groups[g][v][:6] for v in groups[g]} for g in groups},
         }
     (RUN / "certificate_adjudication.json").write_text(json.dumps(out, indent=2))
