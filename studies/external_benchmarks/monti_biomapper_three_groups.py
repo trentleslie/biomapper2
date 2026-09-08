@@ -24,9 +24,9 @@ from pathlib import Path
 
 from studies.external_benchmarks.scorers.cross_cohort_overlap import curie_set
 
-RUN = Path(os.environ["AB_RUN_DIR"]).expanduser()
-GOLD_TSV = Path(os.environ["NECS_GOLD_TSV"]).expanduser()
-REFMET_CACHE = Path(os.environ["REFMET_CACHE"]).expanduser()
+RUN = Path(os.environ["AB_RUN_DIR"]).expanduser() if os.environ.get("AB_RUN_DIR") else None
+GOLD_TSV = Path(os.environ["NECS_GOLD_TSV"]).expanduser() if os.environ.get("NECS_GOLD_TSV") else None
+REFMET_CACHE = Path(os.environ["REFMET_CACHE"]).expanduser() if os.environ.get("REFMET_CACHE") else None
 PAIRS = ("arivale", "xuetal")
 
 
@@ -68,6 +68,14 @@ def _index(names, keyfn) -> dict[str, set[str]]:
             if k:
                 idx[k].add(n)
     return idx
+
+
+def _both_sides_have_structure(necs_block, partner_has_block: bool) -> bool:
+    """A cross-cohort link is structurally adjudicable ONLY when BOTH sides carry an independent structure
+    block. A one-sided block (e.g. NECS has one but the exact-name cohort partner does not) is NOT
+    adjudicable and must be counted as no-independent-structure, not structure-but-unlinked (Greptile #66).
+    """
+    return bool(necs_block) and bool(partner_has_block)
 
 
 def characterize(cohort: str, refmet: dict[str, str]) -> dict:
@@ -112,7 +120,11 @@ def characterize(cohort: str, refmet: dict[str, str]) -> dict:
                 adjudication["monti_only_correct" if ok else "monti_only_wrong"] += 1
         else:
             groups["neither"].append(n)
-            neither_why["structure_but_unlinked" if gblk else "no_independent_structure"] += 1
+            partner_has_block = any(coh_blk.get(p) for p in coh_by_name.get(n_norm, set())) or bool(
+                gblk and coh_by_block.get(gblk)
+            )
+            key = "structure_but_unlinked" if _both_sides_have_structure(gblk, partner_has_block) else "no_independent_structure"
+            neither_why[key] += 1
 
     # Performance-ceiling view: of the FULL cohort panel, how many metabolites harmonize to NECS at all?
     # The unharmonized remainder is the headroom a perfect harmonizer would still need to close.
