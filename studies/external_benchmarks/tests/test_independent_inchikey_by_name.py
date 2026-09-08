@@ -42,3 +42,19 @@ def test_block_for_name_is_cached():
     r.block_for_name("glutamate")
     r.block_for_name("glutamate")
     assert sess.calls == 1  # repeated name costs one fetch
+
+
+def test_block_for_name_status_marks_transient_failure_and_does_not_cache_it():
+    sess = _Session(_Resp(503, ""))  # 5xx = transient
+    r = PubChemInChIKeyResolver(session=sess)
+    assert r.block_for_name_status("glutamate") == (None, "lookup_failed")
+    r.block_for_name_status("glutamate")  # retried after "recovery" — a transient failure is never sticky
+    assert sess.calls == 2
+
+
+def test_block_for_name_status_clean_miss_is_terminal():
+    sess = _Session(_Resp(404, ""))
+    r = PubChemInChIKeyResolver(session=sess)
+    assert r.block_for_name_status("nope") == (None, "clean_miss")
+    r.block_for_name_status("nope")
+    assert sess.calls == 1  # a genuine miss IS cached (terminal)
