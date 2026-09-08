@@ -153,8 +153,7 @@ async def map_batch(
     # slow-but-succeeding endpoint cannot make an N-row batch scale unbounded (the single-entity
     # path never arms it). Disarmed in finally so it never leaks into the next request.
     mw_annotator = mapper.annotation_engine.annotator_registry.get(MetabolomicsWorkbenchAnnotator.slug)
-    if mw_annotator is not None:
-        mw_annotator.arm_batch_deadline()
+    armed_batch_deadline = mw_annotator.arm_batch_deadline() if mw_annotator is not None else False
     try:
         for entity_req in body.entities:
             try:
@@ -198,7 +197,7 @@ async def map_batch(
                 )
                 failed += 1
     finally:
-        if mw_annotator is not None:
+        if mw_annotator is not None and armed_batch_deadline:
             mw_annotator.disarm_batch_deadline()
 
     processing_time = (time.time() - start_time) * 1000

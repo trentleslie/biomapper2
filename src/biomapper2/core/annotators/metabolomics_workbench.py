@@ -103,13 +103,17 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         if batch_deadline_s is not None:
             self.BATCH_DEADLINE_S = batch_deadline_s
 
-    def arm_batch_deadline(self) -> None:
-        """Start the shared per-batch wall-clock bound. Idempotent: only the FIRST arm sets the
-        clock, so an API /batch loop that maps one entity at a time bounds the WHOLE loop, not each
-        row. Pair with ``disarm_batch_deadline`` in a finally.
+    def arm_batch_deadline(self) -> bool:
+        """Start the shared per-batch wall-clock bound; return True iff THIS call set it.
+        Only the FIRST (outermost) arm sets the clock, so an API /batch loop that maps one entity at
+        a time bounds the WHOLE loop. A nested caller (each entity re-enters ``_fetch_all``) gets
+        False and must NOT disarm, or it would wipe the outer deadline. Pair with a guarded
+        ``disarm_batch_deadline`` in a finally.
         """
         if self._batch_deadline is None:
             self._batch_deadline = self._clock() + self.BATCH_DEADLINE_S
+            return True
+        return False
 
     def disarm_batch_deadline(self) -> None:
         """Clear the shared per-batch deadline so the next batch (or a single lookup) is unbounded."""
@@ -230,13 +234,16 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     def _fetch_all(self, names: list[str]) -> dict[str, RefMetResult]:
         """Fetch each name into a RefMetResult, stopping network work at the hard batch deadline."""
         cache: dict[str, RefMetResult] = {}
-        self.arm_batch_deadline()
+        armed_here = self.arm_batch_deadline()
         try:
             for name in names:
                 # _fetch_refmet_data marks names past the armed deadline UNAVAILABLE with no network.
                 cache[name] = self._fetch_refmet_data(name)
         finally:
-            self.disarm_batch_deadline()
+            # Only the outermost armer disarms; a route-armed batch deadline survives each entity's
+            # nested _fetch_all so the whole /batch loop stays bounded (not re-armed per row).
+            if armed_here:
+                self.disarm_batch_deadline()
         return cache
 
     def _fetch_refmet_data(self, metabolite_name: str) -> RefMetResult:

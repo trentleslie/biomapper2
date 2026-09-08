@@ -22,6 +22,7 @@ from biomapper2.core.annotators.base import (
     AVAILABILITY_UNAVAILABLE,
     BaseAnnotator,
 )
+from biomapper2.core.annotators.metabolomics_workbench import MetabolomicsWorkbenchAnnotator
 from biomapper2.core.certificate import REFMET_ANNOTATOR
 from biomapper2.core.resolver import Resolver
 
@@ -194,3 +195,18 @@ def test_r6b_rescued_row_shifts_choice_toward_the_refmet_node():
     assert unrescued == "CHEBI:bmp"
     assert rescued == "CHEBI:refmet"
     assert flag == "divergent_refmet"
+
+
+def test_route_armed_deadline_survives_nested_fetch_all():
+    # The API /batch route arms the shared deadline once, then each entity re-enters _fetch_all via
+    # build_availability_cache. A nested _fetch_all must NOT disarm the outer deadline, or the whole
+    # -batch bound would be wiped after the first entity (Greptile round-2 finding).
+    ann = MetabolomicsWorkbenchAnnotator(batch_deadline_s=999.0)
+    ann._request_once = lambda metabolite_name: {"refmet_id": "RM"}
+    assert ann.arm_batch_deadline() is True  # outer arm (the route)
+    outer_deadline = ann._batch_deadline
+    ann.build_availability_cache({"name": "x"}, "name")  # inner _fetch_all: arms->False, no disarm
+    assert ann._batch_deadline == outer_deadline  # outer deadline survived the nested call
+    assert ann.arm_batch_deadline() is False  # still armed
+    ann.disarm_batch_deadline()
+    assert ann._batch_deadline is None
