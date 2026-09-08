@@ -46,6 +46,17 @@ def test_none_and_empty_inputs_return_empty_list() -> None:
     assert stable_result_order([]) == []
 
 
+def test_nan_score_is_folded_to_zero_and_stays_deterministic() -> None:
+    nan = float("nan")
+    real = {"id": "CHEBI:5", "score": 0.3}
+    a = {"id": "CHEBI:9", "score": nan}
+    b = {"id": "CHEBI:1", "score": nan}
+    # NaN is unorderable, so without folding it timsort would leave NaN rows in arrival order. Folded to
+    # 0.0: the real 0.3 row leads and the two NaN rows order by id, identically across input orders.
+    assert [r["id"] for r in stable_result_order([a, real, b])] == ["CHEBI:5", "CHEBI:1", "CHEBI:9"]
+    assert stable_result_order([a, b]) == stable_result_order([b, a])
+
+
 def test_text_annotator_commit_is_order_independent_on_a_tie(monkeypatch) -> None:
     # Two on-category rows tie on score; the committed node must be identical across response orders.
     a = {"id": "CHEBI:200", "score": 0.8, "categories": SM}

@@ -38,6 +38,10 @@ def stable_result_order(rows: list[dict] | None) -> list[dict]:
             score = float(row.get("score"))  # type: ignore[arg-type]
         except (TypeError, ValueError):
             score = 0.0
+        # A NaN score coerces fine but is unorderable (every NaN comparison is False), so timsort would
+        # leave NaN rows in arrival order — the very non-determinism this helper removes. Fold NaN to 0.0.
+        if score != score:  # noqa: PLR0124 — NaN check
+            score = 0.0
         return (-score, str(row.get("id") or ""))
 
     return sorted(rows or [], key=_key)
