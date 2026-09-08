@@ -34,6 +34,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 
 from .cross_cohort_devapi_sweep import ArmScore, ResolvedRows, arms_look_confounded
+from .scorers.cross_cohort_overlap import OverlapResult
+from .scorers.independent_link_certificate_overlap import CertifiedOverlap
 
 # A cross-cohort link identifier: (a_name, b_name). Matches ``CertifiedOverlap.per_link`` keys.
 Pair = tuple[str, str]
@@ -78,6 +80,12 @@ class Prereg:
     cold_canary_expected: str
     metric: str = "certified_overlap"
     noise_rule: str = "replicate_range"
+    # A3: the pre-registered adjudicable population — the links the gate is allowed to judge on the
+    # KG-independent certificate. When declared (non-empty), ``confound_gate`` FAILS CLOSED (ABSTAIN)
+    # unless BOTH arms carry a RefMet mask covering every declared pair: an absent/partial mask means
+    # coverage and correctness are not separable, so a coverage-only treatment can no longer PASS by
+    # simply omitting masks. Left empty it preserves the no-mask contract the pure tests exercise.
+    adjudicable_pairs: tuple[Pair, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -199,6 +207,21 @@ def confound_gate(
                 f"(reading={arm.canary_reading!r} != expected {prereg.cold_canary_expected!r})"
             )
 
+    # A3 fail-closed RefMet masks: when the prereg declares an adjudicable population, EVERY declared
+    # pair must be masked on BOTH arms. A missing pair (absent or partial coverage) means the RefMet
+    # parity filter cannot separate a coverage change from a correctness change over that population,
+    # so we ABSTAIN rather than silently fall back to the full aggregate (the old silent pass).
+    if prereg.adjudicable_pairs:
+        declared = set(prereg.adjudicable_pairs)
+        for arm in (baseline, treatment):
+            missing = declared - set(arm.refmet_mask)
+            if missing:
+                reasons.append(
+                    f"arm {arm.name!r} RefMet parity mask missing over the declared adjudicable "
+                    f"population ({len(missing)}/{len(declared)} pairs unmasked) — coverage/correctness "
+                    "not separable; failing closed"
+                )
+
     if caches is not None:
         flagged = arms_look_confounded(caches)
         if flagged:
@@ -310,6 +333,26 @@ def decide(
     if fails:
         return GateResult("FAIL", deltas, dict(floor), (), True, tuple(fails))
 
+    # A1 refused-rise tripwire (the lipid-conflation false-clean guard). A material rise in
+    # ``refused`` (beyond its noise floor) means links left the adjudicable population — they can no
+    # longer be graded on the KG-independent certificate. When ``certified`` did NOT rise beyond its
+    # floor to compensate, that shrinking population is a conflation signal, not a free pass: the
+    # verdict is untrustworthy, so ABSTAIN. (A refused rise paired with a refuted rise already FAILed
+    # above; a refused rise with a real certified gain falls through to the improvement block.)
+    if deltas["refused"] > fu and deltas["certified"] <= fc:
+        return GateResult(
+            "ABSTAIN",
+            deltas,
+            dict(floor),
+            (),
+            True,
+            (
+                f"refused rose {deltas['refused']} beyond floor {fu} while certified stayed flat "
+                f"(delta {deltas['certified']} within floor {fc}) — adjudicable population shrank, "
+                "verdict untrustworthy",
+            ),
+        )
+
     improvements: list[str] = []
     if deltas["refuted"] < -fr:
         improvements.append(f"refuted fell {deltas['refuted']} beyond floor {fr}")
@@ -370,26 +413,85 @@ def _pooled_floor(
     return {m: max(fb[m], ft[m]) for m in _METRICS}
 
 
-def evaluate_conflation_gate(prereg: Prereg, arms: Mapping[str, ArmReplicates]) -> GateResult:
+def _arm_pairs(arm: ArmReplicates) -> frozenset[Pair]:
+    """The set of (a, b) link pairs an arm actually carries, over all its replicates.
+
+    Used to scope the positive-control self-test to the PLANT's OWN planted population instead of the
+    baseline/treatment RefMet-parity-kept set — the synthetic plant pairs are generally not members of
+    that set, and filtering the plant through it drops exactly the refutations the control exists to
+    prove are detectable.
+    """
+    pairs: set[Pair] = set()
+    for s in arm.replicates:
+        for a, bn, _v in s.certified.per_link:
+            pairs.add((a, bn))
+    return frozenset(pairs)
+
+
+def _empty_reference() -> ArmScore:
+    """A clean, zero-link reference for the positive-control self-test.
+
+    The positive control compares the KNOWN-BAD plant against a CLEAN reference (no links) over the
+    plant's own pairs, so a planted refutation ALWAYS registers as a rise (FAIL) — even for a
+    baseline-derived plant. The documented plant source (``refuted_pairs.json``) is built FROM baseline
+    refutations, so the OBSERVED baseline already refutes those pairs; comparing plant-vs-baseline over
+    them would zero the delta (NOOP) and force a spurious ABORT on a perfectly valid plant. A clean
+    reference makes the self-test a robust probe of the decision core's FAIL path, independent of the
+    baseline's own conflation state.
+    """
+    empty = OverlapResult(links=(), n_links=0, n_a_linked=0, n_b_linked=0, n_a_comparable=0, n_b_comparable=0)
+    return ArmScore(curie=empty, stability=empty, certified=CertifiedOverlap(certified=0, refuted=0, refused=0, per_link=()))
+
+
+def evaluate_conflation_gate(
+    prereg: Prereg,
+    arms: Mapping[str, ArmReplicates],
+    caches: Mapping[str, ResolvedRows] | None = None,
+) -> GateResult:
     """Orchestrate the pure gate: confound gate -> noise floor -> positive-control self-test -> decide.
 
     ``arms`` must contain ``"baseline"``, ``"treatment"``, and ``prereg.positive_control_arm``. Pure and
     deterministic: no I/O, same inputs -> same verdict. Short-circuits to ABSTAIN on any confound and to
     ABORT if the positive control is not detected, before it will emit an improvement verdict.
+
+    ``caches`` are the raw per-arm ``ResolvedRows`` (A2): when supplied they are threaded into
+    ``confound_gate`` so the byte-identical-cache (shared-KG-cache) guard fires on THIS orchestrated
+    path, not only when ``confound_gate`` is called in isolation. The LIVE runner ALWAYS supplies them
+    (a real verdict without the cache guard is not trustworthy); pure unit tests may pass ``None`` to
+    exercise the no-cache paths.
     """
     baseline = arms["baseline"]
     treatment = arms["treatment"]
 
-    abstain, kept, excluded = confound_gate(prereg, baseline, treatment)
+    abstain, kept, excluded = confound_gate(prereg, baseline, treatment, caches=caches)
     if abstain is not None:
         return abstain
 
     floor = _pooled_floor(baseline, treatment, kept)
     b_rep = representative(baseline, kept)
     t_rep = representative(treatment, kept)
-    control_rep = representative(arms[prereg.positive_control_arm], kept)
 
-    abort = positive_control_selftest(prereg, b_rep, control_rep, floor, kept, prereg.thresholds)
+    # Positive-control self-test runs over the PLANT'S OWN planted population, NOT the baseline/treatment
+    # RefMet-parity-kept set `kept`. The plant's forced-conflation pairs are synthetic and generally sit
+    # OUTSIDE `kept`; scoping the control through `kept` would drop the very refutations the control
+    # exists to prove are detectable — making the gate either wrongly ABORT or clear on a spurious
+    # certified-fall instead of the planted refutation (the population-mismatch bug). Baseline carries no
+    # links on those synthetic pairs, so over the plant's population the self-test measures refuted
+    # 0 -> N and correctly requires FAIL. An empty plant population (no per-link data, e.g. the pure
+    # aggregate-only tests) falls back to full-total scoring, matching the prior behavior.
+    control_arm = arms[prereg.positive_control_arm]
+    control_pairs = _arm_pairs(control_arm)
+    control_floor = noise_floor(control_arm, control_pairs)
+    control_rep = representative(control_arm, control_pairs)
+
+    # Compare the plant against a CLEAN zero reference over its OWN pairs (not the observed baseline):
+    # the documented plant is built from baseline refutations, so a baseline reference would already
+    # carry those refutations and zero the delta (spurious NOOP -> ABORT). Against a clean reference a
+    # planted refutation always registers as a rise -> FAIL, so the self-test stays a valid probe of the
+    # decision core's FAIL path regardless of the baseline's conflation state.
+    abort = positive_control_selftest(
+        prereg, _empty_reference(), control_rep, control_floor, control_pairs, prereg.thresholds
+    )
     if abort is not None:
         return dataclasses.replace(abort, excluded_pairs=excluded)
 
@@ -402,17 +504,21 @@ def evaluate_conflation_gate(prereg: Prereg, arms: Mapping[str, ArmReplicates]) 
 
 def run_conflation_gate(*args, **kwargs):  # pragma: no cover - supervised live step, never in pytest
     """LIVE, SUPERVISED operator step. Drive Unit E per arm x >=3 replicates against a COLD dev API,
-    resolve source-tagged independent oracles (small molecules via ``PubChemInChIKeyResolver``; lipids
-    via a source-DISJOINT LIPID MAPS oracle so the certificate is not circular), score each replicate
-    with ``score_arm``, then run the pure ``evaluate_conflation_gate`` on the observed arms.
+    resolve the source-tagged independent oracle (PubChem-by-name for every name; lipid
+    sum-composition names cannot be adjudicated by name and are honestly ``refused``, NOT graded off a
+    circular structure source), score each replicate with ``score_arm``, then run the pure
+    ``evaluate_conflation_gate`` on the observed arms WITH the per-arm caches (so the shared-cache
+    guard fires). The gate is pre-registered as small-molecule-adjudicable; the A1 refused-rise
+    tripwire keeps a lipid-conflation rise from earning a free pass. A source-tag disjointness check
+    (A4) forces any link whose oracle source equals the candidate resolver source for that name to
+    ``refused`` so the certificate can never grade the treatment with its own structure source.
 
     Persist-by-default (R23): write ``prereg.json`` FIRST (the pre-registered contract), then
     ``result.json`` (the verdict + deltas + noise floor + excluded pairs) under a timestamped path, and
-    print the path. Deliberately unimplemented in committable library code — wiring the live dev API +
-    lipid oracle belongs in the gated operator harness (and depends on ``biomapper-fix`` producing the
-    re-resolution arm and the source-tagged lipid structures), not in importable code a test could trip.
+    print the path. Deliberately unimplemented in committable library code — the live wiring lives in
+    ``run_conflation_gate_live.py`` (the gated operator harness); this stub delegates to it so a stray
+    import never trips the network.
     """
-    raise NotImplementedError(
-        "run_conflation_gate is a supervised live step; run it from the gated Unit F operator harness "
-        "once biomapper-fix has produced the re-resolution arm and the source-tagged lipid oracle"
-    )
+    from .run_conflation_gate_live import run_live  # local import: keeps the module import-pure
+
+    return run_live(*args, **kwargs)
