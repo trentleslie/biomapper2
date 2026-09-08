@@ -15,26 +15,39 @@ from circuitbreaker import CircuitBreakerError, circuit
 
 from ...config import CACHE_DIR, CACHE_IGNORED_PARAMETERS
 from ...utils import AssignedIDsDict
+from . import refmet_snapshot
 from .base import (
     AVAILABILITY_NO_MATCH,
     AVAILABILITY_NOT_QUERIED,
     AVAILABILITY_UNAVAILABLE,
     AVAILABILITY_VOTED,
+    REFMET_SOURCE_LIVE,
+    REFMET_SOURCE_LOCAL,
+    REFMET_SOURCE_NOT_IN_SNAPSHOT,
+    REFMET_SOURCE_NOT_QUERIED,
+    REFMET_SOURCE_UNAVAILABLE,
     BaseAnnotator,
 )
 
 
 @dataclass(frozen=True)
 class RefMetResult:
-    """One RefMet lookup outcome: its availability status plus the payload when it VOTED.
+    """One RefMet lookup outcome: availability status, the payload when it VOTED, and provenance.
 
     ``status`` is one of the ``AVAILABILITY_*`` strings. ``data`` is the raw API dict only for a
     VOTED result; NO_MATCH and UNAVAILABLE carry ``None`` so an UNAVAILABLE outcome can never be
     mistaken for (or folded into) an empty vote.
+
+    ``source`` is one of the ``REFMET_SOURCE_*`` strings — WHICH source served the row (the pinned
+    local freeze, a freeze miss, the live endpoint, or an unreachable service) — on a parallel axis
+    to ``status``. ``version`` is the freeze version when a snapshot served (or was consulted for)
+    the row, else None.
     """
 
     status: str
     data: dict[str, Any] | None = None
+    source: str = REFMET_SOURCE_NOT_QUERIED
+    version: str | None = None
 
 
 class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
@@ -73,6 +86,12 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     # safe unarmed value; the deadline branches then no-op without touching the injectable clock.
     _batch_deadline: float | None = None
 
+    # Default-OFF. When a snapshot is present, a freeze MISS resolves deterministically to NO_MATCH
+    # (source=not_in_snapshot) with NO network call. Only when this is True does a miss fall through
+    # to the live /match + breaker path — deliberately opt-in so the breaker stays out of the
+    # default resolution path.
+    LIVE_API_FALLBACK: bool = False
+
     def __init__(
         self,
         *,
@@ -80,6 +99,7 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         max_retries: int | None = None,
         retry_backoff_s: float | None = None,
         batch_deadline_s: float | None = None,
+        live_api_fallback: bool | None = None,
         sleep: Callable[[float], None] | None = None,
         clock: Callable[[], float] | None = None,
     ):
@@ -102,6 +122,8 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
             self.RETRY_BACKOFF_S = retry_backoff_s
         if batch_deadline_s is not None:
             self.BATCH_DEADLINE_S = batch_deadline_s
+        if live_api_fallback is not None:
+            self.LIVE_API_FALLBACK = live_api_fallback
 
     def arm_batch_deadline(self) -> bool:
         """Start the shared per-batch wall-clock bound; return True iff THIS call set it.
@@ -185,6 +207,22 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
             status = self._fetch_refmet_data(name).status
         return {self.slug: status}
 
+    def get_source(self, entity: dict | pd.Series, name_field: str, cache: dict | None = None) -> dict[str, str]:
+        """WHICH RefMet source served this row: local_snapshot / not_in_snapshot / live_api / unavailable.
+
+        Parallel to ``get_availability`` and reads the SAME cache, so a row is fetched (and, on the
+        live path, breaker-counted) once. With no cache it fetches inline.
+        """
+        name = entity.get(name_field)
+        if not name:
+            return {self.slug: REFMET_SOURCE_NOT_QUERIED}
+        if cache is not None:
+            result = cache.get(name)
+            source = result.source if result is not None else REFMET_SOURCE_NOT_QUERIED
+        else:
+            source = self._fetch_refmet_data(name).source
+        return {self.slug: source}
+
     def build_availability_cache(
         self, items: dict | pd.Series | pd.DataFrame, name_field: str
     ) -> dict[str, RefMetResult]:
@@ -247,7 +285,44 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         return cache
 
     def _fetch_refmet_data(self, metabolite_name: str) -> RefMetResult:
-        """Fetch RefMet data, classifying the outcome as VOTED / NO_MATCH / UNAVAILABLE.
+        """Resolve one name to a RefMetResult, consulting the pinned freeze FIRST when present.
+
+        SAFE ROLLOUT (this is the whole point of the change):
+        - Snapshot ABSENT (not configured / not loadable): behave EXACTLY as before — live /match +
+          breaker + retry + deadline, tagged source=live_api (or unavailable). Zero behavior change.
+        - Snapshot PRESENT: consult the freeze first, so the circuit breaker leaves the default
+          resolution path. A freeze hit (voted/no_match) is authoritative and deterministic; a MISS
+          resolves to NO_MATCH (source=not_in_snapshot) with NO network call — UNLESS
+          ``LIVE_API_FALLBACK`` is on, in which case a miss falls through to the live path.
+        """
+        if refmet_snapshot.is_present():
+            return self._fetch_from_snapshot(metabolite_name)
+        return self._fetch_live(metabolite_name)
+
+    def _fetch_from_snapshot(self, metabolite_name: str) -> RefMetResult:
+        """Resolve one name against the pinned freeze (breaker OUT of the path)."""
+        snapshot_version = refmet_snapshot.version()
+        hit = refmet_snapshot.lookup(metabolite_name)
+        if hit is not None:
+            if hit.status == AVAILABILITY_VOTED and hit.refmet_id:
+                data = {"refmet_id": hit.refmet_id}
+                return RefMetResult(AVAILABILITY_VOTED, data, source=REFMET_SOURCE_LOCAL, version=snapshot_version)
+            if hit.status == AVAILABILITY_UNAVAILABLE:
+                # The freeze positively recorded that /match did not answer for this name at freeze
+                # time. Deterministic, still no network: surface UNAVAILABLE, source=local_snapshot.
+                return RefMetResult(AVAILABILITY_UNAVAILABLE, source=REFMET_SOURCE_LOCAL, version=snapshot_version)
+            # NO_MATCH (or a malformed 'voted' row with no id): the freeze answered "no such
+            # metabolite". Deterministic no-match from the local source.
+            return RefMetResult(AVAILABILITY_NO_MATCH, source=REFMET_SOURCE_LOCAL, version=snapshot_version)
+        # MISS: the name is not in the freeze.
+        if not self.LIVE_API_FALLBACK:
+            # Default deterministic path: NO_MATCH with NO network call, breaker untouched.
+            return RefMetResult(AVAILABILITY_NO_MATCH, source=REFMET_SOURCE_NOT_IN_SNAPSHOT, version=snapshot_version)
+        # Opt-in fallback: resolve the miss against the live endpoint (source=live_api / unavailable).
+        return self._fetch_live(metabolite_name)
+
+    def _fetch_live(self, metabolite_name: str) -> RefMetResult:
+        """Live /match fetch, classifying the outcome as VOTED / NO_MATCH / UNAVAILABLE.
 
         A CircuitBreakerError (breaker open), a transport error, or a timeout is UNAVAILABLE — the
         service did not answer. A 200 whose refmet_id is "-" (or a non-dict body) is NO_MATCH — the
@@ -255,18 +330,18 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         """
         if self._past_batch_deadline():
             # Past the shared batch deadline: mark UNAVAILABLE with NO network call.
-            return RefMetResult(AVAILABILITY_UNAVAILABLE)
+            return RefMetResult(AVAILABILITY_UNAVAILABLE, source=REFMET_SOURCE_UNAVAILABLE)
         try:
             data = self._do_refmet_request(metabolite_name)
         except CircuitBreakerError:
             logging.debug(f"RefMet API outage, skipping '{metabolite_name}' (circuit open)")
-            return RefMetResult(AVAILABILITY_UNAVAILABLE)
+            return RefMetResult(AVAILABILITY_UNAVAILABLE, source=REFMET_SOURCE_UNAVAILABLE)
         except requests.RequestException as e:
             logging.warning(f"Failed to fetch RefMet data for '{metabolite_name}': {e}")
-            return RefMetResult(AVAILABILITY_UNAVAILABLE)
+            return RefMetResult(AVAILABILITY_UNAVAILABLE, source=REFMET_SOURCE_UNAVAILABLE)
         if data is None:
-            return RefMetResult(AVAILABILITY_NO_MATCH)
-        return RefMetResult(AVAILABILITY_VOTED, data)
+            return RefMetResult(AVAILABILITY_NO_MATCH, source=REFMET_SOURCE_LIVE)
+        return RefMetResult(AVAILABILITY_VOTED, data, source=REFMET_SOURCE_LIVE)
 
     @circuit(failure_threshold=3, recovery_timeout=300)
     def _do_refmet_request(self, metabolite_name: str) -> dict[str, Any] | None:

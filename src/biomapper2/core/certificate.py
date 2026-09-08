@@ -189,6 +189,14 @@ class ResolutionCertificate:
     # not selected for the row, so the field is total. Appended after the existing defaulted fields
     # so the dataclass shape stays additive.
     refmet_availability: str = "not_queried"
+    # WHICH RefMet source served the row, on a parallel axis to ``refmet_availability`` (a provenance
+    # tag, not a verdict): ``local_snapshot`` | ``not_in_snapshot`` | ``live_api`` | ``unavailable`` |
+    # ``not_queried``. With a pinned freeze present the default path is ``local_snapshot`` /
+    # ``not_in_snapshot`` (the circuit breaker is OUT of it); without one it is ``live_api`` /
+    # ``unavailable``, exactly as before. ``refmet_snapshot_version`` pins WHICH freeze produced a
+    # snapshot-served vote (set only when the freeze served or was consulted for the row), else None.
+    refmet_source: str = "not_queried"
+    refmet_snapshot_version: str | None = None
     provenance: dict[str, Any] = field(default_factory=dict)
 
     def to_api_dict(self) -> dict[str, Any]:
@@ -211,6 +219,8 @@ class ResolutionCertificate:
             "tier_b_outcome": self.tier_b_outcome.value,
             "refusal_reason": self.refusal_reason,
             "refmet_availability": self.refmet_availability,
+            "refmet_source": self.refmet_source,
+            "refmet_snapshot_version": self.refmet_snapshot_version,
             "provenance": dict(self.provenance),
         }
 
@@ -235,6 +245,8 @@ class ResolutionCertificate:
             "certificate_tier_b_outcome": self.tier_b_outcome.value,
             "certificate_refusal_reason": self.refusal_reason,
             "certificate_refmet_availability": self.refmet_availability,
+            "certificate_refmet_source": self.refmet_source,
+            "certificate_refmet_snapshot_version": self.refmet_snapshot_version,
         }
         for key, value in self.provenance.items():
             flat[f"certificate_provenance_{key}"] = value
@@ -328,6 +340,8 @@ def issue(
     comparison_rule: str = COMPARISON_RULE_FIRST_BLOCK_SET_INTERSECTION,
     refusal_reason: str | None = None,
     refmet_availability: str = "not_queried",
+    refmet_source: str = "not_queried",
+    refmet_snapshot_version: str | None = None,
     provenance: Mapping[str, Any] | None = None,
 ) -> ResolutionCertificate:
     """Issue a certificate for one committed answer. Pure: no network, no cache, no clock.
@@ -345,6 +359,11 @@ def issue(
         refmet_availability: Whether the RefMet source answered for this row (voted / no_match /
             unavailable / not_queried). A runtime availability input like ``equivalent_ids_lookup_ok``,
             recorded on the certificate; it does not affect the state machine.
+        refmet_source: WHICH RefMet source served the row (local_snapshot / not_in_snapshot /
+            live_api / unavailable / not_queried). A provenance tag on a parallel axis to
+            ``refmet_availability``; like it, recorded but not part of the state machine.
+        refmet_snapshot_version: Version of the freeze that served (or was consulted for) the row,
+            else None. Recorded, not part of the state machine.
     """
     if selection_conflict is not None and (chosen_kg_id is None or not is_small_molecule):
         # The resolver only reaches the flagging branch inside the small-molecule guard and only
@@ -431,6 +450,8 @@ def issue(
         tier_b_outcome=tier_b_outcome,
         refusal_reason=refusal_reason,
         refmet_availability=refmet_availability,
+        refmet_source=refmet_source,
+        refmet_snapshot_version=refmet_snapshot_version,
         provenance=dict(provenance) if provenance is not None else _default_provenance(tier_b),
     )
 

@@ -39,6 +39,14 @@ def get_mapper(request: Request):
     return mapper
 
 
+def _count_by_source(results: list[EntityMappingResult]) -> dict[str, int]:
+    """Tally the batch's rows by RefMet source (a run-level provenance metric)."""
+    counts: dict[str, int] = {}
+    for r in results:
+        counts[r.refmet_source] = counts.get(r.refmet_source, 0) + 1
+    return counts
+
+
 def extract_mapping_result(mapped_item: dict[str, Any] | pd.Series, original_name: str) -> EntityMappingResult:
     """Extract mapping result from mapped item."""
     if isinstance(mapped_item, pd.Series):
@@ -55,6 +63,8 @@ def extract_mapping_result(mapped_item: dict[str, Any] | pd.Series, original_nam
         chosen_kg_id_review=mapped_item.get("chosen_kg_id_review"),
         resolution_certificate=certificate,
         refmet_availability=mapped_item.get("refmet_availability") or "not_queried",
+        refmet_source=mapped_item.get("refmet_source") or "not_queried",
+        refmet_snapshot_version=mapped_item.get("refmet_snapshot_version"),
         kg_equivalent_ids=mapped_item.get("kg_equivalent_ids", {}) or {},
         kg_ids=mapped_item.get("kg_ids", {}) or {},
         assigned_ids=mapped_item.get("assigned_ids", {}) or {},
@@ -216,6 +226,10 @@ async def map_batch(
             # uncovered. Cold-run-attributable only — the RefMet HTTP cache serves successes, so a
             # warm rerun understates this count.
             "refmet_unavailable": sum(1 for r in results if r.refmet_availability == "unavailable"),
+            # Run-level RefMet SOURCE provenance: counts by which source served each row. With a
+            # pinned freeze present this is dominated by local_snapshot / not_in_snapshot (the
+            # circuit breaker is out of the default path); without one it is live_api / unavailable.
+            "refmet_source_counts": _count_by_source(results),
         },
     )
 
