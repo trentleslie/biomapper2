@@ -63,7 +63,8 @@ def test_preferred_prefix_wins_cross_namespace_tie() -> None:
 
 def test_descendant_category_inherits_preferred_namespace() -> None:
     # T6 (Greptile #1): a descendant category (biolink:Drug) must inherit SmallMolecule's CHEBI policy.
-    # Numeric fallback would pick PUBCHEM.COMPOUND:1 (local 1 < 500); inheritance must pick CHEBI:500.
+    # Numeric fallback alone would prefer the lower-local-id PubChem sibling (PUBCHEM.COMPOUND:1); the
+    # inherited CHEBI preference must instead pick CHEBI:500.
     r = _resolver(_DESCENDANTS)
     chosen, _ = r._choose_best_kg_id(
         {"PUBCHEM.COMPOUND:1": ["x"], "CHEBI:500": ["y"]},
