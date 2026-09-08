@@ -1,8 +1,18 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 import pandas as pd
 
 from ...utils import AssignedIDsDict
+
+# Availability of an annotator's vote for a single row, surfaced ALONGSIDE the vote (never inside it)
+# so a consumer can tell a genuine no-match from a service that never answered. Plain strings (not an
+# Enum) so the value passes unchanged through a pandas column, ``Entity.model_extra`` and the JSON
+# API. ``not_queried`` is the total-map default: an annotator that did not run for the row.
+AVAILABILITY_VOTED = "voted"
+AVAILABILITY_NO_MATCH = "no_match"
+AVAILABILITY_UNAVAILABLE = "unavailable"
+AVAILABILITY_NOT_QUERIED = "not_queried"
 
 # A node typed only at the top of the Biolink hierarchy is an ABSENT type assertion,
 # not an off-category claim, so the category validator lets it through (see `is_on_category`).
@@ -74,6 +84,28 @@ class BaseAnnotator(ABC):  # Inherit from ABC
             Prepared entity/entities (default: unchanged)
         """
         return item
+
+    def build_availability_cache(
+        self, items: dict | pd.Series | pd.DataFrame, name_field: str
+    ) -> dict[str, Any] | None:
+        """Prefetch external data once so the vote and the availability signal share ONE fetch.
+
+        Default: ``None`` — an annotator with no external dependency needs no cache and reports
+        ``not_queried`` regardless. Only the RefMet annotator (Metabolomics Workbench) overrides
+        this, because it alone can distinguish a genuine no-match from an unreachable service.
+        Building the cache once and threading it to both ``get_annotations`` and ``get_availability``
+        is what keeps a degraded row from being fetched (and breaker-counted) twice.
+        """
+        return None
+
+    def get_availability(self, entity: dict | pd.Series, name_field: str, cache: dict | None = None) -> dict[str, str]:
+        """This annotator's availability for one row, keyed by slug.
+
+        Default ``not_queried``: only an annotator that observes service availability reports
+        anything else. Kept SEPARATE from ``get_annotations`` on purpose — an UNAVAILABLE outcome
+        must never be folded into an empty vote, which is indistinguishable from a genuine no-match.
+        """
+        return {self.slug: AVAILABILITY_NOT_QUERIED}
 
     @abstractmethod
     def get_annotations(

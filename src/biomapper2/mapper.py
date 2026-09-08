@@ -19,6 +19,7 @@ from .config import PROJECT_ROOT, RERESOLUTION_ENABLED, TIER_B_ENABLED, get_kest
 from .core.analysis import analyze_dataset_mapping
 from .core.annotation_engine import AnnotationEngine
 from .core.certificate import (
+    REFMET_ANNOTATOR,
     CertificateState,
     ResolutionCertificate,
     derive_chosen_kg_id_review,
@@ -119,6 +120,7 @@ class Mapper:
         selection_conflict: str | None,
         kg_ids_assigned: dict[str, dict[str, list[str]]] | None,
         refusal_reason: str | None = None,
+        refmet_availability: str = "not_queried",
     ) -> ResolutionCertificate:
         """Assemble one certificate. Shared by both emission paths so they cannot drift apart.
 
@@ -168,6 +170,7 @@ class Mapper:
             tier_b=tier_b_result,
             committed_node_sources=committed_sources,
             refusal_reason=refusal_reason,
+            refmet_availability=refmet_availability,
         )
 
     def _enrich_equivalent_ids(self, chosen_kg_id: str | None) -> tuple[dict[str, list[str]], bool]:
@@ -192,6 +195,7 @@ class Mapper:
         selection_conflict: str | None,
         kg_ids: dict[str, list[str]] | None,
         kg_ids_assigned: dict[str, dict[str, list[str]]] | None,
+        refmet_availability: str = "not_queried",
     ) -> tuple[ResolutionCertificate, str | None, dict[str, list[str]]]:
         """Step 6 (+ optional Step 6.5): issue the certificate and, on a contradiction, re-resolve.
 
@@ -214,6 +218,7 @@ class Mapper:
             equivalent_ids_lookup_ok=equivalent_ids_lookup_ok,
             selection_conflict=selection_conflict,
             kg_ids_assigned=kg_ids_assigned,
+            refmet_availability=refmet_availability,
         )
         if not (config.RERESOLUTION_ENABLED and certificate.state is CertificateState.CONTRADICTED):
             return certificate, chosen_kg_id, kg_equivalent_ids
@@ -235,6 +240,7 @@ class Mapper:
                 selection_conflict=selection_conflict,
                 kg_ids_assigned=kg_ids_assigned,
                 refusal_reason=reason,
+                refmet_availability=refmet_availability,
             )
             return refused, chosen_kg_id, kg_equivalent_ids
 
@@ -249,6 +255,7 @@ class Mapper:
             equivalent_ids_lookup_ok=new_ok,
             selection_conflict=selection_conflict,
             kg_ids_assigned=kg_ids_assigned,
+            refmet_availability=refmet_availability,
         )
         if swapped.state is CertificateState.CONTRADICTED:
             # The swapped node still contradicts the independent structure. Refuse rather than recurse
@@ -267,6 +274,7 @@ class Mapper:
                 selection_conflict=selection_conflict,
                 kg_ids_assigned=kg_ids_assigned,
                 refusal_reason="reresolution_still_contradicted",
+                refmet_availability=refmet_availability,
             )
             return refused, chosen_kg_id, kg_equivalent_ids
 
@@ -330,6 +338,10 @@ class Mapper:
         )
         assert isinstance(annotation_result, pd.Series)
         entity = entity.update_from(annotation_result)
+        # RefMet availability for the row, read from the engine's TOTAL availability map (present on
+        # every path, including skips). Threaded into the certificate and mirrored on the output.
+        annotator_availability = annotation_result.get("annotator_availability") or {}
+        refmet_availability = annotator_availability.get(REFMET_ANNOTATOR, "not_queried")
 
         # Do Step 2: normalize vocab IDs to form proper curies
         normalization_result = self.normalizer.normalize(
@@ -375,9 +387,11 @@ class Mapper:
             selection_conflict=entity.chosen_kg_id_review,
             kg_ids=entity.kg_ids,
             kg_ids_assigned=entity.kg_ids_assigned,
+            refmet_availability=refmet_availability,
         )
         # Emitted as a plain dict, not the dataclass: pydantic rejects a raw dataclass at the
         # response model, and the NDJSON endpoint json.dumps's this value outside its try/except.
+        # ``refmet_availability`` is mirrored on the row (per R2) as well as on the certificate.
         entity = entity.update_from(
             pd.Series(
                 {
@@ -385,6 +399,7 @@ class Mapper:
                     "kg_equivalent_ids": kg_equivalent_ids or {},
                     "resolution_certificate": certificate.to_api_dict(),
                     "chosen_kg_id_review": derive_chosen_kg_id_review(certificate),
+                    "refmet_availability": refmet_availability,
                 }
             )
         )
@@ -532,6 +547,7 @@ class Mapper:
         for _, row in df.iterrows():
             committed = _scalar_or_none(row.get("chosen_kg_id"))
             equiv = row.get("kg_equivalent_ids") or {}
+            row_availability = row.get("annotator_availability") or {}
             certificate, new_id, new_equiv = self._certify_and_reresolve(
                 query_name=_scalar_or_none(row.get(name_column)),
                 category=entity_type,
@@ -541,6 +557,7 @@ class Mapper:
                 selection_conflict=_scalar_or_none(row.get("chosen_kg_id_review")),
                 kg_ids=row.get("kg_ids") or {},
                 kg_ids_assigned=row.get("kg_ids_assigned") or {},
+                refmet_availability=row_availability.get(REFMET_ANNOTATOR, "not_queried"),
             )
             certificate_rows.append(certificate)
             reresolved_ids.append(new_id)
@@ -570,6 +587,15 @@ class Mapper:
                 f"rows. Row count should not change."
             )
 
+        # Count RefMet-unavailable rows before the availability helper column is dropped. This is a
+        # cold-run metric only: the RefMet HTTP cache serves successes, so a warm rerun understates
+        # unavailability. Any gating use must be attributed to a cold cache.
+        refmet_unavailable_rows = sum(1 for c in certificate_rows if c.refmet_availability == "unavailable")
+
+        # Drop the availability helper column: its per-row RefMet status is already emitted as the
+        # flat ``certificate_refmet_availability`` column, so the TSV keeps no repr'd dict for it.
+        df = df.drop(columns=["annotator_availability"], errors="ignore")
+
         # Dump the final dataframe to a TSV
 
         logging.info(f"Dumping output TSV to {output_tsv_path}")
@@ -584,5 +610,8 @@ class Mapper:
         stats_summary = analyze_dataset_mapping(
             output_tsv_path, self.linker, annotation_mode, run_provenance=run_provenance.model_dump()
         )
+        # Run-level RefMet availability metric (D5). Cold-run-attributable only (see the count above).
+        stats_summary["refmet_unavailable_rows"] = refmet_unavailable_rows
+        stats_summary["refmet_total_rows"] = len(certificate_rows)
 
         return str(output_tsv_path), stats_summary

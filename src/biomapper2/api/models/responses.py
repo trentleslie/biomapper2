@@ -67,6 +67,14 @@ class ResolutionCertificateModel(BaseModel):
         description="Reserved. Until the refusal-reason change ships, an off-category refusal and a "
         "no-match are not distinguishable in this response.",
     )
+    refmet_availability: str = Field(
+        default="not_queried",
+        description="Whether the RefMet source (Metabolomics Workbench) answered for this row: "
+        "'voted' | 'no_match' | 'unavailable' | 'not_queried'. A runtime availability signal like "
+        "'equivalent_ids_lookup_ok', NOT a verdict — 'unavailable' means the service did not answer, "
+        "distinct from 'no_match' (it answered, no such metabolite). 'not_queried' when RefMet was "
+        "not selected for the row.",
+    )
     provenance: dict[str, Any] = Field(default_factory=dict, description="Tier B state, cache stores and expiry policy")
 
 
@@ -86,6 +94,12 @@ class EntityMappingResult(BaseModel):
         default=None,
         description="Structural certificate for chosen_kg_id (and only chosen_kg_id — "
         "chosen_kg_id_provided and chosen_kg_id_assigned carry none). Null when mapping failed.",
+    )
+    refmet_availability: str = Field(
+        default="not_queried",
+        description="Per-row RefMet (Metabolomics Workbench) availability, mirrored from the "
+        "certificate so a consumer can flag/exclude rows a degraded RefMet service left uncovered: "
+        "'voted' | 'no_match' | 'unavailable' | 'not_queried'. Always present (never None).",
     )
     kg_equivalent_ids: dict[str, list[str]] = Field(
         default_factory=dict,

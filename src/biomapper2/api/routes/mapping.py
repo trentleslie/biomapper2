@@ -53,6 +53,7 @@ def extract_mapping_result(mapped_item: dict[str, Any] | pd.Series, original_nam
         chosen_kg_id=mapped_item.get("chosen_kg_id"),
         chosen_kg_id_review=mapped_item.get("chosen_kg_id_review"),
         resolution_certificate=certificate,
+        refmet_availability=mapped_item.get("refmet_availability") or "not_queried",
         kg_equivalent_ids=mapped_item.get("kg_equivalent_ids", {}) or {},
         kg_ids=mapped_item.get("kg_ids", {}) or {},
         assigned_ids=mapped_item.get("assigned_ids", {}) or {},
@@ -201,6 +202,10 @@ async def map_batch(
             "total": len(body.entities),
             "successful": successful,
             "failed": failed,
+            # Run-level RefMet availability metric (D5): rows a degraded RefMet service left
+            # uncovered. Cold-run-attributable only — the RefMet HTTP cache serves successes, so a
+            # warm rerun understates this count.
+            "refmet_unavailable": sum(1 for r in results if r.refmet_availability == "unavailable"),
         },
     )
 
