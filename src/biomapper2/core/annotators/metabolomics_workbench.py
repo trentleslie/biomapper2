@@ -138,10 +138,19 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
             self.freeze_mode = freeze_mode
         # Mode live_backup seeds the store from the pinned freeze on first start (D8): a no-op when the
         # store already has rows or no freeze is configured, so it is safe to run at every construction.
-        if self.freeze_mode == "live_backup" and refmet_store.is_configured():
-            snapshot_path = config.get_refmet_snapshot_path()
-            if snapshot_path is not None:
-                refmet_store.seed_from_tsv(snapshot_path)
+        if self.freeze_mode == "live_backup":
+            if refmet_store.is_configured():
+                snapshot_path = config.get_refmet_snapshot_path()
+                if snapshot_path is not None:
+                    refmet_store.seed_from_tsv(snapshot_path)
+            else:
+                # Selected live_backup but no REFMET_STORE_PATH: the store no-ops, so there is NO outage
+                # fallback and behavior collapses to live-only. Surface it loudly rather than silently.
+                logging.warning(
+                    "REFMET_FREEZE_MODE=live_backup but REFMET_STORE_PATH is not set: the backup store "
+                    "is inactive (no outage fallback, no write-back) — behaving as live-only. Set "
+                    "REFMET_STORE_PATH to enable the write-through backup."
+                )
 
     def arm_batch_deadline(self) -> bool:
         """Start the shared per-batch wall-clock bound; return True iff THIS call set it.
@@ -337,18 +346,29 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         """
         live = self._fetch_live(metabolite_name)
         if live.status in (AVAILABILITY_VOTED, AVAILABILITY_NO_MATCH):
+            # Write-back is BEST-EFFORT: the store is a backup, never a source of truth, so an
+            # unwritable / full / corrupt / locked store must NEVER abort a valid live resolution (or
+            # the surrounding mapping). On any store error, log and return the live result unchanged.
             refmet_id = live.data.get("refmet_id") if live.data else None
-            hit = refmet_store.get(metabolite_name)
-            if hit is None or hit.status != live.status or hit.refmet_id != refmet_id:
-                refmet_store.upsert(
-                    metabolite_name,
-                    status=live.status,
-                    refmet_id=refmet_id,
-                    source=REFMET_SOURCE_LIVE,
-                )
+            try:
+                hit = refmet_store.get(metabolite_name)
+                if hit is None or hit.status != live.status or hit.refmet_id != refmet_id:
+                    refmet_store.upsert(
+                        metabolite_name,
+                        status=live.status,
+                        refmet_id=refmet_id,
+                        source=REFMET_SOURCE_LIVE,
+                    )
+            except Exception as e:  # noqa: BLE001 — backup store is best-effort; a failure is not fatal
+                logging.warning("RefMet backup store write failed for %r (ignored): %s", metabolite_name, e)
             return live
-        # Live UNAVAILABLE: fall back to the last-known-good store value if we have one.
-        hit = refmet_store.get(metabolite_name)
+        # Live UNAVAILABLE: fall back to the last-known-good store value. A store READ failure likewise
+        # degrades to UNAVAILABLE rather than aborting the mapping.
+        try:
+            hit = refmet_store.get(metabolite_name)
+        except Exception as e:  # noqa: BLE001 — backup store is best-effort; a failure is not fatal
+            logging.warning("RefMet backup store read failed for %r (treated as miss): %s", metabolite_name, e)
+            hit = None
         if hit is not None:
             return self._result_from_store_hit(hit)
         return RefMetResult(AVAILABILITY_UNAVAILABLE, source=REFMET_SOURCE_UNAVAILABLE)

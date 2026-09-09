@@ -171,9 +171,10 @@ def get_refmet_live_api_fallback() -> bool:
 
 # The three RefMet freeze modes (D5). ``off`` = live ``/match`` only (no freeze); ``frozen`` =
 # deterministic freeze-first via the immutable TSV (benchmark reproducibility); ``live_backup`` =
-# live-first + write-through SQLite store served as backup when live is down (prod). Unknown values
-# are treated as ``off`` with a logged warning rather than raising, so a typo degrades to the safe
-# live-only path instead of hard-failing startup.
+# live-first + write-through SQLite store served as backup when live is down (prod). An unknown value
+# (or unset) resolves to the BACKWARD-COMPAT default rather than raising: ``frozen`` when a
+# REFMET_SNAPSHOT_PATH is configured, else ``off`` (see get_refmet_freeze_mode) — so a typo degrades
+# to whatever the box was already doing, never hard-failing startup or silently dropping a freeze.
 REFMET_FREEZE_MODES = frozenset({"off", "frozen", "live_backup"})
 
 

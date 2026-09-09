@@ -40,8 +40,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from ... import config
-from .base import REFMET_SOURCE_LIVE, REFMET_SOURCE_LOCAL
-from .refmet_snapshot import _normalize
+from .base import AVAILABILITY_VOTED, REFMET_SOURCE_LIVE, REFMET_SOURCE_LOCAL
+from .refmet_snapshot import _VALID_STATUSES, _normalize
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +216,7 @@ def seed_from_tsv(tsv_path: Path, *, path: Path | None = None) -> int:
             logger.warning("RefMet store seed skipped: could not read freeze %s (%s)", tsv_path, exc)
             return 0
         inserted = 0
+        skipped = 0
         now = _now()
         with handle:
             reader = csv.DictReader(handle, delimiter="\t")
@@ -232,8 +233,15 @@ def seed_from_tsv(tsv_path: Path, *, path: Path | None = None) -> int:
                 key = _normalize(query_name)
                 if key in seen:
                     continue  # first occurrence wins, mirroring the freeze loader
-                seen.add(key)
                 values = {f: ((row.get(f) or "").strip() or None) for f in _SEED_FIELDS}
+                # Mirror the freeze loader's validation (refmet_snapshot._parse): reject an unknown status
+                # or a `voted` row with no refmet_id. A malformed row must not be seeded — it would later
+                # replay to a misleading `unavailable` and silently remove outage coverage. Skip (don't
+                # mark `seen`), so a valid later occurrence of the same name can still win.
+                if status not in _VALID_STATUSES or (status == AVAILABILITY_VOTED and not values["refmet_id"]):
+                    skipped += 1
+                    continue
+                seen.add(key)
                 rows.append(
                     (
                         key,
@@ -257,6 +265,8 @@ def seed_from_tsv(tsv_path: Path, *, path: Path | None = None) -> int:
                 )
                 conn.commit()
                 inserted = len(rows)
+        if skipped:
+            logger.warning("RefMet store seed skipped %d malformed row(s) from %s", skipped, tsv_path)
         if inserted:
             logger.info("Seeded RefMet store at %s with %d rows from freeze %s", resolved, inserted, tsv_path)
         return inserted

@@ -11,6 +11,7 @@ Fixture + monkeypatch only; NEVER a live call. Proves the write-through design:
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -120,3 +121,22 @@ def test_mode_frozen_uses_snapshot(monkeypatch, store_db: Path):
     assert result.status == "voted"
     assert result.source == "local_snapshot"
     assert result.data == {"refmet_id": "RM0041813"}
+
+
+def test_store_failure_is_best_effort_never_aborts(store_db: Path, monkeypatch):
+    # The backup store is best-effort: an unwritable/unreadable store must NEVER abort a valid live
+    # resolution (write path) nor raise on the outage path (read path) — it degrades, not fails.
+    def _boom(*_a, **_k):
+        raise sqlite3.OperationalError("simulated unwritable/locked store")
+
+    monkeypatch.setattr(refmet_store, "get", _boom)
+    monkeypatch.setattr(refmet_store, "upsert", _boom)
+    ann = MetabolomicsWorkbenchAnnotator(freeze_mode="live_backup")
+
+    ann._request_once = lambda metabolite_name: {"refmet_id": "RM1"}
+    live_ok = ann._fetch_refmet_data("x")  # live succeeds; store write blows up -> still VOTED
+    assert live_ok.status == "voted" and live_ok.source == "live_api"
+
+    ann._request_once = _breaker_open  # live down; store read blows up -> unavailable, no exception
+    down = ann._fetch_refmet_data("y")
+    assert down.status == "unavailable"
