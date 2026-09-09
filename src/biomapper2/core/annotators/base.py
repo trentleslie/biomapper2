@@ -19,6 +19,34 @@ AVAILABILITY_NOT_QUERIED = "not_queried"
 TOP_OF_HIERARCHY_SENTINELS = frozenset({"biolink:NamedThing", "biolink:Entity"})
 
 
+def stable_result_order(rows: list[dict] | None) -> list[dict]:
+    """Deterministic total order over Kestrel candidate rows: higher score first, then the ``id`` CURIE.
+
+    The single-node selection in each Kestrel annotator (``term_results[0]``, ``max(..., key=score)``,
+    and the first-on-category scan) trusts the order candidates arrive in. Kestrel returns them
+    score-descending, but breaks *exact* score ties by response order, which varies run-to-run and so
+    flipped which node an annotator committed (the residual "Axis 3" non-determinism the resolver's own
+    tie-break cannot reach, because it acts on the candidate SET the annotators already reduced to one
+    node each). Sorting once at ingestion resolves an exact score tie by the ``id`` CURIE. This is a
+    determinism fix, not a ranking change: rows with distinct scores keep their order, and a
+    missing/None score sorts as ``0.0``. Applied at ingestion so the pure selection helpers stay
+    order-trusting and their unit tests stay valid.
+    """
+
+    def _key(row: dict) -> tuple[float, str]:
+        try:
+            score = float(row.get("score"))  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            score = 0.0
+        # A NaN score coerces fine but is unorderable (every NaN comparison is False), so timsort would
+        # leave NaN rows in arrival order — the very non-determinism this helper removes. Fold NaN to 0.0.
+        if score != score:  # noqa: PLR0124 — NaN check
+            score = 0.0
+        return (-score, str(row.get("id") or ""))
+
+    return sorted(rows or [], key=_key)
+
+
 def is_on_category(row: dict, accepted: set[str] | None) -> bool:
     """True if the committed node's Biolink type is compatible with the queried category.
 

@@ -11,7 +11,7 @@ from ...config import (
 )
 from ...utils import AssignedIDsDict, kestrel_request, text_is_not_empty
 from ..gene_symbol_resolver import GeneSymbolResolver
-from .base import BaseAnnotator, is_on_category
+from .base import BaseAnnotator, is_on_category, stable_result_order
 
 # Score assigned to a node recovered by the deterministic symbol fallback. Modest and fixed: the result
 # is a verified identity match, but it bypassed competitive search, so it must not be reported as a top
@@ -64,6 +64,12 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
                 limit = HYBRID_SEARCH_LIMIT if (prefer_human or preferred_prefixes) else 1
                 results = self._kestrel_hybrid_search(search_term, category, prefixes, limit=limit)
                 term_results = results[search_term]
+
+            # Deterministic candidate order before any selection: `_select_result`/`_select_canonical`
+            # trust the row order (top-1 fallback and `max(..., key=score)` both resolve an exact score
+            # tie by list position), so an exact tie must not ride on Kestrel's run-varying response
+            # order (Axis 3). Distinct scores are unaffected; ties break on the `id` CURIE.
+            term_results = stable_result_order(term_results)
 
             annotations: dict[str, dict[str, dict[str, Any]]] = {}
             chosen, matched = self._select_result(term_results, search_term, prefer_human)
