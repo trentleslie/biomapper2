@@ -12,7 +12,7 @@ from typing import Any
 import pandas as pd
 
 from ..biolink_client import BiolinkClient
-from ..config import CATEGORY_ACCEPTED_ROOTS, CATEGORY_PREFERRED_NAMESPACES
+from ..config import CATEGORY_ACCEPTED_ROOTS, CATEGORY_PREFERRED_NAMESPACES, get_refmet_live_api_fallback
 from ..utils import AnnotationMode, AssignedIDsDict
 from .annotators.base import AVAILABILITY_NOT_QUERIED, REFMET_SOURCE_NOT_QUERIED, BaseAnnotator
 from .annotators.goslin_lipid import GoslinLipidAnnotator
@@ -33,7 +33,7 @@ class AnnotationEngine:
                 KestrelHybridSearchAnnotator(),
                 KestrelTextSearchAnnotator(),
                 KestrelVectorSearchAnnotator(),
-                MetabolomicsWorkbenchAnnotator(),
+                MetabolomicsWorkbenchAnnotator(live_api_fallback=get_refmet_live_api_fallback()),
                 GoslinLipidAnnotator(),
             ]
         }
