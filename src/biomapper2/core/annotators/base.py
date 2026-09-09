@@ -14,6 +14,25 @@ AVAILABILITY_NO_MATCH = "no_match"
 AVAILABILITY_UNAVAILABLE = "unavailable"
 AVAILABILITY_NOT_QUERIED = "not_queried"
 
+# WHICH RefMet source served a row's vote, surfaced ALONGSIDE availability on a parallel provenance
+# channel (never folded into it): availability answers "did a source answer?", source answers "which
+# source". Plain strings for the same reasons as the AVAILABILITY_* values (pandas column,
+# ``Entity.model_extra``, JSON API). ``not_queried`` is the total-map default: an annotator that did
+# not run for the row (e.g. every gene row, and every RefMet-not-selected row).
+#   local_snapshot  : the pinned local freeze answered (voted or no_match) — the breaker was OUT of
+#                     the path, so the vote is deterministic.
+#   not_in_snapshot : a snapshot IS loaded but this exact query name was not in the freeze; the
+#                     default deterministic outcome (NO_MATCH) without a network call.
+#   live_api        : the live Metabolomics Workbench /match endpoint served the row (no snapshot,
+#                     or a snapshot miss with live_api_fallback enabled) and answered.
+#   unavailable     : the live service did not answer (breaker open / transport error / timeout).
+#   not_queried     : RefMet was not selected for the row.
+REFMET_SOURCE_LOCAL = "local_snapshot"
+REFMET_SOURCE_NOT_IN_SNAPSHOT = "not_in_snapshot"
+REFMET_SOURCE_LIVE = "live_api"
+REFMET_SOURCE_UNAVAILABLE = "unavailable"
+REFMET_SOURCE_NOT_QUERIED = "not_queried"
+
 # A node typed only at the top of the Biolink hierarchy is an ABSENT type assertion,
 # not an off-category claim, so the category validator lets it through (see `is_on_category`).
 TOP_OF_HIERARCHY_SENTINELS = frozenset({"biolink:NamedThing", "biolink:Entity"})
@@ -134,6 +153,17 @@ class BaseAnnotator(ABC):  # Inherit from ABC
         must never be folded into an empty vote, which is indistinguishable from a genuine no-match.
         """
         return {self.slug: AVAILABILITY_NOT_QUERIED}
+
+    def get_source(self, entity: dict | pd.Series, name_field: str, cache: dict | None = None) -> dict[str, str]:
+        """WHICH source served this annotator's vote for one row, keyed by slug.
+
+        A PARALLEL provenance channel to ``get_availability`` (same shape, never folded into it):
+        availability records whether a source answered, source records which one. Default
+        ``not_queried`` — only the RefMet annotator, which can serve a row from a pinned local freeze
+        instead of the live endpoint, reports anything else. Kept as its own method so the engine can
+        accumulate a total per-row source map exactly the way it accumulates availability.
+        """
+        return {self.slug: REFMET_SOURCE_NOT_QUERIED}
 
     @abstractmethod
     def get_annotations(
