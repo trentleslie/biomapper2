@@ -180,16 +180,24 @@ REFMET_FREEZE_MODES = frozenset({"off", "frozen", "live_backup"})
 def get_refmet_freeze_mode() -> str:
     """RefMet freeze mode from ``REFMET_FREEZE_MODE`` (reads os.environ per call).
 
-    One of ``off`` | ``frozen`` | ``live_backup``; default ``off``. An unset/blank value is ``off``;
-    an unrecognized value is treated as ``off`` with a logged warning (a typo must not silently
-    enable — or hard-fail — a resolution path).
+    One of ``off`` | ``frozen`` | ``live_backup``. An unrecognized value is treated as the unset case
+    with a logged warning (a typo must not silently enable — or hard-fail — a resolution path).
+
+    BACKWARD-COMPAT default: when the mode is unset/blank, infer ``frozen`` iff a ``REFMET_SNAPSHOT_PATH``
+    is configured, else ``off``. This preserves every existing deployment — a box that set only
+    ``REFMET_SNAPSHOT_PATH`` (freeze-first, pre-mode) keeps freeze behavior instead of silently reverting
+    to live-only. Set the mode explicitly to opt into ``live_backup`` (or force ``off``).
     """
+
+    def _unset_default() -> str:
+        return "frozen" if get_refmet_snapshot_path() is not None else "off"
+
     raw = os.environ.get("REFMET_FREEZE_MODE", "").strip().lower()
     if not raw:
-        return "off"
+        return _unset_default()
     if raw not in REFMET_FREEZE_MODES:
-        logger.warning("Unknown REFMET_FREEZE_MODE %r; falling back to 'off' (valid: off|frozen|live_backup)", raw)
-        return "off"
+        logger.warning("Unknown REFMET_FREEZE_MODE %r; using the unset default (valid: off|frozen|live_backup)", raw)
+        return _unset_default()
     return raw
 
 
