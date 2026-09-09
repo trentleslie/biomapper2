@@ -38,6 +38,7 @@ def test_engine_wires_fallback_from_env(monkeypatch):
 def test_engine_fallback_off_by_default(monkeypatch):
     monkeypatch.delenv("REFMET_LIVE_API_FALLBACK", raising=False)
     ann = AnnotationEngine().annotator_registry[MetabolomicsWorkbenchAnnotator.slug]
+    assert isinstance(ann, MetabolomicsWorkbenchAnnotator)
     assert ann.LIVE_API_FALLBACK is False
 
 
@@ -48,5 +49,7 @@ def test_goslin_binder_also_honors_the_toggle(monkeypatch):
 
     monkeypatch.setenv("REFMET_LIVE_API_FALLBACK", "1")
     goslin = AnnotationEngine().annotator_registry[GoslinLipidAnnotator.slug]
-    assert isinstance(goslin._binder, MetabolomicsWorkbenchAnnotator)
-    assert goslin._binder.LIVE_API_FALLBACK is True
+    assert isinstance(goslin, GoslinLipidAnnotator)
+    binder = goslin._binder
+    assert isinstance(binder, MetabolomicsWorkbenchAnnotator)
+    assert binder.LIVE_API_FALLBACK is True
