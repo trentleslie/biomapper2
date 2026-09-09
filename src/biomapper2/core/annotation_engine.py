@@ -50,6 +50,7 @@ class AnnotationEngine:
         annotators: list[str] | None = None,
         prefer_human: bool = True,
         prefer_canonical: bool = True,
+        candidate_limit: int | None = None,
     ) -> pd.DataFrame | pd.Series:
         """
         Annotate entity with additional vocab IDs, obtained using various internal or external methods.
@@ -72,6 +73,10 @@ class AnnotationEngine:
                 categories with a configured policy (e.g. CHEBI/HMDB/RM for metabolites, MONDO for
                 disease). The engine resolves the category's preferred-prefix set and passes it down;
                 gene/protein categories never receive a set (they use prefer_human).
+            candidate_limit: When set, forwarded unchanged to every annotator as the search ``limit``
+                the Kestrel annotators use directly (overriding their adaptive default). None means
+                "use the adaptive default". The engine does not gate it by category — it is a request
+                knob, not a category-resolved policy — so it is threaded straight through.
 
         Note: the engine also resolves an ``accepted_categories`` set from ``CATEGORY_ACCEPTED_ROOTS``
         and passes it down. It has no request-level flag on purpose — it is a correctness guard on the
@@ -149,6 +154,7 @@ class AnnotationEngine:
                     effective_prefer_human,
                     effective_preferred_prefixes,
                     effective_accepted_categories,
+                    candidate_limit,
                 )
             else:
                 return self._annotate_single(
@@ -162,6 +168,7 @@ class AnnotationEngine:
                     effective_prefer_human,
                     effective_preferred_prefixes,
                     effective_accepted_categories,
+                    candidate_limit,
                 )
         else:
             return self._get_empty_assigned_ids(item)
@@ -248,6 +255,7 @@ class AnnotationEngine:
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
         accepted_categories: set[str] | None = None,
+        candidate_limit: int | None = None,
     ) -> pd.DataFrame:
         """Annotate an entire DataFrame. Returns a single-column DataFrame containing AssignedIDsDicts."""
         if mode == "missing":
@@ -290,6 +298,7 @@ class AnnotationEngine:
                     prefer_human=prefer_human,
                     preferred_prefixes=preferred_prefixes,
                     accepted_categories=accepted_categories,
+                    candidate_limit=candidate_limit,
                 )
                 # Only the RefMet annotator returns a cache and accepts the kwarg; others build none.
                 if availability_cache is not None:
@@ -345,6 +354,7 @@ class AnnotationEngine:
         prefer_human: bool = True,
         preferred_prefixes: set[str] | None = None,
         accepted_categories: set[str] | None = None,
+        candidate_limit: int | None = None,
     ) -> pd.Series:
         """Annotate a single entity. Returns named series containing AssignedIDsDict."""
         # If user requested it, skip entities that have any provided IDs
@@ -370,6 +380,7 @@ class AnnotationEngine:
                 prefer_human=prefer_human,
                 preferred_prefixes=preferred_prefixes,
                 accepted_categories=accepted_categories,
+                candidate_limit=candidate_limit,
                 cache=availability_cache,
             )
             assigned_ids: AssignedIDsDict = self._merge_nested_dicts(assigned_ids, entity_annotations)
