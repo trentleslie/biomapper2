@@ -12,7 +12,7 @@ from typing import Any
 import pandas as pd
 
 from ..biolink_client import BiolinkClient
-from ..config import CATEGORY_ACCEPTED_ROOTS, CATEGORY_PREFERRED_NAMESPACES
+from ..config import CATEGORY_ACCEPTED_ROOTS, CATEGORY_PREFERRED_NAMESPACES, get_refmet_live_api_fallback
 from ..utils import AnnotationMode, AssignedIDsDict
 from .annotators.base import AVAILABILITY_NOT_QUERIED, REFMET_SOURCE_NOT_QUERIED, BaseAnnotator
 from .annotators.goslin_lipid import GoslinLipidAnnotator
@@ -27,14 +27,19 @@ class AnnotationEngine:
 
     def __init__(self, biolink_client: BiolinkClient | None = None):
         """Initialize the annotation engine and set up available annotators."""
+        # Resolve the freeze-miss fallback once and apply it to BOTH RefMet annotators — the directly
+        # registered one AND the private binder inside GoslinLipidAnnotator (separate instances, so the
+        # per-batch deadline state is not shared) — otherwise lipids resolved via Goslin would silently
+        # ignore the toggle.
+        refmet_fallback = get_refmet_live_api_fallback()
         self.annotator_registry: dict[str, BaseAnnotator] = {
             annotator.slug: annotator
             for annotator in [
                 KestrelHybridSearchAnnotator(),
                 KestrelTextSearchAnnotator(),
                 KestrelVectorSearchAnnotator(),
-                MetabolomicsWorkbenchAnnotator(),
-                GoslinLipidAnnotator(),
+                MetabolomicsWorkbenchAnnotator(live_api_fallback=refmet_fallback),
+                GoslinLipidAnnotator(binder=MetabolomicsWorkbenchAnnotator(live_api_fallback=refmet_fallback)),
             ]
         }
         self.biolink_client = biolink_client if biolink_client else BiolinkClient()
