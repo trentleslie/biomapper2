@@ -5,12 +5,15 @@ Customize these values to change API endpoints, model versions, and logging beha
 """
 
 import contextlib
+import logging
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
 
 load_dotenv()  # Load environmental variables (secrets)
+
+logger = logging.getLogger(__name__)
 
 
 # Set up our general cache directory (e.g., for requests cache, biolink)
@@ -164,6 +167,43 @@ def get_refmet_live_api_fallback() -> bool:
     No effect when no freeze is present -- the live path is already the default there.
     """
     return os.environ.get("REFMET_LIVE_API_FALLBACK", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+# The three RefMet freeze modes (D5). ``off`` = live ``/match`` only (no freeze); ``frozen`` =
+# deterministic freeze-first via the immutable TSV (benchmark reproducibility); ``live_backup`` =
+# live-first + write-through SQLite store served as backup when live is down (prod). Unknown values
+# are treated as ``off`` with a logged warning rather than raising, so a typo degrades to the safe
+# live-only path instead of hard-failing startup.
+REFMET_FREEZE_MODES = frozenset({"off", "frozen", "live_backup"})
+
+
+def get_refmet_freeze_mode() -> str:
+    """RefMet freeze mode from ``REFMET_FREEZE_MODE`` (reads os.environ per call).
+
+    One of ``off`` | ``frozen`` | ``live_backup``; default ``off``. An unset/blank value is ``off``;
+    an unrecognized value is treated as ``off`` with a logged warning (a typo must not silently
+    enable — or hard-fail — a resolution path).
+    """
+    raw = os.environ.get("REFMET_FREEZE_MODE", "").strip().lower()
+    if not raw:
+        return "off"
+    if raw not in REFMET_FREEZE_MODES:
+        logger.warning("Unknown REFMET_FREEZE_MODE %r; falling back to 'off' (valid: off|frozen|live_backup)", raw)
+        return "off"
+    return raw
+
+
+def get_refmet_store_path() -> Path | None:
+    """Return the configured write-through store path, reading os.environ on every call.
+
+    Mirrors ``get_refmet_snapshot_path``: the mutable SQLite store used by mode ``live_backup``.
+    A relative value resolves against PROJECT_ROOT; empty/unset -> None (store NOT configured).
+    """
+    raw = os.environ.get("REFMET_STORE_PATH", "").strip()
+    if not raw:
+        return None
+    p = Path(raw)
+    return p if p.is_absolute() else (PROJECT_ROOT / p)
 
 
 def derive_refmet_snapshot_version(path: Path | None) -> str | None:

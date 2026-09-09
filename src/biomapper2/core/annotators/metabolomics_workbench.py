@@ -13,14 +13,16 @@ import requests
 import requests_cache
 from circuitbreaker import CircuitBreakerError, circuit
 
+from ... import config
 from ...config import CACHE_DIR, CACHE_IGNORED_PARAMETERS
 from ...utils import AssignedIDsDict
-from . import refmet_snapshot
+from . import refmet_snapshot, refmet_store
 from .base import (
     AVAILABILITY_NO_MATCH,
     AVAILABILITY_NOT_QUERIED,
     AVAILABILITY_UNAVAILABLE,
     AVAILABILITY_VOTED,
+    REFMET_SOURCE_FREEZE_BACKUP,
     REFMET_SOURCE_LIVE,
     REFMET_SOURCE_LOCAL,
     REFMET_SOURCE_NOT_IN_SNAPSHOT,
@@ -92,6 +94,13 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     # default resolution path.
     LIVE_API_FALLBACK: bool = False
 
+    # RefMet freeze mode (D5). ``None`` (the default when constructed directly) preserves the
+    # historical snapshot-first-if-present dispatch. The engine resolves ``get_refmet_freeze_mode()``
+    # and passes an explicit ``off`` | ``frozen`` | ``live_backup`` string, which selects the code path
+    # in ``_fetch_refmet_data`` (``off``->live only; ``frozen``->immutable freeze; ``live_backup``->
+    # live-first + write-through backup store).
+    freeze_mode: str | None = None
+
     def __init__(
         self,
         *,
@@ -100,6 +109,7 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         retry_backoff_s: float | None = None,
         batch_deadline_s: float | None = None,
         live_api_fallback: bool | None = None,
+        freeze_mode: str | None = None,
         sleep: Callable[[float], None] | None = None,
         clock: Callable[[], float] | None = None,
     ):
@@ -124,6 +134,14 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
             self.BATCH_DEADLINE_S = batch_deadline_s
         if live_api_fallback is not None:
             self.LIVE_API_FALLBACK = live_api_fallback
+        if freeze_mode is not None:
+            self.freeze_mode = freeze_mode
+        # Mode live_backup seeds the store from the pinned freeze on first start (D8): a no-op when the
+        # store already has rows or no freeze is configured, so it is safe to run at every construction.
+        if self.freeze_mode == "live_backup" and refmet_store.is_configured():
+            snapshot_path = config.get_refmet_snapshot_path()
+            if snapshot_path is not None:
+                refmet_store.seed_from_tsv(snapshot_path)
 
     def arm_batch_deadline(self) -> bool:
         """Start the shared per-batch wall-clock bound; return True iff THIS call set it.
@@ -287,19 +305,76 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         return cache
 
     def _fetch_refmet_data(self, metabolite_name: str) -> RefMetResult:
-        """Resolve one name to a RefMetResult, consulting the pinned freeze FIRST when present.
+        """Resolve one name to a RefMetResult, dispatching on the configured freeze mode (D5).
 
-        SAFE ROLLOUT (this is the whole point of the change):
-        - Snapshot ABSENT (not configured / not loadable): behave EXACTLY as before — live /match +
-          breaker + retry + deadline, tagged source=live_api (or unavailable). Zero behavior change.
-        - Snapshot PRESENT: consult the freeze first, so the circuit breaker leaves the default
-          resolution path. A freeze hit (voted/no_match) is authoritative and deterministic; a MISS
-          resolves to NO_MATCH (source=not_in_snapshot) with NO network call — UNLESS
-          ``LIVE_API_FALLBACK`` is on, in which case a miss falls through to the live path.
+        - ``off``         : live ``/match`` only (breaker+retry+deadline), source=live_api/unavailable.
+        - ``frozen``      : the immutable freeze served first (deterministic; breaker out of the path);
+                            a miss is not_in_snapshot NO_MATCH unless ``LIVE_API_FALLBACK`` is on.
+        - ``live_backup`` : live-first + write-through store served as backup when live is down.
+        - ``None`` (legacy, direct construction): the historical snapshot-first-if-present dispatch,
+          preserved byte-for-byte so a caller that only sets ``REFMET_SNAPSHOT_PATH`` is unchanged.
         """
+        if self.freeze_mode == "live_backup":
+            return self._fetch_live_backup(metabolite_name)
+        if self.freeze_mode == "frozen":
+            return self._fetch_from_snapshot(metabolite_name)
+        if self.freeze_mode == "off":
+            return self._fetch_live(metabolite_name)
+        # Legacy dispatch (freeze_mode unset): snapshot-first-if-present, exactly as before the modes.
         if refmet_snapshot.is_present():
             return self._fetch_from_snapshot(metabolite_name)
         return self._fetch_live(metabolite_name)
+
+    def _fetch_live_backup(self, metabolite_name: str) -> RefMetResult:
+        """Live-first with a write-through store as an outage backup (mode ``live_backup``, D3/D6/D7).
+
+        Try live ``/match`` first. An authoritative live answer (VOTED or NO_MATCH — NO_MATCH is a
+        real negative, cached too) is returned as source=live_api and written back to the store when
+        the stored ``(status, refmet_id)`` is absent OR different (D7 — no write on an identical hit,
+        avoiding write amplification). When live is DOWN (breaker open / timeout / transport →
+        UNAVAILABLE), serve the store's last-known-good value as source=freeze_backup (D3: any age);
+        on a store miss, UNAVAILABLE.
+        """
+        live = self._fetch_live(metabolite_name)
+        if live.status in (AVAILABILITY_VOTED, AVAILABILITY_NO_MATCH):
+            refmet_id = live.data.get("refmet_id") if live.data else None
+            hit = refmet_store.get(metabolite_name)
+            if hit is None or hit.status != live.status or hit.refmet_id != refmet_id:
+                refmet_store.upsert(
+                    metabolite_name,
+                    status=live.status,
+                    refmet_id=refmet_id,
+                    source=REFMET_SOURCE_LIVE,
+                )
+            return live
+        # Live UNAVAILABLE: fall back to the last-known-good store value if we have one.
+        hit = refmet_store.get(metabolite_name)
+        if hit is not None:
+            return self._result_from_store_hit(hit)
+        return RefMetResult(AVAILABILITY_UNAVAILABLE, source=REFMET_SOURCE_UNAVAILABLE)
+
+    @staticmethod
+    def _result_from_store_hit(hit: refmet_store.StoreHit) -> RefMetResult:
+        """Translate a backup store row into a RefMetResult (source=freeze_backup).
+
+        A VOTED row replays its refmet_id; a NO_MATCH row replays the negative deterministically. A
+        stored UNAVAILABLE row carries no usable last-known-good, so it is surfaced as a plain
+        UNAVAILABLE (source=unavailable), never a misleading freeze_backup.
+        """
+        if hit.status == AVAILABILITY_VOTED and hit.refmet_id:
+            return RefMetResult(
+                AVAILABILITY_VOTED,
+                {"refmet_id": hit.refmet_id},
+                source=REFMET_SOURCE_FREEZE_BACKUP,
+                version=hit.snapshot_version,
+            )
+        if hit.status == AVAILABILITY_NO_MATCH:
+            return RefMetResult(
+                AVAILABILITY_NO_MATCH,
+                source=REFMET_SOURCE_FREEZE_BACKUP,
+                version=hit.snapshot_version,
+            )
+        return RefMetResult(AVAILABILITY_UNAVAILABLE, source=REFMET_SOURCE_UNAVAILABLE)
 
     def _fetch_from_snapshot(self, metabolite_name: str) -> RefMetResult:
         """Resolve one name against the pinned freeze (breaker OUT of the path)."""
