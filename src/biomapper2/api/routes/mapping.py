@@ -8,7 +8,7 @@ import uuid
 from typing import Any
 
 import pandas as pd
-from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
 from ...core.annotators.metabolomics_workbench import MetabolomicsWorkbenchAnnotator
@@ -248,7 +248,7 @@ async def map_dataset(
     vocab: str | None = None,
     prefer_human: bool = True,
     prefer_canonical: bool = True,
-    candidate_limit: int | None = None,
+    candidate_limit: int | None = Query(default=None, ge=1, le=100),
     _api_key: str = Depends(validate_api_key),
 ) -> DatasetMappingResponse:
     """
@@ -328,7 +328,7 @@ async def map_dataset_stream(
     vocab: str | None = None,
     prefer_human: bool = True,
     prefer_canonical: bool = True,
-    candidate_limit: int | None = None,
+    candidate_limit: int | None = Query(default=None, ge=1, le=100),
     _api_key: str = Depends(validate_api_key),
 ) -> StreamingResponse:
     """
