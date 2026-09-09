@@ -39,3 +39,14 @@ def test_engine_fallback_off_by_default(monkeypatch):
     monkeypatch.delenv("REFMET_LIVE_API_FALLBACK", raising=False)
     ann = AnnotationEngine().annotator_registry[MetabolomicsWorkbenchAnnotator.slug]
     assert ann.LIVE_API_FALLBACK is False
+
+
+def test_goslin_binder_also_honors_the_toggle(monkeypatch):
+    # GoslinLipidAnnotator wraps its OWN RefMet binder; the toggle must reach it too, or lipids resolved
+    # via Goslin would silently ignore the fallback.
+    from biomapper2.core.annotators.goslin_lipid import GoslinLipidAnnotator
+
+    monkeypatch.setenv("REFMET_LIVE_API_FALLBACK", "1")
+    goslin = AnnotationEngine().annotator_registry[GoslinLipidAnnotator.slug]
+    assert isinstance(goslin._binder, MetabolomicsWorkbenchAnnotator)
+    assert goslin._binder.LIVE_API_FALLBACK is True
