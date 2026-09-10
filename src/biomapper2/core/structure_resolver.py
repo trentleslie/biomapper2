@@ -149,7 +149,9 @@ class StructureResolver:
         try:
             hit = refmet_snapshot.lookup(node_name)
         except Exception:  # noqa: BLE001 - broken snapshot -> live hop, never aborts
-            logging.warning("Frozen structure lookup failed for '%s'; falling through to live", node_name, exc_info=True)
+            logging.warning(
+                "Frozen structure lookup failed for '%s'; falling through to live", node_name, exc_info=True
+            )
             return None
         if hit is None:
             return None
