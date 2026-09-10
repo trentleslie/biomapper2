@@ -146,11 +146,17 @@ class StructureResolver:
         """
         if not node_name:
             return None
-        hit = refmet_snapshot.lookup(node_name)
+        try:
+            hit = refmet_snapshot.lookup(node_name)
+        except Exception:  # noqa: BLE001 — a broken snapshot degrades to the live hop, never aborts
+            logging.warning("Frozen structure lookup failed for '%s'; falling through to live", node_name, exc_info=True)
+            return None
         if hit is None:
             return None
         key = (hit.extra or {}).get("inchi_key")
-        return key.upper() if key else None
+        # Treat the upstream "-" missing-value sentinel (and blanks) as NO structure, matching the live
+        # MW lookup's own "-" filter — a sentinel must never be accepted as a real InChIKey.
+        return key.upper() if key and key != "-" else None
 
     def _resolve_name_key(self, node_name: str) -> str | None:
         """Full InChIKey for a NAME via pinned freeze -> MW -> PubChem -> lipid hop. Fail-soft (``None``)."""

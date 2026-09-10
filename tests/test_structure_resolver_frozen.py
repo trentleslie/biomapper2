@@ -82,3 +82,35 @@ def test_connectivity_is_deterministic_via_freeze_when_live_would_fail(frozen, m
     monkeypatch.setattr(sr, "_fetch_mw_inchikey", _boom)  # live must NOT be reached for the RM node
     monkeypatch.setattr(sr, "_fetch_pubchem_inchikey", _boom)
     assert sr.connectivity_match("RM:0041813", "CHEBI:16359") is True  # shared block, deterministic
+
+
+def test_frozen_sentinel_and_blank_are_not_structure(monkeypatch, tmp_path):
+    # A regenerated freeze carrying the upstream "-" missing sentinel (or a blank) must NOT be accepted
+    # as an InChIKey — it is "no structure", same as the live MW lookup's own "-" filter.
+    cols = [
+        "query_name",
+        "status",
+        "refmet_id",
+        "refmet_name",
+        "inchi_key",
+        "formula",
+        "exactmass",
+        "pubchem_cid",
+        "super_class",
+        "main_class",
+        "sub_class",
+        "panels",
+    ]
+    rows = ["dash sentinel\tvoted\tRM1\t\t-\t\t\t\t\t\t\t", "blank key\tvoted\tRM2\t\t\t\t\t\t\t\t\t"]
+    freeze = tmp_path / "freeze.tsv"
+    freeze.write_text("\t".join(cols) + "\n" + "\n".join(rows) + "\n", encoding="utf-8")
+    monkeypatch.setenv("REFMET_SNAPSHOT_PATH", str(freeze))
+    refmet_snapshot.reset()
+    assert StructureResolver._frozen_inchikey("dash sentinel") is None
+    assert StructureResolver._frozen_inchikey("blank key") is None
+
+
+def test_frozen_lookup_is_fail_soft(frozen, monkeypatch):
+    # A broken snapshot must degrade to the live hop, never abort resolution.
+    monkeypatch.setattr(refmet_snapshot, "lookup", lambda *_a, **_k: (_ for _ in ()).throw(RuntimeError("corrupt")))
+    assert StructureResolver._frozen_inchikey("Cholic acid") is None
