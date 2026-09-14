@@ -173,8 +173,18 @@ def main():  # pragma: no cover
         w.writerows(notes)
 
     # --- Tab 6: independent PubChem re-adjudication (from readjudication_table.csv, Unit 5) ---
+    # The re-adjudication table is pinned to ONE specific run (recorded as run_id in the co-located
+    # readjudication_summary.json). Refuse to copy it into a sheet stamped with a different AB_RUN_DIR --
+    # otherwise Tab 6 would carry data from one run under another run's provenance label. Fail loudly.
     readj = Path(__file__).with_name("readjudication_table.csv")
+    readj_summary = Path(__file__).with_name("readjudication_summary.json")
     if readj.exists():
+        if readj_summary.exists():
+            pinned_run_id = json.loads(readj_summary.read_text()).get("run_id", "")
+            if pinned_run_id and pinned_run_id != RUN.name:
+                raise AssertionError(
+                    f"re-adjudication table is pinned to run {pinned_run_id!r} but AB_RUN_DIR is "
+                    f"{RUN.name!r}; refusing to stamp mismatched provenance onto Tab 6")
         with readj.open(newline="") as fin, (OUT / "6_readjudication.tsv").open("w", newline="") as fh:
             r = csv.DictReader(fin)
             w = csv.DictWriter(fh, fieldnames=r.fieldnames, delimiter="\t", extrasaction="ignore")

@@ -18,6 +18,19 @@ benchmark run, no backend/Kestrel call, and no resolver/KG change. It:
 The certificate structures are the gold-id-resolved blocks (``nblk``/``cblk``); BioMapper's treatment
 structure is used only for grouping, exactly as the generator does. The independent arbiter is a fresh
 PubChem lookup on the names, distinct from both. # pragma: no cover on the __main__ path.
+
+Required inputs (env vars, also accepted as ``--run-dir/--refmet-cache/--gold-tsv`` flags). These live
+under the author's home dir on the benchmark box and are NOT committed to the repo, so a clean checkout
+cannot regenerate the table without them present locally:
+
+  AB_RUN_DIR      the pinned ab_lipid_oracle run dir (holds certificate_adjudication.json + the
+                  treatment__*_devapi.jsonl / oracle_provided_*.jsonl resolution files).
+  REFMET_CACHE    the 2-column ``input<TAB>refmet`` convert cache that drives the grouping.
+  NECS_GOLD_TSV   the NECS gold TSV (feeds only the extended sheet's provenance columns).
+
+The reconciliation test in ``tests/test_certificate_adjudication_full.py`` SKIPS LOUDLY (never silently
+passes) with a message naming these inputs when they are absent; the pure-logic tests run regardless.
+The defaults are pinned to the specific run the shipped ``readjudication_table.csv`` was built from.
 """
 
 from __future__ import annotations
@@ -99,7 +112,11 @@ def build_full(run_dir, refmet_cache, gold_tsv):
                 grp, part = "monti_only", mo
             else:
                 continue
-            pblocks = [(p, cblk.get(p)) for p in part if cblk.get(p)]
+            # ``part`` is an unordered set; sort the partner candidates by (name, block) so the
+            # first-block match and the pblocks[0] fallback are deterministic across processes
+            # (a Python set's iteration order varies with the per-process hash seed).
+            pblocks = sorted(((p, cblk.get(p)) for p in part if cblk.get(p)),
+                             key=lambda pb: (pb[0], pb[1] or ""))
             if not gb or not pblocks:
                 rec = {"name": n, "group": grp, "verdict": "refused",
                        "necs_block": gb, "partner": None, "partner_block": None}
@@ -202,8 +219,14 @@ def pubchem_lookup(name, cache, fetch=None, max_retries=4):
 
     - single exact CID  -> {"status":"resolved","block":<14>,"formula":...,"cid":...}
     - multiple CIDs     -> {"status":"multi", candidates:[...], "review":True}  (NO auto-pick)
-    - no match / error  -> {"status":"unresolvable","review":True}
-    Cached by normalized name; a warm cache makes reruns offline + byte-identical.
+    - genuine no match  -> {"status":"unresolvable","review":True}  (HTTP 404 / empty property table)
+    - transient failure -> {"status":"unresolvable","review":True,"transient":True}  (NOT cached)
+
+    Caching policy: only GENUINE no-results (404 / empty PubChem response) are persisted as
+    ``unresolvable``. A TRANSIENT failure -- timeout, connection error, HTTP 5xx, a 503 that survives
+    retries, an unparseable body, or an ``--offline`` cache miss -- is returned but NEVER written to the
+    cache, so a later online run retries it instead of inheriting a stale permanent ``unresolvable``.
+    A warm cache makes reruns offline + byte-identical.
     """
     key = normalize_name(name)
     if key in cache:
@@ -212,32 +235,39 @@ def pubchem_lookup(name, cache, fetch=None, max_retries=4):
     enc = urllib.parse.quote(name, safe="")
     url = f"{_PUG}/compound/name/{enc}/property/InChIKey,MolecularFormula/JSON"
     result = None
+    cacheable = True  # only genuine no-results (404 / empty table) get persisted
     for attempt in range(max_retries):
         try:
             status, body = fetch(url)
-        except Exception as e:  # noqa: BLE001 - any transport error -> unresolvable
-            result = {"status": "unresolvable", "review": True, "error": f"{type(e).__name__}"}
+        except Exception as e:  # noqa: BLE001 - timeout/connection/offline miss -> TRANSIENT, don't cache
+            result = {"status": "unresolvable", "review": True, "transient": True,
+                      "error": f"transient: {type(e).__name__}"}
+            cacheable = False
             break
         if status == 503:  # PUG-REST throttling; back off and retry
             time.sleep(0.6 * (attempt + 1))
             continue
-        if status == 404:
+        if status == 404:  # genuine "no exact-name match" -> cache
             result = {"status": "unresolvable", "review": True, "error": "no exact-name match"}
             break
-        if status != 200:
-            result = {"status": "unresolvable", "review": True, "error": f"http {status}"}
+        if 500 <= status < 600 or status != 200:  # server/other error -> TRANSIENT, don't cache
+            result = {"status": "unresolvable", "review": True, "transient": True,
+                      "error": f"transient: http {status}"}
+            cacheable = False
             break
         try:
             props = json.loads(body)["PropertyTable"]["Properties"]
-        except Exception:  # noqa: BLE001
-            result = {"status": "unresolvable", "review": True, "error": "unparseable"}
+        except Exception:  # noqa: BLE001 - malformed/gateway body -> TRANSIENT, don't cache
+            result = {"status": "unresolvable", "review": True, "transient": True,
+                      "error": "transient: unparseable"}
+            cacheable = False
             break
         cands = []
         for p in props:
             ik = (p.get("InChIKey") or "").strip()
             blk = ik.split("-")[0] if ik else ""
             cands.append({"cid": p.get("CID"), "block": blk, "formula": (p.get("MolecularFormula") or "").strip()})
-        if not cands:
+        if not cands:  # 200 with an empty property table -> genuine no-result -> cache
             result = {"status": "unresolvable", "review": True, "error": "empty property table"}
         elif len({c["block"] for c in cands}) == 1 and len(cands) == 1:
             c = cands[0]
@@ -251,9 +281,12 @@ def pubchem_lookup(name, cache, fetch=None, max_retries=4):
         else:
             result = {"status": "multi", "review": True, "candidates": cands}
         break
-    if result is None:  # exhausted retries on 503
-        result = {"status": "unresolvable", "review": True, "error": "throttled (503) after retries"}
-    cache[key] = result
+    if result is None:  # exhausted retries on 503 -> TRANSIENT, don't cache
+        result = {"status": "unresolvable", "review": True, "transient": True,
+                  "error": "transient: throttled (503) after retries"}
+        cacheable = False
+    if cacheable:
+        cache[key] = result
     return result
 
 
@@ -294,13 +327,17 @@ def classify(verdict, pc_necs, pc_partner):
         if same_block:
             return "false-refutation", review           # PubChem says same structure -> gold defect
         if same_formula:
-            return "convention-difference", review       # same formula, different block (acid/anion, anomer)
+            # same formula, DIFFERENT first block: this is NOT necessarily a naming convention -- it can
+            # be a regioisomer/ring-chain/connectivity defect (e.g. gamma- vs alpha-glutamylvaline). Route
+            # to review with subtype undetermined so a real structural defect is never called a convention.
+            return "structural-disagreement", True
         return "real-disagreement", review               # genuinely different structures
     # certified bucket (monti_only / biomapper_only)
     if same_block:
         return "confirmed-genuine", review               # both names -> same PubChem structure
     if same_formula:
-        return "convention-difference", True             # certified on equal formula but PubChem differs -> review
+        # certified on equal formula but PubChem first blocks differ: same regioisomer ambiguity as above
+        return "structural-disagreement", True
     return "spurious-certification", review              # gold blocks matched but PubChem disagrees
 
 

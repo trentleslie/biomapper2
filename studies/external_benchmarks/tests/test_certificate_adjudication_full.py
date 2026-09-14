@@ -24,8 +24,17 @@ _HAVE_RUN = (
     and caf.PINNED_GOLD_TSV.exists()
 )
 
+# Loud, explicit skip reason so an absent input never reads as a silent pass (finding #5). These
+# inputs live under the author's home dir and cannot be committed; set AB_RUN_DIR / REFMET_CACHE /
+# NECS_GOLD_TSV (or the pinned defaults below) to run the reconciliation gate.
+_SKIP_REASON = (
+    "reconciliation gate skipped: pinned ab_lipid_oracle run/inputs not on disk. Required (uncommitted): "
+    f"AB_RUN_DIR={caf.PINNED_RUN_DIR}/certificate_adjudication.json, "
+    f"REFMET_CACHE={caf.PINNED_REFMET_CACHE}, NECS_GOLD_TSV={caf.PINNED_GOLD_TSV}."
+)
 
-@pytest.mark.skipif(not _HAVE_RUN, reason="pinned ab_lipid_oracle run/inputs not on disk")
+
+@pytest.mark.skipif(not _HAVE_RUN, reason=_SKIP_REASON)
 def test_reconciliation_gate_exact():
     """Full-emit per (pair, group, verdict) counts + refused_species_lipid reconcile CELL-FOR-CELL
     with the shipped certificate_adjudication.json; the 6 truncated examples are a subset of the
@@ -50,7 +59,7 @@ def test_reconciliation_gate_exact():
                 assert ex <= got, f"{cohort}/{g}/{v}: examples not a subset of full emit"
 
 
-@pytest.mark.skipif(not _HAVE_RUN, reason="pinned ab_lipid_oracle run/inputs not on disk")
+@pytest.mark.skipif(not _HAVE_RUN, reason=_SKIP_REASON)
 def test_target_selection_counts_and_blocks():
     """Unit 2: selected rows carry a necs_block + partner_block by construction; species-lipids
     are dropped; pre-exclusion target totals match the artifact bucket counts."""
@@ -123,6 +132,105 @@ def test_pubchem_error_unresolvable():
     assert res["review"] is True
 
 
+# --------------------------------------------------------------------------------------------------
+# Finding #1: transient failures are NOT cached; only genuine no-results persist
+# --------------------------------------------------------------------------------------------------
+def test_transient_500_not_cached_but_404_is_cached():
+    """A 500 (server error) is transient -> unresolvable but NOT persisted, so a later online run
+    retries it. A 404 (genuine no exact-name match) IS persisted."""
+    # 500 -> transient, uncached
+    def fetch_500(url, timeout=20):
+        return 500, ""
+    cache = {}
+    res = caf.pubchem_lookup("flaky-name", cache, fetch=fetch_500)
+    assert res["status"] == "unresolvable"
+    assert res.get("transient") is True
+    assert "flaky-name" not in cache, "a transient 500 must NOT be persisted"
+
+    # a subsequent online call for the SAME name is retried (cache did not short-circuit it)
+    def fetch_ok(url, timeout=20):
+        return 200, _prop_body([{"CID": 7, "InChIKey": "DDDDDDDDDDDDDD-UHFFFAOYSA-N", "MolecularFormula": "C2H6O"}])
+    res2 = caf.pubchem_lookup("flaky-name", cache, fetch=fetch_ok)
+    assert res2["status"] == "resolved"
+    assert cache["flaky-name"]["status"] == "resolved"
+
+    # 404 -> genuine no-result, IS persisted
+    def fetch_404(url, timeout=20):
+        return 404, ""
+    res3 = caf.pubchem_lookup("truly-absent", cache, fetch=fetch_404)
+    assert res3["status"] == "unresolvable"
+    assert res3.get("transient") is not True
+    assert cache["truly-absent"]["status"] == "unresolvable", "a genuine 404 must be persisted"
+
+
+def test_transient_timeout_and_offline_miss_not_cached():
+    """Timeout / connection error / offline cache-miss are all transient -> never persisted."""
+    def fetch_timeout(url, timeout=20):
+        raise TimeoutError("boom")
+    cache = {}
+    res = caf.pubchem_lookup("some-name", cache, fetch=fetch_timeout)
+    assert res["status"] == "unresolvable"
+    assert res.get("transient") is True
+    assert "some-name" not in cache
+
+    def fetch_offline(url, timeout=20):
+        raise RuntimeError("offline")
+    res2 = caf.pubchem_lookup("offline-name", cache, fetch=fetch_offline)
+    assert res2.get("transient") is True
+    assert "offline-name" not in cache
+
+
+# --------------------------------------------------------------------------------------------------
+# Finding #4: deterministic partner selection
+# --------------------------------------------------------------------------------------------------
+def test_deterministic_partner_selection():
+    """build_full picks the partner from an unordered set; sorting makes the choice reproducible.
+
+    Two NECS names each map (via curie) to MULTIPLE partner candidates whose gold blocks differ from
+    the NECS block (forcing the pblocks[0] fallback, the nondeterministic path). The chosen partner
+    must be identical across independent build_full invocations."""
+    import types
+
+    def fake_ca():
+        m = types.SimpleNamespace()
+        # three partner names sharing curie "CU"; the NECS name "target" is also present as a cohort
+        # name (via a distinct curie) so it passes the presence gate but does NOT join the partner set.
+        cohort_res = {"pz": ["CU"], "pa": ["CU"], "pm": ["CU"], "target": ["OTHER"]}
+        necs_res = {"target": ["CU"]}
+        blocks = {"pz": "ZZZZZZZZZZZZZZ", "pa": "AAAAAAAAAAAAAA", "pm": "MMMMMMMMMMMMMM",
+                  "target": "TTTTTTTTTTTTTT"}
+
+        def _res(label):
+            return necs_res if label == "necs" else dict(cohort_res)
+
+        def _blk(tag):
+            return dict(blocks)
+
+        m._res = _res
+        m._blk = _blk
+        m._refmet = lambda: {}
+        m.is_species_level_lipid = lambda name: False
+        return m
+
+    orig = caf.ca
+    try:
+        caf.ca = fake_ca()
+        # single cohort pair to keep it simple
+        orig_pairs = caf.PAIRS
+        caf.PAIRS = ("arivale",)
+        first = caf.build_full("/tmp/x", "/tmp/y", "/tmp/z")
+        second = caf.build_full("/tmp/x", "/tmp/y", "/tmp/z")
+    finally:
+        caf.ca = orig
+        caf.PAIRS = orig_pairs
+    r1 = first["arivale"]["biomapper_only"]["refuted"]
+    r2 = second["arivale"]["biomapper_only"]["refuted"]
+    assert r1 and r2, "expected a refuted record from the multi-partner set"
+    assert r1[0]["partner"] == r2[0]["partner"]
+    # sorted-by-name -> the alphabetically-first partner ('pa') is chosen deterministically
+    assert r1[0]["partner"] == "pa"
+
+
 def test_warm_cache_determinism_no_network():
     """A warm cache returns without calling fetch (offline-deterministic reruns)."""
     def fetch_once(url, timeout=20):
@@ -159,12 +267,29 @@ def test_classify_real_disagreement():
     assert cls == "real-disagreement"
 
 
-def test_classify_convention_difference_acid_anion():
-    """4-hydroxyphenylacetate acid vs anion: same formula, different first block -> convention."""
-    acid = _resolved("XQXPVVBIMDBYFF", "C8H8O3")
-    anion = _resolved("XQXPVVBIMDBYFC", "C8H8O3")  # different block, identical formula
-    cls, review = caf.classify("refuted", acid, anion)
-    assert cls == "convention-difference"
+def test_classify_same_formula_diff_block_is_structural_not_convention():
+    """Same molecular formula, DIFFERENT first block is NOT auto-called a convention: it may be a
+    regioisomer/ring-chain defect, so it routes to review as ``structural-disagreement`` (finding #2)."""
+    a = _resolved("XQXPVVBIMDBYFF", "C8H8O3")
+    b = _resolved("XQXPVVBIMDBYFC", "C8H8O3")  # different block, identical formula
+    cls, review = caf.classify("refuted", a, b)
+    assert cls == "structural-disagreement"
+    assert cls != "convention-difference"
+    assert review is True
+    # certified bucket takes the same route (never a silent convention)
+    cls2, review2 = caf.classify("certified", a, b)
+    assert cls2 == "structural-disagreement"
+    assert review2 is True
+
+
+def test_classify_regioisomer_glutamylvaline_not_convention():
+    """gamma- vs alpha-glutamylvaline: identical formula, different connectivity (different first
+    block) -> a genuine structural defect, never 'convention-difference'."""
+    gamma = _resolved("SITLTJHOQZFJGG", "C10H18N2O5")
+    alpha = _resolved("AQAKHZVPOOGUCK", "C10H18N2O5")  # regioisomer: same formula, different block
+    cls, review = caf.classify("refuted", gamma, alpha)
+    assert cls == "structural-disagreement"
+    assert review is True
 
 
 def test_classify_l3_guard_block_match_formula_mismatch():
