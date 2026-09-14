@@ -1,0 +1,33 @@
+{
+  "analysis": "Independent PubChem re-adjudication of the cross-cohort certificate (overlap-refuted + certified misses)",
+  "run_id": "ab_lipid_oracle_20260907T235106Z",
+  "kg_build": "mg:d7dddb3e5b51be69",
+  "rdkit": "2025.09.3",
+  "date": "2026-09-14",
+  "arbiter": "PubChem PUG-REST compound/name/<name>/property/InChIKey,MolecularFormula (independent of KG and of gold)",
+  "note": "clean run covers arivale + xuetal only; the superseded ~/arm-m-report/ set also had blsa + llfs, NOT in this run.",
+  "summary": {
+    "arivale": {
+      "overlap_refuted": {
+        "false-refutation": 12,
+        "unresolvable": 6,
+        "review-nonstandard-gold-block": 3
+      },
+      "certified": {
+        "unresolvable": 4,
+        "confirmed-genuine": 1
+      }
+    },
+    "xuetal": {
+      "overlap_refuted": {
+        "unresolvable": 1
+      },
+      "certified": {
+        "unresolvable": 12,
+        "confirmed-genuine": 6
+      }
+    }
+  },
+  "unresolvable": 23,
+  "n_rows": 45
+}

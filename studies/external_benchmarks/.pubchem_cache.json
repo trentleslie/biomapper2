@@ -1,0 +1,339 @@
+{
+  "(n(1) + n(8))-acetylspermidine": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "(s)-3-hydroxybutyrylcarnitine": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "13-hode + 9-hode": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "16-hydroxypalmitate": {
+    "block": "UGAGPNKCDRTDHP",
+    "cid": 7058075,
+    "formula": "C16H31O3-",
+    "review": false,
+    "status": "resolved"
+  },
+  "3-hydroxy-2-methylpyridine sulfate": {
+    "block": "PIDWMOXDWRUIHQ",
+    "cid": 155730938,
+    "formula": "C6H5NO5S",
+    "review": false,
+    "status": "resolved"
+  },
+  "3-methylglutarylcarnitine (2)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "4-methylcatechol sulfate": {
+    "block": "AATDNGCLCGOWJE",
+    "cid": 129848880,
+    "formula": "C7H6O6S",
+    "review": false,
+    "status": "resolved"
+  },
+  "5-hydroxy-2-methylpyridine sulfate": {
+    "block": "VZCFLNLYNRUCHM",
+    "cid": 155730937,
+    "formula": "C6H5NO5S",
+    "review": false,
+    "status": "resolved"
+  },
+  "5alpha-androstan-3alpha,17beta-diol monosulfate (1)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "5alpha-androstan-3alpha,17beta-diol monosulfate (2)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "5alpha-androstan-3beta,17beta-diol disulfate": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "5alpha-pregnan-3beta,20beta-diol monosulfate (1)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "6-bromotryptophan": {
+    "block": "OAORYCZPERQARS",
+    "candidates": [
+      {
+        "block": "OAORYCZPERQARS",
+        "cid": 9856996,
+        "formula": "C11H11BrN2O2"
+      },
+      {
+        "block": "OAORYCZPERQARS",
+        "cid": 3496442,
+        "formula": "C11H11BrN2O2"
+      }
+    ],
+    "cid": 9856996,
+    "formula": "C11H11BrN2O2",
+    "review": true,
+    "status": "resolved"
+  },
+  "6-hydroxyindole sulfate": {
+    "block": "QRHHXPIYYXPEMG",
+    "cid": 122198196,
+    "formula": "C8H7NO4S",
+    "review": false,
+    "status": "resolved"
+  },
+  "androstenediol (3beta,17beta) disulfate (1)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "androstenediol (3beta,17beta) disulfate (2)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "androstenediol (3beta,17beta) monosulfate (1)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "arabitol/xylitol": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "arabonate/xylonate": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "biliverdin": {
+    "block": "RCNSAJSGRJSBKK",
+    "candidates": [
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 5280353,
+        "formula": "C33H34N4O6"
+      },
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 5353439,
+        "formula": "C33H34N4O6"
+      },
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 251,
+        "formula": "C33H34N4O6"
+      },
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 66588766,
+        "formula": "C33H34N4O6"
+      },
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 5315455,
+        "formula": "C33H34N4O6"
+      },
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 6183357,
+        "formula": "C33H34N4O6"
+      },
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 6323236,
+        "formula": "C33H34N4O6"
+      },
+      {
+        "block": "RCNSAJSGRJSBKK",
+        "cid": 177830436,
+        "formula": "C33H34N4O6"
+      }
+    ],
+    "cid": 5280353,
+    "formula": "C33H34N4O6",
+    "review": true,
+    "status": "resolved"
+  },
+  "choline": {
+    "block": "OEYIOHPDSNJKLS",
+    "cid": 305,
+    "formula": "C5H14NO+",
+    "review": false,
+    "status": "resolved"
+  },
+  "cortisone": {
+    "block": "MFYSYFVPBJMHGN",
+    "cid": 222786,
+    "formula": "C21H28O5",
+    "review": false,
+    "status": "resolved"
+  },
+  "docosadioate (c22-dc)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "gamma-glutamylvaline": {
+    "block": "AQAKHZVPOOGUCK",
+    "cid": 7015683,
+    "formula": "C10H18N2O5",
+    "review": false,
+    "status": "resolved"
+  },
+  "glucuronate": {
+    "block": "AEMOLEFTQBMNLQ",
+    "cid": 94715,
+    "formula": "C6H10O7",
+    "review": false,
+    "status": "resolved"
+  },
+  "glycochenodeoxycholate": {
+    "block": "GHCZAUBVMUEKKP",
+    "cid": 12544,
+    "formula": "C26H43NO5",
+    "review": false,
+    "status": "resolved"
+  },
+  "glycochenodeoxycholate glucuronide (1)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "glycoursodeoxycholate": {
+    "block": "GHCZAUBVMUEKKP",
+    "cid": 12310288,
+    "formula": "C26H43NO5",
+    "review": false,
+    "status": "resolved"
+  },
+  "hydroxyproline": {
+    "block": "PMMYEEVYMWASQN",
+    "cid": 5810,
+    "formula": "C5H9NO3",
+    "review": false,
+    "status": "resolved"
+  },
+  "maltose": {
+    "block": "GUBGYTABKSRVRQ",
+    "cid": 439186,
+    "formula": "C12H22O11",
+    "review": false,
+    "status": "resolved"
+  },
+  "mannose": {
+    "block": "WQZGKKKJIJFFOK",
+    "cid": 18950,
+    "formula": "C6H12O6",
+    "review": false,
+    "status": "resolved"
+  },
+  "methyl-4-hydroxybenzoate sulfate": {
+    "block": "IBEAHXYYSZWGED",
+    "cid": 122164837,
+    "formula": "C8H8O6S",
+    "review": false,
+    "status": "resolved"
+  },
+  "metoprolol acid metabolite*": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "n-methylproline": {
+    "block": "CWLQUGTUXBXTLF",
+    "cid": 643474,
+    "formula": "C6H11NO2",
+    "review": false,
+    "status": "resolved"
+  },
+  "n4-acetyl-5-hydroxysulfamethoxazole*": {
+    "block": "YKWZTWOYFWCVKH",
+    "cid": 10335611,
+    "formula": "C12H13N3O5S",
+    "review": false,
+    "status": "resolved"
+  },
+  "n6-carbamoylthreonyladenosine": {
+    "block": "UNUYMBPXEFMLNW",
+    "cid": 161466,
+    "formula": "C15H20N6O8",
+    "review": false,
+    "status": "resolved"
+  },
+  "pentose acid*": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "pregnenediol sulfate (c21h34o5s)*": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "pregnenetriol sulfate*": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "pseudouridine": {
+    "block": "PTJWIQPHWPFNBW",
+    "cid": 15047,
+    "formula": "C9H12N2O6",
+    "review": false,
+    "status": "resolved"
+  },
+  "retinol (vitamin a)": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  },
+  "s-methylcysteine sulfoxide": {
+    "block": "ZZLHPCSGGOGHFW",
+    "candidates": [
+      {
+        "block": "ZZLHPCSGGOGHFW",
+        "cid": 182092,
+        "formula": "C4H9NO3S"
+      },
+      {
+        "block": "ZZLHPCSGGOGHFW",
+        "cid": 82142,
+        "formula": "C4H9NO3S"
+      },
+      {
+        "block": "ZZLHPCSGGOGHFW",
+        "cid": 99483,
+        "formula": "C4H9NO3S"
+      }
+    ],
+    "cid": 182092,
+    "formula": "C4H9NO3S",
+    "review": true,
+    "status": "resolved"
+  },
+  "trans-4-hydroxyproline": {
+    "block": "PMMYEEVYMWASQN",
+    "cid": 5810,
+    "formula": "C5H9NO3",
+    "review": false,
+    "status": "resolved"
+  },
+  "vanillic acid glycine": {
+    "error": "no exact-name match",
+    "review": true,
+    "status": "unresolvable"
+  }
+}

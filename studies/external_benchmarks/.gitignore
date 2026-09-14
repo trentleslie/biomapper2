@@ -1,0 +1,5 @@
+# Root .gitignore ignores *.csv / *.json globally; un-ignore the committed, data-pinned
+# re-adjudication deliverables + cache (plan R7: numbers regenerate from a committed source).
+!readjudication_table.csv
+!readjudication_summary.json
+!.pubchem_cache.json
