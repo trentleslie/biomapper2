@@ -11,6 +11,7 @@ from __future__ import annotations
 import csv
 import json
 import os
+import re
 from pathlib import Path
 
 from studies.external_benchmarks.scorers.cross_cohort_overlap import curie_set
@@ -158,11 +159,45 @@ def main():  # pragma: no cover
         ("refmet_source", REFMET_CACHE.name),
         ("caveat", "kg_<NS> capped at 6 ids/namespace; full kg_ids + resolution_certificate require a re-query (not in this sheet)"),
         ("api_key", "NOT recorded in any artifact; internal endpoints omitted"),
+        # --- re-adjudication provenance header (Unit 5) ---
+        ("readjudication_run_id", RUN.name),
+        ("readjudication_kg_build", "mg:d7dddb3e5b51be69"),
+        ("readjudication_rdkit", "2025.09.3"),
+        ("readjudication_date", "2026-09-14"),
+        ("readjudication_arbiter", "PubChem PUG-REST compound/name/<name>/property/InChIKey,MolecularFormula (independent of KG and gold)"),
+        ("cohorts_in_clean_run", "arivale + xuetal ONLY; the superseded ~/arm-m-report/ set also had blsa + llfs, which are NOT in this run"),
     ]
     with (OUT / "5_provenance_notes.tsv").open("w", newline="") as fh:
         w = csv.writer(fh, delimiter="\t")
         w.writerow(["key", "value"])
         w.writerows(notes)
+
+    # --- Tab 6: independent PubChem re-adjudication (from readjudication_table.csv, Unit 5) ---
+    # The re-adjudication table is pinned to ONE specific run (recorded as run_id in the co-located
+    # readjudication_summary.json). Refuse to copy it into a sheet stamped with a different AB_RUN_DIR --
+    # otherwise Tab 6 would carry data from one run under another run's provenance label. Fail loudly.
+    readj = Path(__file__).with_name("readjudication_table.csv")
+    readj_summary = Path(__file__).with_name("readjudication_summary.json")
+    if readj.exists():
+        if readj_summary.exists():
+            pinned_run_id = json.loads(readj_summary.read_text()).get("run_id", "")
+            if pinned_run_id and pinned_run_id != RUN.name:
+                raise AssertionError(
+                    f"re-adjudication table is pinned to run {pinned_run_id!r} but AB_RUN_DIR is "
+                    f"{RUN.name!r}; refusing to stamp mismatched provenance onto Tab 6")
+        with readj.open(newline="") as fin, (OUT / "6_readjudication.tsv").open("w", newline="") as fh:
+            r = csv.DictReader(fin)
+            w = csv.DictWriter(fh, fieldnames=r.fieldnames, delimiter="\t", extrasaction="ignore")
+            w.writeheader()
+            for row in r:
+                w.writerow(row)
+
+    # Pre-publish assertion: NO output tab may carry an internal endpoint or a manifest *_api URL.
+    leak = re.compile(r"127\.0\.0\.1|(?:baseline|treatment)_api")
+    for f in sorted(OUT.glob("*.tsv")):
+        m = leak.search(f.read_text())
+        if m:
+            raise AssertionError(f"endpoint leak in {f.name}: {m.group(0)!r}")
 
     for f in sorted(OUT.glob("*.tsv")):
         print(f"  {f.name}: {sum(1 for _ in f.open())-1} rows")

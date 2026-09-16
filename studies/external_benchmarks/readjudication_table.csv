@@ -1,0 +1,46 @@
+pair,group,verdict,necs_name,partner_name,necs_block,partner_block,pubchem_necs_block,pubchem_partner_block,formula_necs,formula_partner,classification,review_flag
+arivale,overlap,refuted,biliverdin,biliverdin,QBUVFDKTZJNUPP,RCNSAJSGRJSBKK,RCNSAJSGRJSBKK,RCNSAJSGRJSBKK,C33H34N4O6,C33H34N4O6,false-refutation,True
+arivale,overlap,refuted,cortisone,cortisone,IWIJFUQFXLWZIA,MFYSYFVPBJMHGN,MFYSYFVPBJMHGN,MFYSYFVPBJMHGN,C21H28O5,C21H28O5,false-refutation,False
+arivale,overlap,refuted,mannose,mannose,GZCGUPFRVQAUEE,WQZGKKKJIJFFOK,WQZGKKKJIJFFOK,WQZGKKKJIJFFOK,C6H12O6,C6H12O6,false-refutation,False
+arivale,overlap,refuted,pseudouridine,pseudouridine,HZIOZCLEXIYJAD,PTJWIQPHWPFNBW,PTJWIQPHWPFNBW,PTJWIQPHWPFNBW,C9H12N2O6,C9H12N2O6,false-refutation,False
+arivale,overlap,refuted,choline,choline,CRBHXDCYXIISFC,OEYIOHPDSNJKLS,OEYIOHPDSNJKLS,OEYIOHPDSNJKLS,C5H14NO+,C5H14NO+,false-refutation,False
+arivale,overlap,refuted,glucuronate,glucuronate,IAJILQKETJEXLJ,AEMOLEFTQBMNLQ,AEMOLEFTQBMNLQ,AEMOLEFTQBMNLQ,C6H10O7,C6H10O7,false-refutation,False
+arivale,overlap,refuted,gamma-glutamylvaline,gamma-glutamylvaline,SITLTJHOQZFJGG,AQAKHZVPOOGUCK,AQAKHZVPOOGUCK,AQAKHZVPOOGUCK,C10H18N2O5,C10H18N2O5,false-refutation,False
+arivale,overlap,refuted,n6-carbamoylthreonyladenosine,N6-carbamoylthreonyladenosine,GYCVHQYQICRFAX,UNUYMBPXEFMLNW,UNUYMBPXEFMLNW,UNUYMBPXEFMLNW,C15H20N6O8,C15H20N6O8,false-refutation,False
+arivale,overlap,refuted,"5alpha-androstan-3beta,17beta-diol disulfate","5alpha-androstan-3beta,17beta-diol disulfate",JHFAETDERBWUOO,CBMYJHIOYJEBSB,,,,,unresolvable,True
+arivale,overlap,refuted,13-hode + 9-hode,13-HODE + 9-HODE,NPDSHTNEKLQQIJ,XBGUTAISSLTGIB,,,,,unresolvable,True
+arivale,overlap,refuted,glycoursodeoxycholate,glycoursodeoxycholate,4000,GHCZAUBVMUEKKP,GHCZAUBVMUEKKP,GHCZAUBVMUEKKP,C26H43NO5,C26H43NO5,review-nonstandard-gold-block,True
+arivale,overlap,refuted,s-methylcysteine sulfoxide,S-methylcysteine sulfoxide,4000,ZZLHPCSGGOGHFW,ZZLHPCSGGOGHFW,ZZLHPCSGGOGHFW,C4H9NO3S,C4H9NO3S,review-nonstandard-gold-block,True
+arivale,overlap,refuted,docosadioate (c22-dc),docosadioate (C22-DC),4000,DGXRZJSPDXZJFG,,,,,unresolvable,True
+arivale,overlap,refuted,16-hydroxypalmitate,16-hydroxypalmitate,4000,UGAGPNKCDRTDHP,UGAGPNKCDRTDHP,UGAGPNKCDRTDHP,C16H31O3-,C16H31O3-,review-nonstandard-gold-block,True
+arivale,overlap,refuted,4-methylcatechol sulfate,4-methylcatechol sulfate,NCOMUGOPQPRVSE,AATDNGCLCGOWJE,AATDNGCLCGOWJE,AATDNGCLCGOWJE,C7H6O6S,C7H6O6S,false-refutation,False
+arivale,overlap,refuted,arabonate/xylonate,arabitol/xylitol,QXKAIJAYHKCRRA,HEBKCHPVOIAQTA,,,,,unresolvable,True
+arivale,overlap,refuted,methyl-4-hydroxybenzoate sulfate,methyl-4-hydroxybenzoate sulfate,COXWPCPYWFBNJH,IBEAHXYYSZWGED,IBEAHXYYSZWGED,IBEAHXYYSZWGED,C8H8O6S,C8H8O6S,false-refutation,False
+arivale,overlap,refuted,6-hydroxyindole sulfate,6-hydroxyindole sulfate,BXFFHSIDQOFMLE,QRHHXPIYYXPEMG,QRHHXPIYYXPEMG,QRHHXPIYYXPEMG,C8H7NO4S,C8H7NO4S,false-refutation,False
+arivale,overlap,refuted,glycochenodeoxycholate glucuronide (1),glycochenodeoxycholate,ABFZMYIIUREPLL,GHCZAUBVMUEKKP,,GHCZAUBVMUEKKP,,C26H43NO5,unresolvable,True
+arivale,overlap,refuted,(s)-3-hydroxybutyrylcarnitine,3-methylglutarylcarnitine (2),UEFRDQSMQXDWTO,HFCPFJNSBPQJDP,,,,,unresolvable,True
+arivale,overlap,refuted,6-bromotryptophan,6-bromotryptophan,OAORYCZPERQARS,KZDNJQUJBMDHJW,OAORYCZPERQARS,OAORYCZPERQARS,C11H11BrN2O2,C11H11BrN2O2,false-refutation,True
+arivale,monti_only,certified,retinol (vitamin a),retinol (Vitamin A),FPIPGXGPPPQFEQ,FPIPGXGPPPQFEQ,,,,,unresolvable,True
+arivale,monti_only,certified,n-methylproline,N-methylproline,CWLQUGTUXBXTLF,CWLQUGTUXBXTLF,CWLQUGTUXBXTLF,CWLQUGTUXBXTLF,C6H11NO2,C6H11NO2,confirmed-genuine,False
+arivale,monti_only,certified,(n(1) + n(8))-acetylspermidine,(N(1) + N(8))-acetylspermidine,MQTAVJHICJWXBR,MQTAVJHICJWXBR,,,,,unresolvable,True
+arivale,biomapper_only,certified,"androstenediol (3beta,17beta) disulfate (1)","androstenediol (3beta,17beta) disulfate (1)",UWPTUYJASNIIJM,UWPTUYJASNIIJM,,,,,unresolvable,True
+arivale,biomapper_only,certified,"androstenediol (3beta,17beta) disulfate (2)","androstenediol (3beta,17beta) disulfate (1)",UWPTUYJASNIIJM,UWPTUYJASNIIJM,,,,,unresolvable,True
+xuetal,overlap,refuted,(s)-3-hydroxybutyrylcarnitine,3-methylglutarylcarnitine (2),UEFRDQSMQXDWTO,HFCPFJNSBPQJDP,,,,,unresolvable,True
+xuetal,monti_only,certified,retinol (vitamin a),retinol (Vitamin A),FPIPGXGPPPQFEQ,FPIPGXGPPPQFEQ,,,,,unresolvable,True
+xuetal,monti_only,certified,maltose,maltose,GUBGYTABKSRVRQ,GUBGYTABKSRVRQ,GUBGYTABKSRVRQ,GUBGYTABKSRVRQ,C12H22O11,C12H22O11,confirmed-genuine,False
+xuetal,monti_only,certified,n-methylproline,N-methylproline,CWLQUGTUXBXTLF,CWLQUGTUXBXTLF,CWLQUGTUXBXTLF,CWLQUGTUXBXTLF,C6H11NO2,C6H11NO2,confirmed-genuine,False
+xuetal,monti_only,certified,vanillic acid glycine,vanillic acid glycine,LOODYTDRRBLQNH,LOODYTDRRBLQNH,,,,,unresolvable,True
+xuetal,monti_only,certified,pentose acid*,pentose acid*,NQPDZGIKBAWPEJ,NQPDZGIKBAWPEJ,,,,,unresolvable,True
+xuetal,biomapper_only,certified,trans-4-hydroxyproline,hydroxyproline,PMMYEEVYMWASQN,PMMYEEVYMWASQN,PMMYEEVYMWASQN,PMMYEEVYMWASQN,C5H9NO3,C5H9NO3,confirmed-genuine,False
+xuetal,biomapper_only,certified,metoprolol acid metabolite*,metoprolol acid metabolite*,PUQIRTNPJRFRCZ,PUQIRTNPJRFRCZ,,,,,unresolvable,True
+xuetal,biomapper_only,certified,"androstenediol (3beta,17beta) disulfate (1)","androstenediol (3beta,17beta) disulfate (1)",UWPTUYJASNIIJM,UWPTUYJASNIIJM,,,,,unresolvable,True
+xuetal,biomapper_only,certified,"androstenediol (3beta,17beta) disulfate (2)","androstenediol (3beta,17beta) disulfate (1)",UWPTUYJASNIIJM,UWPTUYJASNIIJM,,,,,unresolvable,True
+xuetal,biomapper_only,certified,"5alpha-pregnan-3beta,20beta-diol monosulfate (1)","5alpha-pregnan-3beta,20beta-diol monosulfate (1)",NOGKXXMAHGCQBS,NOGKXXMAHGCQBS,,,,,unresolvable,True
+xuetal,biomapper_only,certified,"5alpha-androstan-3alpha,17beta-diol monosulfate (1)","5alpha-androstan-3alpha,17beta-diol monosulfate (1)",LERFMBCTNMFXCT,LERFMBCTNMFXCT,,,,,unresolvable,True
+xuetal,biomapper_only,certified,"androstenediol (3beta,17beta) monosulfate (1)","androstenediol (3beta,17beta) monosulfate (1)",KMTOEENORMWLCF,KMTOEENORMWLCF,,,,,unresolvable,True
+xuetal,biomapper_only,certified,pregnenediol sulfate (c21h34o5s)*,pregnenediol sulfate (C21H34O5S)*,DIJBBUIOWGGQOP,DIJBBUIOWGGQOP,,,,,unresolvable,True
+xuetal,biomapper_only,certified,"5alpha-androstan-3alpha,17beta-diol monosulfate (2)","5alpha-androstan-3alpha,17beta-diol monosulfate (2)",KWYNDVHEQWYGIL,KWYNDVHEQWYGIL,,,,,unresolvable,True
+xuetal,biomapper_only,certified,n4-acetyl-5-hydroxysulfamethoxazole*,N4-acetyl-5-hydroxysulfamethoxazole*,YKWZTWOYFWCVKH,YKWZTWOYFWCVKH,YKWZTWOYFWCVKH,YKWZTWOYFWCVKH,C12H13N3O5S,C12H13N3O5S,confirmed-genuine,False
+xuetal,biomapper_only,certified,5-hydroxy-2-methylpyridine sulfate,5-hydroxy-2-methylpyridine sulfate,VZCFLNLYNRUCHM,VZCFLNLYNRUCHM,VZCFLNLYNRUCHM,VZCFLNLYNRUCHM,C6H5NO5S,C6H5NO5S,confirmed-genuine,False
+xuetal,biomapper_only,certified,3-hydroxy-2-methylpyridine sulfate,3-hydroxy-2-methylpyridine sulfate,PIDWMOXDWRUIHQ,PIDWMOXDWRUIHQ,PIDWMOXDWRUIHQ,PIDWMOXDWRUIHQ,C6H5NO5S,C6H5NO5S,confirmed-genuine,False
+xuetal,biomapper_only,certified,pregnenetriol sulfate*,pregnenetriol sulfate*,MBZWTCCXLKPWAT,MBZWTCCXLKPWAT,,,,,unresolvable,True
