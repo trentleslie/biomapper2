@@ -48,6 +48,15 @@ def test_block1_disagreement_is_contradicted() -> None:
     assert resolve_level([GLUCOSE_A], DIFFERENT) == (ResolutionLevel.CONTRADICTED, ResolutionLevel.CONTRADICTED)
 
 
+def test_two_identical_first_block_only_keys_are_connectivity_not_exact() -> None:
+    # Regression (Greptile PR #77): a node first-block-only key equal to an MW/PubChem first-block
+    # key only proves connectivity; grading it exact would publish an overstated certificate.
+    assert resolve_level([FIRST_BLOCK_ONLY], FIRST_BLOCK_ONLY) == (
+        ResolutionLevel.CONNECTIVITY,
+        ResolutionLevel.CONNECTIVITY,
+    )
+
+
 def test_empty_sides_are_unavailable() -> None:
     assert resolve_level([], GLUCOSE_A) == (ResolutionLevel.UNAVAILABLE, ResolutionLevel.UNAVAILABLE)
     assert resolve_level([GLUCOSE_A], None) == (ResolutionLevel.UNAVAILABLE, ResolutionLevel.UNAVAILABLE)

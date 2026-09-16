@@ -149,11 +149,14 @@ def _pair_level(node_key: str | None, independent_key: str | None) -> Resolution
         return ResolutionLevel.UNAVAILABLE
     if n1 != i1:
         return ResolutionLevel.CONTRADICTED
+    if n2 is None or i2 is None:
+        # At least one side is first-block-only (MW/PubChem, or a graph key with no stereo layer):
+        # only connectivity was compared. Two identical truncated strings are NOT exact -- no full
+        # key or stereo layer was ever seen -- so never grant exact/structural here.
+        return ResolutionLevel.CONNECTIVITY
     if str(node_key).strip().upper() == str(independent_key).strip().upper():
         return ResolutionLevel.EXACT_INCHIKEY
-    if n2 is not None and i2 is not None:
-        return ResolutionLevel.STRUCTURAL if n2 == i2 else ResolutionLevel.CONTRADICTED
-    return ResolutionLevel.CONNECTIVITY
+    return ResolutionLevel.STRUCTURAL if n2 == i2 else ResolutionLevel.CONTRADICTED
 
 
 def resolve_level(
