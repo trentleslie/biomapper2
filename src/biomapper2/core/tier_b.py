@@ -186,7 +186,10 @@ class IndependentStructureLookup:
         # folds into the tier's own lookup_failed accounting.
         if self._lipid_resolver is not None:
             lipid = self._lipid_resolver.resolve(name)
-            if lipid.outcome is TierBOutcome.RESOLVED:
+            # AMBIGUOUS is a real verdict (the lipid name maps to several distinct connectivities), not
+            # a miss: forward it so the certificate records ``ambiguous`` and keeps the candidate set,
+            # rather than letting it fall through to ``unresolvable``.
+            if lipid.outcome in (TierBOutcome.RESOLVED, TierBOutcome.AMBIGUOUS):
                 return lipid
             if lipid.outcome is TierBOutcome.LOOKUP_FAILED:
                 any_failure = True
