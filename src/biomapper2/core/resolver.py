@@ -129,6 +129,157 @@ def _lipid_generalized_hint(
     return None
 
 
+# SKOS mapping relation between the COMMITTED lipid node's matched level and the effective query level.
+# ``exact`` when they coincide, ``broad`` when the node is coarser (the ``lipid_generalized`` case),
+# ``narrow`` when it is finer (should not happen under Decision 2's at-or-above policy, but is
+# represented honestly if seen), ``unknown`` when either level is missing.
+LIPID_RELATION_EXACT = "exact"
+LIPID_RELATION_BROAD = "broad"
+LIPID_RELATION_NARROW = "narrow"
+LIPID_RELATION_UNKNOWN = "unknown"
+_LIPID_RELATION_PREDICATE: dict[str, str] = {
+    LIPID_RELATION_EXACT: "skos:exactMatch",
+    LIPID_RELATION_BROAD: "skos:broadMatch",
+    LIPID_RELATION_NARROW: "skos:narrowMatch",
+}
+
+# ``query_transformed`` values. A trust-off downgrade (asserted finer than effective) means the input's
+# slash-bearing name was queried in its underscore form; otherwise the query rode goslin's canonical
+# species-level rendering.
+QUERY_TRANSFORMED_SLASH_TO_UNDERSCORE = "slash_to_underscore"
+QUERY_TRANSFORMED_GOSLIN_CANONICAL = "goslin_species_canonical"
+
+# Ordered keys of the additive ``lipid_resolution`` object, reused for the API model and the dataset's
+# ``lipid_``-prefixed flat columns so the two surfaces cannot drift apart.
+LIPID_RESOLUTION_FIELDS: tuple[str, ...] = (
+    "query_lipid_level_asserted",
+    "query_lipid_level_effective",
+    "matched_lipid_level",
+    "mapping_relation",
+    "mapping_predicate",
+    "query_transformed",
+    "ambiguous",
+    "candidate_structure_count",
+    "ambiguity_basis",
+    "goslin_dialect",
+    "goslin_formula",
+    "goslin_mass",
+)
+
+
+def lipid_mapping_relation(matched_level: str | None, effective_level: str | None) -> tuple[str, str | None]:
+    """The (relation, SKOS predicate) for a committed lipid node's matched level vs the effective level.
+
+    Compared by specificity RANK, not name equality, so the relation survives any level whose name the
+    two sources spell differently. ``unknown`` (predicate None) when either level is missing.
+    """
+    if matched_level is None or effective_level is None:
+        return LIPID_RELATION_UNKNOWN, None
+    rank_matched = _lipid_level_rank(matched_level)
+    rank_effective = _lipid_level_rank(effective_level)
+    if rank_matched == rank_effective:
+        relation = LIPID_RELATION_EXACT
+    elif rank_matched > rank_effective:
+        # Higher rank == LESS specific == the committed node is broader than the query asked for.
+        relation = LIPID_RELATION_BROAD
+    else:
+        relation = LIPID_RELATION_NARROW
+    return relation, _LIPID_RELATION_PREDICATE.get(relation)
+
+
+def _lipid_query_transformed(asserted_level: str | None, effective_level: str | None) -> str:
+    """``slash_to_underscore`` when the trust-off policy downgraded the asserted level to a coarser
+    effective one; ``goslin_species_canonical`` otherwise (no downgrade, or a level is unknown)."""
+    if asserted_level is not None and effective_level is not None and asserted_level != effective_level:
+        return QUERY_TRANSFORMED_SLASH_TO_UNDERSCORE
+    return QUERY_TRANSFORMED_GOSLIN_CANONICAL
+
+
+def _goslin_base_metadata(entity: "pd.Series | dict[str, Any]") -> dict[str, Any] | None:
+    """Any goslin-lipid vote's shared metadata (dialect / formula / mass / asserted / effective).
+
+    Every goslin vote is stamped with the same base metadata, so the first non-empty one is
+    representative. ``None`` for a non-lipid row (no goslin votes), which is the signal the whole
+    ``lipid_resolution`` object stays null off the lipid path.
+    """
+    assigned_ids = entity.get("assigned_ids") or {}
+    goslin_meta = assigned_ids.get(GOSLIN_LIPID_ANNOTATOR) or {}
+    for vocab_map in goslin_meta.values():
+        if not isinstance(vocab_map, dict):
+            continue
+        for meta in vocab_map.values():
+            if isinstance(meta, dict) and meta:
+                return meta
+    return None
+
+
+class _UseEntityChosen:
+    """Sentinel: ``build_lipid_resolution`` reads ``chosen_kg_id`` from the entity itself.
+
+    A distinct type (not ``None``) because ``None`` is a real committed value -- "no node" -- that a
+    caller may pass to describe an unmapped row.
+    """
+
+
+_USE_ENTITY_CHOSEN = _UseEntityChosen()
+
+
+def build_lipid_resolution(
+    entity: "pd.Series | dict[str, Any]",
+    chosen_kg_id: "str | None | _UseEntityChosen" = _USE_ENTITY_CHOSEN,
+) -> dict[str, Any] | None:
+    """Assemble the additive ``lipid_resolution`` object for a mapped row, or ``None`` for a non-lipid.
+
+    Pulls together what the earlier units already produced: the goslin metadata on the goslin-lipid
+    votes (Unit 2/3) and the committed node's matched level joined via ``_lipid_level_context`` (the
+    same raw-id vs curie reconciliation Unit 4's tie-break uses). The relation between that matched
+    level and the effective query level is computed here and SUBSUMES the ``chosen_kg_id_lipid_hint``
+    flag: ``mapping_relation == "broad"`` is exactly the ``lipid_generalized`` case.
+
+    ``chosen_kg_id`` defaults to the value on ``entity``; a caller may pass it explicitly to describe a
+    DIFFERENT committed node than the one on the row. Re-resolution relies on this so the object always
+    tracks the node the certificate actually commits, never a node a later swap replaced.
+
+    ``ambiguous`` / ``candidate_structure_count`` / ``ambiguity_basis`` describe the LIPID MAPS / Tier B
+    candidate set (plan Units for lipids). That ambiguity signal does not reach this row yet, so they
+    default to a non-ambiguous, count-unknown reading rather than fabricating one.
+    """
+    meta = _goslin_base_metadata(entity)
+    if meta is None:
+        return None
+    levels, effective_from_context = _lipid_level_context(entity)
+    node = entity.get("chosen_kg_id") if isinstance(chosen_kg_id, _UseEntityChosen) else chosen_kg_id
+    matched_level = levels.get(node) if isinstance(node, str) else None
+    asserted_level = meta.get("query_lipid_level_asserted")
+    effective_level = meta.get("query_lipid_level_effective") or effective_from_context
+    relation, predicate = lipid_mapping_relation(matched_level, effective_level)
+    return {
+        "query_lipid_level_asserted": asserted_level,
+        "query_lipid_level_effective": effective_level,
+        "matched_lipid_level": matched_level,
+        "mapping_relation": relation,
+        "mapping_predicate": predicate,
+        "query_transformed": _lipid_query_transformed(asserted_level, effective_level),
+        "ambiguous": False,
+        "candidate_structure_count": None,
+        "ambiguity_basis": None,
+        "goslin_dialect": meta.get("goslin_dialect"),
+        "goslin_formula": meta.get("goslin_formula"),
+        "goslin_mass": meta.get("goslin_mass"),
+    }
+
+
+def lipid_flat_columns(lipid_resolution: dict[str, Any] | None) -> dict[str, Any]:
+    """The ``lipid_resolution`` object as ``lipid_``-prefixed flat scalar columns for the dataset TSV.
+
+    Every key is always emitted so the column set is stable across rows; a non-lipid row (``None``)
+    gets ``None`` in every ``lipid_`` column.
+    """
+    if lipid_resolution is None:
+        return {f"lipid_{field}": None for field in LIPID_RESOLUTION_FIELDS}
+    return {f"lipid_{field}": lipid_resolution.get(field) for field in LIPID_RESOLUTION_FIELDS}
+
+
 def _curie_sort_key(curie: str) -> tuple[int, int, str]:
     """Total order over CURIEs preferring a lower NUMERIC local id, without implying canonicality.
 

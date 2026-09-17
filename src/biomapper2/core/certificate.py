@@ -430,6 +430,7 @@ def issue(
     refmet_source: str = "not_queried",
     refmet_snapshot_version: str | None = None,
     provenance: Mapping[str, Any] | None = None,
+    extra_provenance: Mapping[str, Any] | None = None,
 ) -> ResolutionCertificate:
     """Issue a certificate for one committed answer. Pure: no network, no cache, no clock.
 
@@ -451,6 +452,9 @@ def issue(
             ``refmet_availability``; like it, recorded but not part of the state machine.
         refmet_snapshot_version: Version of the freeze that served (or was consulted for) the row,
             else None. Recorded, not part of the state machine.
+        extra_provenance: Extra provenance keys MERGED onto the (default or supplied) provenance,
+            so a caller can mirror an out-of-band signal such as the lipid ``mapping_relation`` and
+            ``ambiguous`` onto the certificate without replacing the default cache/Tier B provenance.
     """
     if selection_conflict is not None and (chosen_kg_id is None or not is_small_molecule):
         # The resolver only reaches the flagging branch inside the small-molecule guard and only
@@ -534,6 +538,8 @@ def issue(
     _prov = dict(provenance) if provenance is not None else _default_provenance(tier_b)
     if resolution_level_rule is not None:
         _prov["resolution_level_rule"] = resolution_level_rule
+    if extra_provenance:
+        _prov.update(extra_provenance)
 
     certificate = ResolutionCertificate(
         state=state,
