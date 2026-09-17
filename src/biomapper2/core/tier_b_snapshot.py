@@ -170,8 +170,19 @@ def _current() -> _LoadedSnapshot | None:
 
 
 def is_present() -> bool:
-    """True iff a freeze is configured AND loadable. The freeze-first rollout switch."""
-    return _current() is not None
+    """True iff a freeze is configured, loadable, AND has at least one USABLE row.
+
+    The freeze-first rollout switch. The usable-row requirement is a safety guard, not tidiness: a
+    header-valid corpus whose rows were ALL rejected at load (e.g. an older corpus missing the
+    now-required ``source``, or every inchikey malformed) reduces to an EMPTY lookup table. If such a
+    corpus still read as present, the default posture would resolve to ``enabled_freeze``, every
+    eligible name would miss the empty table, and it would fall back to live MW/PubChem, defeating the
+    inert default-safety. Reporting NOT present sends the default posture to INERT instead. A corpus of
+    only frozen-unresolvable rows (empty inchikeys, valid deterministic-unresolvable entries) is
+    non-empty and stays present.
+    """
+    snapshot = _current()
+    return snapshot is not None and bool(snapshot.by_normalized)
 
 
 def version() -> str | None:

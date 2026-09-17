@@ -33,7 +33,6 @@ def _freeze(monkeypatch, tmp_path, body: str):
 
 def test_resolved_row_with_empty_source_is_skipped(monkeypatch, tmp_path):
     _freeze(monkeypatch, tmp_path, f"name\tinchikey\tsource\nglucose\t{GOOD_KEY}\t\n")
-    assert tier_b_snapshot.is_present() is True
     assert tier_b_snapshot.lookup("glucose") is None  # skipped -> falls back to live
 
 
@@ -62,3 +61,28 @@ def test_a_bad_row_does_not_reject_the_whole_freeze(monkeypatch, tmp_path):
     _freeze(monkeypatch, tmp_path, body)
     assert tier_b_snapshot.lookup("glucose") is not None
     assert tier_b_snapshot.lookup("bad") is None
+
+
+def test_all_rejected_corpus_is_not_present_so_default_stays_inert(monkeypatch, tmp_path):
+    """Finding 1: a header-valid corpus whose EVERY resolved row is rejected reduces to an empty
+    lookup table. It must read as NOT present so the default posture falls to INERT (no live calls),
+    while an explicit truthy override still goes live-behind-breaker."""
+    from biomapper2 import config
+
+    # Both rows rejected: one non-canonical source, one malformed inchikey. No frozen-unresolvable row.
+    body = f"name\tinchikey\tsource\na\t{GOOD_KEY}\tsome_random_db\nb\tNOTAKEY\tpubchem\n"
+    _freeze(monkeypatch, tmp_path, body)
+    assert tier_b_snapshot.is_present() is False
+
+    monkeypatch.delenv("BIOMAPPER2_TIER_B_ENABLED", raising=False)
+    assert config.resolve_tier_b_state(tier_b_snapshot.is_present()) == config.TIER_B_STATE_INERT
+    monkeypatch.setenv("BIOMAPPER2_TIER_B_ENABLED", "true")
+    assert config.resolve_tier_b_state(tier_b_snapshot.is_present()) == config.TIER_B_STATE_ENABLED_LIVE
+
+
+def test_all_unresolvable_corpus_is_still_present(monkeypatch, tmp_path):
+    """A corpus of only frozen-unresolvable rows (empty inchikeys) is a valid, usable freeze: those
+    are deterministic-unresolvable entries, so it stays present rather than falling to live."""
+    _freeze(monkeypatch, tmp_path, "name\tinchikey\tsource\nX-1\t\t\nX-2\t\t\n")
+    assert tier_b_snapshot.is_present() is True
+    assert tier_b_snapshot.lookup("X-1") is not None
