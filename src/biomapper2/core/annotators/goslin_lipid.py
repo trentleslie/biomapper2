@@ -24,6 +24,7 @@ likewise injected: when present it is queried only for cascade levels no other s
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from typing import Any, cast
 
@@ -129,25 +130,32 @@ class GoslinLipidAnnotator(BaseAnnotator):
             enrich_votes, enrich_level = self._cascade_source(cascade, self._enrichment_query)
 
         # Source 3: Kestrel hybrid search (off unless injected), ONLY for levels no other source hit (D3).
+        # Fail-soft: Kestrel is the last source and the least essential (RefMet is the accuracy path), so
+        # any error in its cascade degrades to no Kestrel vote rather than discarding the RefMet / LIPID
+        # MAPS votes already gathered above. This annotator's whole contract is fail-soft.
         already_hit = {level for level in (refmet_level, enrich_level) if level is not None}
         kestrel_votes: _Votes = {}
         kestrel_level: str | None = None
         if self._kestrel is not None:
-            kestrel_votes, kestrel_level = self._cascade_source(
-                cascade,
-                lambda level_name: self._kestrel_query(
-                    entity,
-                    name_field,
-                    level_name,
-                    category,
-                    prefixes,
-                    prefer_human,
-                    preferred_prefixes,
-                    accepted_categories,
-                    candidate_limit,
-                ),
-                skip_levels=already_hit,
-            )
+            try:
+                kestrel_votes, kestrel_level = self._cascade_source(
+                    cascade,
+                    lambda level_name: self._kestrel_query(
+                        entity,
+                        name_field,
+                        level_name,
+                        category,
+                        prefixes,
+                        prefer_human,
+                        preferred_prefixes,
+                        accepted_categories,
+                        candidate_limit,
+                    ),
+                    skip_levels=already_hit,
+                )
+            except Exception:  # noqa: BLE001 — Kestrel is best-effort; a failure must not lose other votes
+                logging.warning("goslin-lipid Kestrel cascade failed for %r (ignored, other votes kept)", name)
+                kestrel_votes, kestrel_level = {}, None
 
         base_meta = self._base_metadata(parsed, asserted, effective, enrichment_fired=bool(enrich_votes))
 
@@ -172,9 +180,19 @@ class GoslinLipidAnnotator(BaseAnnotator):
         accepted_categories: set[str] | None = None,
         candidate_limit: int | None = None,
     ) -> pd.Series:
-        """Implements BaseAnnotator.get_annotations_bulk (rowwise; each source handles its own cache)."""
+        """Implements BaseAnnotator.get_annotations_bulk (rowwise; each source handles its own cache).
+
+        Call volume, stated rather than hidden: the cascade runs PER ROW, so a lipid panel costs on the
+        order of rows x levels x sources network calls. This is inherent to level-aware matching and is
+        the ratified behavior (D3: more lookups to try more specific levels), bounded by stop-at-first-hit
+        and skip-already-hit. Request batching across rows is deferred to a later plan, not done here.
+
+        Fail-soft PER ROW: one row's source failure degrades that row to an empty vote (like a non-lipid),
+        it never aborts the whole batch. So a single bad name in a dataset job cannot lose every other
+        row's mapping.
+        """
         col = entities.apply(
-            self.get_annotations,
+            self._row_annotations_fail_soft,
             axis=1,
             name_field=name_field,
             category=category,
@@ -187,6 +205,15 @@ class GoslinLipidAnnotator(BaseAnnotator):
             candidate_limit=candidate_limit,
         )
         return cast(pd.Series, col)
+
+    def _row_annotations_fail_soft(self, entity: pd.Series, **kwargs: Any) -> AssignedIDsDict:
+        """One row's ``get_annotations``, but any exception degrades to an empty vote so the batch
+        survives. The single-entity path calls ``get_annotations`` directly and is unaffected."""
+        try:
+            return self.get_annotations(entity, **kwargs)
+        except Exception:  # noqa: BLE001 — one bad row must not abort the whole lipid panel
+            logging.warning("goslin-lipid row annotation failed for %r (ignored)", entity.get(kwargs["name_field"]))
+            return {}
 
     # ---------------------------------------- Cascade helpers ---------------------------------------- #
 
@@ -303,9 +330,20 @@ class GoslinLipidAnnotator(BaseAnnotator):
         return _SPECIES
 
     def _effective_level(self, asserted: str) -> str:
-        """Apply the sn-position trust policy (D1): with trust OFF, an sn-position input is downgraded
-        to molecular-species for querying (vendors use "/" loosely). With trust ON, effective=asserted."""
-        if not self._trust_sn and asserted == _SN_POSITION:
+        """Apply the sn-position trust policy (D1): with trust OFF, an input asserted at sn-position OR
+        FINER is capped at molecular-species for querying (vendors use "/" loosely, and the finer levels
+        STRUCTURE_DEFINED / FULL_STRUCTURE / COMPLETE_STRUCTURE also carry the "/" sn claim). Capping,
+        not just an sn-position equality check, so a slash-bearing structurally-detailed name never
+        escapes the policy. MOLECULAR_SPECIES and SPECIES stay as-is. With trust ON, effective=asserted."""
+        if self._trust_sn:
+            return asserted
+        order = _LEVEL_ORDER_MOST_TO_LEAST
+        try:
+            asserted_index = order.index(asserted)
+        except ValueError:
+            return asserted
+        # Lower index == more specific; sn-position or finer is at/above SN_POSITION's specificity.
+        if asserted_index <= order.index(_SN_POSITION):
             return _MOLECULAR_SPECIES
         return asserted
 
