@@ -453,13 +453,15 @@ class AnnotationEngine:
         Total by construction so a consumer (certificate, run metric) never reads None or hits a
         missing key, whether or not the row was annotated.
 
-        Availability tracks whether an EXTERNAL source answered for the row (live / snapshot /
-        unavailable / no_match), which is a RefMet-backed concept: only the RefMet annotator
-        (Metabolomics Workbench) overrides the base ``not_queried`` (F8). Non-RefMet annotators such as
-        ``goslin-lipid`` and ``kestrel-hybrid-search`` stay ``not_queried`` here BY DESIGN even when they
-        voted; a local parser or graph search has no external-service availability to report, and their
-        contribution is recorded in ``assigned_ids``, not in this map. The certificate consumes only the
-        RefMet slug, surfaced as ``refmet_availability``.
+        Availability tracks whether a source answered for the row (live / snapshot / unavailable /
+        no_match). Only the RefMet annotator (Metabolomics Workbench) is INSTRUMENTED for it: it alone
+        overrides the base ``not_queried`` (F8). Every other annotator inherits ``not_queried`` here BY
+        DESIGN even when it voted, regardless of whether it hits an external service. That covers both a
+        purely local parser like ``goslin-lipid`` (no external call to instrument) and
+        ``kestrel-hybrid-search``, which DOES call an external Kestrel API and can fail when that service
+        is unavailable but whose availability is simply not instrumented in this map. A voting
+        annotator's contribution is recorded in ``assigned_ids``, not here. The certificate consumes only
+        the RefMet slug, surfaced as ``refmet_availability``.
         """
         return {slug: AVAILABILITY_NOT_QUERIED for slug in self.annotator_registry}
 
