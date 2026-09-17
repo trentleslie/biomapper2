@@ -108,6 +108,14 @@ class EntityMappingResult(BaseModel):
         description="Structural certificate for chosen_kg_id (and only chosen_kg_id — "
         "chosen_kg_id_provided and chosen_kg_id_assigned carry none). Null when mapping failed.",
     )
+    chosen_kg_id_lipid_hint: str | None = Field(
+        default=None,
+        description="Additive lipid review hint for chosen_kg_id, on its own axis from the closed "
+        "selection_conflict whitelist: 'lipid_generalized' when the committed lipid node is BROADER "
+        "than the effective lipid query level (a generalization the resolver could not avoid); None "
+        "otherwise and for non-lipid rows. A later release folds this into a richer lipid_resolution "
+        "object.",
+    )
     refmet_availability: str = Field(
         default="not_queried",
         description="Per-row RefMet (Metabolomics Workbench) availability, mirrored from the "

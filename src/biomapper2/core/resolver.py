@@ -23,6 +23,111 @@ from .structure_resolver import StructureResolver
 # RefMet /match endpoint by name and emits the RefMet-anchored node.
 REFMET_ANNOTATOR = "metabolomics-workbench"
 
+# The lipid-shorthand annotator whose votes carry the ``matched_level`` and effective-query-level
+# metadata the Unit 4 level-aware tie-break reads.
+GOSLIN_LIPID_ANNOTATOR = "goslin-lipid"
+
+# Review hint set when a lipid tie could only be resolved to a node BROADER than the effective query
+# level. Deliberately a NEW, additive resolver-output field, NOT a ``selection_conflict`` value: that
+# channel is a closed, small-molecule-only whitelist enforced by the certificate, so widening it would
+# be a certificate-contract change. This hint rides its own field and never touches selection_conflict.
+LIPID_GENERALIZED_HINT = "lipid_generalized"
+
+# Lipid shorthand levels, MOST specific -> LEAST specific, lowercased to match the goslin annotator's
+# stamped ``matched_level`` metadata. Kept local (not imported from core.annotators.goslin_lipid) to
+# avoid an annotators -> resolver import edge; mirrors GoslinLipidAnnotator._LEVEL_ORDER_MOST_TO_LEAST.
+_LIPID_LEVEL_ORDER: tuple[str, ...] = (
+    "complete_structure",
+    "full_structure",
+    "structure_defined",
+    "sn_position",
+    "molecular_species",
+    "species",
+)
+
+
+def _lipid_level_rank(level: str | None) -> int:
+    """Specificity rank of a lipid level: LOWER means MORE specific. Unknown/None sorts as broadest."""
+    if level is None:
+        return len(_LIPID_LEVEL_ORDER)
+    try:
+        return _LIPID_LEVEL_ORDER.index(level)
+    except ValueError:
+        return len(_LIPID_LEVEL_ORDER)
+
+
+def _raw_level_for_curie(curie: str, level_by_raw: dict[str, str]) -> str | None:
+    """A curie's matched level from a map keyed by the annotator's RAW id, reconciling the two forms.
+
+    Normalization rewrites a raw annotator id into a curie in one of two shapes: a vocab prefix glued
+    onto the value is split off behind a colon (so stripping the colon rebuilds the raw id -- RefMet and
+    LIPID MAPS), or no prefix was present and the curie's local part already equals the raw id (an
+    InChIKey). Trying the full curie, the colon-stripped curie, and the local part covers both, so the
+    level survives the raw-id vs curie representation gap that a plain local-part join silently drops.
+    """
+    for candidate in (curie, curie.replace(":", ""), curie.rsplit(":", 1)[-1]):
+        level = level_by_raw.get(candidate)
+        if level is not None:
+            return level
+    return None
+
+
+def _lipid_level_context(entity: "pd.Series | dict[str, Any]") -> tuple[dict[str, str], str | None]:
+    """Best-effort ``{kg_id: matched_level}`` plus the effective query level, joined from goslin votes.
+
+    The matched level lives on the goslin-lipid votes' metadata (``assigned_ids``), keyed by the
+    annotator's RAW id; the linked KG node ids live in ``kg_ids_assigned``, keyed by the NORMALIZED
+    curie that same raw id became. Those two representations differ, so the join reconciles them via
+    ``_raw_level_for_curie`` rather than assuming the curie's local part equals the raw id. Returns
+    ``({}, None)`` for a non-lipid row (no goslin votes) or when either structure is absent, so the
+    tie-break stays inert off the lipid path.
+    """
+    assigned_ids = entity.get("assigned_ids") or {}
+    kg_ids_assigned = entity.get("kg_ids_assigned") or {}
+    goslin_meta = assigned_ids.get(GOSLIN_LIPID_ANNOTATOR) or {}
+    goslin_kg = kg_ids_assigned.get(GOSLIN_LIPID_ANNOTATOR) or {}
+    if not goslin_meta or not goslin_kg:
+        return {}, None
+
+    # raw metadata id -> matched_level, unioned across vocabs. The key is the annotator's RAW id (what
+    # goslin stamps the metadata under), NOT yet a curie.
+    level_by_raw: dict[str, str] = {}
+    effective: str | None = None
+    for vocab_map in goslin_meta.values():
+        if not isinstance(vocab_map, dict):
+            continue
+        for raw_id, meta in vocab_map.items():
+            if not isinstance(meta, dict):
+                continue
+            matched = meta.get("matched_level")
+            if isinstance(matched, str):
+                level_by_raw[raw_id] = matched
+            if effective is None and isinstance(meta.get("query_lipid_level_effective"), str):
+                effective = meta["query_lipid_level_effective"]
+
+    # Each KG node inherits the MOST specific level among the goslin votes its curies reconcile to.
+    levels: dict[str, str] = {}
+    for kg_id, curies in goslin_kg.items():
+        found = [lvl for c in curies if (lvl := _raw_level_for_curie(c, level_by_raw)) is not None]
+        if found:
+            levels[kg_id] = min(found, key=_lipid_level_rank)
+    return levels, effective
+
+
+def _lipid_generalized_hint(
+    chosen_kg_id: str | None, lipid_levels: dict[str, str], effective_level: str | None
+) -> str | None:
+    """``lipid_generalized`` when the committed lipid node is BROADER than the effective query level -- a
+    generalization the resolver could not avoid (R8). None for non-lipid rows and exact/finer matches."""
+    if not chosen_kg_id or not lipid_levels or not effective_level:
+        return None
+    chosen_level = lipid_levels.get(chosen_kg_id)
+    if chosen_level is None:
+        return None
+    if _lipid_level_rank(chosen_level) > _lipid_level_rank(effective_level):
+        return LIPID_GENERALIZED_HINT
+    return None
+
 
 def _curie_sort_key(curie: str) -> tuple[int, int, str]:
     """Total order over CURIEs preferring a lower NUMERIC local id, without implying canonicality.
@@ -90,9 +195,18 @@ class Resolver:
             Named Series with fields: chosen_kg_id, chosen_kg_id_provided, chosen_kg_id_assigned,
             chosen_kg_id_review
         """
+        # Lipid level context for the main tie-break (Unit 4). Empty/None off the lipid path, so the
+        # provided- and assigned-combined resolutions below deliberately stay level-blind (today's
+        # behavior); only the primary ``kg_ids`` choice is made level-aware.
+        lipid_levels, effective_level = _lipid_level_context(entity)
+
         chosen_kg_id_provided, _ = self._choose_best_kg_id(entity["kg_ids_provided"])
         chosen_kg_id, chosen_kg_id_review = self._choose_best_kg_id(
-            entity["kg_ids"], kg_ids_assigned=entity["kg_ids_assigned"], category=category
+            entity["kg_ids"],
+            kg_ids_assigned=entity["kg_ids_assigned"],
+            category=category,
+            lipid_levels=lipid_levels,
+            effective_level=effective_level,
         )
 
         # Combine all annotators' KG IDs dict into one to choose preferred 'assigned' KG ID
@@ -108,32 +222,52 @@ class Resolver:
                 "chosen_kg_id_provided": chosen_kg_id_provided,
                 "chosen_kg_id_assigned": chosen_kg_id_assigned,
                 "chosen_kg_id_review": chosen_kg_id_review,
+                # New, additive channel (separate from the closed selection_conflict whitelist).
+                "chosen_kg_id_lipid_hint": _lipid_generalized_hint(chosen_kg_id, lipid_levels, effective_level),
             }
         )
 
-    def _stable_majority(self, kg_ids_dict: dict[str, list[str]], category: str | None) -> str:
+    def _stable_majority(
+        self,
+        kg_ids_dict: dict[str, list[str]],
+        category: str | None,
+        lipid_levels: dict[str, str] | None = None,
+        effective_level: str | None = None,
+    ) -> str:
         """Majority vote by supporting-curie count with a DETERMINISTIC tie-break.
 
         A strict count winner is returned unchanged (byte-identical to the old
-        ``max(kg_ids_dict, key=len)``). On a genuine 2+ count tie the pick is (1) a category-preferred
-        namespace when one is configured, then (2) ``_curie_sort_key`` as a total-order fallback, and a
-        WARNING is logged so a coin-flip resolution stays visible in run logs instead of riding silently on
-        API-response order. Determinism, not chemical correctness. (A structured downstream tie flag is a
-        deliberate follow-up: the certificate ``selection_conflict`` channel is a closed, small-molecule-only
-        whitelist, so surfacing ties to the benchmark is a certificate-contract change gated on the Unit 0
-        tie-frequency scan, not part of this resolver fix.)
+        ``max(kg_ids_dict, key=len)``). On a genuine 2+ count tie the pick is (1) for a lipid tie whose
+        candidates carry known levels, the node whose matched level EQUALS the effective query level
+        (Unit 4), then (2) a category-preferred namespace when one is configured, then (3)
+        ``_curie_sort_key`` as a total-order fallback, and a WARNING is logged so a coin-flip resolution
+        stays visible in run logs instead of riding silently on API-response order. Determinism, not
+        chemical correctness.
+
+        ``lipid_levels`` / ``effective_level`` are supplied ONLY for the primary lipid-capable
+        resolution; when absent (every non-lipid tie, and the provided/assigned-combined resolutions)
+        the pool stays the full tie set and the pick is byte-identical to the pre-Unit-4 behavior.
         """
         max_count = max(len(curies) for curies in kg_ids_dict.values())
         tied = [kg_id for kg_id, curies in kg_ids_dict.items() if len(curies) == max_count]
         if len(tied) == 1:
             return tied[0]
+        # Unit 4: for a lipid tie, prefer the node whose matched level equals the EFFECTIVE query level
+        # before today's namespace/numeric tie-break. Only narrows the pool when at least one tied node
+        # matches exactly; otherwise (and for every non-lipid tie, where lipid_levels is empty) the pool
+        # is the full tie set and the downstream pick is unchanged.
+        pool_for_pref = tied
+        if lipid_levels and effective_level:
+            exact = [kg_id for kg_id in tied if lipid_levels.get(kg_id) == effective_level]
+            if exact:
+                pool_for_pref = exact
         # Prefer a canonical namespace for the row's category when configured, inheriting a configured
         # ancestor's policy through the Biolink hierarchy (so e.g. biolink:Drug inherits SmallMolecule's
         # CHEBI/HMDB/RM), matching the annotation path. The numeric fallback keeps ties deterministic when
         # no policy applies.
         preferred = self._preferred_prefixes(category)
-        pool = [kg_id for kg_id in tied if kg_id.split(":", 1)[0] in preferred] if preferred else []
-        chosen = min(pool or tied, key=_curie_sort_key)
+        pool = [kg_id for kg_id in pool_for_pref if kg_id.split(":", 1)[0] in preferred] if preferred else []
+        chosen = min(pool or pool_for_pref, key=_curie_sort_key)
         logging.warning(
             "majority tie among %s (category=%s); picked %s by deterministic tie-break — arbitrary, no "
             "chemical preference",
@@ -148,6 +282,8 @@ class Resolver:
         kg_ids_dict: dict[str, list[str]],
         kg_ids_assigned: dict[str, dict[str, list[str]]] | None = None,
         category: str | None = None,
+        lipid_levels: dict[str, str] | None = None,
+        effective_level: str | None = None,
     ) -> tuple[str | None, str | None]:
         """
         Select a single KG ID from multiple candidates.
@@ -164,6 +300,9 @@ class Resolver:
             kg_ids_dict: Dictionary mapping KG IDs to supporting curies
             kg_ids_assigned: Per-annotator {kg_id: [curies]}, used to find the RefMet node
             category: Standardized Biolink category; source-weighting applies only to small molecules
+            lipid_levels: Optional {kg_id: matched_level} for lipid candidates; enables the Unit 4
+                level-aware tie-break. Omitted (empty) off the lipid path, leaving the tie-break unchanged.
+            effective_level: The effective lipid query level the tie-break prefers a candidate to match.
 
         Returns:
             (chosen_kg_id, review_flag) — review_flag is None unless the choice should be
@@ -173,7 +312,8 @@ class Resolver:
             return None, None
 
         # Deterministic majority vote (stable tie-break on count ties; warning logged on a genuine tie).
-        majority = self._stable_majority(kg_ids_dict, category)
+        # Lipid level context, when supplied, makes the tie-break prefer the effective-query-level node.
+        majority = self._stable_majority(kg_ids_dict, category, lipid_levels, effective_level)
 
         # Source-weighting applies ONLY to small-molecule ChEBI conflicts.
         if not (kg_ids_assigned and category and self._is_small_molecule(category)):
