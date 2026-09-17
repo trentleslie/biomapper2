@@ -236,14 +236,19 @@ class Mapper:
         refmet_availability: str = "not_queried",
         refmet_source: str = REFMET_SOURCE_NOT_QUERIED,
         refmet_snapshot_version: str | None = None,
-        lipid_mapping_relation: str | None = None,
-        lipid_ambiguous: bool | None = None,
-    ) -> tuple[ResolutionCertificate, str | None, dict[str, list[str]]]:
+        lipid_row: "pd.Series | dict[str, Any] | None" = None,
+    ) -> tuple[ResolutionCertificate, str | None, dict[str, list[str]], dict[str, Any] | None]:
         """Step 6 (+ optional Step 6.5): issue the certificate and, on a contradiction, re-resolve.
 
-        Returns ``(certificate, chosen_kg_id, kg_equivalent_ids)`` -- the last two are swapped only
-        when re-resolution commits a distinct candidate. When the flag is off, or the certificate is
-        not CONTRADICTED, this is exactly today's behavior: a single ``_issue_certificate`` call.
+        Returns ``(certificate, chosen_kg_id, kg_equivalent_ids, lipid_resolution)``. The middle two
+        are swapped only when re-resolution commits a distinct candidate. When the flag is off, or the
+        certificate is not CONTRADICTED, this is exactly today's behavior: a single
+        ``_issue_certificate`` call.
+
+        ``lipid_resolution`` is rebuilt from ``lipid_row`` against the node the certificate ACTUALLY
+        commits, so a swap can never emit the replaced node's matched level or mapping relation, and
+        the certificate provenance mirror carries the committed node's relation, not a stale one. It is
+        ``None`` off the lipid path (no ``lipid_row``, or a non-lipid row).
 
         On a CONTRADICTED certificate with the flag on, the resolver picks the distinct candidate
         whose own structure matches the query's INDEPENDENT structure (never the committed node's key,
@@ -252,6 +257,15 @@ class Mapper:
         committed node and records the reason on the certificate.
         """
         kg_equivalent_ids = kg_equivalent_ids or {}
+
+        def _lipid_for(node: str | None) -> dict[str, Any] | None:
+            # Recompute against the committed node so re-resolution never leaves stale lipid metadata
+            # on either the emitted object or the certificate provenance mirror.
+            if lipid_row is None:
+                return None
+            return build_lipid_resolution(lipid_row, node)
+
+        committed_lipid = _lipid_for(chosen_kg_id)
         certificate = self._issue_certificate(
             query_name=query_name,
             category=category,
@@ -263,11 +277,11 @@ class Mapper:
             refmet_availability=refmet_availability,
             refmet_source=refmet_source,
             refmet_snapshot_version=refmet_snapshot_version,
-            lipid_mapping_relation=lipid_mapping_relation,
-            lipid_ambiguous=lipid_ambiguous,
+            lipid_mapping_relation=(committed_lipid or {}).get("mapping_relation"),
+            lipid_ambiguous=(committed_lipid or {}).get("ambiguous"),
         )
         if not (config.RERESOLUTION_ENABLED and certificate.state is CertificateState.CONTRADICTED):
-            return certificate, chosen_kg_id, kg_equivalent_ids
+            return certificate, chosen_kg_id, kg_equivalent_ids, committed_lipid
 
         new_id, reason = self.resolver.reresolve_on_contradiction(
             candidates=list(kg_ids or {}),
@@ -289,14 +303,16 @@ class Mapper:
                 refmet_availability=refmet_availability,
                 refmet_source=refmet_source,
                 refmet_snapshot_version=refmet_snapshot_version,
-                lipid_mapping_relation=lipid_mapping_relation,
-                lipid_ambiguous=lipid_ambiguous,
+                lipid_mapping_relation=(committed_lipid or {}).get("mapping_relation"),
+                lipid_ambiguous=(committed_lipid or {}).get("ambiguous"),
             )
-            return refused, chosen_kg_id, kg_equivalent_ids
+            return refused, chosen_kg_id, kg_equivalent_ids, committed_lipid
 
         # Commit the swap: re-run Step 5 enrichment + Step 6 certificate on the NEW node. This
-        # re-certify must NOT re-trigger re-resolution (single attempt).
+        # re-certify must NOT re-trigger re-resolution (single attempt). The lipid object is rebuilt
+        # against the swapped node so its level and relation describe what actually got committed.
         new_equiv, new_ok = self._enrich_equivalent_ids(new_id)
+        swapped_lipid = _lipid_for(new_id)
         swapped = self._issue_certificate(
             query_name=query_name,
             category=category,
@@ -308,8 +324,8 @@ class Mapper:
             refmet_availability=refmet_availability,
             refmet_source=refmet_source,
             refmet_snapshot_version=refmet_snapshot_version,
-            lipid_mapping_relation=lipid_mapping_relation,
-            lipid_ambiguous=lipid_ambiguous,
+            lipid_mapping_relation=(swapped_lipid or {}).get("mapping_relation"),
+            lipid_ambiguous=(swapped_lipid or {}).get("ambiguous"),
         )
         if swapped.state is CertificateState.CONTRADICTED:
             # The swapped node still contradicts the independent structure. Refuse rather than recurse
@@ -331,13 +347,13 @@ class Mapper:
                 refmet_availability=refmet_availability,
                 refmet_source=refmet_source,
                 refmet_snapshot_version=refmet_snapshot_version,
-                lipid_mapping_relation=lipid_mapping_relation,
-                lipid_ambiguous=lipid_ambiguous,
+                lipid_mapping_relation=(committed_lipid or {}).get("mapping_relation"),
+                lipid_ambiguous=(committed_lipid or {}).get("ambiguous"),
             )
-            return refused, chosen_kg_id, kg_equivalent_ids
+            return refused, chosen_kg_id, kg_equivalent_ids, committed_lipid
 
         logging.info("Re-resolution swapped conflated node %s -> %s (structure-guided)", chosen_kg_id, new_id)
-        return swapped, new_id, new_equiv
+        return swapped, new_id, new_equiv, swapped_lipid
 
     def map_entity_to_kg(
         self,
@@ -436,19 +452,17 @@ class Mapper:
             kg_equivalent_ids = equiv_ids.get(entity.chosen_kg_id, {})
             entity = entity.update_from(pd.Series({"kg_equivalent_ids": kg_equivalent_ids}))
 
-        # Unit 5: assemble the additive lipid_resolution object from the goslin metadata + committed
-        # node's matched level. None off the lipid path. Built before the certificate so its
-        # mapping_relation + ambiguous can be mirrored into certificate provenance (Decision 5).
-        lipid_resolution = build_lipid_resolution(entity.to_series())
-
         # Do Step 6 (+ optional Step 6.5 re-resolution): issue the resolution certificate.
         #
         # Deliberately OUTSIDE the null guard above: the rows the certificate most needs to describe
-        # are the ones with no committed node, and building it inside would leave that population
-        # undescribed here while the dataset path described it. When re-resolution is enabled and the
-        # certificate contradicts, the committed node and its equivalent ids may be swapped for the
-        # correct distinct candidate (default-off; today's behavior otherwise).
-        certificate, chosen_kg_id, kg_equivalent_ids = self._certify_and_reresolve(
+        # are the ones with no committed node. When re-resolution is enabled and the certificate
+        # contradicts, the committed node and its equivalent ids may be swapped for the correct
+        # distinct candidate (default-off; today's behavior otherwise).
+        #
+        # Unit 5: the additive lipid_resolution object is built INSIDE, against whichever node the
+        # certificate commits, so a swap never emits the replaced node's level or mapping relation and
+        # the certificate provenance mirror stays consistent with it. None off the lipid path.
+        certificate, chosen_kg_id, kg_equivalent_ids, lipid_resolution = self._certify_and_reresolve(
             query_name=entity.name,
             category=entity_type,
             chosen_kg_id=entity.chosen_kg_id,
@@ -460,8 +474,7 @@ class Mapper:
             refmet_availability=refmet_availability,
             refmet_source=refmet_source,
             refmet_snapshot_version=refmet_snapshot_version,
-            lipid_mapping_relation=(lipid_resolution or {}).get("mapping_relation"),
-            lipid_ambiguous=(lipid_resolution or {}).get("ambiguous"),
+            lipid_row=entity.to_series(),
         )
         # Emitted as a plain dict, not the dataclass: pydantic rejects a raw dataclass at the
         # response model, and the NDJSON endpoint json.dumps's this value outside its try/except.
@@ -631,10 +644,9 @@ class Mapper:
             row_availability = row.get("annotator_availability") or {}
             row_source = row.get("annotator_source") or {}
             refmet_source = row_source.get(REFMET_ANNOTATOR, REFMET_SOURCE_NOT_QUERIED)
-            # Built before the certificate so its mapping_relation + ambiguous mirror into provenance.
-            lipid_resolution = build_lipid_resolution(row)
-            lipid_column_rows.append(lipid_flat_columns(lipid_resolution))
-            certificate, new_id, new_equiv = self._certify_and_reresolve(
+            # lipid_resolution is built INSIDE, against the committed node, so its lipid_ columns
+            # describe whatever node a re-resolution swap actually commits (never the replaced one).
+            certificate, new_id, new_equiv, lipid_resolution = self._certify_and_reresolve(
                 query_name=_scalar_or_none(row.get(name_column)),
                 category=entity_type,
                 chosen_kg_id=committed,
@@ -646,12 +658,12 @@ class Mapper:
                 refmet_availability=row_availability.get(REFMET_ANNOTATOR, "not_queried"),
                 refmet_source=refmet_source,
                 refmet_snapshot_version=_refmet_snapshot_version_for(refmet_source),
-                lipid_mapping_relation=(lipid_resolution or {}).get("mapping_relation"),
-                lipid_ambiguous=(lipid_resolution or {}).get("ambiguous"),
+                lipid_row=row,
             )
             certificate_rows.append(certificate)
             reresolved_ids.append(new_id)
             reresolved_equiv.append(new_equiv or {})
+            lipid_column_rows.append(lipid_flat_columns(lipid_resolution))
         # Re-resolution may have swapped the committed node; reflect the correction in the emitted
         # chosen_kg_id / kg_equivalent_ids columns. Guarded by the flag so a default run's columns
         # (and their dtypes) are byte-for-byte unchanged.

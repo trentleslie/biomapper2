@@ -213,7 +213,21 @@ def _goslin_base_metadata(entity: "pd.Series | dict[str, Any]") -> dict[str, Any
     return None
 
 
-def build_lipid_resolution(entity: "pd.Series | dict[str, Any]") -> dict[str, Any] | None:
+class _UseEntityChosen:
+    """Sentinel: ``build_lipid_resolution`` reads ``chosen_kg_id`` from the entity itself.
+
+    A distinct type (not ``None``) because ``None`` is a real committed value -- "no node" -- that a
+    caller may pass to describe an unmapped row.
+    """
+
+
+_USE_ENTITY_CHOSEN = _UseEntityChosen()
+
+
+def build_lipid_resolution(
+    entity: "pd.Series | dict[str, Any]",
+    chosen_kg_id: "str | None | _UseEntityChosen" = _USE_ENTITY_CHOSEN,
+) -> dict[str, Any] | None:
     """Assemble the additive ``lipid_resolution`` object for a mapped row, or ``None`` for a non-lipid.
 
     Pulls together what the earlier units already produced: the goslin metadata on the goslin-lipid
@@ -221,6 +235,10 @@ def build_lipid_resolution(entity: "pd.Series | dict[str, Any]") -> dict[str, An
     same raw-id vs curie reconciliation Unit 4's tie-break uses). The relation between that matched
     level and the effective query level is computed here and SUBSUMES the ``chosen_kg_id_lipid_hint``
     flag: ``mapping_relation == "broad"`` is exactly the ``lipid_generalized`` case.
+
+    ``chosen_kg_id`` defaults to the value on ``entity``; a caller may pass it explicitly to describe a
+    DIFFERENT committed node than the one on the row. Re-resolution relies on this so the object always
+    tracks the node the certificate actually commits, never a node a later swap replaced.
 
     ``ambiguous`` / ``candidate_structure_count`` / ``ambiguity_basis`` describe the LIPID MAPS / Tier B
     candidate set (plan Units for lipids). That ambiguity signal does not reach this row yet, so they
@@ -230,8 +248,8 @@ def build_lipid_resolution(entity: "pd.Series | dict[str, Any]") -> dict[str, An
     if meta is None:
         return None
     levels, effective_from_context = _lipid_level_context(entity)
-    chosen_kg_id = entity.get("chosen_kg_id")
-    matched_level = levels.get(chosen_kg_id) if isinstance(chosen_kg_id, str) else None
+    node = entity.get("chosen_kg_id") if isinstance(chosen_kg_id, _UseEntityChosen) else chosen_kg_id
+    matched_level = levels.get(node) if isinstance(node, str) else None
     asserted_level = meta.get("query_lipid_level_asserted")
     effective_level = meta.get("query_lipid_level_effective") or effective_from_context
     relation, predicate = lipid_mapping_relation(matched_level, effective_level)
