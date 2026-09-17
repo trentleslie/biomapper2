@@ -128,7 +128,7 @@ def test_http_404_is_no_match_not_unavailable(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_http_400_is_no_match_not_unavailable(monkeypatch: pytest.MonkeyPatch):
-    """A per-name 400 (Bad Request) is handled on the same no-match branch as 404, so the Bad
+    """A per-name Bad Request is handled on the same no-match branch as a Not Found, so the Bad
     Request path also never increments the shared breaker."""
     ann = _annotator(_FakeSession(lambda _url: _FakeResponse({}, status=400)), monkeypatch)
     result = ann._fetch_refmet_data("a-name-the-server-rejects")
