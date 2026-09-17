@@ -74,6 +74,7 @@ class LipidStructureResolver:
                 inchikey_block=memo.inchikey_block,
                 outcome=memo.outcome,
                 cache_state="process_memo",
+                candidate_inchikeys=memo.candidate_inchikeys,
             )
 
         result = self._resolve(key)
@@ -88,17 +89,28 @@ class LipidStructureResolver:
         parsed = self._grammar.parse(name)
         if parsed is None:
             return _UNRESOLVED  # not a lipid; a clean "unknown", never a failure
-        mapping, ok = self._enricher.enrich_checked(parsed.canonical_name)
+        candidates, ok = self._enricher.candidates_checked(parsed.canonical_name)
         if not ok:
             log.warning("LIPID MAPS lookup failed for '%s'; recording lookup_failed", parsed.canonical_name)
             return _LOOKUP_FAILED
-        inchikey = mapping.get("INCHIKEY")
-        if not inchikey:
+        keys = [str(c.get("inchi_key")).upper() for c in candidates if c.get("inchi_key")]
+        if not keys:
             return _UNRESOLVED  # parsed as a lipid but LIPID MAPS has no structure for it
+        distinct_blocks = {k.split("-")[0] for k in keys}
+        if len(distinct_blocks) == 1:
+            # One connectivity across every candidate (stereo / double-bond variants of a single
+            # skeleton): a single structural answer. FULL key on purpose (block2 present) so the
+            # certificate's structural-key comparison can use stereo when both sides carry it.
+            return TierBResult(
+                source=TIER_B_SOURCE_LIPIDMAPS,
+                inchikey_block=sorted(keys)[0],
+                outcome=TierBOutcome.RESOLVED,
+            )
+        # Distinct connectivities: the name is known but does not pin one structure. Carry the
+        # candidate set instead of collapsing to an arbitrary Row, so a caller can adjudicate.
         return TierBResult(
             source=TIER_B_SOURCE_LIPIDMAPS,
-            # FULL key on purpose (block2 present): the lipid source is the one hop that can supply
-            # stereo, which the certificate's structural-key comparison uses when both sides carry it.
-            inchikey_block=str(inchikey).upper(),
-            outcome=TierBOutcome.RESOLVED,
+            inchikey_block=None,
+            outcome=TierBOutcome.AMBIGUOUS,
+            candidate_inchikeys=tuple(sorted(keys)),
         )

@@ -221,6 +221,10 @@ class TierBOutcome(str, Enum):
     RESOLVED = "resolved"
     UNRESOLVABLE = "unresolvable"
     LOOKUP_FAILED = "lookup_failed"
+    # The registry returned several candidates with DISTINCT connectivity (e.g. a lipid species name
+    # that maps to more than one first block). Not RESOLVED (no single structure to compare) and not
+    # UNRESOLVABLE (the name is known); the candidate keys are carried on the result.
+    AMBIGUOUS = "ambiguous"
 
 
 @dataclass(frozen=True)
@@ -231,6 +235,9 @@ class TierBResult:
     inchikey_block: str | None
     outcome: TierBOutcome
     cache_state: str | None = None  # 'hit' | 'miss' | 'process_memo' | None
+    # Candidate InChIKeys when ``outcome is AMBIGUOUS`` (empty otherwise). A tuple so the frozen
+    # dataclass stays hashable; sorted so it is order-independent.
+    candidate_inchikeys: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
