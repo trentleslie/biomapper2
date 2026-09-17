@@ -382,6 +382,13 @@ class ResolutionCertificate:
     # row, so the two axes never overlap. Appended after the existing defaulted fields so the dataclass
     # shape stays additive.
     lipid_resolution_level: LipidResolutionLevel = LipidResolutionLevel.UNAVAILABLE
+    # Version of the Tier B freeze that produced a frozen independent result (set only when the freeze
+    # served the row), else None for a live result. A first-class field mirroring
+    # ``refmet_snapshot_version`` so frozen Tier B evidence is auditable on the same footing: it is a
+    # flat ``certificate_tier_b_snapshot_version`` column and an API response field, not only a
+    # provenance entry. Appended after the existing defaulted fields so the dataclass shape stays
+    # additive.
+    tier_b_snapshot_version: str | None = None
     provenance: dict[str, Any] = field(default_factory=dict)
 
     def to_api_dict(self) -> dict[str, Any]:
@@ -409,6 +416,7 @@ class ResolutionCertificate:
             "refmet_availability": self.refmet_availability,
             "refmet_source": self.refmet_source,
             "refmet_snapshot_version": self.refmet_snapshot_version,
+            "tier_b_snapshot_version": self.tier_b_snapshot_version,
             "provenance": dict(self.provenance),
         }
 
@@ -438,6 +446,7 @@ class ResolutionCertificate:
             "certificate_refmet_availability": self.refmet_availability,
             "certificate_refmet_source": self.refmet_source,
             "certificate_refmet_snapshot_version": self.refmet_snapshot_version,
+            "certificate_tier_b_snapshot_version": self.tier_b_snapshot_version,
         }
         for key, value in self.provenance.items():
             flat[f"certificate_provenance_{key}"] = value
@@ -505,9 +514,9 @@ def _default_provenance(tier_b: TierBResult | None, tier_b_enabled: bool | None 
     return {
         "tier_b_enabled": enabled,
         "tier_b_cache_state": tier_b.cache_state if tier_b else None,
-        # Version of the freeze that served a frozen Tier B result (None for a live result), so frozen
-        # independent evidence is auditable. Mirrors RefMet's certificate_refmet_snapshot_version.
-        "tier_b_snapshot_version": tier_b.version if tier_b else None,
+        # The freeze version is NOT recorded here: it is a FIRST-CLASS certificate field
+        # (``tier_b_snapshot_version``, a flat column and an API field), mirroring RefMet's
+        # ``refmet_snapshot_version`` which is likewise not carried in provenance.
         "kestrel_cache_store": KESTREL_CACHE_STORE,
         "kestrel_cache_expiry": KESTREL_CACHE_EXPIRY,
         "structure_cache_store": STRUCTURE_CACHE_STORE,
@@ -730,6 +739,9 @@ def issue(
         refmet_availability=refmet_availability,
         refmet_source=refmet_source,
         refmet_snapshot_version=refmet_snapshot_version,
+        # Read the freeze version off the passed-in result (None for a live result). issue() stays
+        # pure: it neither loads the freeze nor knows how the version was derived.
+        tier_b_snapshot_version=(tier_b.version if tier_b is not None else None),
         provenance=_prov,
     )
 

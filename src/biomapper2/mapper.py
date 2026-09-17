@@ -592,6 +592,9 @@ class Mapper:
                     "refmet_availability": refmet_availability,
                     "refmet_source": refmet_source,
                     "refmet_snapshot_version": refmet_snapshot_version,
+                    # Mirrored from the certificate (a first-class field) so the row surface carries the
+                    # Tier B freeze version too, parallel to refmet_snapshot_version.
+                    "tier_b_snapshot_version": certificate.tier_b_snapshot_version,
                 }
             )
         )

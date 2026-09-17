@@ -134,24 +134,38 @@ def test_three_state_resolution_matrix(monkeypatch) -> None:
     assert config.resolve_tier_b_state(snapshot_present=False) == config.TIER_B_STATE_DISABLED
 
 
-def test_freeze_version_reaches_the_certificate_provenance(_freeze) -> None:
-    """Frozen independent evidence must be auditable: the freeze version threads through the lookup
-    onto the certificate provenance, mirroring RefMet's snapshot version. A live result carries None."""
-    from biomapper2.core.certificate import issue
+def test_freeze_version_is_a_first_class_certificate_field(_freeze) -> None:
+    """Frozen independent evidence must be auditable on the same footing as RefMet's: the freeze
+    version is a FIRST-CLASS certificate field and a flat top-level column (not only provenance),
+    populated on a freeze hit and None on a live result."""
+    from biomapper2.core.certificate import TierBOutcome, TierBResult, issue
+
+    def _cert(tier_b):
+        return issue(
+            chosen_kg_id="CHEBI:4167",
+            is_small_molecule=True,
+            kg_equivalent_ids={"INCHIKEY": ["WQZGKKKJIJFFOK-GASJEMHNSA-N"]},
+            equivalent_ids_lookup_ok=True,
+            tier_b=tier_b,
+            tier_b_enabled=True,
+        )
 
     lookup, _ = _lookup({})  # no responses needed; glucose is a freeze hit
-    result = lookup.lookup("glucose")
-    assert result.version == "tier-b-fixture-v1"
+    frozen = lookup.lookup("glucose")
+    assert frozen.version == "tier-b-fixture-v1"
 
-    certificate = issue(
-        chosen_kg_id="CHEBI:4167",
-        is_small_molecule=True,
-        kg_equivalent_ids={"INCHIKEY": ["WQZGKKKJIJFFOK-GASJEMHNSA-N"]},
-        equivalent_ids_lookup_ok=True,
-        tier_b=result,
-        tier_b_enabled=True,
-    )
-    assert certificate.provenance["tier_b_snapshot_version"] == "tier-b-fixture-v1"
+    frozen_cert = _cert(frozen)
+    assert frozen_cert.tier_b_snapshot_version == "tier-b-fixture-v1"
+    assert frozen_cert.to_flat_columns()["certificate_tier_b_snapshot_version"] == "tier-b-fixture-v1"
+    assert frozen_cert.to_api_dict()["tier_b_snapshot_version"] == "tier-b-fixture-v1"
+    # RefMet parity: the version is a first-class field, NOT carried in provenance.
+    assert "tier_b_snapshot_version" not in frozen_cert.provenance
+
+    # A live (non-frozen) result carries no freeze version.
+    live = TierBResult(source="pubchem", inchikey_block="WQZGKKKJIJFFOK", outcome=TierBOutcome.RESOLVED)
+    live_cert = _cert(live)
+    assert live_cert.tier_b_snapshot_version is None
+    assert live_cert.to_flat_columns()["certificate_tier_b_snapshot_version"] is None
 
 
 def test_non_small_molecule_stays_out_of_scope_under_an_enabled_run() -> None:
