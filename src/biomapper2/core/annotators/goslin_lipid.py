@@ -138,5 +138,8 @@ class GoslinLipidAnnotator(BaseAnnotator):
             "goslin_mass": parsed.monoisotopic_mass,
             "goslin_dialect": parsed.dialect,
             "goslin_level": parsed.level,
+            "goslin_input_level": parsed.level,
+            "goslin_level_names": dict(parsed.level_names),
+            "goslin_chains": list(parsed.chains),
             "lipidmaps_rest_enrichment_fired": enrichment_fired,
         }
