@@ -85,6 +85,7 @@ class _Mapper:
         self.linker = linker
         self._issue_certificate = Mapper._issue_certificate.__get__(self, _Mapper)
         self._enrich_equivalent_ids = Mapper._enrich_equivalent_ids.__get__(self, _Mapper)
+        self._lipid_structure_evidence = Mapper._lipid_structure_evidence.__get__(self, _Mapper)
         self._certify_and_reresolve = Mapper._certify_and_reresolve.__get__(self, _Mapper)
 
 
