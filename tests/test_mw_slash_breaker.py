@@ -127,6 +127,16 @@ def test_http_404_is_no_match_not_unavailable(monkeypatch: pytest.MonkeyPatch):
     assert _breaker().failure_count == 0
 
 
+def test_http_400_is_no_match_not_unavailable(monkeypatch: pytest.MonkeyPatch):
+    """A per-name 400 (Bad Request) is handled on the same no-match branch as 404, so the Bad
+    Request path also never increments the shared breaker."""
+    ann = _annotator(_FakeSession(lambda _url: _FakeResponse({}, status=400)), monkeypatch)
+    result = ann._fetch_refmet_data("a-name-the-server-rejects")
+    assert result.status == AVAILABILITY_NO_MATCH
+    assert result.data is None
+    assert _breaker().failure_count == 0
+
+
 def test_repeated_404s_do_not_open_the_breaker(monkeypatch: pytest.MonkeyPatch):
     """Four 404s in a row leave the breaker closed (4xx is per-name, not an outage)."""
 
