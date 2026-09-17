@@ -42,6 +42,15 @@ def test_sphingoid_base_is_kept_as_one_chain() -> None:
     assert parsed.chains == ("18:1;O2", "16:0")
 
 
+def test_structurally_defined_input_keeps_double_bond_detail() -> None:
+    # The chain list comes from the most specific level (FULL_STRUCTURE here), so the double-bond
+    # position/configuration is preserved rather than reduced to the sn-position rendering.
+    parsed = _parse("PA 18:1(5Z)/12:0")
+    assert parsed is not None
+    assert parsed.level_names.get("SN_POSITION") == "PA 18:1/12:0"  # sn level alone drops it
+    assert parsed.chains == ("18:1(5Z)", "12:0")
+
+
 def test_annotator_metadata_carries_the_new_level_fields() -> None:
     parsed = _parse("PC 16:0/18:1")
     assert parsed is not None

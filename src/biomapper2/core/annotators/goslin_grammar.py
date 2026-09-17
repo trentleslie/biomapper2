@@ -162,11 +162,15 @@ class LipidGrammar:
 
     @staticmethod
     def _chains(level_names: dict[str, str]) -> tuple[str, ...]:
-        """Ordered chain list for sn filtering, taken from the most specific level that carries chains.
-        sn order is meaningful only at SN_POSITION; MOLECULAR_SPECIES gives the same set, order not
-        asserted. A species-level name (sum composition) has no individual chains."""
-        name = level_names.get("SN_POSITION") or level_names.get("MOLECULAR_SPECIES")
-        if not name or " " not in name:
-            return ()
-        tail = name.split(" ", 1)[1]
-        return tuple(chain for chain in re.split(r"[/_]", tail) if chain)
+        """Ordered chain list for sn filtering, from the MOST specific level that carries per-chain
+        detail, so double-bond position/configuration (e.g. ``18:1(5Z)``) is kept rather than reduced
+        to the sn level. sn order is meaningful from SN_POSITION up; MOLECULAR_SPECIES gives the same
+        set with order not asserted. A species sum composition has no individual chains."""
+        for level in ("COMPLETE_STRUCTURE", "FULL_STRUCTURE", "STRUCTURE_DEFINED", "SN_POSITION", "MOLECULAR_SPECIES"):
+            name = level_names.get(level)
+            if not name or " " not in name:
+                continue
+            chains = tuple(chain for chain in re.split(r"[/_]", name.split(" ", 1)[1]) if chain)
+            if chains:
+                return chains
+        return ()
