@@ -54,7 +54,12 @@ def test_structurally_defined_input_keeps_double_bond_detail() -> None:
 def test_annotator_metadata_carries_the_new_level_fields() -> None:
     parsed = _parse("PC 16:0/18:1")
     assert parsed is not None
-    meta = GoslinLipidAnnotator._metadata(parsed, enrichment_fired=False)
+    meta = GoslinLipidAnnotator._base_metadata(
+        parsed, asserted="SN_POSITION", effective="MOLECULAR_SPECIES", enrichment_fired=False
+    )
     assert meta["goslin_input_level"] == parsed.level
     assert meta["goslin_level_names"]["SN_POSITION"] == "PC 16:0/18:1"
     assert meta["goslin_chains"] == ["16:0", "18:1"]
+    # Unit 3 adds the query-level pair (asserted vs the trust-policy-adjusted effective level).
+    assert meta["query_lipid_level_asserted"] == "sn_position"
+    assert meta["query_lipid_level_effective"] == "molecular_species"

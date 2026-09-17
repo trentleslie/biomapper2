@@ -51,7 +51,12 @@ class AnnotationEngine:
                 GoslinLipidAnnotator(
                     binder=MetabolomicsWorkbenchAnnotator(
                         live_api_fallback=refmet_fallback, freeze_mode=refmet_freeze_mode
-                    )
+                    ),
+                    # D3: the level cascade queries Kestrel hybrid search with each level-specific name,
+                    # but only for levels no other source already hit. A private instance (separate from
+                    # the registered kestrel-hybrid-search, which searches the raw name) so the two do
+                    # not share state; both keep the same adaptive candidate window.
+                    kestrel=KestrelHybridSearchAnnotator(),
                 ),
             ]
         }
