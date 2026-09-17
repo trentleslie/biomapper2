@@ -62,6 +62,14 @@ class LipidStructureResolver:
         self._enricher = enricher
         self._memo: dict[str, TierBResult] = {}
 
+    def parse(self, name: str | None) -> Any | None:
+        """Offline Goslin parse of a name (e.g. a committed node's name), or ``None`` if it is not a
+        lipid. Exposed so a caller can parse a node name for the structure-free composition check
+        without constructing a second pygoslin grammar; network-free and deterministic."""
+        if not name or not str(name).strip():
+            return None
+        return self._grammar.parse(str(name))
+
     def resolve(self, name: str | None) -> TierBResult:
         """Resolve one query name. Never raises; a service failure comes back as ``lookup_failed``."""
         key = (name or "").strip()

@@ -59,8 +59,17 @@ class ResolutionCertificateModel(BaseModel):
     )
     tier_b_outcome: str = Field(
         default="off",
-        description="'off' | 'resolved' | 'unresolvable' | 'lookup_failed'. A failed lookup is kept "
-        "distinct from an unresolvable name so a throttled service is never read as name difficulty.",
+        description="'off' | 'resolved' | 'unresolvable' | 'lookup_failed' | 'ambiguous' | "
+        "'out_of_scope'. A failed lookup is kept distinct from an unresolvable name so a throttled "
+        "service is never read as name difficulty. 'off' means Tier B was disabled for the run; "
+        "'out_of_scope' means it was enabled but this row is not one an independent lookup can "
+        "adjudicate, so the two are never conflated.",
+    )
+    lipid_resolution_level: str = Field(
+        default="unavailable",
+        description="Graded agreement of a STRUCTURE-FREE lipid check ('lipid_species' | 'contradicted' "
+        "| 'unavailable'), on an axis PARALLEL to the InChIKey-block 'resolution_level'. Set only for a "
+        "committed lipid node the graph lists no InChIKey for; 'unavailable' on every other row.",
     )
     refusal_reason: str | None = Field(
         default=None,

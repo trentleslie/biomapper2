@@ -16,7 +16,7 @@ from typing import Any
 import pandas as pd
 
 from ..config import CATEGORY_PREFERRED_NAMESPACES
-from .certificate import structural_agree
+from .certificate import LipidStructureEvidence, compare_lipid_composition, structural_agree
 from .structure_resolver import StructureResolver
 
 # The annotator whose vote is authoritative for small-molecule ChEBI conflicts: it queries the
@@ -267,6 +267,42 @@ def build_lipid_resolution(
         "goslin_formula": meta.get("goslin_formula"),
         "goslin_mass": meta.get("goslin_mass"),
     }
+
+
+def _lipid_head_group(species_name: str | None) -> str | None:
+    """The lipid class (head group) from a species-level shorthand: the token before the first space
+    (e.g. ``PC 34:1`` -> ``PC``). None for an empty name. A fallback used only when a parse exposes no
+    explicit CLASS-level rendering."""
+    if not species_name or not str(species_name).strip():
+        return None
+    return str(species_name).strip().split(" ", 1)[0] or None
+
+
+def build_lipid_structure_evidence(
+    query_meta: dict[str, Any] | None,
+    node_parse: Any | None,
+) -> LipidStructureEvidence | None:
+    """The STRUCTURE-FREE lipid verdict for a committed node, from the query's goslin metadata and the
+    committed node's parsed name (a :class:`LipidParse`). Both are produced UPSTREAM; this only reads
+    fields and delegates the comparison to the pure ``compare_lipid_composition``.
+
+    ``None`` when the node name did not parse as a lipid (no structure-free comparison is possible) or
+    the query is not a lipid, which the certificate reads as ``out_of_scope`` rather than a verdict.
+    """
+    if node_parse is None or not query_meta:
+        return None
+    query_species = query_meta.get("goslin_canonical")
+    query_level_names = query_meta.get("goslin_level_names") or {}
+    query_class = query_level_names.get("CLASS") or _lipid_head_group(query_species)
+    node_level_names = getattr(node_parse, "level_names", {}) or {}
+    node_species = node_level_names.get("SPECIES") or getattr(node_parse, "canonical_name", None)
+    node_class = node_level_names.get("CLASS") or _lipid_head_group(node_species)
+    return compare_lipid_composition(
+        query_class=query_class,
+        query_species=query_species,
+        node_class=node_class,
+        node_species=node_species,
+    )
 
 
 def lipid_flat_columns(lipid_resolution: dict[str, Any] | None) -> dict[str, Any]:
