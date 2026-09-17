@@ -34,7 +34,7 @@ from .core.certificate import (
 )
 from .core.linker import Linker
 from .core.normalizer import Normalizer
-from .core.resolver import Resolver
+from .core.resolver import Resolver, build_lipid_resolution, lipid_flat_columns
 from .models import Entity
 from .provenance import build_run_provenance
 from .utils import AnnotationMode, setup_logging
@@ -146,6 +146,8 @@ class Mapper:
         refmet_availability: str = "not_queried",
         refmet_source: str = REFMET_SOURCE_NOT_QUERIED,
         refmet_snapshot_version: str | None = None,
+        lipid_mapping_relation: str | None = None,
+        lipid_ambiguous: bool | None = None,
     ) -> ResolutionCertificate:
         """Assemble one certificate. Shared by both emission paths so they cannot drift apart.
 
@@ -186,6 +188,14 @@ class Mapper:
             and bool(node_blocks_from_equivalent_ids(kg_equivalent_ids))
         )
         tier_b_result = self.tier_b.lookup(query_name) if (self.tier_b is not None and in_population) else None
+        # Decision 5: mirror the lipid mapping_relation + ambiguous onto the certificate's provenance
+        # so a certificate read alone shows them. Merged (not replacing the default provenance) and only
+        # for lipid rows, so a non-lipid certificate is byte-identical to before.
+        extra_provenance = (
+            {"mapping_relation": lipid_mapping_relation, "ambiguous": bool(lipid_ambiguous)}
+            if lipid_mapping_relation is not None
+            else None
+        )
         return issue(
             chosen_kg_id=chosen_kg_id,
             is_small_molecule=is_small_molecule,
@@ -198,6 +208,7 @@ class Mapper:
             refmet_availability=refmet_availability,
             refmet_source=refmet_source,
             refmet_snapshot_version=refmet_snapshot_version,
+            extra_provenance=extra_provenance,
         )
 
     def _enrich_equivalent_ids(self, chosen_kg_id: str | None) -> tuple[dict[str, list[str]], bool]:
@@ -225,6 +236,8 @@ class Mapper:
         refmet_availability: str = "not_queried",
         refmet_source: str = REFMET_SOURCE_NOT_QUERIED,
         refmet_snapshot_version: str | None = None,
+        lipid_mapping_relation: str | None = None,
+        lipid_ambiguous: bool | None = None,
     ) -> tuple[ResolutionCertificate, str | None, dict[str, list[str]]]:
         """Step 6 (+ optional Step 6.5): issue the certificate and, on a contradiction, re-resolve.
 
@@ -250,6 +263,8 @@ class Mapper:
             refmet_availability=refmet_availability,
             refmet_source=refmet_source,
             refmet_snapshot_version=refmet_snapshot_version,
+            lipid_mapping_relation=lipid_mapping_relation,
+            lipid_ambiguous=lipid_ambiguous,
         )
         if not (config.RERESOLUTION_ENABLED and certificate.state is CertificateState.CONTRADICTED):
             return certificate, chosen_kg_id, kg_equivalent_ids
@@ -274,6 +289,8 @@ class Mapper:
                 refmet_availability=refmet_availability,
                 refmet_source=refmet_source,
                 refmet_snapshot_version=refmet_snapshot_version,
+                lipid_mapping_relation=lipid_mapping_relation,
+                lipid_ambiguous=lipid_ambiguous,
             )
             return refused, chosen_kg_id, kg_equivalent_ids
 
@@ -291,6 +308,8 @@ class Mapper:
             refmet_availability=refmet_availability,
             refmet_source=refmet_source,
             refmet_snapshot_version=refmet_snapshot_version,
+            lipid_mapping_relation=lipid_mapping_relation,
+            lipid_ambiguous=lipid_ambiguous,
         )
         if swapped.state is CertificateState.CONTRADICTED:
             # The swapped node still contradicts the independent structure. Refuse rather than recurse
@@ -312,6 +331,8 @@ class Mapper:
                 refmet_availability=refmet_availability,
                 refmet_source=refmet_source,
                 refmet_snapshot_version=refmet_snapshot_version,
+                lipid_mapping_relation=lipid_mapping_relation,
+                lipid_ambiguous=lipid_ambiguous,
             )
             return refused, chosen_kg_id, kg_equivalent_ids
 
@@ -415,6 +436,11 @@ class Mapper:
             kg_equivalent_ids = equiv_ids.get(entity.chosen_kg_id, {})
             entity = entity.update_from(pd.Series({"kg_equivalent_ids": kg_equivalent_ids}))
 
+        # Unit 5: assemble the additive lipid_resolution object from the goslin metadata + committed
+        # node's matched level. None off the lipid path. Built before the certificate so its
+        # mapping_relation + ambiguous can be mirrored into certificate provenance (Decision 5).
+        lipid_resolution = build_lipid_resolution(entity.to_series())
+
         # Do Step 6 (+ optional Step 6.5 re-resolution): issue the resolution certificate.
         #
         # Deliberately OUTSIDE the null guard above: the rows the certificate most needs to describe
@@ -434,6 +460,8 @@ class Mapper:
             refmet_availability=refmet_availability,
             refmet_source=refmet_source,
             refmet_snapshot_version=refmet_snapshot_version,
+            lipid_mapping_relation=(lipid_resolution or {}).get("mapping_relation"),
+            lipid_ambiguous=(lipid_resolution or {}).get("ambiguous"),
         )
         # Emitted as a plain dict, not the dataclass: pydantic rejects a raw dataclass at the
         # response model, and the NDJSON endpoint json.dumps's this value outside its try/except.
@@ -445,6 +473,7 @@ class Mapper:
                     "kg_equivalent_ids": kg_equivalent_ids or {},
                     "resolution_certificate": certificate.to_api_dict(),
                     "chosen_kg_id_review": derive_chosen_kg_id_review(certificate),
+                    "lipid_resolution": lipid_resolution,
                     "refmet_availability": refmet_availability,
                     "refmet_source": refmet_source,
                     "refmet_snapshot_version": refmet_snapshot_version,
@@ -594,12 +623,17 @@ class Mapper:
         certificate_rows = []
         reresolved_ids: list[str | None] = []
         reresolved_equiv: list[dict[str, list[str]]] = []
+        # Unit 5: per-row lipid_resolution as lipid_-prefixed flat columns (null off the lipid path).
+        lipid_column_rows: list[dict[str, Any]] = []
         for _, row in df.iterrows():
             committed = _scalar_or_none(row.get("chosen_kg_id"))
             equiv = row.get("kg_equivalent_ids") or {}
             row_availability = row.get("annotator_availability") or {}
             row_source = row.get("annotator_source") or {}
             refmet_source = row_source.get(REFMET_ANNOTATOR, REFMET_SOURCE_NOT_QUERIED)
+            # Built before the certificate so its mapping_relation + ambiguous mirror into provenance.
+            lipid_resolution = build_lipid_resolution(row)
+            lipid_column_rows.append(lipid_flat_columns(lipid_resolution))
             certificate, new_id, new_equiv = self._certify_and_reresolve(
                 query_name=_scalar_or_none(row.get(name_column)),
                 category=entity_type,
@@ -612,6 +646,8 @@ class Mapper:
                 refmet_availability=row_availability.get(REFMET_ANNOTATOR, "not_queried"),
                 refmet_source=refmet_source,
                 refmet_snapshot_version=_refmet_snapshot_version_for(refmet_source),
+                lipid_mapping_relation=(lipid_resolution or {}).get("mapping_relation"),
+                lipid_ambiguous=(lipid_resolution or {}).get("ambiguous"),
             )
             certificate_rows.append(certificate)
             reresolved_ids.append(new_id)
@@ -623,6 +659,8 @@ class Mapper:
             df["chosen_kg_id"] = pd.Series(reresolved_ids, index=df.index, dtype=object)
             df["kg_equivalent_ids"] = pd.Series(reresolved_equiv, index=df.index, dtype=object)
         df = df.join(pd.DataFrame([c.to_flat_columns() for c in certificate_rows], index=df.index))
+        # Unit 5: lipid_-prefixed flat columns, one column set for every row (null off the lipid path).
+        df = df.join(pd.DataFrame(lipid_column_rows, index=df.index))
         # The legacy flag is now DERIVED from the certificate (C4/L20) rather than passed through,
         # so the two can never disagree. Identical for one release; deprecation is a follow-up.
         # object dtype and an explicit index: the review is str | None per row, and a bare list with
