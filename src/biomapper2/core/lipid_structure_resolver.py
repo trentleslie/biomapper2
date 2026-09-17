@@ -98,12 +98,16 @@ class LipidStructureResolver:
             return _UNRESOLVED  # parsed as a lipid but LIPID MAPS has no structure for it
         distinct_blocks = {k.split("-")[0] for k in keys}
         if len(distinct_blocks) == 1:
-            # One connectivity across every candidate (stereo / double-bond variants of a single
-            # skeleton): a single structural answer. FULL key on purpose (block2 present) so the
-            # certificate's structural-key comparison can use stereo when both sides carry it.
+            # One connectivity across every candidate. If a single FULL key, stereo is pinned too, so
+            # supply it (block2 present) and the certificate can compare stereo when both sides carry
+            # it. If several stereo / double-bond variants share the connectivity, stereo is NOT pinned:
+            # assert FIRST BLOCK ONLY. Picking one arbitrary full key would assert a stereo we cannot
+            # justify and could false-contradict a node carrying a different valid variant.
+            distinct_full = set(keys)
+            resolved_key = sorted(distinct_full)[0] if len(distinct_full) == 1 else next(iter(distinct_blocks))
             return TierBResult(
                 source=TIER_B_SOURCE_LIPIDMAPS,
-                inchikey_block=sorted(keys)[0],
+                inchikey_block=resolved_key,
                 outcome=TierBOutcome.RESOLVED,
             )
         # Distinct connectivities: the name is known but does not pin one structure. Carry the

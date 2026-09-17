@@ -33,6 +33,12 @@ class LipidEnricher(Protocol):
         """
         ...
 
+    def candidates_checked(self, canonical_name: str) -> tuple[list[dict[str, str]], bool]:
+        """Every candidate the registry returned, order-independent (see
+        :meth:`LipidMapsRestEnricher.candidates_checked`). Required by the resolver, so it is part of
+        the contract, not just the concrete class."""
+        ...
+
 
 class LipidMapsRestEnricher:
     """Bind a Goslin-canonical shorthand -> LIPID MAPS ``LM_ID`` + InChIKey via the REST API."""

@@ -54,8 +54,10 @@ def test_distinct_connectivities_are_ambiguous_with_the_candidate_set() -> None:
     assert result.candidate_inchikeys == ("AAAAAAAAAAAAAA-BBBBBBBBBB-N", "CCCCCCCCCCCCCC-DDDDDDDDDD-N")
 
 
-def test_variants_of_one_skeleton_collapse_to_resolved() -> None:
-    # Same first block (one connectivity), different stereo layers: a single structural answer.
+def test_one_connectivity_many_stereo_resolves_connectivity_only() -> None:
+    # Same first block (one connectivity), different stereo layers: stereo is NOT pinned, so assert
+    # first block only. A full key would pick an arbitrary stereo and could false-contradict a node
+    # carrying a different valid variant.
     result = _resolver(
         [
             {"inchi_key": "AAAAAAAAAAAAAA-XXXXXXXXXX-N"},
@@ -63,5 +65,12 @@ def test_variants_of_one_skeleton_collapse_to_resolved() -> None:
         ]
     ).resolve("PC 16:0/18:1")
     assert result.outcome is TierBOutcome.RESOLVED
-    assert result.inchikey_block == "AAAAAAAAAAAAAA-BBBBBBBBBB-N"  # sorted-first representative
+    assert result.inchikey_block == "AAAAAAAAAAAAAA"  # connectivity only, no arbitrary stereo
     assert result.candidate_inchikeys == ()
+
+
+def test_single_full_key_pins_stereo() -> None:
+    # Exactly one candidate: connectivity AND stereo are pinned, so the full key is asserted.
+    result = _resolver([{"inchi_key": "AAAAAAAAAAAAAA-BBBBBBBBBB-N"}]).resolve("PC 16:0/18:1")
+    assert result.outcome is TierBOutcome.RESOLVED
+    assert result.inchikey_block == "AAAAAAAAAAAAAA-BBBBBBBBBB-N"
