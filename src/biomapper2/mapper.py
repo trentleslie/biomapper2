@@ -113,11 +113,13 @@ class Mapper:
 
     @staticmethod
     def _build_tier_b(lipid_resolver=None):
-        """The opt-in independent-structure lookup, or None.
+        """The independent-structure lookup, or None when disabled.
 
-        Constructed only when enabled, so a default run holds no session against Metabolomics
-        Workbench or PubChem and cannot drift into making calls. The lipid resolver is threaded in as
-        the third hop (MW -> PubChem -> Goslin/LIPID MAPS).
+        Constructed when Tier B is enabled (the default; set BIOMAPPER2_TIER_B_ENABLED to 0/false/no
+        to disable a run), None otherwise. On-by-default is safe because the lookup is SmallMolecule
+        scoped and consults the freeze corpus first, so the hot path holds no live call against
+        Metabolomics Workbench or PubChem when a freeze is configured. The lipid resolver is threaded
+        in as the third hop (MW -> PubChem -> Goslin/LIPID MAPS).
 
         Re-resolution is INERT without Tier B (a CONTRADICTED certificate, which it keys on, can only
         come from Tier B), so the dependency is made explicit here: enabling re-resolution without

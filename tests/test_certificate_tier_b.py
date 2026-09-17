@@ -66,12 +66,13 @@ def _lookup(responses: dict[str, Any], **kwargs) -> tuple[IndependentStructureLo
     )
 
 
-def test_default_is_off_in_config() -> None:
-    """Default-off is the contract, not a deployment convention. Changing this fires network calls
-    for every unique query name across every arm."""
+def test_default_is_on_in_config() -> None:
+    """On-by-default is the contract. It is SAFE because Tier B is SmallMolecule-scoped and consults
+    the freeze corpus first, so there are no live per-name calls in the hot path when a freeze is
+    configured. The env-driven default and the disable path are pinned in test_tier_b_freeze.py."""
     from biomapper2 import config
 
-    assert config.TIER_B_ENABLED is False
+    assert config.TIER_B_ENABLED is True
 
 
 def test_mw_hit_resolves_the_query_name() -> None:

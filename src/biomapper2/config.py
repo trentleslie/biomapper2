@@ -215,6 +215,53 @@ def get_refmet_store_path() -> Path | None:
     return p if p.is_absolute() else (PROJECT_ROOT / p)
 
 
+# Pinned local Tier B freeze (deterministic independent structure evidence). Path to a frozen
+# name to InChIKey corpus TSV (see core/tier_b_snapshot.py for the format), mirroring the RefMet
+# freeze above. When set to a loadable file the Tier B lookup consults the freeze FIRST: a freeze HIT
+# returns the frozen structure with no network call, so there are no live per-name calls in the hot
+# path; a freeze MISS falls back to live PubChem behind a circuit breaker. Unset (None) or absent ->
+# the loader reports NOT present and every name goes to the live path behind the breaker, exactly as
+# before. Override via BIOMAPPER2_TIER_B_SNAPSHOT_PATH in the environment; a relative value is
+# resolved against PROJECT_ROOT so a repo-relative default and an absolute deployment path both work.
+_tier_b_snapshot_env = os.getenv("BIOMAPPER2_TIER_B_SNAPSHOT_PATH", "").strip()
+if _tier_b_snapshot_env:
+    _tb_snap = Path(_tier_b_snapshot_env)
+    TIER_B_SNAPSHOT_PATH: Path | None = _tb_snap if _tb_snap.is_absolute() else (PROJECT_ROOT / _tb_snap)
+else:
+    TIER_B_SNAPSHOT_PATH = None
+
+
+def get_tier_b_snapshot_path() -> Path | None:
+    """Return the configured Tier B freeze path, reading os.environ on every call.
+
+    Mirrors ``get_refmet_snapshot_path``: the module-level constant is captured at import time, this
+    function reflects an override applied after import (a test setting BIOMAPPER2_TIER_B_SNAPSHOT_PATH).
+    A relative value resolves against PROJECT_ROOT; empty/unset -> None (loader NOT present).
+    """
+    raw = os.environ.get("BIOMAPPER2_TIER_B_SNAPSHOT_PATH", "").strip()
+    if not raw:
+        return None
+    p = Path(raw)
+    return p if p.is_absolute() else (PROJECT_ROOT / p)
+
+
+def derive_tier_b_snapshot_version(path: Path | None) -> str | None:
+    """Derive the Tier B freeze version from a sidecar or the filename. No read of the TSV itself.
+
+    Mirrors ``derive_refmet_snapshot_version``: a ``<path>.version`` sidecar (first non-empty line)
+    wins so a freeze can be versioned independently of its filename; otherwise the version is the TSV
+    filename stem. None when no path is configured.
+    """
+    if path is None:
+        return None
+    sidecar = path.with_suffix(path.suffix + ".version")
+    with contextlib.suppress(OSError):
+        for line in sidecar.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                return line.strip()
+    return path.stem
+
+
 def derive_refmet_snapshot_version(path: Path | None) -> str | None:
     """Derive the freeze version from a sidecar or the filename. No file read of the TSV itself.
 
@@ -249,12 +296,20 @@ STRUCTURE_LOOKUP_TIMEOUT_S = 3  # per external structure call; mirrors the RefMe
 
 # Tier B of the resolution certificate: independent structure evidence for the QUERY NAME.
 #
-# OFF by default, and that default is part of the contract rather than a deployment convention.
-# Tier A is zero-I/O and reads only what the graph already asserts about the committed node; turning
-# Tier B on moves external calls from a small conflict subset to every unique query name in a run,
-# against rate-limited services, and changes what the emitted certificate state means. An operator
-# enables it deliberately for a supervised sweep. See core/tier_b.py.
-TIER_B_ENABLED = os.getenv("BIOMAPPER2_TIER_B_ENABLED", "").strip().lower() in {"1", "true", "yes"}
+# ON by default. That is SAFE as an on-by-default because of two properties, not a loosening of the
+# contract:
+#   (i)  Tier B is SCOPED to SmallMolecule rows only (see mapper.py is_small_molecule and
+#        certificate.issue). A gene, protein, disease or any non-small-molecule row is never looked
+#        up; it reports out_of_scope under an enabled run.
+#   (ii) Tier B consults the FREEZE corpus FIRST (a frozen, pinned name to InChIKey table, mirroring
+#        the RefMet freeze). When a freeze is configured there are NO live per-name calls in the hot
+#        path: a freeze HIT returns the frozen structure with no network, and only a freeze MISS
+#        falls back to live PubChem, and that fallback is itself guarded by a circuit breaker. So the
+#        rate-limited external services are reached rarely and defensively rather than once per
+#        unique query name.
+# Set BIOMAPPER2_TIER_B_ENABLED to 0, false or no to disable it (an operator opting a run out); unset
+# resolves to True. See core/tier_b.py and core/tier_b_snapshot.py.
+TIER_B_ENABLED = os.getenv("BIOMAPPER2_TIER_B_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 TIER_B_MIN_INTERVAL_S = 0.25  # minimum spacing between outbound Tier B calls (PUG-REST is throttled)
 TIER_B_MAX_ATTEMPTS = 3  # attempts per hop before recording lookup_failed
 TIER_B_BACKOFF_BASE_S = 0.5  # first backoff; doubles per retry
