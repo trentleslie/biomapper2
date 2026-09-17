@@ -115,29 +115,23 @@ def test_breaker_open_degrades_to_lookup_failed_with_no_call() -> None:
     assert session.calls == [], "an open breaker must make no network call"
 
 
-def test_tier_b_enabled_defaults_true_when_env_unset(monkeypatch) -> None:
-    """On-by-default is the new contract. It is SAFE because Tier B is SmallMolecule-scoped and
-    consults the freeze first, so an unset environment enables it without live per-name calls."""
-    import importlib
+def test_three_state_resolution_matrix(monkeypatch) -> None:
+    """The default posture is COUPLED to freeze presence, so a fresh deploy never silently hits live
+    services: unset + freeze -> enabled_freeze, unset + no freeze -> inert, explicit truthy + no
+    freeze -> enabled_live (the supervised-sweep path), falsy -> disabled regardless of freeze."""
+    from biomapper2 import config
 
     monkeypatch.delenv("BIOMAPPER2_TIER_B_ENABLED", raising=False)
-    config = importlib.reload(importlib.import_module("biomapper2.config"))
-    try:
-        assert config.TIER_B_ENABLED is True
-    finally:
-        importlib.reload(config)
+    assert config.resolve_tier_b_state(snapshot_present=True) == config.TIER_B_STATE_ENABLED_FREEZE
+    assert config.resolve_tier_b_state(snapshot_present=False) == config.TIER_B_STATE_INERT
 
-
-def test_tier_b_enabled_false_disables(monkeypatch) -> None:
-    import importlib
+    monkeypatch.setenv("BIOMAPPER2_TIER_B_ENABLED", "true")
+    assert config.resolve_tier_b_state(snapshot_present=False) == config.TIER_B_STATE_ENABLED_LIVE
+    assert config.resolve_tier_b_state(snapshot_present=True) == config.TIER_B_STATE_ENABLED_FREEZE
 
     monkeypatch.setenv("BIOMAPPER2_TIER_B_ENABLED", "false")
-    config = importlib.reload(importlib.import_module("biomapper2.config"))
-    try:
-        assert config.TIER_B_ENABLED is False
-    finally:
-        monkeypatch.delenv("BIOMAPPER2_TIER_B_ENABLED", raising=False)
-        importlib.reload(config)
+    assert config.resolve_tier_b_state(snapshot_present=True) == config.TIER_B_STATE_DISABLED
+    assert config.resolve_tier_b_state(snapshot_present=False) == config.TIER_B_STATE_DISABLED
 
 
 def test_non_small_molecule_stays_out_of_scope_under_an_enabled_run() -> None:

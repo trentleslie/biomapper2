@@ -17,7 +17,10 @@ never looked up. Second, the lookup consults a FREEZE FIRST: a frozen, pinned na
 disk with NO network call, so there are no live per-name calls in the hot path; only a freeze MISS
 falls back to the live path, and that fallback is itself guarded by a circuit breaker. So the
 rate-limited registries are reached rarely and defensively rather than once per unique query name.
-``config.TIER_B_ENABLED`` is the switch (unset -> on; set to 0/false/no to disable a run).
+Enablement is three-state and, in the default posture, coupled to freeze presence: unset enables Tier
+B only when a loadable freeze is present (inert with a warning otherwise), an explicit truthy value
+force-enables live lookups behind the breaker for the supervised sweep that builds the corpus, and a
+falsy value disables it. See ``config.resolve_tier_b_state`` and ``Mapper._build_tier_b``.
 
 Independence is a per-row property, not a property of the tier (L26)
 --------------------------------------------------------------------

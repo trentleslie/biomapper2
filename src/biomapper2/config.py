@@ -296,20 +296,67 @@ STRUCTURE_LOOKUP_TIMEOUT_S = 3  # per external structure call; mirrors the RefMe
 
 # Tier B of the resolution certificate: independent structure evidence for the QUERY NAME.
 #
-# ON by default. That is SAFE as an on-by-default because of two properties, not a loosening of the
-# contract:
+# Enablement is THREE-STATE and, in the default posture, COUPLED to freeze presence. Freeze presence
+# is a runtime fact (the file must be loadable), so the decision is made in Mapper._build_tier_b via
+# ``resolve_tier_b_state`` rather than in a bare import-time boolean. The SAFETY properties are:
 #   (i)  Tier B is SCOPED to SmallMolecule rows only (see mapper.py is_small_molecule and
 #        certificate.issue). A gene, protein, disease or any non-small-molecule row is never looked
 #        up; it reports out_of_scope under an enabled run.
-#   (ii) Tier B consults the FREEZE corpus FIRST (a frozen, pinned name to InChIKey table, mirroring
-#        the RefMet freeze). When a freeze is configured there are NO live per-name calls in the hot
-#        path: a freeze HIT returns the frozen structure with no network, and only a freeze MISS
-#        falls back to live PubChem, and that fallback is itself guarded by a circuit breaker. So the
-#        rate-limited external services are reached rarely and defensively rather than once per
-#        unique query name.
-# Set BIOMAPPER2_TIER_B_ENABLED to 0, false or no to disable it (an operator opting a run out); unset
-# resolves to True. See core/tier_b.py and core/tier_b_snapshot.py.
-TIER_B_ENABLED = os.getenv("BIOMAPPER2_TIER_B_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+#   (ii) When a freeze is configured Tier B consults it FIRST (a frozen, pinned name to InChIKey
+#        table, mirroring the RefMet freeze), so there are NO live per-name calls in the hot path: a
+#        HIT returns the frozen structure with no network, and only a MISS falls back to live PubChem
+#        behind a circuit breaker.
+# The three states of BIOMAPPER2_TIER_B_ENABLED:
+#   unset (the default) -> enabled ONLY if a loadable freeze is present (safe, freeze-first). With NO
+#     loadable freeze it is INERT (behaves disabled, certificates report ``off``) and the Mapper logs
+#     one prominent warning to configure BIOMAPPER2_TIER_B_SNAPSHOT_PATH, so a fresh deploy never
+#     silently reaches live services.
+#   truthy (1/true/yes/on) -> force-enabled: runs even with no freeze (live behind the breaker),
+#     which is how the freeze corpus is built in a supervised sweep; the Mapper warns it is doing live
+#     lookups without a freeze.
+#   falsy (0/false/no) -> disabled.
+# See core/tier_b.py and core/tier_b_snapshot.py.
+_TIER_B_TRUTHY = {"1", "true", "yes", "on"}
+_TIER_B_FALSY = {"0", "false", "no"}
+
+
+def tier_b_explicitly_enabled() -> bool:
+    """True iff BIOMAPPER2_TIER_B_ENABLED is set to an explicit truthy value (reads os.environ)."""
+    return os.environ.get("BIOMAPPER2_TIER_B_ENABLED", "").strip().lower() in _TIER_B_TRUTHY
+
+
+def tier_b_explicitly_disabled() -> bool:
+    """True iff BIOMAPPER2_TIER_B_ENABLED is set to an explicit falsy value (reads os.environ)."""
+    return os.environ.get("BIOMAPPER2_TIER_B_ENABLED", "").strip().lower() in _TIER_B_FALSY
+
+
+# The four resolved postures ``resolve_tier_b_state`` returns.
+TIER_B_STATE_DISABLED = "disabled"
+TIER_B_STATE_INERT = "inert"
+TIER_B_STATE_ENABLED_FREEZE = "enabled_freeze"
+TIER_B_STATE_ENABLED_LIVE = "enabled_live"
+
+
+def resolve_tier_b_state(snapshot_present: bool) -> str:
+    """Resolve the three-state Tier B posture given runtime freeze presence. Reads os.environ.
+
+    - explicit falsy -> ``disabled``.
+    - a loadable freeze present -> ``enabled_freeze`` (freeze-first; the safe default-on path). This
+      holds whether the default or an explicit truthy value selected it.
+    - no freeze + explicit truthy -> ``enabled_live`` (force live behind the breaker, e.g. the
+      supervised sweep that BUILDS the freeze corpus).
+    - no freeze + default (unset) -> ``inert`` (behaves disabled; the Mapper warns to configure a
+      freeze), so a fresh deploy never silently hits live services.
+    """
+    if tier_b_explicitly_disabled():
+        return TIER_B_STATE_DISABLED
+    if snapshot_present:
+        return TIER_B_STATE_ENABLED_FREEZE
+    if tier_b_explicitly_enabled():
+        return TIER_B_STATE_ENABLED_LIVE
+    return TIER_B_STATE_INERT
+
+
 TIER_B_MIN_INTERVAL_S = 0.25  # minimum spacing between outbound Tier B calls (PUG-REST is throttled)
 TIER_B_MAX_ATTEMPTS = 3  # attempts per hop before recording lookup_failed
 TIER_B_BACKOFF_BASE_S = 0.5  # first backoff; doubles per retry
@@ -320,9 +367,9 @@ TIER_B_MIN_RESOLUTION_RATE = 0.5
 
 # Structure-guided re-resolution of conflated KG commits (see core/resolver.py:reresolve_on_contradiction).
 #
-# OFF by default, and INERT unless TIER_B_ENABLED: re-resolution keys on a CONTRADICTED certificate,
-# which only Tier B can produce, so enabling this without Tier B does nothing. The Mapper asserts the
-# dependency and logs at build time. When on (and Tier B on), a contradiction triggers a single
+# OFF by default, and INERT unless Tier B is ACTIVE: re-resolution keys on a CONTRADICTED certificate,
+# which only Tier B can produce, so enabling this without an active Tier B does nothing. The Mapper
+# asserts the dependency and logs at build time. When on (and Tier B active), a contradiction triggers a single
 # structure-guided attempt to swap the conflated node for the correct distinct candidate; a
 # still-contradicted swap is a logged REFUSE, never a recursion. A gated production change: the
 # falsifiable benchmark that measures precision/coverage lives in the separate benchmark axis.
