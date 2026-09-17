@@ -326,10 +326,15 @@ class TierBResult:
     source: str | None
     inchikey_block: str | None
     outcome: TierBOutcome
-    cache_state: str | None = None  # 'hit' | 'miss' | 'process_memo' | None
+    cache_state: str | None = None  # 'hit' | 'miss' | 'process_memo' | 'frozen' | None
     # Candidate InChIKeys when ``outcome is AMBIGUOUS`` (empty otherwise). A tuple so the frozen
     # dataclass stays hashable; sorted so it is order-independent.
     candidate_inchikeys: tuple[str, ...] = ()
+    # Version of the Tier B freeze that served this result, when it came from the freeze (see
+    # tier_b_snapshot); None for a live (non-frozen) result. Surfaced in the certificate provenance
+    # as ``tier_b_snapshot_version`` so frozen evidence is auditable, mirroring RefMet's snapshot
+    # version. Appended after the existing defaulted fields so the dataclass shape stays additive.
+    version: str | None = None
 
 
 @dataclass(frozen=True)
@@ -500,6 +505,9 @@ def _default_provenance(tier_b: TierBResult | None, tier_b_enabled: bool | None 
     return {
         "tier_b_enabled": enabled,
         "tier_b_cache_state": tier_b.cache_state if tier_b else None,
+        # Version of the freeze that served a frozen Tier B result (None for a live result), so frozen
+        # independent evidence is auditable. Mirrors RefMet's certificate_refmet_snapshot_version.
+        "tier_b_snapshot_version": tier_b.version if tier_b else None,
         "kestrel_cache_store": KESTREL_CACHE_STORE,
         "kestrel_cache_expiry": KESTREL_CACHE_EXPIRY,
         "structure_cache_store": STRUCTURE_CACHE_STORE,

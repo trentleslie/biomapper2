@@ -248,10 +248,18 @@ class IndependentStructureLookup:
             return None
         if hit.inchikey is None:
             return TierBResult(
-                source=None, inchikey_block=None, outcome=TierBOutcome.UNRESOLVABLE, cache_state="frozen"
+                source=None,
+                inchikey_block=None,
+                outcome=TierBOutcome.UNRESOLVABLE,
+                cache_state="frozen",
+                version=hit.version,
             )
         return TierBResult(
-            source=hit.source, inchikey_block=hit.inchikey, outcome=TierBOutcome.RESOLVED, cache_state="frozen"
+            source=hit.source,
+            inchikey_block=hit.inchikey,
+            outcome=TierBOutcome.RESOLVED,
+            cache_state="frozen",
+            version=hit.version,
         )
 
     def _resolve_live_guarded(self, name: str) -> TierBResult:

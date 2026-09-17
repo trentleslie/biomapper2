@@ -134,6 +134,26 @@ def test_three_state_resolution_matrix(monkeypatch) -> None:
     assert config.resolve_tier_b_state(snapshot_present=False) == config.TIER_B_STATE_DISABLED
 
 
+def test_freeze_version_reaches_the_certificate_provenance(_freeze) -> None:
+    """Frozen independent evidence must be auditable: the freeze version threads through the lookup
+    onto the certificate provenance, mirroring RefMet's snapshot version. A live result carries None."""
+    from biomapper2.core.certificate import issue
+
+    lookup, _ = _lookup({})  # no responses needed; glucose is a freeze hit
+    result = lookup.lookup("glucose")
+    assert result.version == "tier-b-fixture-v1"
+
+    certificate = issue(
+        chosen_kg_id="CHEBI:4167",
+        is_small_molecule=True,
+        kg_equivalent_ids={"INCHIKEY": ["WQZGKKKJIJFFOK-GASJEMHNSA-N"]},
+        equivalent_ids_lookup_ok=True,
+        tier_b=result,
+        tier_b_enabled=True,
+    )
+    assert certificate.provenance["tier_b_snapshot_version"] == "tier-b-fixture-v1"
+
+
 def test_non_small_molecule_stays_out_of_scope_under_an_enabled_run() -> None:
     """Scope is the first safety property: an enabled run never looks Tier B up for a
     non-small-molecule row, and the certificate records out_of_scope rather than a live verdict."""
