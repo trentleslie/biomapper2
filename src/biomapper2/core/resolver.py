@@ -56,14 +56,31 @@ def _lipid_level_rank(level: str | None) -> int:
         return len(_LIPID_LEVEL_ORDER)
 
 
+def _raw_level_for_curie(curie: str, level_by_raw: dict[str, str]) -> str | None:
+    """A curie's matched level from a map keyed by the annotator's RAW id, reconciling the two forms.
+
+    Normalization rewrites a raw annotator id into a curie in one of two shapes: a vocab prefix glued
+    onto the value is split off behind a colon (so stripping the colon rebuilds the raw id -- RefMet and
+    LIPID MAPS), or no prefix was present and the curie's local part already equals the raw id (an
+    InChIKey). Trying the full curie, the colon-stripped curie, and the local part covers both, so the
+    level survives the raw-id vs curie representation gap that a plain local-part join silently drops.
+    """
+    for candidate in (curie, curie.replace(":", ""), curie.rsplit(":", 1)[-1]):
+        level = level_by_raw.get(candidate)
+        if level is not None:
+            return level
+    return None
+
+
 def _lipid_level_context(entity: "pd.Series | dict[str, Any]") -> tuple[dict[str, str], str | None]:
     """Best-effort ``{kg_id: matched_level}`` plus the effective query level, joined from goslin votes.
 
-    The matched level lives on the goslin-lipid votes' metadata (``assigned_ids``); the linked KG node
-    ids live in ``kg_ids_assigned``. The two share the vote's LOCAL id (the part after the CURIE
-    prefix), so they are joined on it without reconstructing curies. Returns ``({}, None)`` for a
-    non-lipid row (no goslin votes) or when either structure is absent, so the tie-break stays inert
-    off the lipid path.
+    The matched level lives on the goslin-lipid votes' metadata (``assigned_ids``), keyed by the
+    annotator's RAW id; the linked KG node ids live in ``kg_ids_assigned``, keyed by the NORMALIZED
+    curie that same raw id became. Those two representations differ, so the join reconciles them via
+    ``_raw_level_for_curie`` rather than assuming the curie's local part equals the raw id. Returns
+    ``({}, None)`` for a non-lipid row (no goslin votes) or when either structure is absent, so the
+    tie-break stays inert off the lipid path.
     """
     assigned_ids = entity.get("assigned_ids") or {}
     kg_ids_assigned = entity.get("kg_ids_assigned") or {}
@@ -72,26 +89,26 @@ def _lipid_level_context(entity: "pd.Series | dict[str, Any]") -> tuple[dict[str
     if not goslin_meta or not goslin_kg:
         return {}, None
 
-    # local_id -> matched_level, unioned across vocabs. Goslin's per-vocab local ids do not collide:
-    # RefMet locals are numeric, LIPID MAPS are LM ids, InChIKeys are fixed-width keys.
-    level_by_local: dict[str, str] = {}
+    # raw metadata id -> matched_level, unioned across vocabs. The key is the annotator's RAW id (what
+    # goslin stamps the metadata under), NOT yet a curie.
+    level_by_raw: dict[str, str] = {}
     effective: str | None = None
     for vocab_map in goslin_meta.values():
         if not isinstance(vocab_map, dict):
             continue
-        for local_id, meta in vocab_map.items():
+        for raw_id, meta in vocab_map.items():
             if not isinstance(meta, dict):
                 continue
             matched = meta.get("matched_level")
             if isinstance(matched, str):
-                level_by_local[local_id] = matched
+                level_by_raw[raw_id] = matched
             if effective is None and isinstance(meta.get("query_lipid_level_effective"), str):
                 effective = meta["query_lipid_level_effective"]
 
-    # Each KG node inherits the MOST specific level among its supporting goslin votes.
+    # Each KG node inherits the MOST specific level among the goslin votes its curies reconcile to.
     levels: dict[str, str] = {}
     for kg_id, curies in goslin_kg.items():
-        found = [level_by_local[local] for c in curies if (local := c.rsplit(":", 1)[-1]) in level_by_local]
+        found = [lvl for c in curies if (lvl := _raw_level_for_curie(c, level_by_raw)) is not None]
         if found:
             levels[kg_id] = min(found, key=_lipid_level_rank)
     return levels, effective

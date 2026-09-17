@@ -79,7 +79,12 @@ def test_resolve_exact_level_end_to_end_sets_no_hint() -> None:
             "kg_ids": _KG_IDS_TIE,
             "kg_ids_provided": {},
             "kg_ids_assigned": _goslin_kg_ids_assigned([_EXACT_NODE, _SPECIES_NODE]),
-            "assigned_ids": _goslin_assigned_ids({"0015001": "molecular_species", "0010728": "species"}, _EFFECTIVE),
+            # RAW refmet_id keys ("RM0015001"), the form goslin actually stamps -- NOT the numeric
+            # local part. The curie is "RM:0015001", so a plain local-part join would miss these and
+            # lose the level; the raw-id reconciliation is what makes this pass.
+            "assigned_ids": _goslin_assigned_ids(
+                {"RM0015001": "molecular_species", "RM0010728": "species"}, _EFFECTIVE
+            ),
         }
     )
     out = r.resolve(entity)
@@ -97,7 +102,7 @@ def test_resolve_species_only_sets_generalized_hint() -> None:
             "kg_ids": _KG_IDS_TIE,
             "kg_ids_provided": {},
             "kg_ids_assigned": _goslin_kg_ids_assigned([_EXACT_NODE, _SPECIES_NODE]),
-            "assigned_ids": _goslin_assigned_ids({"0015001": "species", "0010728": "species"}, _EFFECTIVE),
+            "assigned_ids": _goslin_assigned_ids({"RM0015001": "species", "RM0010728": "species"}, _EFFECTIVE),
         }
     )
     out = r.resolve(entity)
