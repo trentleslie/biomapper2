@@ -17,11 +17,18 @@ Format (tab-separated, with a header)::
 ``name`` is the query string. ``inchikey`` is the frozen structure: a full InChIKey or a first block,
 placed verbatim (upper-cased) into ``TierBResult.inchikey_block``; the live PubChem path emits a
 first block, so a corpus built from it stores first blocks, and a full key is accepted too (it lets a
-stereo-level agreement register, matching the lipid hop). An EMPTY ``inchikey`` positively records
-"this name has no independent structure" (a frozen unresolvable, still no network). ``source`` is
-optional and names the registry the row came from; empty defaults to ``pubchem`` (the hop that is
-independent of every annotator the resolver source-weights toward, which keeps the independence claim
-honest). The only required columns are ``name`` and ``inchikey``.
+stereo-level agreement register, matching the lipid hop). A non-empty ``inchikey`` is VALIDATED
+against first-block form (fourteen letters) or full-InChIKey form; a malformed value is SKIPPED at
+load with a loud warning (the name falls back to the live path), never returned as evidence. An EMPTY
+``inchikey`` positively records "this name has no independent structure" (a frozen unresolvable,
+still no network) and needs no source.
+
+``source`` names the registry the row came from and is REQUIRED on a resolved (non-empty inchikey)
+row. It is normalized (strip + casefold) and must be one of the canonical sources the certificate
+understands (``pubchem`` / ``metabolomics-workbench`` / ``lipidmaps``); a resolved row whose source is
+empty or non-canonical is SKIPPED at load with a loud warning (it falls to the live path) rather than
+silently defaulting -- pubchem provenance is never attributed to missing data. The only required
+header columns are ``name`` and ``inchikey``.
 
 Lookup is by NORMALIZED name (strip + casefold), so the corpus is case- and surrounding-whitespace
 insensitive. Loading is done ONCE per resolved path and cached (immutable); the cache is keyed on the
@@ -34,17 +41,29 @@ from __future__ import annotations
 
 import csv
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from .. import config
+from .certificate import TIER_B_SOURCE_LIPIDMAPS, TIER_B_SOURCE_MW, TIER_B_SOURCE_PUBCHEM
 
 logger = logging.getLogger(__name__)
 
-# The registry a row is attributed to when its ``source`` column is empty. PubChem is independent of
-# every annotator the resolver source-weights toward, so it is the honest default for the independence
-# calculation in certificate.issue.
-_DEFAULT_SOURCE = "pubchem"
+# The canonical Tier B sources the certificate understands. A RESOLVED freeze row (non-empty
+# inchikey) MUST carry one of these; the value is normalized (strip + casefold) and checked against
+# this set. A resolved row whose source is EMPTY or NON-canonical is SKIPPED at load (it falls to the
+# live path) rather than silently assigned a default provenance -- never attribute pubchem to missing
+# data on a resolved row. These are the same source strings the live path emits (see certificate.py):
+# pubchem and lipidmaps are independent of every annotator the resolver source-weights toward, and MW
+# is handled by the certificate's per-row independence calculation.
+_CANONICAL_SOURCES = frozenset({TIER_B_SOURCE_PUBCHEM, TIER_B_SOURCE_MW, TIER_B_SOURCE_LIPIDMAPS})
+
+# InChIKey validation, mirroring the two forms the live path can emit: a 14-character first block
+# (MW/PubChem emit first-block only) OR a full InChIKey (block1-block2-flag; the lipid hop emits one).
+# A non-empty value that matches neither is a truncation/typo and is SKIPPED at load (falls to live);
+# a malformed key must never be returned as RESOLVED evidence.
+_INCHIKEY_RE = re.compile(r"^[A-Z]{14}$|^[A-Z]{14}-[A-Z]{10}-[A-Z]$")
 
 
 def _normalize(name: str) -> str:
@@ -100,11 +119,38 @@ def _parse(path: Path) -> _LoadedSnapshot:
             name = (row.get("name") or "").strip()
             if not name:
                 continue
-            inchikey = (row.get("inchikey") or "").strip().upper() or None
-            source = (row.get("source") or "").strip() or _DEFAULT_SOURCE
-            hit = FrozenStructureHit(inchikey=inchikey, source=source, version=version)
+            raw_inchikey = (row.get("inchikey") or "").strip()
+            if not raw_inchikey:
+                # A frozen-unresolvable row: positively records "no independent structure" for this
+                # name. It needs no source and is served deterministically with no network call.
+                by_normalized.setdefault(_normalize(name), FrozenStructureHit(None, "", version))
+                continue
+            inchikey = raw_inchikey.upper()
+            if not _INCHIKEY_RE.fullmatch(inchikey):
+                # Finding 3: a malformed inchikey must never become RESOLVED evidence. Skip the row so
+                # the name falls back to the live path, and say so loudly.
+                logger.warning(
+                    "Tier B freeze %s: skipping %r, malformed inchikey %r (falls back to live)",
+                    path,
+                    name,
+                    raw_inchikey,
+                )
+                continue
+            source = (row.get("source") or "").strip().casefold()
+            if source not in _CANONICAL_SOURCES:
+                # Finding 2: never assign pubchem provenance to missing data on a resolved row. An empty
+                # or non-canonical source is skipped so the name falls back to the live path.
+                logger.warning(
+                    "Tier B freeze %s: skipping %r, resolved row has empty/non-canonical source %r "
+                    "(falls back to live; expected one of %s)",
+                    path,
+                    name,
+                    row.get("source"),
+                    sorted(_CANONICAL_SOURCES),
+                )
+                continue
             # First occurrence wins on a duplicate key; the freeze is expected to be unique per name.
-            by_normalized.setdefault(_normalize(name), hit)
+            by_normalized.setdefault(_normalize(name), FrozenStructureHit(inchikey, source, version))
     return _LoadedSnapshot(version=version, by_normalized=by_normalized)
 
 

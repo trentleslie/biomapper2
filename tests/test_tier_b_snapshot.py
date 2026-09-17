@@ -54,11 +54,14 @@ def test_resolved_hit_carries_inchikey_source_and_version(loaded):
     assert hit.version == "tier-b-fixture-v1"
 
 
-def test_empty_source_column_defaults_to_pubchem(loaded):
-    hit = loaded.lookup("caffeine")
-    assert hit is not None
-    assert hit.inchikey == "RYYVLZVUVIJVGH-UHFFFAOYSA-N"
-    assert hit.source == "pubchem"
+def test_canonical_mw_source_and_first_block_form_are_accepted(loaded):
+    # metabolomics-workbench is a canonical source; a 14-letter first-block-only key is a valid form.
+    mw = loaded.lookup("citrate")
+    assert mw is not None
+    assert mw.source == "metabolomics-workbench"
+    first_block = loaded.lookup("alanine")
+    assert first_block is not None
+    assert first_block.inchikey == "QNAYBMKLOCPYGJ"
 
 
 def test_empty_inchikey_is_a_positively_frozen_no_structure(loaded):
