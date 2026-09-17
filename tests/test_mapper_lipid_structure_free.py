@@ -90,6 +90,17 @@ def test_a_non_lipid_query_is_out_of_scope_for_the_structure_free_check() -> Non
     assert evidence is None
 
 
+def test_an_enrichment_outage_skips_the_structure_free_fetch() -> None:
+    # During a /get-nodes enrichment outage the row is unavailable regardless, so the check must not
+    # buy a second redundant /get-nodes round trip whose verdict the certificate would discard.
+    mapper = _Mapper(node_name="PC 34:1")
+    evidence = mapper._lipid_structure_evidence(
+        node_id=NODE, kg_equivalent_ids={}, lipid_row=_lipid_row(), equivalent_ids_lookup_ok=False
+    )
+    assert evidence is None
+    assert mapper.linker.calls == 0
+
+
 def test_the_check_is_inert_when_tier_b_is_disabled() -> None:
     # lipid_resolver is None exactly when Tier B is off; the check must not fetch or parse anything.
     mapper = _Mapper(node_name="PC 34:1")

@@ -229,6 +229,7 @@ class Mapper:
         node_id: str | None,
         kg_equivalent_ids: dict[str, list[str]] | None,
         lipid_row: "pd.Series | dict[str, Any] | None",
+        equivalent_ids_lookup_ok: bool = True,
     ) -> "Any | None":
         """The STRUCTURE-FREE lipid verdict for a committed node, or None when it does not apply.
 
@@ -240,9 +241,14 @@ class Mapper:
         InChIKey (an InChIKey-bearing node keeps the block-comparison path unchanged). It spends NO
         MW/PubChem Tier B lookup: the comparison is offline, so the scoping discipline that keeps
         throttled round trips off out-of-scope rows is preserved.
+
+        ``equivalent_ids_lookup_ok`` mirrors the ``issue()`` population predicate: during a /get-nodes
+        outage the enrichment call returned nothing and the row is ``unavailable`` no matter what, so the
+        verdict would be discarded. Short-circuit BEFORE the node-name fetch so an outage does not buy a
+        second redundant /get-nodes round trip whose result cannot reach the certificate.
         """
         lipid_resolver = getattr(self, "lipid_resolver", None)
-        if lipid_resolver is None or node_id is None or lipid_row is None:
+        if lipid_resolver is None or node_id is None or lipid_row is None or not equivalent_ids_lookup_ok:
             return None
         if node_blocks_from_equivalent_ids(kg_equivalent_ids):
             return None  # InChIKey present: the block-comparison path owns this row
@@ -308,13 +314,16 @@ class Mapper:
                 return None
             return build_lipid_resolution(lipid_row, node)
 
-        def _structure_for(node: str | None, equiv: dict[str, list[str]] | None) -> "Any | None":
+        def _structure_for(node: str | None, equiv: dict[str, list[str]] | None, lookup_ok: bool) -> "Any | None":
             # The structure-free lipid verdict, recomputed against whichever node a certificate commits
-            # so a re-resolution swap never carries the replaced node's composition verdict.
-            return self._lipid_structure_evidence(node_id=node, kg_equivalent_ids=equiv, lipid_row=lipid_row)
+            # so a re-resolution swap never carries the replaced node's composition verdict. ``lookup_ok``
+            # is threaded so an enrichment outage skips the fetch (mirrors the issue() population).
+            return self._lipid_structure_evidence(
+                node_id=node, kg_equivalent_ids=equiv, lipid_row=lipid_row, equivalent_ids_lookup_ok=lookup_ok
+            )
 
         committed_lipid = _lipid_for(chosen_kg_id)
-        committed_structure = _structure_for(chosen_kg_id, kg_equivalent_ids)
+        committed_structure = _structure_for(chosen_kg_id, kg_equivalent_ids, equivalent_ids_lookup_ok)
         certificate = self._issue_certificate(
             query_name=query_name,
             category=category,
@@ -364,7 +373,7 @@ class Mapper:
         # against the swapped node so its level and relation describe what actually got committed.
         new_equiv, new_ok = self._enrich_equivalent_ids(new_id)
         swapped_lipid = _lipid_for(new_id)
-        swapped_structure = _structure_for(new_id, new_equiv)
+        swapped_structure = _structure_for(new_id, new_equiv, new_ok)
         swapped = self._issue_certificate(
             query_name=query_name,
             category=category,
