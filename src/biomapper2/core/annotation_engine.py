@@ -18,7 +18,7 @@ from ..config import (
     get_refmet_freeze_mode,
     get_refmet_live_api_fallback,
 )
-from ..utils import AnnotationMode, AssignedIDsDict
+from ..utils import AnnotationMode, AssignedIDsDict, text_is_not_empty
 from .annotators.base import AVAILABILITY_NOT_QUERIED, REFMET_SOURCE_NOT_QUERIED, BaseAnnotator
 from .annotators.goslin_lipid import GoslinLipidAnnotator
 from .annotators.kestrel_hybrid import KestrelHybridSearchAnnotator
@@ -385,11 +385,14 @@ class AnnotationEngine:
             assigned_ids_col[needs_annotation_mask] = annotated_rows
             availability_col[needs_annotation_mask] = availability_rows
             source_col[needs_annotation_mask] = source_rows
-            # Every annotated row used the same set of Kestrel endpoints (a fresh list per row so the
-            # rows do not share one mutable list).
+            # Record endpoints only for rows that actually triggered a Kestrel call. An empty/
+            # whitespace name makes every Kestrel annotator return before issuing a request (the
+            # text_is_not_empty guard), so recording its endpoints would make the passthrough collector
+            # fire a call the pipeline never made (R6). Fresh list per row (no shared mutable list).
             endpoints_used = _kestrel_endpoints_used(annotators)
             endpoints_col[needs_annotation_mask] = pd.Series(
-                [list(endpoints_used) for _ in range(len(items_to_annotate))], index=items_to_annotate.index
+                [list(endpoints_used) if text_is_not_empty(name) else [] for name in items_to_annotate[name_field]],
+                index=items_to_annotate.index,
             )
 
         return pd.DataFrame(
@@ -447,13 +450,17 @@ class AnnotationEngine:
             source.update(annotator.get_source(prepared_entity, name_field, cache=availability_cache))
 
         # Named Series. ``kestrel_endpoints_used`` records the Kestrel endpoints actually invoked for
-        # this entity (the raw-passthrough plan reads it; empty when no Kestrel annotator ran).
+        # this entity (the raw-passthrough plan reads it; empty when no Kestrel annotator ran). Gated
+        # on a non-empty name: an empty/whitespace name makes every Kestrel annotator return before
+        # issuing a request (the text_is_not_empty guard), so recording the endpoint would make the
+        # passthrough collector fire a call the pipeline never made (R6).
+        endpoints_used = _kestrel_endpoints_used(annotators) if text_is_not_empty(item.get(name_field)) else []
         return pd.Series(
             {
                 "assigned_ids": assigned_ids,
                 "annotator_availability": availability,
                 "annotator_source": source,
-                "kestrel_endpoints_used": _kestrel_endpoints_used(annotators),
+                "kestrel_endpoints_used": endpoints_used,
             }
         )
 

@@ -239,6 +239,27 @@ def test_non_kestrel_annotator_yields_empty_passthrough(client):
     assert resp.json()["result"]["kestrel_results"] == []
 
 
+def test_whitespace_name_yields_empty_passthrough_and_no_call(mock_kestrel, client):
+    """A whitespace-only name makes the Kestrel annotators return before issuing a request, so the
+    endpoint is NOT recorded and the collector fires NO phantom call → kestrel_results == [] (R6).
+
+    Regression for the provenance bug where endpoints were recorded from the selected annotator list
+    rather than the calls actually issued, causing empty-search passthrough requests.
+    """
+    resp = client.post(
+        "/api/v1/map/entity",
+        json={
+            "name": "   ",
+            "entity_type": "metabolite",
+            "options": {"annotators": ["kestrel-hybrid-search"], "kestrel_top_n": 10},
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["result"]["kestrel_results"] == []
+    # No search call was made for the whitespace term (neither selection nor passthrough).
+    assert not any(c["endpoint"] == "hybrid-search" for c in mock_kestrel)
+
+
 # --------------------------------- R7: passthrough failure isolation (T11) ------------------------- #
 
 

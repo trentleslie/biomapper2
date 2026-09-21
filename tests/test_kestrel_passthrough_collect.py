@@ -38,7 +38,7 @@ def test_collect_truncates_to_n_and_preserves_order(monkeypatch):
     assert len(results) == 1
     result = results[0]
     assert len(result.rows) == 10
-    assert [r.model_dump()["id"] for r in result.rows] == [f"CHEBI:{i}" for i in range(10)]
+    assert [r["id"] for r in result.rows] == [f"CHEBI:{i}" for i in range(10)]
     assert result.request.limit == 10
     assert result.request.search_text == "glucose"
     assert result.fetch_strategy == "separate_call"
@@ -79,8 +79,30 @@ def test_collect_raw_fidelity_keeps_sub_threshold_hybrid_row(monkeypatch):
 
     results = kestrel_passthrough.collect("glucose", "biolink:SmallMolecule", ["CHEBI"], ["hybrid-search"], n=100)
 
-    scores = [r.model_dump()["score"] for r in results[0].rows]
+    scores = [r["score"] for r in results[0].rows]
     assert any(s < 0.5 for s in scores), "sub-threshold hybrid row must survive raw passthrough"
+
+
+def test_collect_rows_are_verbatim_dicts_not_coerced(monkeypatch):
+    """Rows are the raw Kestrel dicts, untouched — no model round-trip, coercion, or null-fill (R3)."""
+    raw = [{"id": "CHEBI:17234", "score": "3.21", "weird": {"n": [1]}}]  # score is a str; no name/synonyms
+    monkeypatch.setattr(kestrel_passthrough, "kestrel_request", lambda **kw: {"glucose": raw})
+    results = kestrel_passthrough.collect("glucose", "c", None, ["hybrid-search"], n=10)
+    assert results[0].rows == raw
+    assert results[0].rows[0]["score"] == "3.21"  # NOT coerced
+    assert "name" not in results[0].rows[0]  # NOT null-filled
+
+
+def test_collect_does_not_count_requests(monkeypatch):
+    """Passthrough calls pass count_requests=False so shared benchmark counters stay untouched.
+
+    A response-only option must not move request_counter_snapshot, or enabling kestrel_top_n would
+    make passthrough traffic indistinguishable from mapping traffic in benchmark manifests.
+    """
+    captured: dict = {}
+    monkeypatch.setattr(kestrel_passthrough, "kestrel_request", lambda **kw: captured.update(kw) or {"glucose": []})
+    kestrel_passthrough.collect("glucose", "biolink:SmallMolecule", ["CHEBI"], ["hybrid-search"], n=5)
+    assert captured["count_requests"] is False
 
 
 def test_collect_empty_endpoints_returns_empty(monkeypatch):

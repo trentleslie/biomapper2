@@ -166,24 +166,11 @@ class LipidResolution(BaseModel):
     goslin_mass: float | None = Field(default=None, description="Monoisotopic mass from the goslin parse")
 
 
-class KestrelRow(BaseModel):
-    """One raw row exactly as a Kestrel search endpoint returned it.
-
-    UNTRUSTED external data: these rows are passed through verbatim and are NOT biomapper-attested.
-    Any renderer (UI, ddharmon) must treat every field as unescaped/unverified. Known fields are the
-    ones the annotators consume; ``extra="allow"`` carries every other field Kestrel returns through
-    without loss (R3), and IDs/CURIEs are preserved byte-for-byte (str, no coercion).
-    """
-
-    id: str | None = Field(default=None, description="Node CURIE exactly as Kestrel returned it")
-    score: float | None = Field(default=None, description="Kestrel relevance score (scale differs per endpoint)")
-    name: str | None = Field(default=None, description="Node name")
-    synonyms: list[str] | None = Field(default=None, description="Node synonyms")
-    prefixes: list[str] | None = Field(default=None, description="CURIE prefixes cross-referenced by the node")
-    categories: list[str] | None = Field(default=None, description="Biolink categories asserted for the node")
-
-    # Preserve every other field Kestrel returns (schema drift / endpoint-specific fields).
-    model_config = {"extra": "allow"}
+# Passthrough rows are carried as VERBATIM dicts (see KestrelSearchResult.rows), not a typed model.
+# A typed row model re-validated every row (null-filling omitted known fields, coercing/rejecting
+# values, and re-emitting defaults without exclude_unset), which broke the byte-for-byte raw contract
+# (R3) and could empty a whole endpoint on a single schema-drift row. Passing the raw dict through is
+# the only representation that is provably lossless.
 
 
 class KestrelRequestParams(BaseModel):
@@ -209,9 +196,16 @@ class KestrelSearchResult(BaseModel):
         ..., description="Which Kestrel search endpoint produced these rows"
     )
     request: KestrelRequestParams = Field(..., description="Parameters sent for these passthrough rows")
-    rows: list[KestrelRow] = Field(
+    rows: list[dict[str, Any]] = Field(
         default_factory=list,
-        description="Raw rows in Kestrel's order, truncated to N, BEFORE any biomapper filter/re-rank (R3)",
+        description=(
+            "Raw rows EXACTLY as Kestrel returned them — verbatim dicts, no coercion, no null-filling, "
+            "no field added or dropped — in Kestrel's order, truncated to N, BEFORE any biomapper "
+            "filter/re-rank (R3). Known fields the annotators consume: id (CURIE), score, name, "
+            "synonyms, prefixes, categories; any other field Kestrel returns is carried through "
+            "unchanged. UNTRUSTED external data, NOT biomapper-attested — any renderer must treat every "
+            "field as unescaped/unverified."
+        ),
     )
     fetch_strategy: Literal["separate_call"] = Field(
         default="separate_call",
@@ -295,7 +289,7 @@ class EntityMappingResult(BaseModel):
         "options.kestrel_top_n (None/omitted otherwise, so existing responses are byte-unchanged, R2). "
         "One entry per search endpoint the pipeline actually used; [] when the entity triggered no Kestrel "
         "call (R6). Passthrough only — these rows NEVER affect chosen_kg_id/assigned_ids/certificate (R4), "
-        "and are UNTRUSTED external data (see KestrelRow).",
+        "and are UNTRUSTED external data (see KestrelSearchResult.rows).",
     )
     error: str | None = Field(default=None, description="Error message if mapping failed")
 

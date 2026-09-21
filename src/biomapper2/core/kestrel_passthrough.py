@@ -25,7 +25,7 @@ import logging
 
 import requests
 
-from ..api.models.responses import KestrelRequestParams, KestrelRow, KestrelSearchResult
+from ..api.models.responses import KestrelRequestParams, KestrelSearchResult
 from ..config import KESTREL_BATCH_SIZE_SEARCH
 from ..utils import BisectBudgetExceeded, kestrel_request
 
@@ -98,9 +98,15 @@ def collect(
                 batch_items=[search_text],
                 batch_size=KESTREL_BATCH_SIZE_SEARCH,
                 json=payload,
+                # Provenance isolation: a response-only option must not move the shared request/cache/
+                # retry/failure counters that benchmark manifests persist (request_counter_snapshot),
+                # or enabling kestrel_top_n would make passthrough traffic indistinguishable from
+                # mapping traffic. count_requests=False keeps selection's counters byte-identical.
+                count_requests=False,
             )
-            raw_rows = (raw.get(search_text) or [])[:n]
-            rows = [KestrelRow(**row) for row in raw_rows]
+            # Verbatim passthrough: the raw dicts Kestrel returned, untouched (no model round-trip →
+            # no coercion, no null-fill, no dropped/added field). Truncated to N, Kestrel's order (R3).
+            rows = list(raw.get(search_text) or [])[:n]
             results.append(
                 KestrelSearchResult(
                     endpoint=endpoint,  # type: ignore[arg-type]
