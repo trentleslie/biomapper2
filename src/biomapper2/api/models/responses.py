@@ -1,6 +1,6 @@
 """Pydantic response models for biomapper2 API."""
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -166,6 +166,66 @@ class LipidResolution(BaseModel):
     goslin_mass: float | None = Field(default=None, description="Monoisotopic mass from the goslin parse")
 
 
+class KestrelRow(BaseModel):
+    """One raw row exactly as a Kestrel search endpoint returned it.
+
+    UNTRUSTED external data: these rows are passed through verbatim and are NOT biomapper-attested.
+    Any renderer (UI, ddharmon) must treat every field as unescaped/unverified. Known fields are the
+    ones the annotators consume; ``extra="allow"`` carries every other field Kestrel returns through
+    without loss (R3), and IDs/CURIEs are preserved byte-for-byte (str, no coercion).
+    """
+
+    id: str | None = Field(default=None, description="Node CURIE exactly as Kestrel returned it")
+    score: float | None = Field(default=None, description="Kestrel relevance score (scale differs per endpoint)")
+    name: str | None = Field(default=None, description="Node name")
+    synonyms: list[str] | None = Field(default=None, description="Node synonyms")
+    prefixes: list[str] | None = Field(default=None, description="CURIE prefixes cross-referenced by the node")
+    categories: list[str] | None = Field(default=None, description="Biolink categories asserted for the node")
+
+    # Preserve every other field Kestrel returns (schema drift / endpoint-specific fields).
+    model_config = {"extra": "allow"}
+
+
+class KestrelRequestParams(BaseModel):
+    """The parameters actually sent for the passthrough rows, so a consumer can reproduce the call."""
+
+    search_text: str = Field(..., description="The search term sent to Kestrel")
+    limit: int = Field(..., description="The passthrough 'limit' sent (equals the requested kestrel_top_n)")
+    category: str = Field(..., description="Biolink category sent to Kestrel (matches the selection call)")
+    prefix: list[str] | None = Field(
+        default=None, description="Allowed CURIE prefixes sent to Kestrel; None when none were sent"
+    )
+
+
+class KestrelSearchResult(BaseModel):
+    """Raw passthrough rows for one Kestrel search endpoint the pipeline actually used.
+
+    Selection is untouched: these rows are captured via a dedicated ``limit=N`` call and never feed
+    back into annotation/resolution/certificate. ``rows`` is empty when the endpoint call failed —
+    see ``error`` — and the mapping result itself is unaffected (R7).
+    """
+
+    endpoint: Literal["text-search", "vector-search", "hybrid-search"] = Field(
+        ..., description="Which Kestrel search endpoint produced these rows"
+    )
+    request: KestrelRequestParams = Field(..., description="Parameters sent for these passthrough rows")
+    rows: list[KestrelRow] = Field(
+        default_factory=list,
+        description="Raw rows in Kestrel's order, truncated to N, BEFORE any biomapper filter/re-rank (R3)",
+    )
+    fetch_strategy: Literal["separate_call"] = Field(
+        default="separate_call",
+        description="How the rows were fetched. 'separate_call' = a dedicated limit=N call, leaving the "
+        "selection call byte-identical. Single-value this release; widened only when 'shared_call' ships.",
+    )
+    error: Literal["timeout", "upstream_error", "malformed_response", "other"] | None = Field(
+        default=None,
+        description="Set when the passthrough call for this endpoint failed; an ENUMERATED class (the full "
+        "exception is logged server-side, never surfaced, so internal Kestrel wiring is not leaked). None on "
+        "success. A passthrough failure never turns a successful mapping into an error (R7).",
+    )
+
+
 class EntityMappingResult(BaseModel):
     """Result of mapping a single entity to knowledge graph nodes."""
 
@@ -228,6 +288,14 @@ class EntityMappingResult(BaseModel):
     assigned_ids: dict[str, Any] = Field(
         default_factory=dict,
         description="IDs assigned during annotation (raw API results)",
+    )
+    kestrel_results: list[KestrelSearchResult] | None = Field(
+        default=None,
+        description="Opt-in raw Kestrel passthrough rows, present ONLY when the request set "
+        "options.kestrel_top_n (None/omitted otherwise, so existing responses are byte-unchanged, R2). "
+        "One entry per search endpoint the pipeline actually used; [] when the entity triggered no Kestrel "
+        "call (R6). Passthrough only — these rows NEVER affect chosen_kg_id/assigned_ids/certificate (R4), "
+        "and are UNTRUSTED external data (see KestrelRow).",
     )
     error: str | None = Field(default=None, description="Error message if mapping failed")
 
