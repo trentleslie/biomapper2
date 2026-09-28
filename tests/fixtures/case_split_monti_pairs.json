@@ -1,0 +1,372 @@
+{
+ "source_run": "cross_cohort_FINAL_v153_kg230_20260927T013646Z (biomapper 1.5.3, kg 2.3.0)",
+ "recorded_utc": "2026-09-28T22:29:18Z",
+ "refmet_match_endpoint": "https://www.metabolomicsworkbench.org/rest/refmet/match/{name}",
+ "pairs": [
+  {
+   "cohort": "arivale",
+   "necs_name": "hexanoylcarnitine (c6)",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0000705",
+   "other_name": "hexanoylcarnitine (C6)",
+   "other_chosen_kg_id_pinned": "RM:0153846"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "acetylcarnitine (c2)",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0000201",
+   "other_name": "acetylcarnitine (C2)",
+   "other_chosen_kg_id_pinned": "RM:0154009"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "isobutyrylcarnitine (c4)",
+   "necs_chosen_kg_id_pinned": "CHEBI:84838",
+   "other_name": "isobutyrylcarnitine (C4)",
+   "other_chosen_kg_id_pinned": "RM:0153770"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "isovalerylcarnitine (c5)",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0000688",
+   "other_name": "isovalerylcarnitine (C5)",
+   "other_chosen_kg_id_pinned": "RM:0154016"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "1-(1-enyl-palmitoyl)-gpc (p-16:0)*",
+   "necs_chosen_kg_id_pinned": "RM:0133290",
+   "other_name": "1-(1-enyl-palmitoyl)-GPC (P-16:0)*",
+   "other_chosen_kg_id_pinned": "RM:0133228"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "1-(1-enyl-palmitoyl)-gpe (p-16:0)*",
+   "necs_chosen_kg_id_pinned": "CHEBI:234152",
+   "other_name": "1-(1-enyl-palmitoyl)-GPE (P-16:0)*",
+   "other_chosen_kg_id_pinned": "RM:0092657"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "1-(1-enyl-stearoyl)-gpe (p-18:0)*",
+   "necs_chosen_kg_id_pinned": "RM:0104246",
+   "other_name": "1-(1-enyl-stearoyl)-GPE (P-18:0)*",
+   "other_chosen_kg_id_pinned": "RM:0133224"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "1-linolenoyl-gpc (18:3)*",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0056303",
+   "other_name": "1-linolenoyl-GPC (18:3)*",
+   "other_chosen_kg_id_pinned": "RM:0163374"
+  },
+  {
+   "cohort": "arivale",
+   "necs_name": "1-(1-enyl-oleoyl)-gpe (p-18:1)*",
+   "necs_chosen_kg_id_pinned": "RM:0017286",
+   "other_name": "1-(1-enyl-oleoyl)-GPE (P-18:1)*",
+   "other_chosen_kg_id_pinned": "RM:0133225"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "12,13-dihome",
+   "necs_chosen_kg_id_pinned": "RM:0138124",
+   "other_name": "12,13-DiHOME",
+   "other_chosen_kg_id_pinned": "RM:0224117"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "9,10-dihome",
+   "necs_chosen_kg_id_pinned": "RM:0074128",
+   "other_name": "9,10-DiHOME",
+   "other_chosen_kg_id_pinned": "RM:0224117"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "hexanoylcarnitine (c6)",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0000705",
+   "other_name": "hexanoylcarnitine (C6)",
+   "other_chosen_kg_id_pinned": "RM:0153846"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "acetylcarnitine (c2)",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0000201",
+   "other_name": "acetylcarnitine (C2)",
+   "other_chosen_kg_id_pinned": "RM:0154009"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "isobutyrylcarnitine (c4)",
+   "necs_chosen_kg_id_pinned": "CHEBI:84838",
+   "other_name": "isobutyrylcarnitine (C4)",
+   "other_chosen_kg_id_pinned": "RM:0153770"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "isovalerylcarnitine (c5)",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0000688",
+   "other_name": "isovalerylcarnitine (C5)",
+   "other_chosen_kg_id_pinned": "RM:0154016"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "12-hete",
+   "necs_chosen_kg_id_pinned": "RM:0152612",
+   "other_name": "12-HETE",
+   "other_chosen_kg_id_pinned": "RM:0224126"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "1-(1-enyl-palmitoyl)-gpc (p-16:0)*",
+   "necs_chosen_kg_id_pinned": "RM:0133290",
+   "other_name": "1-(1-enyl-palmitoyl)-GPC (P-16:0)*",
+   "other_chosen_kg_id_pinned": "RM:0133228"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "1-(1-enyl-palmitoyl)-gpe (p-16:0)*",
+   "necs_chosen_kg_id_pinned": "CHEBI:234152",
+   "other_name": "1-(1-enyl-palmitoyl)-GPE (P-16:0)*",
+   "other_chosen_kg_id_pinned": "RM:0092657"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "1-(1-enyl-stearoyl)-gpe (p-18:0)*",
+   "necs_chosen_kg_id_pinned": "RM:0104246",
+   "other_name": "1-(1-enyl-stearoyl)-GPE (P-18:0)*",
+   "other_chosen_kg_id_pinned": "RM:0133224"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "1-linolenoyl-gpc (18:3)*",
+   "necs_chosen_kg_id_pinned": "HMDB:HMDB0056303",
+   "other_name": "1-linolenoyl-GPC (18:3)*",
+   "other_chosen_kg_id_pinned": "RM:0163374"
+  },
+  {
+   "cohort": "xuetal",
+   "necs_name": "1-(1-enyl-oleoyl)-gpe (p-18:1)*",
+   "necs_chosen_kg_id_pinned": "RM:0017286",
+   "other_name": "1-(1-enyl-oleoyl)-GPE (P-18:1)*",
+   "other_chosen_kg_id_pinned": "RM:0133225"
+  }
+ ],
+ "refmet_match_responses": {
+  "1-(1-enyl-oleoyl)-GPE (P-18:1)*": {
+   "refmet_name": "LPE P-18:1",
+   "formula": "C23H46NO6P",
+   "exactmass": "463.3063",
+   "super_class": "Glycerophospholipids",
+   "main_class": "Glycerophosphoethanolamines",
+   "sub_class": "O-LPE",
+   "refmet_id": "RM0133225"
+  },
+  "1-(1-enyl-oleoyl)-gpe (p-18:1)*": {
+   "refmet_name": "LPE P-18:1 or LPE O-18:2",
+   "formula": "C23H46NO6P",
+   "exactmass": "463.3063",
+   "super_class": "Glycerophospholipids",
+   "main_class": "Glycerophosphoethanolamines",
+   "sub_class": "O-LPE",
+   "refmet_id": "RM0017286"
+  },
+  "1-(1-enyl-palmitoyl)-GPC (P-16:0)*": {
+   "refmet_name": "LPC P-16:0",
+   "formula": "C24H50NO6P",
+   "exactmass": "479.3376",
+   "super_class": "Glycerophospholipids",
+   "main_class": "Glycerophosphocholines",
+   "sub_class": "O-LPC",
+   "refmet_id": "RM0133228"
+  },
+  "1-(1-enyl-palmitoyl)-GPE (P-16:0)*": {
+   "refmet_name": "LPE P-16:0",
+   "formula": "C21H44NO6P",
+   "exactmass": "437.2906",
+   "super_class": "Glycerophospholipids",
+   "main_class": "Glycerophosphoethanolamines",
+   "sub_class": "O-LPE",
+   "refmet_id": "RM0092657"
+  },
+  "1-(1-enyl-palmitoyl)-gpc (p-16:0)*": {
+   "refmet_name": "-",
+   "formula": "-",
+   "exactmass": "-",
+   "super_class": "-",
+   "main_class": "-",
+   "sub_class": "-",
+   "refmet_id": "-"
+  },
+  "1-(1-enyl-palmitoyl)-gpe (p-16:0)*": {
+   "refmet_name": "-",
+   "formula": "-",
+   "exactmass": "-",
+   "super_class": "-",
+   "main_class": "-",
+   "sub_class": "-",
+   "refmet_id": "-"
+  },
+  "1-(1-enyl-stearoyl)-GPE (P-18:0)*": {
+   "refmet_name": "LPE P-18:0",
+   "formula": "C23H48NO6P",
+   "exactmass": "465.3219",
+   "super_class": "Glycerophospholipids",
+   "main_class": "Glycerophosphoethanolamines",
+   "sub_class": "O-LPE",
+   "refmet_id": "RM0133224"
+  },
+  "1-(1-enyl-stearoyl)-gpe (p-18:0)*": {
+   "refmet_name": "LPE P-18:0 or LPE O-18:1",
+   "formula": "C23H48NO6P",
+   "exactmass": "465.3219",
+   "super_class": "Glycerophospholipids",
+   "main_class": "Glycerophosphoethanolamines",
+   "sub_class": "O-LPE",
+   "refmet_id": "RM0104246"
+  },
+  "1-linolenoyl-GPC (18:3)*": {
+   "refmet_name": "LPC 18:3/0:0",
+   "formula": "C26H48NO7P",
+   "exactmass": "517.3168",
+   "super_class": "Glycerophospholipids",
+   "main_class": "Glycerophosphocholines",
+   "sub_class": "LPC",
+   "refmet_id": "RM0163374"
+  },
+  "1-linolenoyl-gpc (18:3)*": {
+   "refmet_name": "-",
+   "formula": "-",
+   "exactmass": "-",
+   "super_class": "-",
+   "main_class": "-",
+   "sub_class": "-",
+   "refmet_id": "-"
+  },
+  "12,13-DiHOME": {
+   "refmet_name": "12,13-DiHOME",
+   "formula": "C18H34O4",
+   "exactmass": "314.2457",
+   "super_class": "Fatty Acyls",
+   "main_class": "Octadecanoids",
+   "sub_class": "DiHOME",
+   "refmet_id": "RM0138124"
+  },
+  "12,13-dihome": {
+   "refmet_name": "12,13-DiHOME",
+   "formula": "C18H34O4",
+   "exactmass": "314.2457",
+   "super_class": "Fatty Acyls",
+   "main_class": "Octadecanoids",
+   "sub_class": "DiHOME",
+   "refmet_id": "RM0138124"
+  },
+  "12-HETE": {
+   "refmet_name": "12-HETE",
+   "formula": "C20H32O3",
+   "exactmass": "320.2351",
+   "super_class": "Fatty Acyls",
+   "main_class": "Eicosanoids",
+   "sub_class": "HETE",
+   "refmet_id": "RM0152612"
+  },
+  "12-hete": {
+   "refmet_name": "12-HETE",
+   "formula": "C20H32O3",
+   "exactmass": "320.2351",
+   "super_class": "Fatty Acyls",
+   "main_class": "Eicosanoids",
+   "sub_class": "HETE",
+   "refmet_id": "RM0152612"
+  },
+  "9,10-DiHOME": {
+   "refmet_name": "9,10-DiHOME",
+   "formula": "C18H34O4",
+   "exactmass": "314.2457",
+   "super_class": "Fatty Acyls",
+   "main_class": "Octadecanoids",
+   "sub_class": "DiHOME",
+   "refmet_id": "RM0074128"
+  },
+  "9,10-dihome": {
+   "refmet_name": "9,10-DiHOME",
+   "formula": "C18H34O4",
+   "exactmass": "314.2457",
+   "super_class": "Fatty Acyls",
+   "main_class": "Octadecanoids",
+   "sub_class": "DiHOME",
+   "refmet_id": "RM0074128"
+  },
+  "acetylcarnitine (C2)": {
+   "refmet_name": "CAR 2:0",
+   "formula": "C9H17NO4",
+   "exactmass": "203.1158",
+   "super_class": "Fatty Acyls",
+   "main_class": "Fatty esters",
+   "sub_class": "Acyl carnitines",
+   "refmet_id": "RM0154009"
+  },
+  "acetylcarnitine (c2)": {
+   "refmet_name": "-",
+   "formula": "-",
+   "exactmass": "-",
+   "super_class": "-",
+   "main_class": "-",
+   "sub_class": "-",
+   "refmet_id": "-"
+  },
+  "hexanoylcarnitine (C6)": {
+   "refmet_name": "CAR 6:0",
+   "formula": "C13H25NO4",
+   "exactmass": "259.1784",
+   "super_class": "Fatty Acyls",
+   "main_class": "Fatty esters",
+   "sub_class": "Acyl carnitines",
+   "refmet_id": "RM0153846"
+  },
+  "hexanoylcarnitine (c6)": {
+   "refmet_name": "-",
+   "formula": "-",
+   "exactmass": "-",
+   "super_class": "-",
+   "main_class": "-",
+   "sub_class": "-",
+   "refmet_id": "-"
+  },
+  "isobutyrylcarnitine (C4)": {
+   "refmet_name": "CAR 3:0;2Me",
+   "formula": "C11H21NO4",
+   "exactmass": "231.1471",
+   "super_class": "Fatty Acyls",
+   "main_class": "Fatty esters",
+   "sub_class": "Acyl carnitines",
+   "refmet_id": "RM0153770"
+  },
+  "isobutyrylcarnitine (c4)": {
+   "refmet_name": "-",
+   "formula": "-",
+   "exactmass": "-",
+   "super_class": "-",
+   "main_class": "-",
+   "sub_class": "-",
+   "refmet_id": "-"
+  },
+  "isovalerylcarnitine (C5)": {
+   "refmet_name": "CAR 4:0;3Me",
+   "formula": "C12H23NO4",
+   "exactmass": "245.1627",
+   "super_class": "Fatty Acyls",
+   "main_class": "Fatty esters",
+   "sub_class": "Acyl carnitines",
+   "refmet_id": "RM0154016"
+  },
+  "isovalerylcarnitine (c5)": {
+   "refmet_name": "-",
+   "formula": "-",
+   "exactmass": "-",
+   "super_class": "-",
+   "main_class": "-",
+   "sub_class": "-",
+   "refmet_id": "-"
+  }
+ }
+}

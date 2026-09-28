@@ -16,6 +16,7 @@ from circuitbreaker import CircuitBreakerError, circuit
 from ... import config
 from ...config import CACHE_DIR, CACHE_IGNORED_PARAMETERS
 from ...utils import AssignedIDsDict
+from ..name_case import canonical_query
 from . import refmet_snapshot, refmet_store
 from .base import (
     AVAILABILITY_NO_MATCH,
@@ -301,11 +302,14 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     def _fetch_all(self, names: list[str]) -> dict[str, RefMetResult]:
         """Fetch each name into a RefMetResult, stopping network work at the hard batch deadline."""
         cache: dict[str, RefMetResult] = {}
+        # One memo per batch, keyed by the exact query string: case variants of one name share the
+        # canonical-case retry query, so it is issued once and every spelling gets the same answer.
+        memo: dict[str, RefMetResult] = {}
         armed_here = self.arm_batch_deadline()
         try:
             for name in names:
                 # _fetch_refmet_data marks names past the armed deadline UNAVAILABLE with no network.
-                cache[name] = self._fetch_refmet_data(name)
+                cache[name] = self._fetch_refmet_data(name, memo=memo)
         finally:
             # Only the outermost armer disarms; a route-armed batch deadline survives each entity's
             # nested _fetch_all so the whole /batch loop stays bounded (not re-armed per row).
@@ -313,8 +317,36 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
                 self.disarm_batch_deadline()
         return cache
 
-    def _fetch_refmet_data(self, metabolite_name: str) -> RefMetResult:
-        """Resolve one name to a RefMetResult, dispatching on the configured freeze mode (D5).
+    def _fetch_refmet_data(self, metabolite_name: str, memo: dict[str, RefMetResult] | None = None) -> RefMetResult:
+        """Resolve one name to a RefMetResult, case-robustly.
+
+        RefMet ``/match`` reads some notations case-sensitively: ``acetylcarnitine (C2)`` matches and
+        ``acetylcarnitine (c2)`` does not, and ``...-gpe (p-18:1)*`` matches a different, ambiguous
+        record than ``...-GPE (P-18:1)*``. When the name carries a recognized notation, the canonical
+        spelling from :func:`~biomapper2.core.name_case.canonical_query` (derived from the casefolded
+        name alone) is queried FIRST, so spellings that differ only in case send the identical query.
+        The name as given is the fallback, used only when the canonical query is a NO_MATCH (never on
+        UNAVAILABLE, which is an outage, not an answer). A name with no recognized notation is queried
+        exactly as before.
+        """
+        canonical = canonical_query(metabolite_name)
+        if canonical is None:
+            return self._memo_dispatch(metabolite_name, memo)
+        result = self._memo_dispatch(canonical, memo)
+        if result.status != AVAILABILITY_NO_MATCH:
+            return result
+        fallback = self._memo_dispatch(metabolite_name, memo)
+        return fallback if fallback.status == AVAILABILITY_VOTED else result
+
+    def _memo_dispatch(self, query: str, memo: dict[str, RefMetResult] | None) -> RefMetResult:
+        if memo is None:
+            return self._dispatch_refmet(query)
+        if query not in memo:
+            memo[query] = self._dispatch_refmet(query)
+        return memo[query]
+
+    def _dispatch_refmet(self, metabolite_name: str) -> RefMetResult:
+        """Resolve one exact query string, dispatching on the configured freeze mode (D5).
 
         - ``off``         : live ``/match`` only (breaker+retry+deadline), source=live_api/unavailable.
         - ``frozen``      : the immutable freeze served first (deterministic; breaker out of the path);

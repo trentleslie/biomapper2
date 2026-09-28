@@ -45,7 +45,8 @@ class ResolutionCertificateModel(BaseModel):
     )
     selection_conflict: str | None = Field(
         default=None,
-        description="Intra-KG selection conflict ('divergent_refmet' | 'conflict_no_structure'). A "
+        description="Intra-KG selection conflict ('divergent_refmet' | 'conflict_no_structure' | "
+        "'stereo_divergent_refmet', same connectivity but a different stereoisomer). A "
         "DIFFERENT axis from 'state': both sides come from the graph, so it is not a contradiction.",
     )
     independent_source: str | None = Field(default=None, description="Registry consulted for independent evidence")
@@ -230,7 +231,8 @@ class EntityMappingResult(BaseModel):
         default=None,
         description="DEPRECATED — read resolution_certificate.selection_conflict instead, which this "
         "field is now derived from. Human-review flag for source-weighted small-molecule ChEBI "
-        "conflicts ('divergent_refmet' | 'conflict_no_structure'); None when no review is warranted",
+        "conflicts ('divergent_refmet' | 'conflict_no_structure' | 'stereo_divergent_refmet'); None when no "
+        "review is warranted",
     )
     resolution_certificate: ResolutionCertificateModel | None = Field(
         default=None,

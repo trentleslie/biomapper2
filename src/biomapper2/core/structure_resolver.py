@@ -68,6 +68,23 @@ class StructureResolver:
             return None
         return bool(blocks_a & blocks_b)
 
+    def stereo_differs(self, node_a: str, node_b: str) -> bool:
+        """True when both nodes' KG-asserted InChIKeys share no connectivity+stereo key (blocks 1-2).
+
+        Reads only graph-asserted InChIKeys (no name-lookup fallback), so it can only report a
+        difference the graph itself states. False when either node asserts none.
+        """
+        records = self.linker.get_node_records([node_a, node_b])
+
+        def stereo_keys(node: str) -> set[str]:
+            keys = ((records.get(node) or {}).get("equivalent_ids") or {}).get("INCHIKEY") or []
+            return {"-".join(str(k).upper().split("-")[:2]) for k in keys if k and str(k).count("-") >= 1}
+
+        a, b = stereo_keys(node_a), stereo_keys(node_b)
+        if not a or not b:
+            return False
+        return a.isdisjoint(b)
+
     def inchikey_block(self, node_id: str, node_name: str | None, records: dict[str, Any] | None = None) -> str | None:
         """First InChIKey block for a node: KG record -> MW by name -> PubChem by name -> lipid."""
         records = records if records is not None else self.linker.get_node_records([node_id])

@@ -272,9 +272,10 @@ KESTREL_CACHE_EXPIRY = "1h"
 STRUCTURE_CACHE_STORE = "structure_http"
 STRUCTURE_CACHE_EXPIRY = "never"
 
-# The legacy review-flag values the resolver actually returns. The field is tri-valued: these two
-# plus None. Exported so the derivation test enumerates the real domain instead of a hand-copied one.
-SELECTION_CONFLICT_VALUES = ("divergent_refmet", "conflict_no_structure", None)
+# The review-flag values the resolver actually returns, plus None. 'stereo_divergent_refmet' marks a
+# RefMet node that shares connectivity with the majority but differs in stereo (the choice is unchanged).
+# Exported so the derivation test enumerates the real domain instead of a hand-copied one.
+SELECTION_CONFLICT_VALUES = ("divergent_refmet", "conflict_no_structure", "stereo_divergent_refmet", None)
 
 
 class CertificateState(str, Enum):

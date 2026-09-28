@@ -478,7 +478,8 @@ class Resolver:
         The default is a majority vote by count of supporting curies. For small-molecule ChEBI
         conflicts (RefMet annotator disagreeing with the majority) the choice is source-weighted
         toward RefMet under a three-way InChIKey-connectivity rule:
-        - same connectivity  -> RefMet, no flag (same molecule, no accuracy loss)
+        - same connectivity  -> RefMet, no flag (same molecule, no accuracy loss); flag
+          'stereo_divergent_refmet' when the two nodes' structures differ in stereo (choice unchanged)
         - different connectivity -> RefMet, flag 'divergent_refmet' (error-prone bucket)
         - InChIKey unavailable -> majority, flag 'conflict_no_structure'
         Non-metabolite, no-RefMet-vote, and no-conflict cases fall through to today's behavior.
@@ -532,6 +533,11 @@ class Resolver:
         refmet_node = refmet_nodes[0]
         same = self._connectivity_match(refmet_node, majority)
         if same is True:
+            # Same connectivity is not always the same molecule: two nodes can share the first InChIKey
+            # block and differ in stereo (e.g. acetylcarnitine: HMDB0000201 vs RM:0154009). The choice
+            # is unchanged; the difference is surfaced for review instead of passing silently.
+            if self._stereo_differs(refmet_node, majority):
+                return refmet_node, "stereo_divergent_refmet"
             return refmet_node, None  # same molecule -> RefMet, silent
         if same is False:
             return refmet_node, "divergent_refmet"  # different molecule -> RefMet, FLAG
@@ -571,6 +577,17 @@ class Resolver:
             if category in self.biolink_client.get_descendants(configured):
                 preferred |= prefixes
         return preferred
+
+    def _stereo_differs(self, node_a: str, node_b: str) -> bool:
+        """True only when both nodes assert structures and they share no connectivity+stereo key.
+
+        Compares the first two InChIKey blocks across every structure each node asserts. Returns False
+        when either side has no structure or when no structure resolver is configured: an unknown is
+        not a stereo difference, so it never raises a flag on its own.
+        """
+        if self.structure_resolver is None:
+            return False
+        return self.structure_resolver.stereo_differs(node_a, node_b) is True
 
     def _connectivity_match(self, node_a: str, node_b: str) -> bool | None:
         """Delegate the InChIKey-connectivity test to the StructureResolver (None if unavailable)."""
