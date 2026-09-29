@@ -35,7 +35,9 @@ The API is deployed to the same Lightsail instance as kraken-backend:
    Set `KESTREL_API_URL` explicitly rather than relying on the code default, so the deployed
    graph is visible in the environment. The public endpoint needs no `KESTREL_API_KEY`; add one
    only if you point this at the internal endpoint. Confirm which build a deployment is serving
-   with `curl $KESTREL_API_URL/metagraph`.
+   with `curl $KESTREL_API_URL/health` (keyless), which reports `kg_version`,
+   `kraken_package_version`, `biolink_version`, the build `git_commit` and the ingested `sources`;
+   `/metagraph` alone does not identify the build.
 
 3. **Install uv and dependencies:**
    ```bash
