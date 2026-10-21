@@ -696,9 +696,12 @@ def kestrel_request(
     return merged_results
 
 
-# A slash that sits between two lipid chain specifications ("16:0/18:1", "P-16:0/20:4", "d18:1/20:0"):
-# a digit before it and, after optional whitespace and a short prefix (P-, O-, d, t), a digit after it.
-_CHAIN_SLASH = re.compile(r"(?<=\d)/(?=\s*(?:[A-Za-z]{1,2}-?)?\d)")
+# A slash that sits between two lipid chain specifications. The text before it must END in a chain spec
+# (carbons:double-bonds plus an optional suffix such as "(5Z)", ";O3", "n3" or "(OH)"), and the text after
+# it must START with one, after an optional short prefix (P-, O-, d, t). "16:0/18:1", "P-16:0/20:4",
+# "d18:1/20:0", "20:0;O3/36:0" and "18:1(5Z)/12:0" qualify; "vitamin D2/D3" and "mannitol/sorbitol" do not.
+_CHAIN_BEFORE_SLASH = re.compile(r"\d+:\d+[^\s/,]*$")
+_CHAIN_AFTER_SLASH = re.compile(r"\s*(?:[A-Za-z]{1,2}-?)?\d+:\d+")
 
 # The Metabolomics Workbench answers a path it cannot parse with a 200 and this plain-text body.
 MW_UNPARSEABLE_PATH_PREFIX = "This output item does not exist"
@@ -712,10 +715,16 @@ def quote_name_path_segment(name: str) -> str:
     * A slash between lipid chain specs must be sent LITERALLY. ``/refmet/match/PC%2016%3A0/18%3A1``
       returns RM0015001 (``PC 16:0/18:1``); the ``%2F`` form is rejected with a 404 before any lookup.
     * Any other slash must be ENCODED. Sent literally, the Workbench answers for the text before the
-      slash alone (``mannitol/sorbitol`` -> Mannitol, ``butyrate/isobutyrate (4:0)`` -> Butyric acid),
+      slash alone (``mannitol/sorbitol`` -> Mannitol, ``vitamin D2/D3`` -> Vitamin D2),
       a confident wrong answer; encoded, it 404s, which callers treat as a clean no-match.
 
     So chain-spec slashes stay literal and every other character, including any other slash, is
     encoded exactly as ``quote(..., safe="")`` would.
     """
-    return "/".join(quote(part, safe="") for part in _CHAIN_SLASH.split(name))
+    parts, start = [], 0
+    for i, ch in enumerate(name):
+        if ch == "/" and _CHAIN_BEFORE_SLASH.search(name, 0, i) and _CHAIN_AFTER_SLASH.match(name, i + 1):
+            parts.append(name[start:i])
+            start = i + 1
+    parts.append(name[start:])
+    return "/".join(quote(part, safe="") for part in parts)

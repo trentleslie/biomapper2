@@ -3,7 +3,8 @@
 * A slash between lipid chain specs must be sent literally: the Workbench resolves
   ``/refmet/match/PC%2016%3A0/18%3A1`` to RM0015001 and 404s on the ``%2F`` form.
 * Any other slash must be encoded: sent literally, the Workbench answers for the text before the slash
-  alone (``mannitol/sorbitol`` -> Mannitol), a confident wrong answer; encoded it 404s (clean no-match).
+  alone (``mannitol/sorbitol`` -> Mannitol, ``vitamin D2/D3`` -> Vitamin D2), a confident wrong answer;
+  encoded it 404s (clean no-match).
 * For a path it cannot parse (multi-isomer names with several chain slashes) the Workbench's name
   endpoint answers 200 with a plain-text "This output item does not exist". That is a not-found, never a
   lookup failure, so it must not count toward the Tier B circuit breaker.
@@ -33,11 +34,18 @@ from biomapper2.utils import MW_UNPARSEABLE_PATH_PREFIX, quote_name_path_segment
         ("butyrate/isobutyrate (4:0)", "butyrate%2Fisobutyrate%20%284%3A0%29"),
         ("14-hdohe/17-hdohe", "14-hdohe%2F17-hdohe"),
         ("pregnanolone/allopregnanolone sulfate", "pregnanolone%2Fallopregnanolone%20sulfate"),
+        ("PA 18:1(5Z)/12:0", "PA%2018%3A1%285Z%29/12%3A0"),
+        ("glycosyl-n-(2-hydroxynervonoyl)-sphingosine (d18:1/24:1(2oh))*", None),
+        ("vitamin D2/D3", "vitamin%20D2%2FD3"),
         ("carnitine", "carnitine"),
     ],
 )
-def test_chain_slashes_stay_literal_and_other_slashes_are_encoded(name: str, expected: str) -> None:
-    assert quote_name_path_segment(name) == expected
+def test_chain_slashes_stay_literal_and_other_slashes_are_encoded(name: str, expected: str | None) -> None:
+    got = quote_name_path_segment(name)
+    if expected is None:  # only the slash's treatment matters here
+        assert "%2F" not in got and got.count("/") == name.count("/"), got
+    else:
+        assert got == expected
 
 
 def test_a_mixture_name_is_sent_encoded_to_refmet_match() -> None:
