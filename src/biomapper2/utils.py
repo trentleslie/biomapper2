@@ -6,13 +6,14 @@ Provides logging setup and mathematical helpers for metric calculations.
 
 import json
 import logging
+import re
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 from typing import Any, Literal, TypeGuard
-from urllib.parse import urlparse
+from urllib.parse import quote, urlparse
 
 import requests
 import requests_cache
@@ -693,3 +694,28 @@ def kestrel_request(
             merged_results.update(chunk_results)
 
     return merged_results
+
+
+# A slash that sits between two lipid chain specifications ("16:0/18:1", "P-16:0/20:4", "d18:1/20:0"):
+# a digit before it and, after optional whitespace and a short prefix (P-, O-, d, t), a digit after it.
+_CHAIN_SLASH = re.compile(r"(?<=\d)/(?=\s*(?:[A-Za-z]{1,2}-?)?\d)")
+
+# The Metabolomics Workbench answers a path it cannot parse with a 200 and this plain-text body.
+MW_UNPARSEABLE_PATH_PREFIX = "This output item does not exist"
+
+
+def quote_name_path_segment(name: str) -> str:
+    """Percent-encode a metabolite name for a Workbench / LIPID MAPS URL path segment.
+
+    The two services treat a slash differently by context, verified live 2026-10-21:
+
+    * A slash between lipid chain specs must be sent LITERALLY. ``/refmet/match/PC%2016%3A0/18%3A1``
+      returns RM0015001 (``PC 16:0/18:1``); the ``%2F`` form is rejected with a 404 before any lookup.
+    * Any other slash must be ENCODED. Sent literally, the Workbench answers for the text before the
+      slash alone (``mannitol/sorbitol`` -> Mannitol, ``butyrate/isobutyrate (4:0)`` -> Butyric acid),
+      a confident wrong answer; encoded, it 404s, which callers treat as a clean no-match.
+
+    So chain-spec slashes stay literal and every other character, including any other slash, is
+    encoded exactly as ``quote(..., safe="")`` would.
+    """
+    return "/".join(quote(part, safe="") for part in _CHAIN_SLASH.split(name))
