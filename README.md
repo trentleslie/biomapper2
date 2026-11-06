@@ -19,7 +19,7 @@ All CURIEs are represented in [Biolink](https://github.com/biolink/biolink-model
 If you just want to **map entities against the hosted production API** without running your own server, you have two options. Neither needs an API key.
 
 - **Over plain HTTP, from any language:** the API is served at `https://biomapper.expertintheloop.io/api/v1`. The [REST API tutorial notebook](examples/biomapper_api_tutorial.ipynb) walks through health and provenance pins, single and batch resolution across entity types, target namespaces, reading the resolution certificate, and batching safely.
-- **From Python:** install the client package, `pip install biomapper` ([repository and README](https://github.com/trentleslie/biomapper), [tutorial notebook](https://github.com/trentleslie/biomapper/blob/main/notebooks/biomapper_tutorial.ipynb)). It wraps the same REST API.
+- **From Python:** install the client package, `pip install biomapper` ([repository and README](https://github.com/Phenome-Health/biomapper), [tutorial notebook](https://github.com/Phenome-Health/biomapper/blob/main/notebooks/biomapper_tutorial.ipynb)). It wraps the same REST API.
 
 (`ddharmon` on PyPI is a separate project, a data-dictionary harmonization tool; it is not a client for this API.)
 
@@ -47,7 +47,7 @@ Then create a `.env` file from the template:
 ```bash
 cp .env.example .env
 ```
-The defaults work as-is: `KESTREL_API_URL` points at the public Kestrel, which needs no key. Set `KESTREL_API_KEY` only if you switch to the internal endpoint. The file also contains optional API authentication settings — see the comments in `.env.example` for details.
+Edit `.env` to fill in your `KESTREL_API_KEY`. The file also contains `KESTREL_API_URL` and optional API authentication settings — see the comments in `.env.example` for details.
 
 Then [run the pytest suite](#run-tests) to confirm all is working.
 
@@ -173,7 +173,7 @@ Set `BIOMAPPER_API_KEY` or `BIOMAPPER2_API_KEYS` (comma-separated) in your `.env
 ### Quick start
 
 ```bash
-cp .env.example .env    # defaults to the keyless public Kestrel; edit only to change endpoints
+cp .env.example .env    # then edit .env with your KESTREL_API_KEY
 
 docker compose --profile prod up -d
 curl http://localhost:8001/api/v1/health
