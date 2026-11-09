@@ -95,3 +95,6 @@ reports/
 
 # Licensed cohort panel (CC BY-NC-ND) — referenced by path, never committed
 data/NIHMS2038904-supplement-2.xlsx
+
+# ICD-10-CM hierarchy snapshot (packaged; written by scripts/build_icd10cm_hierarchy.py).
+!src/biomapper2/data/**/*.tsv
