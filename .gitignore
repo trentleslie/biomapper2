@@ -55,6 +55,10 @@ data/**/*.json
 # Analysis artifacts that back numbers asserted in source comments. These MUST stay tracked --
 # a blanket *.json ignore is exactly how a number ends up cited with no artifact behind it.
 !studies/analysis/results/*.json
+# The ICD-10-CM twin gate's hand-review sheet travels with its artifact.
+!studies/analysis/results/icd10cm_twin_title_review.tsv
+# Packaged runtime data (shipped in the wheel; read via importlib.resources).
+!src/biomapper2/data/**/*.json
 
 # Evidence-base artifacts. Same rule, same reason: each of these is the thing a published number
 # resolves TO, and the reconciliation check reads them from the tree. A blanket ignore here would
