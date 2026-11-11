@@ -20,6 +20,7 @@ _FALLBACK_SCORE = 1.0
 
 
 class KestrelHybridSearchAnnotator(BaseAnnotator):
+
     slug = "kestrel-hybrid-search"
 
     def __init__(self) -> None:
