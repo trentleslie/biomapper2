@@ -52,8 +52,7 @@ def get_canonical_smiles(smiles_string: str) -> str:
         # Check if parsing was successful
         if mol is None:
             logging.warning(
-                f"SMILES string '{smiles_string}' is invalid according to rdkit. "
-                f"Cannot convert it to canonical form."
+                f"SMILES string '{smiles_string}' is invalid according to rdkit. Cannot convert it to canonical form."
             )
             return smiles_string
 

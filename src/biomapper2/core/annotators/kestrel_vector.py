@@ -9,7 +9,6 @@ from .base import BaseAnnotator, is_on_category, stable_result_order
 
 
 class KestrelVectorSearchAnnotator(BaseAnnotator):
-
     slug = "kestrel-vector-search"
 
     def get_annotations(

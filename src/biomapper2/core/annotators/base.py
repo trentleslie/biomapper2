@@ -113,7 +113,6 @@ def is_on_category(row: dict, accepted: set[str] | None) -> bool:
 
 
 class BaseAnnotator(ABC):  # Inherit from ABC
-
     # Subclasses must define this
     slug: str = NotImplemented
 
