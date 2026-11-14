@@ -39,8 +39,9 @@ jobs:
       # Supplied only alongside an explicit backend URL, and deliberately NOT defaulted.
       #
       # This is defence in depth, not the primary control. utils.bulk_kestrel_request already
-      # withholds the key whenever the target host matches PUBLIC_KESTREL_API_URL, so the internal
-      # credential cannot reach public Kraken even if it is present in the environment. But this
+      # withholds any key the public endpoint did not issue (no PUBLIC_KESTREL_KEY_PREFIX) whenever
+      # the target host matches PUBLIC_KESTREL_API_URL, so the internal credential cannot reach
+      # public Kraken even if it is present in the environment. But this
       # repo does have KESTREL_API_KEY set and no KESTREL_API_URL, so defaulting the two
       # independently put the credential into the job environment — visible to every step — for a
       # run that can never use it. Not injecting it is simpler than relying on one library
