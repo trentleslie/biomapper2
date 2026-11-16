@@ -224,6 +224,8 @@ async def run_benchmark_run(
         async with httpx.AsyncClient() as client:
             fk_ready = False
             for _ in range(50):
+                if fk_proc.poll() is not None:
+                    raise RuntimeError(f"Fake Kestrel exited prematurely with code {fk_proc.returncode}")
                 try:
                     r = await client.get(f"http://127.0.0.1:{kestrel_port}/__admin/state", timeout=1.0)
                     if r.status_code == 200:
@@ -236,6 +238,8 @@ async def run_benchmark_run(
 
             api_ready = False
             for _ in range(200):
+                if api_proc.poll() is not None:
+                    raise RuntimeError(f"Candidate API exited prematurely with code {api_proc.returncode}")
                 try:
                     r = await client.get(f"http://127.0.0.1:{api_port}/api/v1/health", timeout=1.0)
                     if r.status_code == 200 and r.json().get("mapper_initialized"):
@@ -243,8 +247,8 @@ async def run_benchmark_run(
                         break
                 except Exception:
                     await asyncio.sleep(0.1)
-            if not api_ready:
-                raise RuntimeError("Candidate API failed to initialize before benchmark start")
+            if not api_ready or fk_proc.poll() is not None or api_proc.poll() is not None:
+                raise RuntimeError("Candidate API failed to initialize or exited before benchmark start")
 
             # Activate fault mode AFTER API readiness so recovering timer starts at t=0 of workload
             mode_resp = await client.post(
@@ -272,7 +276,12 @@ async def run_benchmark_run(
                         r = await client.get(f"http://127.0.0.1:{api_port}/api/v1/health", timeout=5.0)
                         dur_ms = (time.monotonic() - t0) * 1000.0
                         health_total_count += 1
-                        if r.status_code == 200 and r.json().get("status") == "healthy":
+                        body = r.json() if r.status_code == 200 else {}
+                        if (
+                            r.status_code == 200
+                            and body.get("status") == "healthy"
+                            and body.get("mapper_initialized") is True
+                        ):
                             health_latencies.append(dur_ms)
                             health_ok_count += 1
                         else:

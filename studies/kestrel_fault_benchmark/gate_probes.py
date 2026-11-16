@@ -119,7 +119,7 @@ class ServerPairContext:
         self.log_fk: Any = None
         self.log_api: Any = None
 
-    async def start(self, wait_mapper_ready: bool = True) -> float:
+    async def start(self, wait_mapper_ready: bool = True, require_ready: bool = True) -> float:
         """Start both servers. Returns API launch-to-ready duration in seconds."""
         python_bin = self.worktree / ".venv" / "bin" / "python"
         if not python_bin.exists():
@@ -150,14 +150,20 @@ class ServerPairContext:
         )
 
         # Wait for Fake Kestrel
+        fk_ready = False
         async with httpx.AsyncClient() as client:
             for _ in range(50):
+                if self.fk_proc.poll() is not None:
+                    raise RuntimeError(f"Fake Kestrel exited prematurely with code {self.fk_proc.returncode}")
                 try:
                     r = await client.get(f"http://127.0.0.1:{self.kestrel_port}/__admin/state", timeout=1.0)
                     if r.status_code == 200:
+                        fk_ready = True
                         break
                 except Exception:
                     await asyncio.sleep(0.1)
+        if not fk_ready:
+            raise RuntimeError("Fake Kestrel failed to become ready")
 
         # 2. Candidate API
         api_env = os.environ.copy()
@@ -198,6 +204,10 @@ class ServerPairContext:
         if wait_mapper_ready:
             async with httpx.AsyncClient() as client:
                 for _ in range(150):
+                    if self.api_proc.poll() is not None:
+                        if require_ready:
+                            raise RuntimeError(f"Candidate API exited prematurely with code {self.api_proc.returncode}")
+                        break
                     try:
                         r = await client.get(f"http://127.0.0.1:{self.api_port}/api/v1/health", timeout=1.0)
                         if r.status_code == 200 and r.json().get("mapper_initialized"):
@@ -205,6 +215,8 @@ class ServerPairContext:
                             break
                     except Exception:
                         await asyncio.sleep(0.1)
+            if require_ready and ready_time <= 0.0:
+                raise RuntimeError("Candidate API failed to initialize mapper within startup timeout")
 
         return ready_time
 
@@ -363,7 +375,7 @@ async def check_line_1b(worktree: Path, kp: int, ap: int, out_dir: Path) -> Prob
         worktree, kp, ap, initial_mode="hang", cache_dir=empty_cache, out_dir=out_dir / "line_1b"
     )
     try:
-        ready_duration = await ctx.start(wait_mapper_ready=True)
+        ready_duration = await ctx.start(wait_mapper_ready=True, require_ready=False)
         async with httpx.AsyncClient() as client:
             et_resp = await client.get(f"http://127.0.0.1:{ap}/api/v1/entity-types", timeout=2.0)
             et_ok = et_resp.status_code == 200
@@ -388,24 +400,37 @@ def _pct(vals: list[float], p: float) -> float:
     return s[int(idx)] if lo == hi else s[lo] * (1.0 - (idx - lo)) + s[hi] * (idx - lo)
 
 
-async def _measure_non_kestrel_mix(client: httpx.AsyncClient, ap: int, rounds: int = 5) -> list[float]:
+async def _measure_non_kestrel_mix(
+    client: httpx.AsyncClient, ap: int, rounds: int = 5
+) -> tuple[list[float], int]:
     lats: list[float] = []
+    failures = 0
     for _ in range(rounds):
         for ep in ("entity-types", "annotators", "vocabularies"):
             t0 = time.monotonic()
-            r = await client.get(f"http://127.0.0.1:{ap}/api/v1/{ep}", timeout=3.0)
-            if r.status_code == 200:
-                lats.append((time.monotonic() - t0) * 1000.0)
+            try:
+                r = await client.get(f"http://127.0.0.1:{ap}/api/v1/{ep}", timeout=3.0)
+                if r.status_code == 200:
+                    lats.append((time.monotonic() - t0) * 1000.0)
+                else:
+                    failures += 1
+            except Exception:
+                failures += 1
         t0 = time.monotonic()
-        rm = await client.post(
-            f"http://127.0.0.1:{ap}/api/v1/map/entity",
-            json={"name": "glucose", "entity_type": "metabolite", "options": {"annotation_mode": "none"}},
-            timeout=3.0,
-        )
-        if rm.status_code == 200:
-            lats.append((time.monotonic() - t0) * 1000.0)
+        try:
+            rm = await client.post(
+                f"http://127.0.0.1:{ap}/api/v1/map/entity",
+                json={"name": "glucose", "entity_type": "metabolite", "options": {"annotation_mode": "none"}},
+                timeout=3.0,
+            )
+            if rm.status_code == 200 and not rm.json().get("result", {}).get("error"):
+                lats.append((time.monotonic() - t0) * 1000.0)
+            else:
+                failures += 1
+        except Exception:
+            failures += 1
         await asyncio.sleep(0.03)
-    return lats
+    return lats, failures
 
 
 async def check_line_2(
@@ -417,15 +442,16 @@ async def check_line_2(
     await ctx.start()
     try:
         async with httpx.AsyncClient() as client:
+            expected_samples = 4 * 5
             # Warmup once, then measure baseline
-            await _measure_non_kestrel_mix(client, ap, rounds=1)
-            base_lats = await _measure_non_kestrel_mix(client, ap, rounds=5)
+            _, warmup_failures = await _measure_non_kestrel_mix(client, ap, rounds=1)
+            base_lats, base_failures = await _measure_non_kestrel_mix(client, ap, rounds=5)
             base_p50 = _pct(base_lats, 0.50)
             base_p95 = _pct(base_lats, 0.95)
             allow_p50 = max(2.0 * base_p50, base_p50 + 5.0)
             allow_p95 = max(2.0 * base_p95, base_p95 + 5.0)
 
-            mode_stats: dict[str, dict[str, float]] = {}
+            mode_stats: dict[str, dict[str, Any]] = {}
             for fault_mode in ("hang", "slow-30s"):
                 await client.post(
                     f"http://127.0.0.1:{kp}/__admin/mode",
@@ -442,8 +468,10 @@ async def check_line_2(
                     for _ in range(8)
                 ]
                 await asyncio.sleep(0.15)
-                fault_lats = await _measure_non_kestrel_mix(client, ap, rounds=5)
+                fault_lats, fault_failures = await _measure_non_kestrel_mix(client, ap, rounds=5)
                 mode_stats[fault_mode] = {
+                    "samples_ok": len(fault_lats),
+                    "samples_failed": fault_failures,
                     "p50_ms": round(_pct(fault_lats, 0.50), 2),
                     "p95_ms": round(_pct(fault_lats, 0.95), 2),
                 }
@@ -452,10 +480,17 @@ async def check_line_2(
                     t.cancel()
                 await asyncio.gather(*bg_tasks, return_exceptions=True)
 
-            ok = all(
-                st["p50_ms"] <= allow_p50 and st["p95_ms"] <= allow_p95 for st in mode_stats.values()
+            baseline_ok = warmup_failures == 0 and base_failures == 0 and len(base_lats) == expected_samples
+            ok = baseline_ok and all(
+                st["samples_failed"] == 0
+                and st["samples_ok"] == expected_samples
+                and st["p50_ms"] <= allow_p50
+                and st["p95_ms"] <= allow_p95
+                for st in mode_stats.values()
             )
             evidence = {
+                "base_samples_ok": len(base_lats),
+                "base_samples_failed": base_failures,
                 "base_p50_ms": round(base_p50, 2),
                 "base_p95_ms": round(base_p95, 2),
                 "allow_p50_ms": round(allow_p50, 2),
@@ -465,7 +500,7 @@ async def check_line_2(
             if ok:
                 res.mark_pass(f"Non-Kestrel p50/p95 within 2x across hang & slow-30s: {mode_stats}", evidence=evidence)
             else:
-                res.mark_fail(f"Non-Kestrel latency exceeded 2x bound: {evidence}", evidence=evidence)
+                res.mark_fail(f"Non-Kestrel check failed (failures or latency bound): {evidence}", evidence=evidence)
     finally:
         await ctx.stop()
     return res
