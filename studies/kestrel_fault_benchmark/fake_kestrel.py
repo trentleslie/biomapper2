@@ -57,7 +57,7 @@ class FakeKestrelState:
         self.endpoint_overrides: dict[str, str] = dict(endpoint_overrides or {})
         self.recovering_start_time = time.monotonic()
         self.active_hangs = 0
-        self.hang_event = asyncio.Event()
+        self.hang_events: dict[str, asyncio.Event] = {}
         self.deck_lock = asyncio.Lock()
         self.rng = random.Random(seed)
         self.deck: list[int] = []
@@ -68,6 +68,14 @@ class FakeKestrelState:
         override = self.endpoint_overrides.get(endpoint)
         return override if override is not None else self.mode
 
+    def get_hang_event(self, endpoint: str) -> asyncio.Event:
+        """Return or create the cancellation event for a specific endpoint's current hang epoch."""
+        ev = self.hang_events.get(endpoint)
+        if ev is None:
+            ev = asyncio.Event()
+            self.hang_events[endpoint] = ev
+        return ev
+
     def set_mode(
         self,
         mode: str | None = None,
@@ -76,9 +84,11 @@ class FakeKestrelState:
         recover_after_s: float | None = None,
         endpoint_overrides: dict[str, str] | None = None,
     ) -> None:
-        """Update fault mode and parameters."""
-        old_mode = self.mode
-        old_overrides = dict(self.endpoint_overrides)
+        """Update fault mode and parameters, waking only endpoints whose hang ended."""
+        tracked_endpoints = set(self.hang_events) | set(self.endpoint_overrides)
+        if endpoint_overrides is not None:
+            tracked_endpoints |= set(endpoint_overrides)
+        old_effective = {ep: self.effective_behavior(ep) for ep in tracked_endpoints}
 
         if seed is not None:
             self.seed = int(seed)
@@ -96,13 +106,11 @@ class FakeKestrelState:
             if mode == "recovering":
                 self.recovering_start_time = time.monotonic()
 
-        mode_left_hang = old_mode == "hang" and self.mode != "hang"
-        override_left_hang = (
-            "hang" in old_overrides.values() and self.endpoint_overrides != old_overrides
-        )
-        if mode_left_hang or override_left_hang:
-            self.hang_event.set()
-            self.hang_event = asyncio.Event()
+        for ep, prev_beh in old_effective.items():
+            if prev_beh == "hang" and self.effective_behavior(ep) != "hang":
+                ev = self.hang_events.pop(ep, None)
+                if ev is not None:
+                    ev.set()
 
     def reset(self) -> None:
         """Reset state to healthy defaults."""
@@ -115,8 +123,9 @@ class FakeKestrelState:
         self.rng = random.Random(self.seed)
         self.deck.clear()
         self.request_counts.clear()
-        self.hang_event.set()
-        self.hang_event = asyncio.Event()
+        for ev in self.hang_events.values():
+            ev.set()
+        self.hang_events.clear()
 
     def get_state_dict(self) -> dict[str, Any]:
         """Serialize current state."""
@@ -214,7 +223,7 @@ def create_app(cassette_path: Path | str = DEFAULT_FIXTURE_PATH) -> FastAPI:
             )
 
         if active_behavior == "hang":
-            req_hang_event = state.hang_event
+            req_hang_event = state.get_hang_event(endpoint)
             state.active_hangs += 1
             try:
                 while not req_hang_event.is_set() and state.effective_behavior(endpoint) == "hang":

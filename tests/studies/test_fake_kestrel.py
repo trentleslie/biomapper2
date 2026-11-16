@@ -158,7 +158,9 @@ def test_fake_kestrel_hang_wakes_on_reset_and_override_change() -> None:
             assert resp.status_code == 504
             assert (await client.get("/__admin/state")).json()["active_hangs"] == 0
 
-            await client.post("/__admin/mode", json={"mode": "hang"})
+            await client.post(
+                "/__admin/mode", json={"mode": "healthy", "endpoint_overrides": {"hybrid-search": "hang"}}
+            )
             hung_override_task = asyncio.create_task(
                 client.post("/hybrid-search", json={"search_text": ["leukemia"]}, timeout=5.0)
             )
@@ -167,6 +169,15 @@ def test_fake_kestrel_hang_wakes_on_reset_and_override_change() -> None:
                 if st["active_hangs"] == 1:
                     break
                 await asyncio.sleep(0.02)
+
+            # Updating an unrelated endpoint keeps hybrid-search hanging
+            await client.post(
+                "/__admin/mode",
+                json={"endpoint_overrides": {"hybrid-search": "hang", "canonicalize": "5xx"}},
+            )
+            await asyncio.sleep(0.1)
+            assert not hung_override_task.done()
+            assert (await client.get("/__admin/state")).json()["active_hangs"] == 1
 
             await client.post("/__admin/mode", json={"endpoint_overrides": {"hybrid-search": "healthy"}})
             resp2 = await asyncio.wait_for(hung_override_task, timeout=1.0)

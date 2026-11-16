@@ -121,104 +121,112 @@ class ServerPairContext:
 
     async def start(self, wait_mapper_ready: bool = True, require_ready: bool = True) -> float:
         """Start both servers. Returns API launch-to-ready duration in seconds."""
-        python_bin = self.worktree / ".venv" / "bin" / "python"
-        if not python_bin.exists():
-            python_bin = Path(sys.executable)
+        try:
+            python_bin = self.worktree / ".venv" / "bin" / "python"
+            if not python_bin.exists():
+                python_bin = Path(sys.executable)
 
-        _seed_biolink_static_files(self.worktree, self.cache_dir)
-        self.log_fk = open(self.out_dir / "fake_kestrel.log", "w")
-        self.log_api = open(self.out_dir / "api.log", "w")
+            _seed_biolink_static_files(self.worktree, self.cache_dir)
+            self.log_fk = open(self.out_dir / "fake_kestrel.log", "w")
+            self.log_api = open(self.out_dir / "api.log", "w")
 
-        # 1. Fake Kestrel
-        fk_cmd = [
-            str(python_bin),
-            "-m",
-            "studies.kestrel_fault_benchmark.fake_kestrel",
-            "--port",
-            str(self.kestrel_port),
-            "--mode",
-            self.initial_mode,
-        ]
-        fk_env = os.environ.copy()
-        fk_env["PYTHONPATH"] = str(self.worktree)
-        self.fk_proc = subprocess.Popen(
-            fk_cmd,
-            cwd=self.worktree,
-            env=fk_env,
-            stdout=self.log_fk,
-            stderr=self.log_fk,
-        )
+            # 1. Fake Kestrel
+            fk_cmd = [
+                str(python_bin),
+                "-m",
+                "studies.kestrel_fault_benchmark.fake_kestrel",
+                "--port",
+                str(self.kestrel_port),
+                "--mode",
+                self.initial_mode,
+            ]
+            fk_env = os.environ.copy()
+            fk_env["PYTHONPATH"] = str(self.worktree)
+            self.fk_proc = subprocess.Popen(
+                fk_cmd,
+                cwd=self.worktree,
+                env=fk_env,
+                stdout=self.log_fk,
+                stderr=self.log_fk,
+            )
 
-        # Wait for Fake Kestrel
-        fk_ready = False
-        async with httpx.AsyncClient() as client:
-            for _ in range(50):
-                if self.fk_proc.poll() is not None:
-                    raise RuntimeError(f"Fake Kestrel exited prematurely with code {self.fk_proc.returncode}")
-                try:
-                    r = await client.get(f"http://127.0.0.1:{self.kestrel_port}/__admin/state", timeout=1.0)
-                    if r.status_code == 200:
-                        fk_ready = True
-                        break
-                except Exception:
-                    await asyncio.sleep(0.1)
-        if not fk_ready:
-            raise RuntimeError("Fake Kestrel failed to become ready")
-
-        # 2. Candidate API
-        api_env = os.environ.copy()
-        existing_pp = api_env.get("PYTHONPATH", "")
-        api_pp = f"{self.worktree / 'src'}{os.pathsep}{self.worktree}"
-        api_env["PYTHONPATH"] = f"{api_pp}{os.pathsep}{existing_pp}" if existing_pp else api_pp
-        api_env["KESTREL_API_URL"] = f"http://127.0.0.1:{self.kestrel_port}"
-        api_env["BIOMAPPER2_CACHE_DIR"] = str(self.cache_dir)
-        api_env["REFMET_SNAPSHOT_PATH"] = str(
-            (self.worktree / "studies" / "kestrel_fault_benchmark" / "fixtures" / "refmet_regression_freeze.tsv").resolve()
-        )
-        api_env["REFMET_FREEZE_MODE"] = "frozen"
-        api_env["REFMET_LIVE_API_FALLBACK"] = "0"
-        api_env["BIOMAPPER2_TIER_B_ENABLED"] = "0"
-
-        api_cmd = [
-            str(python_bin),
-            "-m",
-            "uvicorn",
-            "biomapper2.api.main:app",
-            "--host",
-            "127.0.0.1",
-            "--port",
-            str(self.api_port),
-            "--workers",
-            "1",
-        ]
-        t_start = time.monotonic()
-        self.api_proc = subprocess.Popen(
-            api_cmd,
-            cwd=self.worktree,
-            env=api_env,
-            stdout=self.log_api,
-            stderr=self.log_api,
-        )
-
-        ready_time = 0.0
-        if wait_mapper_ready:
+            # Wait for Fake Kestrel
+            fk_ready = False
             async with httpx.AsyncClient() as client:
-                for _ in range(150):
-                    if self.api_proc.poll() is not None:
-                        if require_ready:
-                            raise RuntimeError(f"Candidate API exited prematurely with code {self.api_proc.returncode}")
-                        break
+                for _ in range(50):
+                    if self.fk_proc.poll() is not None:
+                        raise RuntimeError(f"Fake Kestrel exited prematurely with code {self.fk_proc.returncode}")
                     try:
-                        r = await client.get(f"http://127.0.0.1:{self.api_port}/api/v1/health", timeout=1.0)
-                        if r.status_code == 200 and r.json().get("mapper_initialized"):
-                            ready_time = time.monotonic() - t_start
+                        r = await client.get(f"http://127.0.0.1:{self.kestrel_port}/__admin/state", timeout=1.0)
+                        if r.status_code == 200:
+                            fk_ready = True
                             break
                     except Exception:
                         await asyncio.sleep(0.1)
-            if require_ready and ready_time <= 0.0:
-                raise RuntimeError("Candidate API failed to initialize mapper within startup timeout")
+            if not fk_ready:
+                raise RuntimeError("Fake Kestrel failed to become ready")
 
-        return ready_time
+            # 2. Candidate API
+            api_env = os.environ.copy()
+            existing_pp = api_env.get("PYTHONPATH", "")
+            api_pp = f"{self.worktree / 'src'}{os.pathsep}{self.worktree}"
+            api_env["PYTHONPATH"] = f"{api_pp}{os.pathsep}{existing_pp}" if existing_pp else api_pp
+            api_env["KESTREL_API_URL"] = f"http://127.0.0.1:{self.kestrel_port}"
+            api_env["BIOMAPPER2_CACHE_DIR"] = str(self.cache_dir)
+            api_env["REFMET_SNAPSHOT_PATH"] = str(
+                (
+                    self.worktree / "studies" / "kestrel_fault_benchmark" / "fixtures" / "refmet_regression_freeze.tsv"
+                ).resolve()
+            )
+            api_env["REFMET_FREEZE_MODE"] = "frozen"
+            api_env["REFMET_LIVE_API_FALLBACK"] = "0"
+            api_env["BIOMAPPER2_TIER_B_ENABLED"] = "0"
+
+            api_cmd = [
+                str(python_bin),
+                "-m",
+                "uvicorn",
+                "biomapper2.api.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(self.api_port),
+                "--workers",
+                "1",
+            ]
+            t_start = time.monotonic()
+            self.api_proc = subprocess.Popen(
+                api_cmd,
+                cwd=self.worktree,
+                env=api_env,
+                stdout=self.log_api,
+                stderr=self.log_api,
+            )
+
+            ready_time = 0.0
+            if wait_mapper_ready:
+                async with httpx.AsyncClient() as client:
+                    for _ in range(150):
+                        if self.api_proc.poll() is not None:
+                            if require_ready:
+                                raise RuntimeError(
+                                    f"Candidate API exited prematurely with code {self.api_proc.returncode}"
+                                )
+                            break
+                        try:
+                            r = await client.get(f"http://127.0.0.1:{self.api_port}/api/v1/health", timeout=1.0)
+                            if r.status_code == 200 and r.json().get("mapper_initialized"):
+                                ready_time = time.monotonic() - t_start
+                                break
+                        except Exception:
+                            await asyncio.sleep(0.1)
+                if require_ready and ready_time <= 0.0:
+                    raise RuntimeError("Candidate API failed to initialize mapper within startup timeout")
+
+            return ready_time
+        except BaseException:
+            await self.stop()
+            raise
 
     async def stop(self) -> None:
         """Terminate subprocesses and close log handles."""
