@@ -246,10 +246,11 @@ def create_app(cassette_path: Path | str = DEFAULT_FIXTURE_PATH) -> FastAPI:
 
     def _assemble_search(endpoint: str, body: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         search_text: list[str] = body.get("search_text", [])
-        category: str | None = body.get("category")
+        category: str = str(body.get("category") or "")
+        pref: str = ",".join(sorted(body.get("prefix") or []))
         limit: int | None = body.get("limit")
 
-        scoped_key = f"{endpoint}|{category}|"
+        scoped_key = f"{endpoint}|{category}|{pref}"
         scoped = search_scoped.get(scoped_key, {})
         fallback = search_fallback.get(endpoint, {})
 
@@ -263,9 +264,9 @@ def create_app(cassette_path: Path | str = DEFAULT_FIXTURE_PATH) -> FastAPI:
             result[term] = list(nodes)
         return result
 
-    def _assemble_canonicalize(body: dict[str, Any]) -> dict[str, str]:
+    def _assemble_canonicalize(body: dict[str, Any]) -> dict[str, str | None]:
         curies: list[str] = body.get("curies", [])
-        return {c: canonicalize_table.get(c, c) for c in curies}
+        return {c: canonicalize_table.get(c) for c in curies}
 
     def _assemble_get_nodes(body: dict[str, Any]) -> dict[str, Any]:
         curies: list[str] = body.get("curies", [])

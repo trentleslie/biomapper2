@@ -93,7 +93,8 @@ async def run_benchmark_run(
 ) -> dict[str, Any]:
     """Execute a single benchmark run under specified mode and seed."""
     if out_root is None:
-        out_root = worktree / "results" / "benchmark"
+        env_out = os.environ.get("BIOMAPPER2_FAULT_BENCH_OUT_DIR", "").strip()
+        out_root = Path(env_out) if env_out else (worktree / "results" / "kestrel_fault_benchmark")
     out_root.mkdir(parents=True, exist_ok=True)
 
     mode_slug = mode.replace(" ", "_").replace("%", "pct")
@@ -118,6 +119,7 @@ async def run_benchmark_run(
 
     # 1. Launch Fake Kestrel
     fk_env = os.environ.copy()
+    fk_env["PYTHONPATH"] = str(worktree)
     fk_cmd = [
         str(python_bin),
         "-m",
@@ -168,17 +170,17 @@ async def run_benchmark_run(
     time_to_recover_s: float | None = None
 
     try:
-        # Wait for Fake Kestrel
+        # Wait for Fake Kestrel via fault-exempt /__admin/state so hang/slow-30s do not stall boot
         async with httpx.AsyncClient() as client:
             for _ in range(50):
                 try:
-                    r = await client.get(f"http://127.0.0.1:{kestrel_port}/health", timeout=1.0)
+                    r = await client.get(f"http://127.0.0.1:{kestrel_port}/__admin/state", timeout=1.0)
                     if r.status_code == 200:
                         break
                 except Exception:
                     await asyncio.sleep(0.1)
 
-            for _ in range(150):
+            for _ in range(200):
                 try:
                     r = await client.get(f"http://127.0.0.1:{api_port}/api/v1/health", timeout=1.0)
                     if r.status_code == 200 and r.json().get("mapper_initialized"):
@@ -209,26 +211,45 @@ async def run_benchmark_run(
 
         async def non_kestrel_worker(stop_event: asyncio.Event, worker_id: int) -> None:
             nonlocal non_kestrel_completed
-            endpoints = ["entity-types", "annotators", "vocabularies"]
+            endpoints = ["entity-types", "annotators", "vocabularies", "map-none"]
             ep = endpoints[worker_id % len(endpoints)]
             async with httpx.AsyncClient() as client:
                 while not stop_event.is_set():
                     t0 = time.monotonic()
                     try:
-                        r = await client.get(f"http://127.0.0.1:{api_port}/api/v1/{ep}", timeout=5.0)
+                        if ep == "map-none":
+                            r = await client.post(
+                                f"http://127.0.0.1:{api_port}/api/v1/map/entity",
+                                json={
+                                    "name": "glucose",
+                                    "entity_type": "metabolite",
+                                    "options": {"annotation_mode": "none"},
+                                },
+                                timeout=5.0,
+                            )
+                        else:
+                            r = await client.get(f"http://127.0.0.1:{api_port}/api/v1/{ep}", timeout=5.0)
                         dur_ms = (time.monotonic() - t0) * 1000.0
                         if r.status_code == 200:
                             non_kestrel_latencies.append(dur_ms)
                             non_kestrel_completed += 1
                     except Exception:
                         pass
-                    await asyncio.sleep(0.05)
+                    await asyncio.sleep(0.02)
 
         async def kestrel_mapping_worker(stop_event: asyncio.Event, worker_id: int) -> None:
             nonlocal kestrel_completed, kestrel_errored
-            names = ["leukemia", "heart attack", "isoleucine", "glucose", "TNFRSF1A"]
-            name = names[worker_id % len(names)]
-            payload = {"name": name, "entity_type": "disease" if "attack" in name or "leuk" in name else "metabolite"}
+            workload_items = [
+                {"name": "leukemia", "entity_type": "disease"},
+                {"name": "heart attack", "entity_type": "disease"},
+                {"name": "isoleucine", "entity_type": "metabolite"},
+                {"name": "Cholic acid", "entity_type": "metabolite"},
+                {"name": "TNFRSF1A", "entity_type": "gene"},
+                {"name": "GH1", "entity_type": "gene"},
+                {"name": "12-HETE", "entity_type": "lipid"},
+                {"name": "glucose", "entity_type": "metabolite", "identifiers": {"kegg": "C00031"}},
+            ]
+            payload = workload_items[worker_id % len(workload_items)]
             async with httpx.AsyncClient() as client:
                 while not stop_event.is_set():
                     try:
