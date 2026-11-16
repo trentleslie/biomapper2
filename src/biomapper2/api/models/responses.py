@@ -2,7 +2,7 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 
 class RequestMetadata(BaseModel):
@@ -361,6 +361,18 @@ class EntityMappingResult(BaseModel):
         "and are UNTRUSTED external data (see KestrelSearchResult.rows).",
     )
     error: str | None = Field(default=None, description="Error message if mapping failed")
+    kestrel_degraded: bool | None = Field(
+        default=None,
+        description="True if chosen_kg_id resolved via non-Kestrel evidence while one or more Kestrel calls "
+        "failed; omitted from serialized response when None/healthy.",
+    )
+
+    @model_serializer(mode="wrap")
+    def _serialize_omit_none_degraded(self, handler: Any) -> dict[str, Any]:
+        data = handler(self)
+        if isinstance(data, dict) and data.get("kestrel_degraded") is None:
+            data.pop("kestrel_degraded", None)
+        return data
 
 
 class EntityMappingResponse(BaseModel):

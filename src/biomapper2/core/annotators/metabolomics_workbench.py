@@ -13,7 +13,7 @@ import requests_cache
 from circuitbreaker import CircuitBreakerError, circuit
 
 from ... import config
-from ...config import CACHE_DIR, CACHE_IGNORED_PARAMETERS
+from ...config import CACHE_IGNORED_PARAMETERS, get_cache_dir
 from ...utils import AssignedIDsDict, quote_name_path_segment
 from ..name_case import canonical_query
 from . import refmet_snapshot, refmet_store
@@ -118,7 +118,7 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
         clock: Callable[[], float] | None = None,
     ):
         self._session = requests_cache.CachedSession(
-            CACHE_DIR / "metabolomics_workbench_http",
+            get_cache_dir() / "metabolomics_workbench_http",
             expire_after=timedelta(days=7),
             ignored_parameters=CACHE_IGNORED_PARAMETERS,
             # allowable_codes stays default (200 only): timeouts/5xx are NOT cached, so a transient

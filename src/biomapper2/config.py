@@ -18,13 +18,23 @@ logger = logging.getLogger(__name__)
 
 # Set up our general cache directory (e.g., for requests cache, biolink)
 PROJECT_ROOT = Path(__file__).parents[2]
-CACHE_DIR = PROJECT_ROOT / "cache"
-# 0700: the requests_cache databases under here record request headers, so treat the directory as
-# secret-bearing. `mode` only applies when mkdir creates the directory, so chmod an existing one
-# too (best-effort — a read-only mount or foreign owner must not break import).
-CACHE_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
-with contextlib.suppress(OSError):
-    CACHE_DIR.chmod(0o700)
+
+
+def get_cache_dir() -> Path:
+    """Return the cache directory, reading BIOMAPPER2_CACHE_DIR on every call.
+
+    If set in the environment, creates it with mode 0o700 and returns Path(raw).
+    Otherwise returns PROJECT_ROOT / "cache" (creating it if needed).
+    """
+    raw = os.environ.get("BIOMAPPER2_CACHE_DIR", "").strip()
+    cache_path = Path(raw) if raw else PROJECT_ROOT / "cache"
+    cache_path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with contextlib.suppress(OSError):
+        cache_path.chmod(0o700)
+    return cache_path
+
+
+CACHE_DIR = get_cache_dir()
 
 # Header and query-parameter names requests_cache must redact before writing a response to disk.
 #

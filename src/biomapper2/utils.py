@@ -19,7 +19,6 @@ import requests
 import requests_cache
 
 from .config import (
-    CACHE_DIR,
     CACHE_IGNORED_PARAMETERS,
     KESTREL_BATCHING_ENABLED,
     KESTREL_BISECT_MAX_CONSECUTIVE_FAILURES,
@@ -32,6 +31,7 @@ from .config import (
     LOG_LEVEL,
     PUBLIC_KESTREL_API_URL,
     PUBLIC_KESTREL_KEY_PREFIX,
+    get_cache_dir,
     get_kestrel_api_key,
     get_kestrel_api_url,
 )
@@ -68,7 +68,7 @@ def get_session() -> "requests_cache.CachedSession":
         # CachedSession would write the API key into the on-disk cache in cleartext again -- the
         # defect PR #50 fixed. Any change to this factory has to preserve both.
         _SESSION = _KestrelCachedSession(
-            CACHE_DIR / "kestrel_http",
+            get_cache_dir() / "kestrel_http",
             expire_after=_SESSION_EXPIRE_AFTER,
             allowable_methods=["GET", "POST"],
             ignored_parameters=CACHE_IGNORED_PARAMETERS,

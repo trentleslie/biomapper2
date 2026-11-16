@@ -2,6 +2,7 @@ import contextlib
 import json
 import logging
 import os
+import shutil
 import tempfile
 import time
 from collections.abc import Iterable
@@ -12,8 +13,9 @@ import inflect
 import requests
 import yaml
 from bmt import Toolkit
+from linkml_runtime.utils.schemaview import SchemaView
 
-from .config import BIOLINK_VERSION_DEFAULT, CACHE_DIR
+from .config import BIOLINK_VERSION_DEFAULT, PROJECT_ROOT, get_cache_dir
 from .utils import setup_logging, to_set
 
 setup_logging()
@@ -64,13 +66,26 @@ def _atomic_write_text(path: str, text: str) -> None:
 def _build_toolkit(schema_source: str) -> Toolkit:
     """Build a bmt Toolkit once per schema source (it is read-only, so safe to share).
 
-    bmt.Toolkit downloads the predicate mapping on every construction (and the schema too when
-    given a URL). Building a fresh Normalizer()/Mapper() per test therefore hammered GitHub raw
-    and made the offline gate flake on transient resets. Caching the Toolkit process-wide means
-    the whole suite triggers at most one schema + one predicate-map fetch; the retry absorbs a
-    transient reset on that single build. predicate_map is left at bmt's default, unchanged from
-    the previous behaviour.
+    Checks local caches for biolink-predicate-mapping.yaml before falling back to network download.
+    When a local mapping exists, constructs Toolkit via SchemaView and safe_load to make zero network calls.
     """
+    candidates = [
+        get_cache_dir() / "biolink-predicate-mapping.yaml",
+        PROJECT_ROOT / "cache" / "biolink-predicate-mapping.yaml",
+        PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures" / "biolink-predicate-mapping.yaml",
+    ]
+    for cand in candidates:
+        if cand.exists():
+            target = get_cache_dir() / "biolink-predicate-mapping.yaml"
+            if cand != target and not target.exists():
+                with contextlib.suppress(OSError):
+                    get_cache_dir().mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(cand, target)
+            tk = Toolkit.__new__(Toolkit)
+            tk.view = SchemaView(schema_source)
+            tk.pmap = yaml.safe_load(cand.read_text(encoding="utf-8"))
+            return tk
+
     last_exc: requests.RequestException | None = None
     for attempt in range(1, 4):
         try:
@@ -137,27 +152,40 @@ class BiolinkClient:
     def _cached_schema_source(self, url: str) -> str:
         """Local path to the cached Biolink model schema, downloading once if absent.
 
-        Returns a filesystem path so bmt.Toolkit loads the schema offline after the first fetch
-        (the cache is keyed by biolink version, so a version bump re-downloads once). If the
-        download fails and nothing is cached yet, fall back to the URL so a first-run network
-        hiccup degrades to the previous behaviour instead of hard-failing.
+        Returns a filesystem path so bmt.Toolkit loads the schema offline after the first fetch.
+        Checks get_cache_dir() first, then PROJECT_ROOT / "cache" (copying to get_cache_dir()).
+        If the download fails and nothing is cached yet, fall back to the URL.
         """
         file_name = url.split("/")[-1]  # e.g. biolink-model.yaml
         stem, _, ext = file_name.rpartition(".")
-        local_path = CACHE_DIR / f"{stem}_{self.biolink_version}.{ext}"
-        if not local_path.exists():
-            try:
-                response = _get_with_retry(url)
-                CACHE_DIR.mkdir(parents=True, exist_ok=True)
-                _atomic_write_text(str(local_path), response.text)
-            except requests.RequestException as exc:
-                logging.warning(f"Could not cache Biolink schema from {url} ({exc}); loading from URL this run.")
-                return url
+        target_name = f"{stem}_{self.biolink_version}.{ext}"
+        cache_dir = get_cache_dir()
+        local_path = cache_dir / target_name
+        if local_path.exists():
+            return str(local_path)
+
+        root_path = PROJECT_ROOT / "cache" / target_name
+        if root_path.exists():
+            if local_path != root_path:
+                with contextlib.suppress(OSError):
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(root_path, local_path)
+                    return str(local_path)
+            return str(root_path)
+
+        try:
+            response = _get_with_retry(url)
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            _atomic_write_text(str(local_path), response.text)
+        except requests.RequestException as exc:
+            logging.warning(f"Could not cache Biolink schema from {url} ({exc}); loading from URL this run.")
+            return url
         return str(local_path)
 
     def _load_biolink_file(self, url: str) -> dict:
-        """
-        Download and cache Biolink model file (or load from cache if already exists).
+        """Download and cache Biolink model file (or load from cache if already exists).
+
+        Checks get_cache_dir() first, then PROJECT_ROOT / "cache" before attempting HTTP download.
 
         Args:
             url: URL to Biolink JSON/YAML file
@@ -167,21 +195,34 @@ class BiolinkClient:
         """
         file_name = url.split("/")[-1]
         file_name_json = file_name.split(".")[0] + f"_{self.biolink_version}" + ".json"
-        local_path = CACHE_DIR / file_name_json
+        cache_dir = get_cache_dir()
+        local_path = cache_dir / file_name_json
         logging.debug(f"Local file path is: {local_path}")
 
-        # Download the file if we don't already have it cached
-        if not local_path.exists():
-            logging.info(f"Downloading YAML file from {url}. local path is: {local_path}")
-            response = _get_with_retry(url)
-            if file_name.endswith(".yaml"):
-                response_json = yaml.safe_load(response.text)
-            else:
-                response_json = response.json()
+        if local_path.exists():
+            with open(local_path) as cache_file:
+                return json.load(cache_file)
 
-            # Cache the response atomically so a partial write cannot poison the cache.
-            CACHE_DIR.mkdir(parents=True, exist_ok=True)
-            _atomic_write_text(str(local_path), json.dumps(response_json, indent=2))
+        root_path = PROJECT_ROOT / "cache" / file_name_json
+        if root_path.exists():
+            if local_path != root_path:
+                with contextlib.suppress(OSError):
+                    cache_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(root_path, local_path)
+            with open(root_path) as cache_file:
+                return json.load(cache_file)
+
+        # Download the file if we don't already have it cached
+        logging.info(f"Downloading YAML file from {url}. local path is: {local_path}")
+        response = _get_with_retry(url)
+        if file_name.endswith(".yaml"):
+            response_json = yaml.safe_load(response.text)
+        else:
+            response_json = response.json()
+
+        # Cache the response atomically so a partial write cannot poison the cache.
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        _atomic_write_text(str(local_path), json.dumps(response_json, indent=2))
 
         # Read and return the cached JSON
         with open(local_path) as cache_file:
