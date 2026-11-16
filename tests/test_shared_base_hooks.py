@@ -41,13 +41,33 @@ def test_get_cache_dir_override() -> None:
 
 @pytest.mark.unit
 def test_biolink_client_offline_predicate_map() -> None:
-    """BiolinkClient initializes offline without network requests using local fixtures."""
-    with tempfile.TemporaryDirectory() as tmp_dir:
-        with patch.dict(os.environ, {"BIOMAPPER2_CACHE_DIR": tmp_dir}):
+    """BiolinkClient initializes schema, prefix map, and predicate map fully offline from committed fixtures."""
+    import requests as req_mod
+
+    from biomapper2.biolink_client import _build_toolkit
+
+    _build_toolkit.cache_clear()
+    with tempfile.TemporaryDirectory() as tmp_dir, tempfile.TemporaryDirectory() as fake_root_str:
+        fake_root = Path(fake_root_str)
+        # Symlink studies/kestrel_fault_benchmark/fixtures into fake_root without any root cache/
+        (fake_root / "studies" / "kestrel_fault_benchmark").mkdir(parents=True)
+        os.symlink(
+            PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures",
+            fake_root / "studies" / "kestrel_fault_benchmark" / "fixtures",
+        )
+        with (
+            patch.dict(os.environ, {"BIOMAPPER2_CACHE_DIR": tmp_dir}),
+            patch("biomapper2.biolink_client.PROJECT_ROOT", fake_root),
+            patch.object(req_mod, "get", side_effect=req_mod.ConnectionError("Network disabled")),
+        ):
             client = BiolinkClient()
             ancestors = client.get_ancestors("biolink:SmallMolecule")
+            prefix_map = client.get_prefix_map()
             assert "biolink:SmallMolecule" in ancestors
             assert "biolink:ChemicalEntity" in ancestors
+            assert "CHEBI" in prefix_map
+            assert (Path(tmp_dir) / "biolink-model_4.2.5.yaml").exists()
+            assert (Path(tmp_dir) / "biolink-model-prefix-map_4.2.5.json").exists()
             assert (Path(tmp_dir) / "biolink-predicate-mapping.yaml").exists()
 
 

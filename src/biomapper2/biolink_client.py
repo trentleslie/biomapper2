@@ -2,11 +2,11 @@ import contextlib
 import json
 import logging
 import os
-import shutil
 import tempfile
 import time
 from collections.abc import Iterable
 from functools import lru_cache
+from pathlib import Path
 from typing import cast
 
 import inflect
@@ -62,6 +62,21 @@ def _atomic_write_text(path: str, text: str) -> None:
         raise
 
 
+def _atomic_copy_file(src: Path, dst: Path) -> None:
+    """Copy src to dst atomically via a same-directory temp file and os.replace."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp = tempfile.mkstemp(dir=str(dst.parent), suffix=".tmp")
+    try:
+        data = src.read_bytes()
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(data)
+        os.replace(tmp, str(dst))
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.remove(tmp)
+        raise
+
+
 @lru_cache(maxsize=8)
 def _build_toolkit(schema_source: str) -> Toolkit:
     """Build a bmt Toolkit once per schema source (it is read-only, so safe to share).
@@ -79,8 +94,7 @@ def _build_toolkit(schema_source: str) -> Toolkit:
             target = get_cache_dir() / "biolink-predicate-mapping.yaml"
             if cand != target and not target.exists():
                 with contextlib.suppress(OSError):
-                    get_cache_dir().mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(cand, target)
+                    _atomic_copy_file(cand, target)
             tk = Toolkit.__new__(Toolkit)
             tk.view = SchemaView(schema_source)
             tk.pmap = yaml.safe_load(cand.read_text(encoding="utf-8"))
@@ -164,14 +178,17 @@ class BiolinkClient:
         if local_path.exists():
             return str(local_path)
 
-        root_path = PROJECT_ROOT / "cache" / target_name
-        if root_path.exists():
-            if local_path != root_path:
-                with contextlib.suppress(OSError):
-                    cache_dir.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(root_path, local_path)
-                    return str(local_path)
-            return str(root_path)
+        fallback_paths = [
+            PROJECT_ROOT / "cache" / target_name,
+            PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures" / target_name,
+        ]
+        for fallback in fallback_paths:
+            if fallback.exists():
+                if local_path != fallback:
+                    with contextlib.suppress(OSError):
+                        _atomic_copy_file(fallback, local_path)
+                        return str(local_path)
+                return str(fallback)
 
         try:
             response = _get_with_retry(url)
@@ -203,14 +220,17 @@ class BiolinkClient:
             with open(local_path) as cache_file:
                 return json.load(cache_file)
 
-        root_path = PROJECT_ROOT / "cache" / file_name_json
-        if root_path.exists():
-            if local_path != root_path:
-                with contextlib.suppress(OSError):
-                    cache_dir.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(root_path, local_path)
-            with open(root_path) as cache_file:
-                return json.load(cache_file)
+        fallback_paths = [
+            PROJECT_ROOT / "cache" / file_name_json,
+            PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures" / file_name_json,
+        ]
+        for fallback in fallback_paths:
+            if fallback.exists():
+                if local_path != fallback:
+                    with contextlib.suppress(OSError):
+                        _atomic_copy_file(fallback, local_path)
+                with open(fallback) as cache_file:
+                    return json.load(cache_file)
 
         # Download the file if we don't already have it cached
         logging.info(f"Downloading YAML file from {url}. local path is: {local_path}")

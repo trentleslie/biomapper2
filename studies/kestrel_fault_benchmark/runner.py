@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import logging
 import math
@@ -24,10 +25,55 @@ from typing import Any
 
 import httpx
 
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 logger = logging.getLogger(__name__)
 
 ALL_MODES = ["healthy", "slow-30s", "hang", "50% 5xx", "recovering"]
 DEFAULT_SEEDS = [101, 202, 303]
+
+
+def _seed_biolink_static_files(worktree: Path, cache_dir: Path) -> None:
+    """Atomically copy pinned Biolink schema/prefix/predicate files into cache_dir for offline runs."""
+    fixtures_dir = worktree / "studies" / "kestrel_fault_benchmark" / "fixtures"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "biolink-model_4.2.5.yaml",
+        "biolink-model-prefix-map_4.2.5.json",
+        "biolink-predicate-mapping.yaml",
+    ):
+        src = fixtures_dir / name
+        dst = cache_dir / name
+        if src.exists() and not dst.exists():
+            fd, tmp = tempfile.mkstemp(dir=str(cache_dir), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as handle:
+                    handle.write(src.read_bytes())
+                os.replace(tmp, str(dst))
+            except BaseException:
+                with contextlib.suppress(OSError):
+                    os.remove(tmp)
+                raise
+
+
+def resolve_seeds(repeats: int | None, seeds_arg: str | None) -> list[int]:
+    """Resolve explicit seed list and requested repetition count."""
+    if repeats is not None and repeats < 1:
+        raise ValueError(f"--repeats must be >= 1, got {repeats}")
+    if seeds_arg is not None:
+        parsed = [int(s.strip()) for s in seeds_arg.split(",") if s.strip()]
+        if not parsed:
+            raise ValueError("--seeds must contain at least one integer seed")
+        if repeats is not None:
+            if len(parsed) < repeats:
+                raise ValueError(
+                    f"--repeats={repeats} requires at least {repeats} seeds in --seeds, got {len(parsed)}"
+                )
+            return parsed[:repeats]
+        return parsed
+    count = repeats if repeats is not None else 1
+    return [DEFAULT_SEEDS[i] if i < len(DEFAULT_SEEDS) else 101 * (i + 1) for i in range(count)]
 
 
 def percentile(data: list[float], p: float) -> float:
@@ -104,6 +150,7 @@ async def run_benchmark_run(
 
     git_sha, git_dirty = get_git_info(worktree)
     cache_dir = Path(tempfile.mkdtemp(prefix=f"cache_{candidate}_{mode_slug}_s{seed}_"))
+    _seed_biolink_static_files(worktree, cache_dir)
 
     log_fk_path = bench_dir / "fake_kestrel.log"
     log_api_path = bench_dir / "api.log"
@@ -111,13 +158,10 @@ async def run_benchmark_run(
     log_api = open(log_api_path, "w")
 
     python_bin = worktree / ".venv" / "bin" / "python"
-    uvicorn_bin = worktree / ".venv" / "bin" / "uvicorn"
     if not python_bin.exists():
         python_bin = Path(sys.executable)
-    if not uvicorn_bin.exists():
-        uvicorn_bin = python_bin
 
-    # 1. Launch Fake Kestrel
+    # 1. Launch Fake Kestrel in healthy mode during boot so fault timers start after API readiness
     fk_env = os.environ.copy()
     fk_env["PYTHONPATH"] = str(worktree)
     fk_cmd = [
@@ -127,7 +171,7 @@ async def run_benchmark_run(
         "--port",
         str(kestrel_port),
         "--mode",
-        mode,
+        "healthy",
         "--seed",
         str(seed),
         "--slow-delay-s",
@@ -137,8 +181,11 @@ async def run_benchmark_run(
     ]
     fk_proc = subprocess.Popen(fk_cmd, cwd=worktree, env=fk_env, stdout=log_fk, stderr=log_fk)
 
-    # 2. Launch Candidate API
+    # 2. Launch Candidate API via python -m uvicorn
     api_env = os.environ.copy()
+    existing_pp = api_env.get("PYTHONPATH", "")
+    api_pp = f"{worktree / 'src'}{os.pathsep}{worktree}"
+    api_env["PYTHONPATH"] = f"{api_pp}{os.pathsep}{existing_pp}" if existing_pp else api_pp
     api_env["KESTREL_API_URL"] = f"http://127.0.0.1:{kestrel_port}"
     api_env["BIOMAPPER2_CACHE_DIR"] = str(cache_dir)
     api_env["REFMET_SNAPSHOT_PATH"] = str(
@@ -149,7 +196,9 @@ async def run_benchmark_run(
     api_env["BIOMAPPER2_TIER_B_ENABLED"] = "0"
 
     api_cmd = [
-        str(uvicorn_bin),
+        str(python_bin),
+        "-m",
+        "uvicorn",
         "biomapper2.api.main:app",
         "--host",
         "127.0.0.1",
@@ -168,25 +217,48 @@ async def run_benchmark_run(
     kestrel_completed = 0
     kestrel_errored = 0
     time_to_recover_s: float | None = None
+    recovered_flag: bool | None = None
+    workload_elapsed_s = 0.0
 
     try:
-        # Wait for Fake Kestrel via fault-exempt /__admin/state so hang/slow-30s do not stall boot
         async with httpx.AsyncClient() as client:
+            fk_ready = False
             for _ in range(50):
                 try:
                     r = await client.get(f"http://127.0.0.1:{kestrel_port}/__admin/state", timeout=1.0)
                     if r.status_code == 200:
+                        fk_ready = True
                         break
                 except Exception:
                     await asyncio.sleep(0.1)
+            if not fk_ready:
+                raise RuntimeError("Fake Kestrel failed to become ready before benchmark start")
 
+            api_ready = False
             for _ in range(200):
                 try:
                     r = await client.get(f"http://127.0.0.1:{api_port}/api/v1/health", timeout=1.0)
                     if r.status_code == 200 and r.json().get("mapper_initialized"):
+                        api_ready = True
                         break
                 except Exception:
                     await asyncio.sleep(0.1)
+            if not api_ready:
+                raise RuntimeError("Candidate API failed to initialize before benchmark start")
+
+            # Activate fault mode AFTER API readiness so recovering timer starts at t=0 of workload
+            mode_resp = await client.post(
+                f"http://127.0.0.1:{kestrel_port}/__admin/mode",
+                json={
+                    "mode": mode,
+                    "seed": seed,
+                    "slow_delay_s": slow_delay_s,
+                    "recover_after_s": recover_after_s,
+                },
+                timeout=2.0,
+            )
+            mode_resp.raise_for_status()
+            mode_start_time = time.monotonic()
 
         threads_before = get_process_threads(api_proc.pid)
 
@@ -199,13 +271,15 @@ async def run_benchmark_run(
                     try:
                         r = await client.get(f"http://127.0.0.1:{api_port}/api/v1/health", timeout=5.0)
                         dur_ms = (time.monotonic() - t0) * 1000.0
-                        health_latencies.append(dur_ms)
                         health_total_count += 1
-                        if r.status_code == 200:
+                        if r.status_code == 200 and r.json().get("status") == "healthy":
+                            health_latencies.append(dur_ms)
                             health_ok_count += 1
+                        else:
+                            health_latencies.append(max(dur_ms, 5000.0))
                     except Exception:
                         dur_ms = (time.monotonic() - t0) * 1000.0
-                        health_latencies.append(dur_ms)
+                        health_latencies.append(max(dur_ms, 5000.0))
                         health_total_count += 1
                     await asyncio.sleep(0.25)
 
@@ -272,18 +346,15 @@ async def run_benchmark_run(
 
         stop_load = asyncio.Event()
 
-        # Run window
-        run_duration = recover_after_s + 60.0 if mode == "recovering" else window_s
-        workers = [
-            asyncio.create_task(health_probe_worker(stop_load)),
-            *(asyncio.create_task(non_kestrel_worker(stop_load, i)) for i in range(4)),
-            *(asyncio.create_task(kestrel_mapping_worker(stop_load, i)) for i in range(8)),
-        ]
+        workload_start_time = time.monotonic()
+        health_task = asyncio.create_task(health_probe_worker(stop_load))
+        non_kestrel_tasks = [asyncio.create_task(non_kestrel_worker(stop_load, i)) for i in range(4)]
+        kestrel_tasks = [asyncio.create_task(kestrel_mapping_worker(stop_load, i)) for i in range(8)]
 
         if mode == "recovering":
-            # In recovering mode: wait until recover_after_s, then measure time_to_recover_s
-            await asyncio.sleep(recover_after_s)
-            flip_time = time.monotonic()
+            flip_deadline = mode_start_time + recover_after_s
+            await asyncio.sleep(max(0.0, flip_deadline - time.monotonic()))
+            flip_time = flip_deadline
             # Probe until recovery is observed (health check < 1.0s and successful mapping)
             recovered = False
             async with httpx.AsyncClient() as probe_client:
@@ -299,21 +370,28 @@ async def run_benchmark_run(
                         )
                         if hr.status_code == 200 and h_ms < 1000.0 and mr.status_code == 200:
                             res_json = mr.json().get("result", {})
-                            if res_json.get("chosen_kg_id") and not res_json.get("error"):
-                                time_to_recover_s = round(time.monotonic() - flip_time, 2)
+                            if (
+                                res_json.get("chosen_kg_id")
+                                and not res_json.get("error")
+                                and "kestrel_degraded" not in mr.text
+                            ):
+                                time_to_recover_s = round(max(0.0, time.monotonic() - flip_time), 2)
                                 recovered = True
                                 break
                     except Exception:
                         pass
                     await asyncio.sleep(0.5)
+            recovered_flag = recovered
             if not recovered:
-                time_to_recover_s = 75.0
+                time_to_recover_s = None
             await asyncio.sleep(5.0)
         else:
-            await asyncio.sleep(run_duration)
+            await asyncio.sleep(window_s)
 
         stop_load.set()
-        await asyncio.gather(*workers, return_exceptions=True)
+        await asyncio.gather(*non_kestrel_tasks, return_exceptions=True)
+        workload_elapsed_s = time.monotonic() - workload_start_time
+        await asyncio.gather(health_task, *kestrel_tasks, return_exceptions=True)
 
         threads_after = get_process_threads(api_proc.pid)
         threads_delta = threads_after - threads_before
@@ -333,8 +411,7 @@ async def run_benchmark_run(
         log_api.close()
         shutil.rmtree(cache_dir, ignore_errors=True)
 
-    duration_actual = window_s if mode != "recovering" else (recover_after_s + 60.0)
-    non_kestrel_rps = round(non_kestrel_completed / max(1.0, duration_actual), 1)
+    non_kestrel_rps = round(non_kestrel_completed / max(0.001, workload_elapsed_s), 1)
 
     summary: dict[str, Any] = {
         "candidate": candidate,
@@ -342,6 +419,12 @@ async def run_benchmark_run(
         "seed": seed,
         "git_sha": git_sha,
         "git_dirty": git_dirty,
+        "config": {
+            "window_s": window_s,
+            "slow_delay_s": slow_delay_s,
+            "recover_after_s": recover_after_s,
+        },
+        "workload_elapsed_s": round(workload_elapsed_s, 2),
         "threads_before": threads_before,
         "threads_after": threads_after,
         "threads_delta": threads_delta,
@@ -356,6 +439,7 @@ async def run_benchmark_run(
         "non_kestrel_rps": non_kestrel_rps,
         "kestrel_requests_completed": kestrel_completed,
         "kestrel_requests_errored": kestrel_errored,
+        "recovered": recovered_flag,
         "time_to_recover_s": time_to_recover_s,
     }
 
@@ -372,8 +456,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="BioMapper2 Kestrel Fault Benchmark Runner")
     parser.add_argument("--candidate", required=True, help="Candidate name (e.g. shared-base, team-a)")
     parser.add_argument("--mode", default="healthy", help="Fault mode (healthy|slow-30s|hang|50% 5xx|recovering|all)")
-    parser.add_argument("--repeats", type=int, default=1, help="Number of repeats per mode")
-    parser.add_argument("--seeds", default="101", help="Comma-separated random seeds (e.g. 101,202,303)")
+    parser.add_argument("--repeats", type=int, default=None, help="Number of repeats per mode")
+    parser.add_argument("--seeds", default=None, help="Comma-separated random seeds (e.g. 101,202,303)")
     parser.add_argument("--kestrel-port", type=int, default=18100, help="Fake Kestrel port")
     parser.add_argument("--api-port", type=int, default=18101, help="Candidate API port")
     parser.add_argument("--out-root", default=None, help="Root directory for benchmark outputs")
@@ -384,13 +468,16 @@ def main() -> None:
     args = parser.parse_args()
 
     worktree = Path(args.worktree).resolve()
-    out_root = Path(args.out_root).resolve() if args.out_root else worktree / "results" / "benchmark"
-    seeds = [int(s.strip()) for s in args.seeds.split(",") if s.strip()]
+    out_root = Path(args.out_root).resolve() if args.out_root else None
+    try:
+        seeds = resolve_seeds(args.repeats, args.seeds)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     modes_to_run = ALL_MODES if args.mode == "all" else [args.mode]
 
     for mode in modes_to_run:
-        for seed in seeds[: args.repeats]:
+        for seed in seeds:
             res = asyncio.run(
                 run_benchmark_run(
                     candidate=args.candidate,

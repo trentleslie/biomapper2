@@ -71,6 +71,29 @@ class ProbeResult:
         }
 
 
+def _seed_biolink_static_files(worktree: Path, cache_dir: Path) -> None:
+    """Atomically copy pinned Biolink schema/prefix/predicate files into cache_dir for offline runs."""
+    fixtures_dir = worktree / "studies" / "kestrel_fault_benchmark" / "fixtures"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "biolink-model_4.2.5.yaml",
+        "biolink-model-prefix-map_4.2.5.json",
+        "biolink-predicate-mapping.yaml",
+    ):
+        src = fixtures_dir / name
+        dst = cache_dir / name
+        if src.exists() and not dst.exists():
+            fd, tmp = tempfile.mkstemp(dir=str(cache_dir), suffix=".tmp")
+            try:
+                with os.fdopen(fd, "wb") as handle:
+                    handle.write(src.read_bytes())
+                os.replace(tmp, str(dst))
+            except BaseException:
+                with contextlib.suppress(OSError):
+                    os.remove(tmp)
+                raise
+
+
 class ServerPairContext:
     """Manages subprocess lifecycles for Fake Kestrel and candidate API."""
 
@@ -87,6 +110,7 @@ class ServerPairContext:
         self.kestrel_port = kestrel_port
         self.api_port = api_port
         self.initial_mode = initial_mode
+        self._owns_cache_dir = cache_dir is None
         self.cache_dir = cache_dir or Path(tempfile.mkdtemp(prefix="gate_cache_"))
         self.out_dir = out_dir or Path(tempfile.mkdtemp(prefix="gate_logs_"))
         self.out_dir.mkdir(parents=True, exist_ok=True)
@@ -98,12 +122,10 @@ class ServerPairContext:
     async def start(self, wait_mapper_ready: bool = True) -> float:
         """Start both servers. Returns API launch-to-ready duration in seconds."""
         python_bin = self.worktree / ".venv" / "bin" / "python"
-        uvicorn_bin = self.worktree / ".venv" / "bin" / "uvicorn"
         if not python_bin.exists():
             python_bin = Path(sys.executable)
-        if not uvicorn_bin.exists():
-            uvicorn_bin = python_bin
 
+        _seed_biolink_static_files(self.worktree, self.cache_dir)
         self.log_fk = open(self.out_dir / "fake_kestrel.log", "w")
         self.log_api = open(self.out_dir / "api.log", "w")
 
@@ -139,6 +161,9 @@ class ServerPairContext:
 
         # 2. Candidate API
         api_env = os.environ.copy()
+        existing_pp = api_env.get("PYTHONPATH", "")
+        api_pp = f"{self.worktree / 'src'}{os.pathsep}{self.worktree}"
+        api_env["PYTHONPATH"] = f"{api_pp}{os.pathsep}{existing_pp}" if existing_pp else api_pp
         api_env["KESTREL_API_URL"] = f"http://127.0.0.1:{self.kestrel_port}"
         api_env["BIOMAPPER2_CACHE_DIR"] = str(self.cache_dir)
         api_env["REFMET_SNAPSHOT_PATH"] = str(
@@ -149,7 +174,9 @@ class ServerPairContext:
         api_env["BIOMAPPER2_TIER_B_ENABLED"] = "0"
 
         api_cmd = [
-            str(uvicorn_bin),
+            str(python_bin),
+            "-m",
+            "uvicorn",
             "biomapper2.api.main:app",
             "--host",
             "127.0.0.1",
@@ -201,29 +228,72 @@ class ServerPairContext:
             self.log_fk.close()
         if self.log_api:
             self.log_api.close()
+        if self._owns_cache_dir:
+            shutil.rmtree(self.cache_dir, ignore_errors=True)
+
+
+def _mapping_response_errored(resp: Any) -> bool:
+    if not isinstance(resp, httpx.Response) or resp.status_code != 200:
+        return False
+    body = resp.json()
+    if "result" in body:
+        res = body.get("result") or {}
+        return bool(res.get("error")) and res.get("chosen_kg_id") is None
+    if "results" in body:
+        results = body.get("results") or []
+        failed = body.get("summary", {}).get("failed", 0)
+        return (
+            failed == len(results) > 0
+            and all(bool(r.get("error")) and r.get("chosen_kg_id") is None for r in results)
+        )
+    return False
 
 
 async def check_line_1a(worktree: Path, kp: int, ap: int, out_dir: Path) -> ProbeResult:
     """Line 1a: Event-loop liveness under hang."""
     res = ProbeResult("1a", "20/20 health checks < 1.0s under hang while 8 mapping workers in-flight; workers error")
-    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir)
+    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir / "line_1a")
     await ctx.start()
     try:
         async with httpx.AsyncClient() as client:
             # Switch Fake Kestrel to hang
             await client.post(f"http://127.0.0.1:{kp}/__admin/mode", json={"mode": "hang"})
 
-            # Launch 8 concurrent mapping requests
-            mapping_tasks = [
-                client.post(
-                    f"http://127.0.0.1:{ap}/api/v1/map/entity",
-                    json={"name": "leukemia", "entity_type": "disease"},
-                    timeout=30.0,
+            # Schedule 8 concurrent mapping requests BEFORE health probes (6 /entity + 2 /batch)
+            mapping_tasks: list[asyncio.Task[httpx.Response]] = []
+            for idx in range(6):
+                name = "leukemia" if idx % 2 == 0 else "heart attack"
+                mapping_tasks.append(
+                    asyncio.create_task(
+                        client.post(
+                            f"http://127.0.0.1:{ap}/api/v1/map/entity",
+                            json={"name": name, "entity_type": "disease"},
+                            timeout=30.0,
+                        )
+                    )
                 )
-                for _ in range(8)
-            ]
+            for _ in range(2):
+                mapping_tasks.append(
+                    asyncio.create_task(
+                        client.post(
+                            f"http://127.0.0.1:{ap}/api/v1/map/batch",
+                            json={"entities": [{"name": "isoleucine", "entity_type": "metabolite"}]},
+                            timeout=30.0,
+                        )
+                    )
+                )
 
-            # Measure 20 health check probes
+            # Confirm requests have actively reached Fake Kestrel hang before probing health
+            active_hangs_before = 0
+            for _ in range(100):
+                st = (await client.get(f"http://127.0.0.1:{kp}/__admin/state", timeout=1.0)).json()
+                active_hangs_before = int(st.get("active_hangs", 0))
+                if active_hangs_before >= 1:
+                    break
+                await asyncio.sleep(0.02)
+            in_flight_before = sum(1 for t in mapping_tasks if not t.done())
+
+            # Measure 20 health check probes while mapping tasks remain in flight (~0.4s window)
             health_ok = 0
             health_latencies: list[float] = []
             for _ in range(20):
@@ -232,34 +302,52 @@ async def check_line_1a(worktree: Path, kp: int, ap: int, out_dir: Path) -> Prob
                     hr = await client.get(f"http://127.0.0.1:{ap}/api/v1/health", timeout=1.5)
                     elapsed_ms = (time.monotonic() - t0) * 1000.0
                     health_latencies.append(elapsed_ms)
-                    if hr.status_code == 200 and hr.json().get("status") == "healthy" and elapsed_ms < 1000.0:
+                    if (
+                        hr.status_code == 200
+                        and hr.json().get("status") == "healthy"
+                        and hr.json().get("mapper_initialized") is True
+                        and elapsed_ms < 1000.0
+                    ):
                         health_ok += 1
                 except Exception:
                     health_latencies.append(9999.0)
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(0.02)
 
-            # Await mapping tasks
+            in_flight_after = sum(1 for t in mapping_tasks if not t.done())
+            st_after = (await client.get(f"http://127.0.0.1:{kp}/__admin/state", timeout=1.0)).json()
+            active_hangs_after = int(st_after.get("active_hangs", 0))
+
+            # Await mapping tasks to verify clean termination with error
             map_responses = await asyncio.gather(*mapping_tasks, return_exceptions=True)
-            workers_errored = sum(
-                1
-                for mr in map_responses
-                if isinstance(mr, httpx.Response)
-                and mr.status_code == 200
-                and bool(mr.json().get("result", {}).get("error"))
-            )
+            workers_errored = sum(1 for mr in map_responses if _mapping_response_errored(mr))
 
             evidence = {
                 "health_ok": health_ok,
                 "health_total": 20,
                 "health_latencies_ms": [round(x, 1) for x in health_latencies],
+                "in_flight_before": in_flight_before,
+                "in_flight_after": in_flight_after,
+                "active_hangs_before": active_hangs_before,
+                "active_hangs_after": active_hangs_after,
                 "workers_errored": workers_errored,
             }
 
-            if health_ok == 20 and workers_errored == 8:
-                res.mark_pass("20/20 health < 1.0s and 8/8 workers cleanly errored", evidence=evidence)
+            if (
+                health_ok == 20
+                and in_flight_before >= 1
+                and in_flight_after >= 1
+                and active_hangs_before >= 1
+                and active_hangs_after >= 1
+                and workers_errored == 8
+            ):
+                res.mark_pass(
+                    "20/20 health < 1.0s while mapping requests actively hung in-flight; 8/8 errored cleanly",
+                    evidence=evidence,
+                )
             else:
                 res.mark_fail(
-                    f"{health_ok}/20 health < 1s, {workers_errored}/8 mapping workers cleanly errored",
+                    f"{health_ok}/20 health < 1s, in_flight={in_flight_before}->{in_flight_after}, "
+                    f"{workers_errored}/8 mapping workers cleanly errored",
                     evidence=evidence,
                 )
     finally:
@@ -271,7 +359,9 @@ async def check_line_1b(worktree: Path, kp: int, ap: int, out_dir: Path) -> Prob
     """Line 1b: Cold startup under hang <= 15s."""
     res = ProbeResult("1b", "Cold startup under hang ready on GET /health in <= 15.0s")
     empty_cache = Path(tempfile.mkdtemp(prefix="gate_1b_empty_cache_"))
-    ctx = ServerPairContext(worktree, kp, ap, initial_mode="hang", cache_dir=empty_cache, out_dir=out_dir)
+    ctx = ServerPairContext(
+        worktree, kp, ap, initial_mode="hang", cache_dir=empty_cache, out_dir=out_dir / "line_1b"
+    )
     try:
         ready_duration = await ctx.start(wait_mapper_ready=True)
         async with httpx.AsyncClient() as client:
@@ -323,7 +413,7 @@ async def check_line_2(
 ) -> ProbeResult:
     """Line 2: Non-Kestrel latency <= 2x under hang and slow-30s."""
     res = ProbeResult("2", "Non-Kestrel p50 and p95 latency <= max(2x healthy, healthy + 5ms) under hang & slow-30s")
-    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir)
+    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir / "line_2")
     await ctx.start()
     try:
         async with httpx.AsyncClient() as client:
@@ -387,7 +477,7 @@ async def check_line_3a(worktree: Path, kp: int, ap: int, out_dir: Path) -> Prob
         "3a",
         "All 4 Kestrel code paths report non-empty error when unresolved across /entity, /batch, /dataset/stream, /dataset",
     )
-    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir)
+    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir / "line_3a")
     await ctx.start()
     try:
         async with httpx.AsyncClient() as client:
@@ -526,7 +616,7 @@ async def check_line_3b(worktree: Path, kp: int, ap: int, out_dir: Path) -> Prob
         "3b",
         "Emits kestrel_degraded: true when non-Kestrel vote resolves despite fault; omits key/column when healthy",
     )
-    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir)
+    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir / "line_3b")
     await ctx.start()
     try:
         async with httpx.AsyncClient() as client:
@@ -627,7 +717,7 @@ async def check_line_3b(worktree: Path, kp: int, ap: int, out_dir: Path) -> Prob
 async def check_line_4(worktree: Path, kp: int, ap: int, out_dir: Path) -> ProbeResult:
     """Line 4: Timeouts and 5xx are never cached on the same running process."""
     res = ProbeResult("4", "Both timeouts (hang) and 5xx are uncached; rows resolve once Kestrel is healthy")
-    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir)
+    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir / "line_4")
     await ctx.start()
     try:
         async with httpx.AsyncClient() as client:
@@ -704,7 +794,7 @@ async def check_line_5(
         kp,
         ap,
         initial_mode="healthy",
-        out_dir=out_dir,
+        out_dir=out_dir / "line_5",
     )
     await ctx.start()
     try:
@@ -713,6 +803,7 @@ async def check_line_5(
                 f"http://127.0.0.1:{kp}/__admin/mode",
                 json={"mode": "recovering", "slow_delay_s": slow_delay_s, "recover_after_s": recover_after_s},
             )
+            mode_start = time.monotonic()
             stop_bg = asyncio.Event()
 
             async def _bg_load(worker_idx: int) -> None:
@@ -728,47 +819,50 @@ async def check_line_5(
                         await client.post(f"http://127.0.0.1:{ap}/api/v1/map/entity", json=ent, timeout=35.0)
                     await asyncio.sleep(0.5)
 
+            # Keep sustained background traffic running throughout BOTH slow and recovery windows
             bg_workers = [asyncio.create_task(_bg_load(i)) for i in range(4)]
-            await asyncio.sleep(recover_after_s)
-            stop_bg.set()
-            flip_time = time.monotonic()
+            try:
+                flip_deadline = mode_start + recover_after_s
+                await asyncio.sleep(max(0.0, flip_deadline - time.monotonic()))
+                flip_time = flip_deadline
 
-            recovered = False
-            recovery_dur_s = 0.0
-            consecutive_ok = 0
-            while time.monotonic() - flip_time <= 60.0:
-                try:
-                    t0 = time.monotonic()
-                    hr = await client.get(f"http://127.0.0.1:{ap}/api/v1/health", timeout=1.5)
-                    h_ms = (time.monotonic() - t0) * 1000.0
-                    mr = await client.post(
-                        f"http://127.0.0.1:{ap}/api/v1/map/entity",
-                        json={"name": "leukemia", "entity_type": "disease"},
-                        timeout=5.0,
-                    )
-                    if hr.status_code == 200 and h_ms < 1000.0 and mr.status_code == 200:
-                        res_json = mr.json().get("result", {})
-                        if (
-                            res_json.get("chosen_kg_id")
-                            and not res_json.get("error")
-                            and "kestrel_degraded" not in mr.text
-                        ):
-                            consecutive_ok += 1
-                            if consecutive_ok >= 2:
-                                recovery_dur_s = time.monotonic() - flip_time
-                                recovered = True
-                                break
+                recovered = False
+                recovery_dur_s = 0.0
+                consecutive_ok = 0
+                while time.monotonic() - flip_time <= 60.0:
+                    try:
+                        t0 = time.monotonic()
+                        hr = await client.get(f"http://127.0.0.1:{ap}/api/v1/health", timeout=1.5)
+                        h_ms = (time.monotonic() - t0) * 1000.0
+                        mr = await client.post(
+                            f"http://127.0.0.1:{ap}/api/v1/map/entity",
+                            json={"name": "leukemia", "entity_type": "disease"},
+                            timeout=5.0,
+                        )
+                        if hr.status_code == 200 and h_ms < 1000.0 and mr.status_code == 200:
+                            res_json = mr.json().get("result", {})
+                            if (
+                                res_json.get("chosen_kg_id")
+                                and not res_json.get("error")
+                                and "kestrel_degraded" not in mr.text
+                            ):
+                                consecutive_ok += 1
+                                if consecutive_ok >= 2:
+                                    recovery_dur_s = max(0.0, time.monotonic() - flip_time)
+                                    recovered = True
+                                    break
+                            else:
+                                consecutive_ok = 0
                         else:
                             consecutive_ok = 0
-                    else:
+                    except Exception:
                         consecutive_ok = 0
-                except Exception:
-                    consecutive_ok = 0
-                await asyncio.sleep(1.0)
-
-            for w in bg_workers:
-                w.cancel()
-            await asyncio.gather(*bg_workers, return_exceptions=True)
+                    await asyncio.sleep(1.0)
+            finally:
+                stop_bg.set()
+                for w in bg_workers:
+                    w.cancel()
+                await asyncio.gather(*bg_workers, return_exceptions=True)
 
             evidence = {
                 "recovered": recovered,
@@ -788,7 +882,7 @@ async def check_line_5(
 async def check_line_6(worktree: Path, kp: int, ap: int, out_dir: Path) -> ProbeResult:
     """Line 6: Fixed regression set byte-identical under healthy Kestrel."""
     res = ProbeResult("6", "100% SHA-256 byte identity against golden_healthy_e578a93.json.gz")
-    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir)
+    ctx = ServerPairContext(worktree, kp, ap, initial_mode="healthy", out_dir=out_dir / "line_6")
     await ctx.start()
     try:
         matched, suite_sha, mismatches = verify_against_golden(f"http://127.0.0.1:{ap}")

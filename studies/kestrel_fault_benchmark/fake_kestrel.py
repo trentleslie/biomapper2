@@ -63,6 +63,11 @@ class FakeKestrelState:
         self.deck: list[int] = []
         self.request_counts: dict[str, int] = {}
 
+    def effective_behavior(self, endpoint: str) -> str:
+        """Resolve effective fault behavior for a given endpoint."""
+        override = self.endpoint_overrides.get(endpoint)
+        return override if override is not None else self.mode
+
     def set_mode(
         self,
         mode: str | None = None,
@@ -72,9 +77,12 @@ class FakeKestrelState:
         endpoint_overrides: dict[str, str] | None = None,
     ) -> None:
         """Update fault mode and parameters."""
-        if seed is not None and seed != self.seed:
-            self.seed = seed
-            self.rng = random.Random(seed)
+        old_mode = self.mode
+        old_overrides = dict(self.endpoint_overrides)
+
+        if seed is not None:
+            self.seed = int(seed)
+            self.rng = random.Random(self.seed)
             self.deck.clear()
         if slow_delay_s is not None:
             self.slow_delay_s = float(slow_delay_s)
@@ -83,15 +91,18 @@ class FakeKestrelState:
         if endpoint_overrides is not None:
             self.endpoint_overrides = dict(endpoint_overrides)
 
-        if mode is not None and mode != self.mode:
-            old_mode = self.mode
+        if mode is not None:
             self.mode = mode
-            if old_mode == "hang" and mode != "hang":
-                # Wake any existing hang coroutines
-                self.hang_event.set()
-                self.hang_event = asyncio.Event()
             if mode == "recovering":
                 self.recovering_start_time = time.monotonic()
+
+        mode_left_hang = old_mode == "hang" and self.mode != "hang"
+        override_left_hang = (
+            "hang" in old_overrides.values() and self.endpoint_overrides != old_overrides
+        )
+        if mode_left_hang or override_left_hang:
+            self.hang_event.set()
+            self.hang_event = asyncio.Event()
 
     def reset(self) -> None:
         """Reset state to healthy defaults."""
@@ -191,8 +202,7 @@ def create_app(cassette_path: Path | str = DEFAULT_FIXTURE_PATH) -> FastAPI:
         """Apply active fault mode or override. Returns Response if faulted, None if healthy."""
         state.request_counts[endpoint] = state.request_counts.get(endpoint, 0) + 1
 
-        override = state.endpoint_overrides.get(endpoint)
-        active_behavior = override if override is not None else state.mode
+        active_behavior = state.effective_behavior(endpoint)
 
         if active_behavior == "healthy":
             return None
@@ -204,15 +214,19 @@ def create_app(cassette_path: Path | str = DEFAULT_FIXTURE_PATH) -> FastAPI:
             )
 
         if active_behavior == "hang":
+            req_hang_event = state.hang_event
             state.active_hangs += 1
             try:
-                while not state.hang_event.is_set():
+                while not req_hang_event.is_set() and state.effective_behavior(endpoint) == "hang":
                     if await request.is_disconnected():
                         break
                     await asyncio.sleep(0.05)
             finally:
                 state.active_hangs = max(0, state.active_hangs - 1)
-            return Response(status_code=204)
+            return JSONResponse(
+                status_code=504,
+                content={"detail": f"Injected Kestrel hang aborted on {endpoint}"},
+            )
 
         if active_behavior == "slow-30s":
             await asyncio.sleep(state.slow_delay_s)
