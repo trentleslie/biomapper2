@@ -40,35 +40,31 @@ def test_get_cache_dir_override() -> None:
 
 
 @pytest.mark.unit
-def test_biolink_client_offline_predicate_map() -> None:
-    """BiolinkClient initializes schema, prefix map, and predicate map fully offline from committed fixtures."""
+def test_biolink_client_uses_get_cache_dir() -> None:
+    """BiolinkClient reads cached schema and prefix map from BIOMAPPER2_CACHE_DIR via get_cache_dir()."""
+    import json
+    from unittest.mock import MagicMock
+
     import requests as req_mod
 
-    from biomapper2.biolink_client import _build_toolkit
-
-    _build_toolkit.cache_clear()
-    with tempfile.TemporaryDirectory() as tmp_dir, tempfile.TemporaryDirectory() as fake_root_str:
-        fake_root = Path(fake_root_str)
-        # Symlink studies/kestrel_fault_benchmark/fixtures into fake_root without any root cache/
-        (fake_root / "studies" / "kestrel_fault_benchmark").mkdir(parents=True)
-        os.symlink(
-            PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures",
-            fake_root / "studies" / "kestrel_fault_benchmark" / "fixtures",
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_path = Path(tmp_dir)
+        (tmp_path / "biolink-model_4.2.5.yaml").write_text(
+            "id: https://w3id.org/biolink/biolink-model\n", encoding="utf-8"
+        )
+        (tmp_path / "biolink-model-prefix-map_4.2.5.json").write_text(
+            json.dumps({"CHEBI": "http://purl.obolibrary.org/obo/CHEBI_"}),
+            encoding="utf-8",
         )
         with (
             patch.dict(os.environ, {"BIOMAPPER2_CACHE_DIR": tmp_dir}),
-            patch("biomapper2.biolink_client.PROJECT_ROOT", fake_root),
+            patch("biomapper2.biolink_client._build_toolkit", return_value=MagicMock()) as mock_tk,
             patch.object(req_mod, "get", side_effect=req_mod.ConnectionError("Network disabled")),
         ):
             client = BiolinkClient()
-            ancestors = client.get_ancestors("biolink:SmallMolecule")
+            mock_tk.assert_called_once_with(str(tmp_path / "biolink-model_4.2.5.yaml"))
             prefix_map = client.get_prefix_map()
-            assert "biolink:SmallMolecule" in ancestors
-            assert "biolink:ChemicalEntity" in ancestors
-            assert "CHEBI" in prefix_map
-            assert (Path(tmp_dir) / "biolink-model_4.2.5.yaml").exists()
-            assert (Path(tmp_dir) / "biolink-model-prefix-map_4.2.5.json").exists()
-            assert (Path(tmp_dir) / "biolink-predicate-mapping.yaml").exists()
+            assert prefix_map["CHEBI"] == "http://purl.obolibrary.org/obo/CHEBI_"
 
 
 @pytest.mark.unit
@@ -141,3 +137,84 @@ def test_annotator_sessions_use_get_cache_dir() -> None:
             sr = StructureResolver(linker=mock_linker)  # type: ignore
             db_path_sr = getattr(sr._session.cache, "db_path", None)
             assert db_path_sr is not None and tmp_dir in str(db_path_sr)
+
+
+@pytest.mark.unit
+def test_build_toolkit_unset_matches_origin_dev() -> None:
+    """When BIOMAPPER2_PREDICATE_MAP_URL is unset, _build_toolkit matches origin/dev byte-for-byte."""
+    import json
+    from unittest.mock import MagicMock
+
+    import bmt.toolkit as bmt_toolkit_mod
+    from bmt import Toolkit
+
+    from biomapper2.biolink_client import _build_toolkit
+
+    fixtures_dir = PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures"
+    schema_path = str(fixtures_dir / "biolink-model_4.2.5.yaml")
+    pred_yaml = (fixtures_dir / "biolink-predicate-mapping.yaml").read_text(encoding="utf-8")
+
+    _build_toolkit.cache_clear()
+    try:
+        # 1. Exact constructor signature check: no predicate_map kwarg when unset or empty
+        with (
+            patch.dict(os.environ, {}, clear=False),
+            patch("biomapper2.biolink_client.Toolkit", return_value=MagicMock()) as mock_tk,
+        ):
+            os.environ.pop("BIOMAPPER2_PREDICATE_MAP_URL", None)
+            _build_toolkit("/tmp/schema_unset.yaml")
+            assert mock_tk.call_args_list == [((), {"schema": "/tmp/schema_unset.yaml"})]
+
+        _build_toolkit.cache_clear()
+        custom_url = "http://127.0.0.1:18100/__fixtures/predicate_mapping.yaml"
+        with (
+            patch.dict(os.environ, {"BIOMAPPER2_PREDICATE_MAP_URL": custom_url}),
+            patch("biomapper2.biolink_client.Toolkit", return_value=MagicMock()) as mock_tk_set,
+        ):
+            _build_toolkit("/tmp/schema_set.yaml")
+            assert mock_tk_set.call_args_list == [((), {"schema": "/tmp/schema_set.yaml", "predicate_map": custom_url})]
+
+        # 2. Real Toolkit output byte-for-byte identity vs direct origin/dev Toolkit(schema=schema_source)
+        _build_toolkit.cache_clear()
+        seen_urls: list[str] = []
+
+        def _fake_bmt_get(url: str, *args: object, **kwargs: object) -> MagicMock:
+            seen_urls.append(url)
+            resp = MagicMock()
+            resp.text = pred_yaml
+            return resp
+
+        with (
+            patch.dict(os.environ, {}, clear=False),
+            patch.object(bmt_toolkit_mod.requests, "get", side_effect=_fake_bmt_get),
+        ):
+            os.environ.pop("BIOMAPPER2_PREDICATE_MAP_URL", None)
+            baseline_tk = Toolkit(schema=schema_path)
+            actual_tk = _build_toolkit(schema_path)
+
+        assert seen_urls == [bmt_toolkit_mod.PREDICATE_MAP, bmt_toolkit_mod.PREDICATE_MAP]
+        baseline_payload = {
+            "pmap": baseline_tk.pmap,
+            "ancestors": sorted(
+                baseline_tk.get_ancestors("biolink:SmallMolecule", formatted=True, mixin=True, reflexive=True)
+            ),
+            "descendants": sorted(
+                baseline_tk.get_descendants("biolink:Disease", formatted=True, mixin=True, reflexive=True)
+            ),
+            "is_cat": baseline_tk.is_category("SmallMolecule"),
+        }
+        actual_payload = {
+            "pmap": actual_tk.pmap,
+            "ancestors": sorted(
+                actual_tk.get_ancestors("biolink:SmallMolecule", formatted=True, mixin=True, reflexive=True)
+            ),
+            "descendants": sorted(
+                actual_tk.get_descendants("biolink:Disease", formatted=True, mixin=True, reflexive=True)
+            ),
+            "is_cat": actual_tk.is_category("SmallMolecule"),
+        }
+        assert json.dumps(actual_payload, sort_keys=True).encode() == (
+            json.dumps(baseline_payload, sort_keys=True).encode()
+        )
+    finally:
+        _build_toolkit.cache_clear()

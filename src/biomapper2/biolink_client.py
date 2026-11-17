@@ -6,16 +6,14 @@ import tempfile
 import time
 from collections.abc import Iterable
 from functools import lru_cache
-from pathlib import Path
 from typing import cast
 
 import inflect
 import requests
 import yaml
 from bmt import Toolkit
-from linkml_runtime.utils.schemaview import SchemaView
 
-from .config import BIOLINK_VERSION_DEFAULT, PROJECT_ROOT, get_cache_dir
+from .config import BIOLINK_VERSION_DEFAULT, get_cache_dir
 from .utils import setup_logging, to_set
 
 setup_logging()
@@ -62,48 +60,26 @@ def _atomic_write_text(path: str, text: str) -> None:
         raise
 
 
-def _atomic_copy_file(src: Path, dst: Path) -> None:
-    """Copy src to dst atomically via a same-directory temp file and os.replace."""
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=str(dst.parent), suffix=".tmp")
-    try:
-        data = src.read_bytes()
-        with os.fdopen(fd, "wb") as handle:
-            handle.write(data)
-        os.replace(tmp, str(dst))
-    except BaseException:
-        with contextlib.suppress(OSError):
-            os.remove(tmp)
-        raise
-
-
 @lru_cache(maxsize=8)
 def _build_toolkit(schema_source: str) -> Toolkit:
     """Build a bmt Toolkit once per schema source (it is read-only, so safe to share).
 
-    Checks local caches for biolink-predicate-mapping.yaml before falling back to network download.
-    When a local mapping exists, constructs Toolkit via SchemaView and safe_load to make zero network calls.
+    bmt.Toolkit downloads the predicate mapping on every construction (and the schema too when
+    given a URL). Building a fresh Normalizer()/Mapper() per test therefore hammered GitHub raw
+    and made the offline gate flake on transient resets. Caching the Toolkit process-wide means
+    the whole suite triggers at most one schema + one predicate-map fetch; the retry absorbs a
+    transient reset on that single build. predicate_map is left at bmt's default, unchanged from
+    the previous behaviour.
     """
-    candidates = [
-        get_cache_dir() / "biolink-predicate-mapping.yaml",
-        PROJECT_ROOT / "cache" / "biolink-predicate-mapping.yaml",
-        PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures" / "biolink-predicate-mapping.yaml",
-    ]
-    for cand in candidates:
-        if cand.exists():
-            target = get_cache_dir() / "biolink-predicate-mapping.yaml"
-            if cand != target and not target.exists():
-                with contextlib.suppress(OSError):
-                    _atomic_copy_file(cand, target)
-            tk = Toolkit.__new__(Toolkit)
-            tk.view = SchemaView(schema_source)
-            tk.pmap = yaml.safe_load(cand.read_text(encoding="utf-8"))
-            return tk
-
+    predicate_map = os.environ.get("BIOMAPPER2_PREDICATE_MAP_URL", "").strip()
     last_exc: requests.RequestException | None = None
     for attempt in range(1, 4):
         try:
-            return Toolkit(schema=schema_source)
+            return (
+                Toolkit(schema=schema_source, predicate_map=predicate_map)
+                if predicate_map
+                else Toolkit(schema=schema_source)
+            )
         except requests.RequestException as exc:
             last_exc = exc
             if attempt < 3:
@@ -166,43 +142,28 @@ class BiolinkClient:
     def _cached_schema_source(self, url: str) -> str:
         """Local path to the cached Biolink model schema, downloading once if absent.
 
-        Returns a filesystem path so bmt.Toolkit loads the schema offline after the first fetch.
-        Checks get_cache_dir() first, then PROJECT_ROOT / "cache" (copying to get_cache_dir()).
-        If the download fails and nothing is cached yet, fall back to the URL.
+        Returns a filesystem path so bmt.Toolkit loads the schema offline after the first fetch
+        (the cache is keyed by biolink version, so a version bump re-downloads once). If the
+        download fails and nothing is cached yet, fall back to the URL so a first-run network
+        hiccup degrades to the previous behaviour instead of hard-failing.
         """
         file_name = url.split("/")[-1]  # e.g. biolink-model.yaml
         stem, _, ext = file_name.rpartition(".")
-        target_name = f"{stem}_{self.biolink_version}.{ext}"
         cache_dir = get_cache_dir()
-        local_path = cache_dir / target_name
-        if local_path.exists():
-            return str(local_path)
-
-        fallback_paths = [
-            PROJECT_ROOT / "cache" / target_name,
-            PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures" / target_name,
-        ]
-        for fallback in fallback_paths:
-            if fallback.exists():
-                if local_path != fallback:
-                    with contextlib.suppress(OSError):
-                        _atomic_copy_file(fallback, local_path)
-                        return str(local_path)
-                return str(fallback)
-
-        try:
-            response = _get_with_retry(url)
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            _atomic_write_text(str(local_path), response.text)
-        except requests.RequestException as exc:
-            logging.warning(f"Could not cache Biolink schema from {url} ({exc}); loading from URL this run.")
-            return url
+        local_path = cache_dir / f"{stem}_{self.biolink_version}.{ext}"
+        if not local_path.exists():
+            try:
+                response = _get_with_retry(url)
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                _atomic_write_text(str(local_path), response.text)
+            except requests.RequestException as exc:
+                logging.warning(f"Could not cache Biolink schema from {url} ({exc}); loading from URL this run.")
+                return url
         return str(local_path)
 
     def _load_biolink_file(self, url: str) -> dict:
-        """Download and cache Biolink model file (or load from cache if already exists).
-
-        Checks get_cache_dir() first, then PROJECT_ROOT / "cache" before attempting HTTP download.
+        """
+        Download and cache Biolink model file (or load from cache if already exists).
 
         Args:
             url: URL to Biolink JSON/YAML file
@@ -216,33 +177,18 @@ class BiolinkClient:
         local_path = cache_dir / file_name_json
         logging.debug(f"Local file path is: {local_path}")
 
-        if local_path.exists():
-            with open(local_path) as cache_file:
-                return json.load(cache_file)
-
-        fallback_paths = [
-            PROJECT_ROOT / "cache" / file_name_json,
-            PROJECT_ROOT / "studies" / "kestrel_fault_benchmark" / "fixtures" / file_name_json,
-        ]
-        for fallback in fallback_paths:
-            if fallback.exists():
-                if local_path != fallback:
-                    with contextlib.suppress(OSError):
-                        _atomic_copy_file(fallback, local_path)
-                with open(fallback) as cache_file:
-                    return json.load(cache_file)
-
         # Download the file if we don't already have it cached
-        logging.info(f"Downloading YAML file from {url}. local path is: {local_path}")
-        response = _get_with_retry(url)
-        if file_name.endswith(".yaml"):
-            response_json = yaml.safe_load(response.text)
-        else:
-            response_json = response.json()
+        if not local_path.exists():
+            logging.info(f"Downloading YAML file from {url}. local path is: {local_path}")
+            response = _get_with_retry(url)
+            if file_name.endswith(".yaml"):
+                response_json = yaml.safe_load(response.text)
+            else:
+                response_json = response.json()
 
-        # Cache the response atomically so a partial write cannot poison the cache.
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        _atomic_write_text(str(local_path), json.dumps(response_json, indent=2))
+            # Cache the response atomically so a partial write cannot poison the cache.
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            _atomic_write_text(str(local_path), json.dumps(response_json, indent=2))
 
         # Read and return the cached JSON
         with open(local_path) as cache_file:

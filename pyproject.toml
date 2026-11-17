@@ -77,8 +77,6 @@ select = [
 known-first-party = ["biomapper2"]
 
 [tool.pyright]
-venvPath = "."
-venv = ".venv"
 # Standalone study modules live outside the installed package; make them resolvable.
 extraPaths = ["studies/shared_gold_set", "studies/analysis"]
 # studies/ is exploratory benchmarking code (fork-only; never promoted to org, so org CI never

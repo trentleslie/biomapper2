@@ -72,13 +72,12 @@ class ProbeResult:
 
 
 def _seed_biolink_static_files(worktree: Path, cache_dir: Path) -> None:
-    """Atomically copy pinned Biolink schema/prefix/predicate files into cache_dir for offline runs."""
+    """Atomically copy pinned Biolink schema and prefix-map fixtures into cache_dir for offline runs."""
     fixtures_dir = worktree / "studies" / "kestrel_fault_benchmark" / "fixtures"
     cache_dir.mkdir(parents=True, exist_ok=True)
     for name in (
         "biolink-model_4.2.5.yaml",
         "biolink-model-prefix-map_4.2.5.json",
-        "biolink-predicate-mapping.yaml",
     ):
         src = fixtures_dir / name
         dst = cache_dir / name
@@ -172,6 +171,9 @@ class ServerPairContext:
             api_pp = f"{self.worktree / 'src'}{os.pathsep}{self.worktree}"
             api_env["PYTHONPATH"] = f"{api_pp}{os.pathsep}{existing_pp}" if existing_pp else api_pp
             api_env["KESTREL_API_URL"] = f"http://127.0.0.1:{self.kestrel_port}"
+            api_env["BIOMAPPER2_PREDICATE_MAP_URL"] = (
+                f"http://127.0.0.1:{self.kestrel_port}/__fixtures/predicate_mapping.yaml"
+            )
             api_env["BIOMAPPER2_CACHE_DIR"] = str(self.cache_dir)
             api_env["REFMET_SNAPSHOT_PATH"] = str(
                 (

@@ -79,9 +79,10 @@ data/**/*.json
 !tests/fixtures/**/*.tsv
 !tests/fixtures/**/*.json
 
-# Allow release-please config and versioning files
+# Allow release-please and Greptile config files
 !release-please-config.json
 !.release-please-manifest.json
+!.greptile/config.json
 
 # Other app-specific items
 cache/

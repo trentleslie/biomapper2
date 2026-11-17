@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 EXPECTED_PAYLOAD_SHA256 = "2d1abd1da7e925fef354d727bd3fd9bfdf945c351f4b012f4a8b22df375db875"
 DEFAULT_FIXTURE_PATH = Path(__file__).parent / "fixtures" / "kestrel_cassette.json.gz"
+DEFAULT_PREDICATE_MAP_PATH = Path(__file__).parent / "fixtures" / "biolink-predicate-mapping.yaml"
 
 
 def canonical_key(method: str, endpoint: str, request_json: dict[str, Any] | None) -> str:
@@ -144,11 +145,19 @@ class FakeKestrelState:
         }
 
 
-def create_app(cassette_path: Path | str = DEFAULT_FIXTURE_PATH) -> FastAPI:
+def create_app(
+    cassette_path: Path | str = DEFAULT_FIXTURE_PATH,
+    predicate_map_path: Path | str = DEFAULT_PREDICATE_MAP_PATH,
+) -> FastAPI:
     """Create FastAPI app wired to cassette payload."""
     path = Path(cassette_path)
     if not path.exists():
         raise FileNotFoundError(f"Cassette fixture not found: {path}")
+
+    pred_path = Path(predicate_map_path)
+    if not pred_path.exists():
+        raise FileNotFoundError(f"Predicate-mapping fixture not found: {pred_path}")
+    predicate_map_text = pred_path.read_text(encoding="utf-8")
 
     with gzip.open(path, "rt", encoding="utf-8") as f:
         cassette_data = json.load(f)
@@ -202,6 +211,10 @@ def create_app(cassette_path: Path | str = DEFAULT_FIXTURE_PATH) -> FastAPI:
     async def admin_post_reset() -> JSONResponse:
         state.reset()
         return JSONResponse(content=state.get_state_dict())
+
+    @app.get("/__fixtures/predicate_mapping.yaml")
+    async def fixture_predicate_mapping() -> Response:
+        return Response(content=predicate_map_text, media_type="application/x-yaml")
 
     # -------------------------------------------------------------------------
     # Fault Injection Handler
