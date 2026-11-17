@@ -267,12 +267,13 @@ def test_no_response_model_serialization_schema_collapses() -> None:
 @pytest.mark.unit
 def test_pyproject_requires_pydantic_with_exclude_if() -> None:
     """pyproject.toml enforces pydantic >= 2.12.0 so Field(exclude_if=...) is never silently ignored."""
+    import ast
     from pathlib import Path
 
-    import tomllib
-
-    pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
-    data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-    deps: list[str] = data["project"]["dependencies"]
+    pyproject_text = (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(encoding="utf-8")
+    _, after = pyproject_text.split("\ndependencies = ", 1)
+    raw_block = after[: after.index("\n]") + 2]
+    cleaned_lines = [line.split("#", 1)[0] for line in raw_block.splitlines()]
+    deps: list[str] = ast.literal_eval("\n".join(cleaned_lines))
     pydantic_specs = [d for d in deps if d.startswith("pydantic")]
     assert pydantic_specs == ["pydantic>=2.12.0"]
