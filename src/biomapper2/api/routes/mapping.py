@@ -132,6 +132,7 @@ def extract_mapping_result(mapped_item: dict[str, Any] | pd.Series, original_nam
         kg_equivalent_ids=mapped_item.get("kg_equivalent_ids", {}) or {},
         kg_ids=mapped_item.get("kg_ids", {}) or {},
         assigned_ids=mapped_item.get("assigned_ids", {}) or {},
+        kestrel_degraded=True if mapped_item.get("kestrel_degraded") else None,
         error=None,
     )
 
@@ -553,6 +554,8 @@ async def map_dataset_stream(
                     # has already been sent and the client sees a truncated body.
                     "resolution_certificate": mapped.get("resolution_certificate"),
                 }
+                if mapped.get("kestrel_degraded"):
+                    result["kestrel_degraded"] = True
                 # Opt-in raw passthrough as JSON-native dicts (model_dump), so json.dumps below — which
                 # runs OUTSIDE this try/except — cannot fail on them mid-stream. The stream path arms no
                 # RefMet batch deadline, so per-row collection here is safe. collect never raises (R7).

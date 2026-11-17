@@ -18,7 +18,7 @@ from typing import Any
 
 import requests
 
-from ..config import CACHE_DIR
+from ..config import CACHE_DIR, get_cache_dir
 from ..utils import bulk_kestrel_request
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,17 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 PRESET_CACHE_PATH = CACHE_DIR / "entity_type_presets.json"
+_INITIAL_PRESET_CACHE_PATH = PRESET_CACHE_PATH
+
+
+def _resolve_preset_cache_path(path: Path | None = None) -> Path:
+    if path is not None:
+        return path
+    if PRESET_CACHE_PATH != _INITIAL_PRESET_CACHE_PATH:
+        return PRESET_CACHE_PATH
+    return get_cache_dir() / "entity_type_presets.json"
+
+
 SCHEMA_VERSION = 1
 MAX_PREFIXES_PER_CATEGORY = 30
 PER_REQUEST_TIMEOUT = 10  # seconds
@@ -214,8 +225,7 @@ def derive_all_presets(aliases: dict[str, str] | None = None) -> tuple[dict[str,
 
 def save_to_disk(presets: dict[str, list[str]], path: Path | None = None) -> None:
     """Persist presets to disk via atomic write (write to .tmp, rename)."""
-    if path is None:
-        path = PRESET_CACHE_PATH
+    path = _resolve_preset_cache_path(path)
 
     data: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
@@ -243,8 +253,7 @@ def save_to_disk(presets: dict[str, list[str]], path: Path | None = None) -> Non
 
 def load_from_disk(path: Path | None = None) -> dict[str, list[str]] | None:
     """Load presets from disk and validate structural integrity."""
-    if path is None:
-        path = PRESET_CACHE_PATH
+    path = _resolve_preset_cache_path(path)
 
     try:
         with open(path) as f:

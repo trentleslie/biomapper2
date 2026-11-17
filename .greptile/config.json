@@ -1,0 +1,4 @@
+{
+  "$schema": "https://docs.greptile.com/config-schema.json",
+  "ignorePatterns": "studies/kestrel_fault_benchmark/fixtures/**"
+}
