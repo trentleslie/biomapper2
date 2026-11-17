@@ -33,6 +33,16 @@ from .core.certificate import (
     issue,
     node_blocks_from_equivalent_ids,
 )
+from .core.fault_tracking import (
+    KestrelFaultError,
+    end_dataset_fault_recording,
+    end_row_fault_recording,
+    get_kestrel_faults,
+    has_kestrel_fault,
+    record_kestrel_fault,
+    start_dataset_fault_recording,
+    start_row_fault_recording,
+)
 from .core.linker import Linker
 from .core.normalizer import Normalizer
 from .core.resolver import (
@@ -623,6 +633,44 @@ class Mapper:
             Mapped entity with added fields: curies, kg_ids, chosen_kg_id, etc.
         """
         logging.debug(f"Item at beginning of map_entity_to_kg() is {item}")
+        faults, token = start_row_fault_recording()
+        try:
+            return self._map_entity_to_kg_impl(
+                item=item,
+                name_field=name_field,
+                provided_id_fields=provided_id_fields,
+                entity_type=entity_type,
+                vocab=vocab,
+                array_delimiters=array_delimiters,
+                stop_on_invalid_id=stop_on_invalid_id,
+                annotation_mode=annotation_mode,
+                annotators=annotators,
+                prefer_human=prefer_human,
+                prefer_canonical=prefer_canonical,
+                candidate_limit=candidate_limit,
+                kestrel_top_n=kestrel_top_n,
+                faults=faults,
+            )
+        finally:
+            end_row_fault_recording(token)
+
+    def _map_entity_to_kg_impl(
+        self,
+        item: pd.Series | dict[str, Any],
+        name_field: str,
+        provided_id_fields: list[str],
+        entity_type: str,
+        vocab: str | list[str] | None = None,
+        array_delimiters: list[str] | None = None,
+        stop_on_invalid_id: bool = False,
+        annotation_mode: AnnotationMode = "missing",
+        annotators: list[str] | None = None,
+        prefer_human: bool = True,
+        prefer_canonical: bool = True,
+        candidate_limit: int | None = None,
+        kestrel_top_n: int | None = None,
+        faults: list[str] | None = None,
+    ) -> dict[str, Any] | pd.Series:
         array_delimiters = array_delimiters if array_delimiters is not None else [",", ";"]
         input_is_series = isinstance(item, pd.Series)
         entity = Entity.from_input(item, name_field=name_field)
@@ -688,6 +736,8 @@ class Mapper:
         equivalent_ids_lookup_ok = True
         if entity.chosen_kg_id is not None:
             equiv_ids, equivalent_ids_lookup_ok = self.linker.get_equivalent_ids_checked([entity.chosen_kg_id])
+            if not equivalent_ids_lookup_ok:
+                record_kestrel_fault(entity, "get-nodes equivalent ids enrichment failed")
             kg_equivalent_ids = equiv_ids.get(entity.chosen_kg_id, {})
             entity = entity.update_from(pd.Series({"kg_equivalent_ids": kg_equivalent_ids}))
 
@@ -763,6 +813,15 @@ class Mapper:
                 )
             )
 
+        # Check fault isolation contracts
+        is_faulted = has_kestrel_fault(entity) or bool(faults)
+        if is_faulted:
+            if entity.chosen_kg_id is None:
+                recorded_faults = get_kestrel_faults(entity)
+                fault_msg = "; ".join(recorded_faults) if recorded_faults else "Kestrel service fault"
+                raise KestrelFaultError(f"Entity mapping unresolved due to Kestrel fault: {fault_msg}")
+            entity = entity.update_from(pd.Series({"kestrel_degraded": True}))
+
         if input_is_series:
             return entity.to_series()
         return entity.to_dict()
@@ -805,6 +864,42 @@ class Mapper:
             Tuple of (output_tsv_path, stats_summary)
         """
         logging.info(f"Beginning to map dataset to KG ({dataset})")
+        fault_map, ds_token = start_dataset_fault_recording()
+        try:
+            return self._map_dataset_to_kg_impl(
+                dataset=dataset,
+                entity_type=entity_type,
+                name_column=name_column,
+                provided_id_columns=provided_id_columns,
+                vocab=vocab,
+                array_delimiters=array_delimiters,
+                output_prefix=output_prefix,
+                output_dir=output_dir,
+                annotation_mode=annotation_mode,
+                annotators=annotators,
+                prefer_human=prefer_human,
+                prefer_canonical=prefer_canonical,
+                candidate_limit=candidate_limit,
+            )
+        finally:
+            end_dataset_fault_recording(ds_token)
+
+    def _map_dataset_to_kg_impl(
+        self,
+        dataset: str | Path | pd.DataFrame,
+        entity_type: str,
+        name_column: str,
+        provided_id_columns: list[str],
+        vocab: str | list[str] | None = None,
+        array_delimiters: list[str] | None = None,
+        output_prefix: str | None = None,
+        output_dir: str | Path = PROJECT_ROOT / "results",
+        annotation_mode: AnnotationMode = "missing",
+        annotators: list[str] | None = None,
+        prefer_human: bool = True,
+        prefer_canonical: bool = True,
+        candidate_limit: int | None = None,
+    ) -> tuple[str, dict[str, Any]]:
         array_delimiters = array_delimiters if array_delimiters is not None else [",", ";"]
 
         # Validate/standardize the input entity type and vocab(s) on Biolink
@@ -900,6 +995,10 @@ class Mapper:
         equivalent_ids_lookup_ok = True
         if unique_kg_ids:
             equiv_map, equivalent_ids_lookup_ok = self.linker.get_equivalent_ids_checked(unique_kg_ids)
+            if not equivalent_ids_lookup_ok:
+                for idx, row in df.iterrows():
+                    if pd.notna(row.get("chosen_kg_id")):
+                        record_kestrel_fault(idx, "get-nodes equivalent ids enrichment failed")
             df["kg_equivalent_ids"] = df["chosen_kg_id"].map(lambda kid: {} if pd.isna(kid) else equiv_map.get(kid, {}))
         else:
             df["kg_equivalent_ids"] = pd.Series([{} for _ in range(len(df))], index=df.index)
@@ -1003,6 +1102,36 @@ class Mapper:
         # does not carry raw passthrough rows (/map/dataset 422s the option), so drop it too rather than
         # writing a repr'd list column to the TSV.
         df = df.drop(columns=["annotator_availability", "annotator_source", "kestrel_endpoints_used"], errors="ignore")
+
+        # Check fault isolation contracts for dataset
+        row_errors: list[str | None] = []
+        row_degraded: list[bool] = []
+        has_any_error = False
+        has_any_degraded = False
+
+        for idx, row in df.iterrows():
+            is_faulted = has_kestrel_fault(row_idx=idx)
+            committed_id = _scalar_or_none(row.get("chosen_kg_id"))
+            if is_faulted:
+                if committed_id is None:
+                    f_list = get_kestrel_faults(row_idx=idx)
+                    msg = "; ".join(f_list) if f_list else "Kestrel service fault"
+                    row_errors.append(f"Kestrel fault: {msg}")
+                    row_degraded.append(False)
+                    has_any_error = True
+                else:
+                    row_errors.append(None)
+                    row_degraded.append(True)
+                    has_any_degraded = True
+            else:
+                row_errors.append(None)
+                row_degraded.append(False)
+
+        if has_any_degraded:
+            df["kestrel_degraded"] = pd.Series(row_degraded, index=df.index, dtype=bool)
+
+        if has_any_error:
+            df["error"] = pd.Series([err or "" for err in row_errors], index=df.index, dtype=str)
 
         # Dump the final dataframe to a TSV
 

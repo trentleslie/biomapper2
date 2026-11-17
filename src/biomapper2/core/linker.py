@@ -53,7 +53,19 @@ class Linker:
             all_curies.update(curies_list)
 
         # Single bulk request for all curies (plus ICD-10-CM twin candidates, in the same batch)
-        curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(list(all_curies))
+        curie_to_kg_id_cache: dict[str, str] = {}
+        isolated: frozenset[str] = frozenset()
+        if all_curies:
+            try:
+                curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(list(all_curies))
+            except Exception as exc:
+                logging.warning("Failed to canonicalize curies in bulk: %s", exc)
+                from .fault_tracking import record_kestrel_fault
+
+                for _, row in df.iterrows():
+                    if row.get("curies"):
+                        record_kestrel_fault(row, f"canonicalize: {exc}")
+                curie_to_kg_id_cache, isolated = {}, frozenset()
 
         # Apply per-entity processing using the shared cache. The cache itself is never modified by
         # the fallback (a per-row overlay is used), so results do not depend on row order.
@@ -97,7 +109,18 @@ class Linker:
         """
         # Use cache if provided, otherwise fetch KG IDs for this entity
         if curie_to_kg_id_cache is None:
-            curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(list(entity["curies"]))
+            entity_curies = list(entity.get("curies") or [])
+            if entity_curies:
+                try:
+                    curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(entity_curies)
+                except Exception as exc:
+                    logging.warning("Failed to canonicalize curies for entity: %s", exc)
+                    from .fault_tracking import record_kestrel_fault
+
+                    record_kestrel_fault(entity, f"canonicalize: {exc}")
+                    curie_to_kg_id_cache, isolated = {}, frozenset()
+            else:
+                curie_to_kg_id_cache, isolated = {}, frozenset()
 
         if not icd10cm_fallback.is_enabled():
             kg_ids, kg_ids_provided, kg_ids_assigned = self._format_kg_id_fields(entity, curie_to_kg_id_cache)
@@ -131,22 +154,28 @@ class Linker:
         Returns:
             Dictionary mapping curies to canonical KG node IDs
         """
-        if budget is None:
+        try:
+            if budget is None:
+                return kestrel_request(
+                    method="POST",
+                    endpoint="canonicalize",
+                    batch_field="curies",
+                    batch_items=curies,
+                    batch_size=KESTREL_BATCH_SIZE_CANONICALIZE,
+                )
             return kestrel_request(
                 method="POST",
                 endpoint="canonicalize",
                 batch_field="curies",
                 batch_items=curies,
                 batch_size=KESTREL_BATCH_SIZE_CANONICALIZE,
+                budget=budget,
             )
-        return kestrel_request(
-            method="POST",
-            endpoint="canonicalize",
-            batch_field="curies",
-            batch_items=curies,
-            batch_size=KESTREL_BATCH_SIZE_CANONICALIZE,
-            budget=budget,
-        )
+        except Exception as exc:
+            from .fault_tracking import record_kestrel_fault
+
+            record_kestrel_fault(None, f"canonicalize: {exc}")
+            raise
 
     @staticmethod
     def get_node_records(kg_node_ids: list[str]) -> dict[str, dict[str, Any]]:
@@ -167,8 +196,11 @@ class Linker:
                 batch_size=KESTREL_BATCH_SIZE_CANONICALIZE,
                 json={"slim": False, "truncate_long_fields": False},
             )
-        except Exception:
-            logging.warning("Failed to fetch node records from Kestrel /get-nodes; returning empty", exc_info=True)
+        except Exception as exc:
+            logging.warning("Failed to fetch node records from Kestrel /get-nodes; returning empty: %s", exc)
+            from .fault_tracking import record_kestrel_fault
+
+            record_kestrel_fault(None, f"get-nodes: {exc}")
             return {}
 
         result: dict[str, dict[str, Any]] = {}
@@ -240,8 +272,11 @@ class Linker:
                 batch_size=KESTREL_BATCH_SIZE_CANONICALIZE,
                 json={"slim": False, "truncate_long_fields": False},
             )
-        except Exception:
-            logging.warning("Failed to fetch equivalent IDs from Kestrel /get-nodes; returning empty", exc_info=True)
+        except Exception as exc:
+            logging.warning("Failed to fetch equivalent IDs from Kestrel /get-nodes; returning empty: %s", exc)
+            from .fault_tracking import record_kestrel_fault
+
+            record_kestrel_fault(None, f"get-nodes: {exc}")
             return {}, False
 
         result: dict[str, dict[str, list[str]]] = {}

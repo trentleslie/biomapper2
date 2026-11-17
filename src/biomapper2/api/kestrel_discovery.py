@@ -18,6 +18,7 @@ from typing import Any
 
 import requests
 
+from .. import config
 from ..config import CACHE_DIR, get_cache_dir
 from ..utils import bulk_kestrel_request
 
@@ -94,9 +95,13 @@ STATIC_FALLBACK: dict[str, list[str]] = {
 
 def fetch_categories() -> list[str]:
     """Fetch all Kestrel knowledge graph categories."""
-    result = bulk_kestrel_request("GET", "categories", timeout=PER_REQUEST_TIMEOUT)
-    if isinstance(result, list):
-        return [str(c) for c in result]
+    timeout = config.get_kestrel_startup_request_timeout_s()
+    try:
+        result = bulk_kestrel_request("GET", "categories", timeout=timeout, max_retries=0)
+        if isinstance(result, list):
+            return [str(c) for c in result]
+    except Exception as exc:
+        logger.warning("Failed to fetch categories: %s", exc)
     return []
 
 
@@ -109,7 +114,7 @@ def sample_prefixes_for_category(
 
     For each sample term, runs a text search against the Kestrel API, collects
     the ``prefixes`` array from each result node, counts frequency across all
-    results, applies a >10% threshold, and returns the top 8 prefixes.
+    results, applies a threshold, and returns ranked prefixes.
 
     Args:
         category: Biolink category string (e.g. ``"biolink:SmallMolecule"``).
@@ -121,6 +126,7 @@ def sample_prefixes_for_category(
     """
     prefix_counter: Counter[str] = Counter()
     total_nodes = 0
+    timeout = config.get_kestrel_startup_request_timeout_s()
 
     for term in sample_terms:
         try:
@@ -133,10 +139,11 @@ def sample_prefixes_for_category(
                     "limit": limit,
                     "category": category,
                 },
-                timeout=PER_REQUEST_TIMEOUT,
+                timeout=timeout,
+                max_retries=0,
             )
-        except (requests.exceptions.RequestException, ValueError):
-            logger.warning("Text search failed for term=%s category=%s", term, category)
+        except (requests.exceptions.RequestException, ValueError) as exc:
+            logger.warning("Text search failed for term=%s category=%s: %s", term, category, exc)
             continue
 
         # Response is dict keyed by search term, each value is list of result nodes
@@ -191,7 +198,7 @@ def derive_all_presets(aliases: dict[str, str] | None = None) -> tuple[dict[str,
     # Only sample aliased categories; others get empty presets
     to_sample = [c for c in categories if c in sampled_categories]
 
-    deadline = time.monotonic() + TOTAL_DERIVE_TIMEOUT
+    deadline = time.monotonic() + config.get_kestrel_startup_total_timeout_s()
 
     for cat in to_sample:
         if time.monotonic() > deadline:

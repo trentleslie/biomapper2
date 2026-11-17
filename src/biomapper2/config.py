@@ -120,6 +120,49 @@ def get_kestrel_api_key() -> str | None:
 # none, because it converts a recoverable server error into a client-side abort.
 KESTREL_REQUEST_TIMEOUT_S = 180
 
+# API-specific Kestrel resilience and fault isolation settings
+KESTREL_API_REQUEST_TIMEOUT_S = float(os.getenv("BIOMAPPER2_KESTREL_API_REQUEST_TIMEOUT_S", "4.0"))
+KESTREL_API_MAX_RETRIES = int(os.getenv("BIOMAPPER2_KESTREL_API_MAX_RETRIES", "1"))
+KESTREL_API_RETRY_BACKOFF_S = float(os.getenv("BIOMAPPER2_KESTREL_API_RETRY_BACKOFF_S", "0.2"))
+
+KESTREL_STARTUP_REQUEST_TIMEOUT_S = float(os.getenv("BIOMAPPER2_KESTREL_STARTUP_REQUEST_TIMEOUT_S", "2.5"))
+KESTREL_STARTUP_TOTAL_TIMEOUT_S = float(os.getenv("BIOMAPPER2_KESTREL_STARTUP_TOTAL_TIMEOUT_S", "8.0"))
+
+KESTREL_API_WORKER_THREADS = int(os.getenv("BIOMAPPER2_KESTREL_API_WORKER_THREADS", "12"))
+KESTREL_NON_KESTREL_WORKER_THREADS = int(os.getenv("BIOMAPPER2_KESTREL_NON_KESTREL_WORKER_THREADS", "4"))
+
+KESTREL_BREAKER_FAILURE_THRESHOLD = int(os.getenv("BIOMAPPER2_KESTREL_BREAKER_FAILURE_THRESHOLD", "6"))
+KESTREL_BREAKER_COOLDOWN_S = float(os.getenv("BIOMAPPER2_KESTREL_BREAKER_COOLDOWN_S", "5.0"))
+
+
+def get_kestrel_api_request_timeout_s() -> float:
+    return float(os.getenv("BIOMAPPER2_KESTREL_API_REQUEST_TIMEOUT_S", str(KESTREL_API_REQUEST_TIMEOUT_S)))
+
+
+def get_kestrel_api_max_retries() -> int:
+    return int(os.getenv("BIOMAPPER2_KESTREL_API_MAX_RETRIES", str(KESTREL_API_MAX_RETRIES)))
+
+
+def get_kestrel_api_retry_backoff_s() -> float:
+    return float(os.getenv("BIOMAPPER2_KESTREL_API_RETRY_BACKOFF_S", str(KESTREL_API_RETRY_BACKOFF_S)))
+
+
+def get_kestrel_startup_request_timeout_s() -> float:
+    return float(os.getenv("BIOMAPPER2_KESTREL_STARTUP_REQUEST_TIMEOUT_S", str(KESTREL_STARTUP_REQUEST_TIMEOUT_S)))
+
+
+def get_kestrel_startup_total_timeout_s() -> float:
+    return float(os.getenv("BIOMAPPER2_KESTREL_STARTUP_TOTAL_TIMEOUT_S", str(KESTREL_STARTUP_TOTAL_TIMEOUT_S)))
+
+
+def get_kestrel_breaker_failure_threshold() -> int:
+    return int(os.getenv("BIOMAPPER2_KESTREL_BREAKER_FAILURE_THRESHOLD", str(KESTREL_BREAKER_FAILURE_THRESHOLD)))
+
+
+def get_kestrel_breaker_cooldown_s() -> float:
+    return float(os.getenv("BIOMAPPER2_KESTREL_BREAKER_COOLDOWN_S", str(KESTREL_BREAKER_COOLDOWN_S)))
+
+
 # Bisect-on-5xx. Ships DORMANT. Its diagnosis -- that server errors are determined by payload
 # CONTENT rather than by load or timing -- is not yet confirmed by the gated single-request
 # diagnostic. If the cause turns out to be load, bisecting amplifies it: the failing chunk is

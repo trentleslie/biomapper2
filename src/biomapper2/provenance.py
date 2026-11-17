@@ -10,6 +10,8 @@ import logging
 import requests
 from pydantic import BaseModel, ConfigDict, Field
 
+from .utils import _CIRCUIT_BREAKER, CircuitBreakerOpenError, get_current_api_context
+
 __all__ = ["KgBuildInfo", "RunProvenance", "fetch_kg_build_info", "build_run_provenance"]
 
 
@@ -51,11 +53,21 @@ def fetch_kg_build_info(kestrel_url: str) -> tuple[str, KgBuildInfo]:
     caller always gets a usable object so outputs record that provenance was unavailable
     rather than omitting it.
     """
+    api_ctx = get_current_api_context()
+    timeout = 5.0
+    if api_ctx is not None:
+        timeout = min(2.0, api_ctx.timeout_s)
+        if api_ctx.use_circuit_breaker and not _CIRCUIT_BREAKER.can_attempt():
+            return "unknown", KgBuildInfo()
     try:
-        resp = requests.get(f"{kestrel_url.rstrip('/')}/health", timeout=5)
+        resp = requests.get(f"{kestrel_url.rstrip('/')}/health", timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
+        if api_ctx is not None and api_ctx.use_circuit_breaker:
+            _CIRCUIT_BREAKER.record_success()
     except Exception as e:
+        if api_ctx is not None and api_ctx.use_circuit_breaker and not isinstance(e, CircuitBreakerOpenError):
+            _CIRCUIT_BREAKER.record_failure()
         logging.warning(f"Could not fetch Kestrel /health for run provenance ({kestrel_url}): {e}; recording 'unknown'")
         return "unknown", KgBuildInfo()
 

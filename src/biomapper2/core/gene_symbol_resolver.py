@@ -40,6 +40,15 @@ _CURATED = {symbol.casefold(): curie for symbol, curie in CURATED_GENE_SYMBOL_TO
 class GeneSymbolResolver:
     """Resolve a curated gene symbol to its HGNC-verified human NCBIGene CURIE (or None)."""
 
+    def __init__(self) -> None:
+        self._last_fault_symbol: str | None = None
+
+    def last_call_faulted(self, symbol: str | None = None) -> bool:
+        """True if the last resolve call encountered a Kestrel transport fault."""
+        if symbol is None:
+            return self._last_fault_symbol is not None
+        return self._last_fault_symbol == str(symbol).strip().casefold()
+
     def resolve(self, symbol: str | None) -> str | None:
         """Return the canonical human NCBIGene CURIE for a curated symbol, else None.
 
@@ -47,6 +56,7 @@ class GeneSymbolResolver:
         does not carry the queried symbol (as its name or a synonym) or lacks an HGNC equivalent —
         never fabricates and never returns a different human gene.
         """
+        self._last_fault_symbol = None
         if not symbol:
             return None
         key = str(symbol).strip().casefold()
@@ -64,12 +74,10 @@ class GeneSymbolResolver:
                 json={"slim": False, "truncate_long_fields": False},
             )
         except Exception as exc:
-            # Catch-all by design: ANY /get-nodes failure — a Kestrel outage (already logged by the
-            # request layer) or a non-network failure like a malformed/changed response body — is
-            # suppressed here to an honest no-op (the entity falls back to whatever the search step
-            # chose, typically an ortholog). Nothing propagates to the caller, so this warning is the
-            # ONLY signal that a curated gene stopped resolving — there is no exception, test failure,
-            # or alert. (A Kestrel outage therefore silently disables the bridge for all six genes.)
+            self._last_fault_symbol = key
+            from .fault_tracking import record_kestrel_fault
+
+            record_kestrel_fault(None, f"gene-symbol fallback /get-nodes failed for {curie} ({symbol!r}): {exc}")
             logging.warning(f"gene-symbol fallback: get-nodes failed for {curie} ({symbol!r}): {exc}")
             return None
 
