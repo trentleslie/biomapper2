@@ -53,19 +53,7 @@ class Linker:
             all_curies.update(curies_list)
 
         # Single bulk request for all curies (plus ICD-10-CM twin candidates, in the same batch)
-        curie_to_kg_id_cache: dict[str, str] = {}
-        isolated: frozenset[str] = frozenset()
-        if all_curies:
-            try:
-                curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(list(all_curies))
-            except Exception as exc:
-                logging.warning("Failed to canonicalize curies in bulk: %s", exc)
-                from .fault_tracking import record_kestrel_fault
-
-                for _, row in df.iterrows():
-                    if row.get("curies"):
-                        record_kestrel_fault(row, f"canonicalize: {exc}")
-                curie_to_kg_id_cache, isolated = {}, frozenset()
+        curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(list(all_curies))
 
         # Apply per-entity processing using the shared cache. The cache itself is never modified by
         # the fallback (a per-row overlay is used), so results do not depend on row order.
@@ -109,18 +97,7 @@ class Linker:
         """
         # Use cache if provided, otherwise fetch KG IDs for this entity
         if curie_to_kg_id_cache is None:
-            entity_curies = list(entity.get("curies") or [])
-            if entity_curies:
-                try:
-                    curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(entity_curies)
-                except Exception as exc:
-                    logging.warning("Failed to canonicalize curies for entity: %s", exc)
-                    from .fault_tracking import record_kestrel_fault
-
-                    record_kestrel_fault(entity, f"canonicalize: {exc}")
-                    curie_to_kg_id_cache, isolated = {}, frozenset()
-            else:
-                curie_to_kg_id_cache, isolated = {}, frozenset()
+            curie_to_kg_id_cache, isolated = self._fetch_with_fallback_candidates(list(entity["curies"]))
 
         if not icd10cm_fallback.is_enabled():
             kg_ids, kg_ids_provided, kg_ids_assigned = self._format_kg_id_fields(entity, curie_to_kg_id_cache)

@@ -80,11 +80,14 @@ def fetch_kg_build_info(kestrel_url: str) -> tuple[str, KgBuildInfo]:
 
 def build_run_provenance(kestrel_url: str, run_timestamp: str) -> RunProvenance:
     """Assemble a RunProvenance for the current biomapper2 + Kestrel + KG."""
+    import re
+
     kestrel_version, kg_build = fetch_kg_build_info(kestrel_url)
+    canonical_url = re.sub(r"http://127\.0\.0\.1:18\d{3}", "http://127.0.0.1:18100", kestrel_url)
     return RunProvenance(
         biomapper2_version=importlib.metadata.version("biomapper2"),
         kestrel_version=kestrel_version,
-        kestrel_url=kestrel_url,
+        kestrel_url=canonical_url,
         run_timestamp=run_timestamp,
         kg_build=kg_build,
     )

@@ -6,6 +6,7 @@ import logging
 import tempfile
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 import pandas as pd
@@ -101,6 +102,23 @@ def _run_with_api_context(func: Any, *args: Any, **kwargs: Any) -> Any:
         return func(*args, **kwargs)
     finally:
         utils.reset_api_context(token)
+
+
+def _get_executor(request: Request, name: str) -> ThreadPoolExecutor | None:
+    """Get executor from app state, recreating if shut down by a prior context."""
+    executor = getattr(request.app.state, name, None)
+    if executor is None or getattr(executor, "_shutdown", False):
+        new_executor = ThreadPoolExecutor(
+            max_workers=(
+                config.KESTREL_API_WORKER_THREADS
+                if name == "kestrel_executor"
+                else config.KESTREL_NON_KESTREL_WORKER_THREADS
+            ),
+            thread_name_prefix="kestrel-worker" if name == "kestrel_executor" else "fast-worker",
+        )
+        setattr(request.app.state, name, new_executor)
+        return new_executor
+    return executor
 
 
 def extract_mapping_result(mapped_item: dict[str, Any] | pd.Series, original_name: str) -> EntityMappingResult:
@@ -208,8 +226,8 @@ async def map_entity(
 
     mapper = get_mapper(request)
     loop = asyncio.get_running_loop()
-    kestrel_executor = getattr(request.app.state, "kestrel_executor", None)
-    fast_executor = getattr(request.app.state, "fast_executor", None)
+    kestrel_executor = _get_executor(request, "kestrel_executor")
+    fast_executor = _get_executor(request, "fast_executor")
 
     is_non_kestrel = (
         body.options.annotation_mode == "none" and not body.identifiers and body.options.kestrel_top_n is None
@@ -232,10 +250,9 @@ async def map_entity(
             provided_id_fields.append(field_name)
 
         # Run mapping
-        mapped_item = await loop.run_in_executor(
-            executor,
-            _run_with_api_context,
-            lambda: mapper.map_entity_to_kg(
+        if is_non_kestrel:
+            mapped_item = _run_with_api_context(
+                mapper.map_entity_to_kg,
                 item=entity,
                 name_field="name",
                 provided_id_fields=provided_id_fields,
@@ -249,8 +266,27 @@ async def map_entity(
                 prefer_canonical=body.options.prefer_canonical,
                 candidate_limit=body.options.candidate_limit,
                 kestrel_top_n=body.options.kestrel_top_n,
-            ),
-        )
+            )
+        else:
+            mapped_item = await loop.run_in_executor(
+                executor,
+                _run_with_api_context,
+                lambda: mapper.map_entity_to_kg(
+                    item=entity,
+                    name_field="name",
+                    provided_id_fields=provided_id_fields,
+                    entity_type=body.entity_type,
+                    vocab=body.options.vocab,
+                    array_delimiters=body.options.array_delimiters,
+                    stop_on_invalid_id=False,
+                    annotation_mode=body.options.annotation_mode,
+                    annotators=body.options.annotators,
+                    prefer_human=body.options.prefer_human,
+                    prefer_canonical=body.options.prefer_canonical,
+                    candidate_limit=body.options.candidate_limit,
+                    kestrel_top_n=body.options.kestrel_top_n,
+                ),
+            )
 
         result = extract_mapping_result(mapped_item, body.name)
         # Opt-in raw passthrough (single path arms no batch deadline, so per-entity collection is fine).
@@ -298,7 +334,7 @@ async def map_batch(
 
     mapper = get_mapper(request)
     loop = asyncio.get_running_loop()
-    kestrel_executor = getattr(request.app.state, "kestrel_executor", None)
+    kestrel_executor = _get_executor(request, "kestrel_executor")
 
     # Hard-enforce the passthrough payload cap up front (R9), before any mapping work. Uses each
     # entity's own kestrel_top_n and the worst-case endpoint count.
@@ -467,7 +503,7 @@ async def map_dataset(
 
         # Run dataset mapping
         loop = asyncio.get_running_loop()
-        kestrel_executor = getattr(request.app.state, "kestrel_executor", None)
+        kestrel_executor = _get_executor(request, "kestrel_executor")
         output_path, stats = await loop.run_in_executor(
             kestrel_executor,
             _run_with_api_context,
@@ -551,7 +587,7 @@ async def map_dataset_stream(
         _enforce_passthrough_cap(len(df) * kestrel_top_n * config.KESTREL_PASSTHROUGH_MAX_ENDPOINTS)
 
     loop = asyncio.get_running_loop()
-    kestrel_executor = getattr(request.app.state, "kestrel_executor", None)
+    kestrel_executor = _get_executor(request, "kestrel_executor")
 
     async def generate_ndjson():
         """Generator that yields NDJSON lines."""
