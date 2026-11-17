@@ -262,3 +262,17 @@ def test_no_response_model_serialization_schema_collapses() -> None:
             assert (
                 isinstance(oa_props, dict) and len(oa_props) > 0
             ), f"OpenAPI components.schemas.{schema_name} collapsed to empty properties: {schema_def}"
+
+
+@pytest.mark.unit
+def test_pyproject_requires_pydantic_with_exclude_if() -> None:
+    """pyproject.toml enforces pydantic >= 2.12.0 so Field(exclude_if=...) is never silently ignored."""
+    from pathlib import Path
+
+    import tomllib
+
+    pyproject_path = Path(__file__).resolve().parents[1] / "pyproject.toml"
+    data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    deps: list[str] = data["project"]["dependencies"]
+    pydantic_specs = [d for d in deps if d.startswith("pydantic")]
+    assert pydantic_specs == ["pydantic>=2.12.0"]
