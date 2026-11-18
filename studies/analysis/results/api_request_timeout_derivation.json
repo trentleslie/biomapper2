@@ -1,0 +1,60 @@
+{
+  "source_artifact": "live_kestrel_latency_uncensored_180s_20261118T181048Z.json",
+  "dev_reference_artifact": "studies/analysis/results/request_timeout_derivation.json",
+  "measured_at_utc": "2026-11-18T18:11:57.044367+00:00",
+  "git_sha": "c6d8463713022e5bf585982a61ed2c5c8d71bfd6",
+  "kestrel_api_url": "https://kestrel.krakenkg.com/api",
+  "lexical_and_metadata": {
+    "env_var": "BIOMAPPER2_KESTREL_API_REQUEST_TIMEOUT_S",
+    "endpoints": [
+      "canonicalize",
+      "categories",
+      "get-nodes",
+      "health",
+      "text-search"
+    ],
+    "n_live_requests": 89,
+    "percentiles_s": {
+      "p50": 0.0551,
+      "p95": 0.1099,
+      "p99": 0.1494
+    },
+    "max_s": 0.1503,
+    "headroom_multiplier": 2.0,
+    "unfloored_2x_ceil_s": 1.0,
+    "floor_s": 4.0,
+    "recommended_timeout_s": 4.0
+  },
+  "vector_search": {
+    "env_var": "BIOMAPPER2_KESTREL_API_SEARCH_TIMEOUT_S",
+    "endpoints": [
+      "hybrid-search",
+      "vector-search"
+    ],
+    "hybrid_search": {
+      "n_live_requests": 28,
+      "percentiles_s": {
+        "p50": 0.5787,
+        "p95": 11.0923,
+        "p99": 11.7738
+      },
+      "max_s": 11.8057
+    },
+    "vector_search": {
+      "n_live_requests": 3,
+      "percentiles_s": {
+        "p50": 0.8616,
+        "p95": 1.1845,
+        "p99": 1.2132
+      },
+      "max_s": 1.2203
+    },
+    "combined_max_s": 11.8057,
+    "headroom_multiplier": 2.0,
+    "step1_2x_ceil_s": 24.0,
+    "dev_recommended_timeout_s": 173.0,
+    "step1_justifies_lower_than_dev": false,
+    "justification": "Step 1 only sampled 1-entity requests and 4-to-10-row TSVs (already reaching 11.6876s on 1 entity and 11.8057s on 4 rows), whereas POST /api/v1/map/dataset executes mapper.map_dataset_to_kg with KESTREL_BATCH_SIZE_SEARCH=1000, the same 1000-entity batch regime measured in request_timeout_derivation.json (p50=14.798s, p95=86.08s, max_s=86.433s, recommended_timeout_s=173).",
+    "recommended_timeout_s": 173.0
+  }
+}

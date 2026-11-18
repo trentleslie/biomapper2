@@ -38,6 +38,7 @@ from .config import (
     get_kestrel_api_max_retries,
     get_kestrel_api_request_timeout_s,
     get_kestrel_api_retry_backoff_s,
+    get_kestrel_api_search_timeout_s,
     get_kestrel_api_url,
     get_kestrel_breaker_cooldown_s,
     get_kestrel_breaker_failure_threshold,
@@ -125,11 +126,15 @@ def reset_circuit_breaker() -> None:
     _CIRCUIT_BREAKER.reset()
 
 
+_VECTOR_SEARCH_ENDPOINTS: frozenset[str] = frozenset({"hybrid-search", "vector-search"})
+
+
 @dataclass
 class ApiRequestContext:
     """Execution context for API and startup Kestrel requests."""
 
     timeout_s: float
+    search_timeout_s: float
     max_retries: int
     retry_backoff_base: float
     use_circuit_breaker: bool = True
@@ -143,10 +148,18 @@ def set_api_context(
     max_retries: int | None = None,
     retry_backoff_base: float | None = None,
     use_circuit_breaker: bool = True,
+    search_timeout_s: float | None = None,
 ) -> contextvars.Token:
     """Activate API execution context for Kestrel requests."""
+    resolved_timeout = timeout_s if timeout_s is not None else get_kestrel_api_request_timeout_s()
+    resolved_search_timeout = (
+        search_timeout_s
+        if search_timeout_s is not None
+        else (timeout_s if timeout_s is not None else get_kestrel_api_search_timeout_s())
+    )
     ctx = ApiRequestContext(
-        timeout_s=timeout_s if timeout_s is not None else get_kestrel_api_request_timeout_s(),
+        timeout_s=resolved_timeout,
+        search_timeout_s=resolved_search_timeout,
         max_retries=max_retries if max_retries is not None else get_kestrel_api_max_retries(),
         retry_backoff_base=retry_backoff_base if retry_backoff_base is not None else get_kestrel_api_retry_backoff_s(),
         use_circuit_breaker=use_circuit_breaker,
@@ -552,9 +565,10 @@ def bulk_kestrel_request(
     api_ctx = _API_CONTEXT.get()
     breaker_active = False
     if api_ctx is not None:
+        ctx_timeout = api_ctx.search_timeout_s if endpoint in _VECTOR_SEARCH_ENDPOINTS else api_ctx.timeout_s
         caller_timeout = kwargs.get("timeout")
-        if caller_timeout is None or caller_timeout > api_ctx.timeout_s:
-            kwargs["timeout"] = api_ctx.timeout_s
+        if caller_timeout is None or caller_timeout > ctx_timeout:
+            kwargs["timeout"] = ctx_timeout
         effective_max_retries = api_ctx.max_retries
         effective_backoff_base = api_ctx.retry_backoff_base
         breaker_active = api_ctx.use_circuit_breaker

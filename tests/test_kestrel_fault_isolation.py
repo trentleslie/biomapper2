@@ -1,18 +1,23 @@
 """Unit tests for Kestrel fault isolation and transport resilience mechanisms."""
 
 import asyncio
+import json
+import math
 import threading
 import time
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 
+from biomapper2 import config
 from biomapper2.provenance import fetch_kg_build_info
 from biomapper2.utils import (
     _CIRCUIT_BREAKER,
     CircuitBreaker,
+    bulk_kestrel_request,
     get_current_api_context,
     get_session,
     kestrel_request,
@@ -257,3 +262,59 @@ def test_circuit_breaker_half_open_settles_every_exit_path(monkeypatch: pytest.M
     finally:
         reset_api_context(token)
         reset_circuit_breaker()
+
+
+@pytest.mark.unit
+def test_api_timeout_defaults_match_committed_derivation() -> None:
+    """API lexical/metadata and vector-search timeouts match the committed derivation artifact."""
+    from studies.analysis.request_timeout import RECOMMENDED_TIMEOUT_S
+
+    derivation_path = (
+        Path(config.PROJECT_ROOT) / "studies" / "analysis" / "results" / "api_request_timeout_derivation.json"
+    )
+    assert derivation_path.exists()
+    derivation = json.loads(derivation_path.read_text(encoding="utf-8"))
+
+    lex = derivation["lexical_and_metadata"]
+    vec = derivation["vector_search"]
+
+    expected_lex = max(float(lex["floor_s"]), float(math.ceil(lex["headroom_multiplier"] * lex["max_s"])))
+    assert lex["recommended_timeout_s"] == expected_lex
+    assert config.KESTREL_API_REQUEST_TIMEOUT_S >= lex["recommended_timeout_s"]
+
+    step1_vec = float(math.ceil(vec["headroom_multiplier"] * vec["combined_max_s"]))
+    assert vec["step1_2x_ceil_s"] == step1_vec
+    if not vec["step1_justifies_lower_than_dev"]:
+        assert vec["recommended_timeout_s"] >= RECOMMENDED_TIMEOUT_S
+    assert vec["recommended_timeout_s"] >= step1_vec
+    assert config.KESTREL_API_SEARCH_TIMEOUT_S >= vec["recommended_timeout_s"]
+
+    # Verify default ApiRequestContext applies each timeout to its endpoint class
+    seen_timeouts: dict[str, Any] = {}
+
+    def _capture_request(method: str, url: str, headers: Any = None, **kwargs: Any) -> MagicMock:
+        ep = url.rsplit("/", 1)[-1]
+        seen_timeouts[ep] = kwargs.get("timeout")
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.from_cache = False
+        resp.raise_for_status.return_value = None
+        resp.json.return_value = {}
+        return resp
+
+    mock_sess = MagicMock()
+    mock_sess.request.side_effect = _capture_request
+    token = set_api_context()
+    try:
+        bulk_kestrel_request("POST", "text-search", session=mock_sess, auth_required=False, json={})
+        bulk_kestrel_request("POST", "get-nodes", session=mock_sess, auth_required=False, json={})
+        bulk_kestrel_request("POST", "hybrid-search", session=mock_sess, auth_required=False, json={})
+        bulk_kestrel_request("POST", "vector-search", session=mock_sess, auth_required=False, json={})
+    finally:
+        reset_api_context(token)
+        reset_circuit_breaker()
+
+    assert seen_timeouts["text-search"] == config.KESTREL_API_REQUEST_TIMEOUT_S
+    assert seen_timeouts["get-nodes"] == config.KESTREL_API_REQUEST_TIMEOUT_S
+    assert seen_timeouts["hybrid-search"] == config.KESTREL_API_SEARCH_TIMEOUT_S
+    assert seen_timeouts["vector-search"] == config.KESTREL_API_SEARCH_TIMEOUT_S

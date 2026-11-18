@@ -121,7 +121,11 @@ def get_kestrel_api_key() -> str | None:
 KESTREL_REQUEST_TIMEOUT_S = 180
 
 # API-specific Kestrel resilience and fault isolation settings
+# Lexical and metadata endpoints (text-search, get-nodes, canonicalize, health, categories) vs
+# embedding-backed vector endpoints (hybrid-search, vector-search); sized from
+# studies/analysis/results/api_request_timeout_derivation.json and asserted in tests.
 KESTREL_API_REQUEST_TIMEOUT_S = float(os.getenv("BIOMAPPER2_KESTREL_API_REQUEST_TIMEOUT_S", "4.0"))
+KESTREL_API_SEARCH_TIMEOUT_S = float(os.getenv("BIOMAPPER2_KESTREL_API_SEARCH_TIMEOUT_S", "173.0"))
 KESTREL_API_MAX_RETRIES = int(os.getenv("BIOMAPPER2_KESTREL_API_MAX_RETRIES", "1"))
 KESTREL_API_RETRY_BACKOFF_S = float(os.getenv("BIOMAPPER2_KESTREL_API_RETRY_BACKOFF_S", "0.2"))
 
@@ -137,6 +141,10 @@ KESTREL_BREAKER_COOLDOWN_S = float(os.getenv("BIOMAPPER2_KESTREL_BREAKER_COOLDOW
 
 def get_kestrel_api_request_timeout_s() -> float:
     return float(os.getenv("BIOMAPPER2_KESTREL_API_REQUEST_TIMEOUT_S", str(KESTREL_API_REQUEST_TIMEOUT_S)))
+
+
+def get_kestrel_api_search_timeout_s() -> float:
+    return float(os.getenv("BIOMAPPER2_KESTREL_API_SEARCH_TIMEOUT_S", str(KESTREL_API_SEARCH_TIMEOUT_S)))
 
 
 def get_kestrel_api_max_retries() -> int:
