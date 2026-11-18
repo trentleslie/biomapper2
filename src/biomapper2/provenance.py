@@ -79,15 +79,18 @@ def fetch_kg_build_info(kestrel_url: str) -> tuple[str, KgBuildInfo]:
             breaker_settled = True
         logging.warning(f"Could not fetch Kestrel /health for run provenance ({kestrel_url}): {e}; recording 'unknown'")
         return "unknown", KgBuildInfo()
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         if breaker_active:
             _CIRCUIT_BREAKER.record_failure()
             breaker_settled = True
         logging.warning(f"Could not fetch Kestrel /health for run provenance ({kestrel_url}): {e}; recording 'unknown'")
         return "unknown", KgBuildInfo()
+    except Exception as e:
+        logging.warning(f"Could not fetch Kestrel /health for run provenance ({kestrel_url}): {e}; recording 'unknown'")
+        return "unknown", KgBuildInfo()
     finally:
         if breaker_active and not breaker_settled:
-            _CIRCUIT_BREAKER.record_failure()
+            _CIRCUIT_BREAKER.settle_unsettled()
 
     kestrel_version = data.get("kestrel_version", "unknown")
     kg_build_raw = data.get("kg_build") or {}

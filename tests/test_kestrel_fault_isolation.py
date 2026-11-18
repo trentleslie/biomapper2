@@ -236,6 +236,24 @@ def test_circuit_breaker_half_open_settles_every_exit_path(monkeypatch: pytest.M
         ):
             fetch_kg_build_info("http://127.0.0.1:9999")
         assert _CIRCUIT_BREAKER.state == "open"
+
+        # 7. Unsettled exits (cancellation / ``BaseException``) in ``closed`` do not increment failure count
+        reset_circuit_breaker()
+        assert _CIRCUIT_BREAKER.state == "closed"
+        for _ in range(5):
+            with pytest.raises(asyncio.CancelledError):
+                _call_once(asyncio.CancelledError())
+            with (
+                patch("biomapper2.provenance.requests.get", side_effect=asyncio.CancelledError()),
+                pytest.raises(asyncio.CancelledError),
+            ):
+                fetch_kg_build_info("http://127.0.0.1:9999")
+        assert _CIRCUIT_BREAKER.state == "closed"
+        assert _CIRCUIT_BREAKER._consecutive_failures == 0
+        # One real failure afterward still leaves threshold=2 breaker ``closed`` (proving count stayed zero)
+        with pytest.raises(requests.Timeout):
+            _call_once(requests.Timeout("single real timeout"))
+        assert _CIRCUIT_BREAKER.state == "closed"
     finally:
         reset_api_context(token)
         reset_circuit_breaker()

@@ -103,6 +103,13 @@ class CircuitBreaker:
             if self._state == "HALF_OPEN" or self._consecutive_failures >= threshold:
                 self._state = "OPEN"
 
+    def settle_unsettled(self) -> None:
+        """Reopen ``HALF_OPEN`` on an unsettled exit without counting failures in ``CLOSED``."""
+        with self._lock:
+            if self._state == "HALF_OPEN":
+                self._last_failure_time = time.monotonic()
+                self._state = "OPEN"
+
     def reset(self) -> None:
         with self._lock:
             self._consecutive_failures = 0
@@ -686,7 +693,7 @@ def bulk_kestrel_request(
                 raise
     finally:
         if breaker_active and not breaker_settled:
-            _CIRCUIT_BREAKER.record_failure()
+            _CIRCUIT_BREAKER.settle_unsettled()
 
 
 def _record_poison(path: "Path | str | None", endpoint: str, batch_field: str, item: Any) -> None:
