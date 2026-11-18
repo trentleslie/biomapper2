@@ -39,6 +39,7 @@ from .config import (
     get_kestrel_api_request_timeout_s,
     get_kestrel_api_retry_backoff_s,
     get_kestrel_api_search_timeout_s,
+    get_kestrel_api_single_search_timeout_s,
     get_kestrel_api_url,
     get_kestrel_breaker_cooldown_s,
     get_kestrel_breaker_failure_threshold,
@@ -134,6 +135,7 @@ class ApiRequestContext:
     """Execution context for API and startup Kestrel requests."""
 
     timeout_s: float
+    single_search_timeout_s: float
     search_timeout_s: float
     max_retries: int
     retry_backoff_base: float
@@ -148,10 +150,16 @@ def set_api_context(
     max_retries: int | None = None,
     retry_backoff_base: float | None = None,
     use_circuit_breaker: bool = True,
+    single_search_timeout_s: float | None = None,
     search_timeout_s: float | None = None,
 ) -> contextvars.Token:
     """Activate API execution context for Kestrel requests."""
     resolved_timeout = timeout_s if timeout_s is not None else get_kestrel_api_request_timeout_s()
+    resolved_single_search_timeout = (
+        single_search_timeout_s
+        if single_search_timeout_s is not None
+        else (timeout_s if timeout_s is not None else get_kestrel_api_single_search_timeout_s())
+    )
     resolved_search_timeout = (
         search_timeout_s
         if search_timeout_s is not None
@@ -159,6 +167,7 @@ def set_api_context(
     )
     ctx = ApiRequestContext(
         timeout_s=resolved_timeout,
+        single_search_timeout_s=resolved_single_search_timeout,
         search_timeout_s=resolved_search_timeout,
         max_retries=max_retries if max_retries is not None else get_kestrel_api_max_retries(),
         retry_backoff_base=retry_backoff_base if retry_backoff_base is not None else get_kestrel_api_retry_backoff_s(),
@@ -509,6 +518,7 @@ def bulk_kestrel_request(
     max_retries: int = 3,
     retry_backoff_base: float = 2.0,
     count_requests: bool = True,
+    batch_item_count: int | None = None,
     **kwargs,
 ) -> Any:
     """
@@ -565,7 +575,23 @@ def bulk_kestrel_request(
     api_ctx = _API_CONTEXT.get()
     breaker_active = False
     if api_ctx is not None:
-        ctx_timeout = api_ctx.search_timeout_s if endpoint in _VECTOR_SEARCH_ENDPOINTS else api_ctx.timeout_s
+        if endpoint in _VECTOR_SEARCH_ENDPOINTS:
+            effective_count = batch_item_count
+            if effective_count is None:
+                json_body = kwargs.get("json")
+                if isinstance(json_body, Mapping):
+                    for key in ("search_text", "search_texts"):
+                        val = json_body.get(key)
+                        if isinstance(val, (list, tuple)):
+                            effective_count = len(val)
+                            break
+            ctx_timeout = (
+                api_ctx.search_timeout_s
+                if (effective_count is not None and effective_count > 1)
+                else api_ctx.single_search_timeout_s
+            )
+        else:
+            ctx_timeout = api_ctx.timeout_s
         caller_timeout = kwargs.get("timeout")
         if caller_timeout is None or caller_timeout > ctx_timeout:
             kwargs["timeout"] = ctx_timeout
@@ -763,6 +789,7 @@ def _bisect_chunk(
             session=session,
             json=payload,
             max_retries=KESTREL_BISECT_MAX_RETRIES,
+            batch_item_count=len(chunk),
             **kwargs,
         )
     except requests.exceptions.HTTPError as exc:
@@ -862,7 +889,14 @@ def kestrel_request(
     # If batching is disabled, send all items in a single request
     if not KESTREL_BATCHING_ENABLED:
         full_payload = {**json_payload, batch_field: batch_items}
-        result = bulk_kestrel_request(method, endpoint, session=session, json=full_payload, **kwargs)
+        result = bulk_kestrel_request(
+            method,
+            endpoint,
+            session=session,
+            json=full_payload,
+            batch_item_count=len(batch_items),
+            **kwargs,
+        )
         return result if isinstance(result, dict) else {}
 
     # Batch the request
@@ -883,7 +917,14 @@ def kestrel_request(
     for chunk in chunks:
         chunk_payload = {**json_payload, batch_field: chunk}
         try:
-            chunk_results = bulk_kestrel_request(method, endpoint, session=session, json=chunk_payload, **kwargs)
+            chunk_results = bulk_kestrel_request(
+                method,
+                endpoint,
+                session=session,
+                json=chunk_payload,
+                batch_item_count=len(chunk),
+                **kwargs,
+            )
         except requests.exceptions.HTTPError as exc:
             status = getattr(exc.response, "status_code", None)
             if not bisect_on_5xx or status is None or not (500 <= status < 600):

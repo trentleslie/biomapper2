@@ -17,7 +17,6 @@ from biomapper2.provenance import fetch_kg_build_info
 from biomapper2.utils import (
     _CIRCUIT_BREAKER,
     CircuitBreaker,
-    bulk_kestrel_request,
     get_current_api_context,
     get_session,
     kestrel_request,
@@ -266,7 +265,7 @@ def test_circuit_breaker_half_open_settles_every_exit_path(monkeypatch: pytest.M
 
 @pytest.mark.unit
 def test_api_timeout_defaults_match_committed_derivation() -> None:
-    """API lexical/metadata and vector-search timeouts match the committed derivation artifact."""
+    """API lexical, single-item search, and bulk search timeouts match the committed derivation."""
     from studies.analysis.request_timeout import RECOMMENDED_TIMEOUT_S
 
     derivation_path = (
@@ -276,25 +275,32 @@ def test_api_timeout_defaults_match_committed_derivation() -> None:
     derivation = json.loads(derivation_path.read_text(encoding="utf-8"))
 
     lex = derivation["lexical_and_metadata"]
-    vec = derivation["vector_search"]
+    single = derivation["vector_search_single_item"]
+    bulk = derivation["vector_search_bulk"]
 
     expected_lex = max(float(lex["floor_s"]), float(math.ceil(lex["headroom_multiplier"] * lex["max_s"])))
     assert lex["recommended_timeout_s"] == expected_lex
     assert config.KESTREL_API_REQUEST_TIMEOUT_S >= lex["recommended_timeout_s"]
 
-    step1_vec = float(math.ceil(vec["headroom_multiplier"] * vec["combined_max_s"]))
-    assert vec["step1_2x_ceil_s"] == step1_vec
-    if not vec["step1_justifies_lower_than_dev"]:
-        assert vec["recommended_timeout_s"] >= RECOMMENDED_TIMEOUT_S
-    assert vec["recommended_timeout_s"] >= step1_vec
-    assert config.KESTREL_API_SEARCH_TIMEOUT_S >= vec["recommended_timeout_s"]
+    assert single["source_artifact"] == "live_kestrel_latency_uncensored_180s_20261118T181048Z.json"
+    assert single["n_hybrid_search_requests"] == 28
+    expected_single = float(math.ceil(single["headroom_multiplier"] * single["max_s"]))
+    assert single["recommended_timeout_s"] == expected_single
+    assert config.KESTREL_API_SINGLE_SEARCH_TIMEOUT_S >= single["recommended_timeout_s"]
 
-    # Verify default ApiRequestContext applies each timeout to its endpoint class
-    seen_timeouts: dict[str, Any] = {}
+    expected_bulk = float(math.ceil(bulk["headroom_multiplier"] * bulk["max_s"]))
+    assert bulk["recommended_timeout_s"] == expected_bulk
+    assert bulk["recommended_timeout_s"] >= RECOMMENDED_TIMEOUT_S
+    assert config.KESTREL_API_SEARCH_TIMEOUT_S >= bulk["recommended_timeout_s"]
+
+    # Verify default ApiRequestContext applies 4s lexical, 24s single-item vector, and 173s bulk vector
+    seen_calls: list[tuple[str, int, Any]] = []
 
     def _capture_request(method: str, url: str, headers: Any = None, **kwargs: Any) -> MagicMock:
         ep = url.rsplit("/", 1)[-1]
-        seen_timeouts[ep] = kwargs.get("timeout")
+        body = kwargs.get("json") or {}
+        items = body.get("items") or body.get("search_text") or []
+        seen_calls.append((ep, len(items), kwargs.get("timeout")))
         resp = MagicMock()
         resp.status_code = 200
         resp.from_cache = False
@@ -306,15 +312,21 @@ def test_api_timeout_defaults_match_committed_derivation() -> None:
     mock_sess.request.side_effect = _capture_request
     token = set_api_context()
     try:
-        bulk_kestrel_request("POST", "text-search", session=mock_sess, auth_required=False, json={})
-        bulk_kestrel_request("POST", "get-nodes", session=mock_sess, auth_required=False, json={})
-        bulk_kestrel_request("POST", "hybrid-search", session=mock_sess, auth_required=False, json={})
-        bulk_kestrel_request("POST", "vector-search", session=mock_sess, auth_required=False, json={})
+        kestrel_request("POST", "text-search", "items", ["a"], 1000, session=mock_sess, json={})
+        kestrel_request("POST", "text-search", "items", ["a", "b"], 1000, session=mock_sess, json={})
+        kestrel_request("POST", "hybrid-search", "items", ["a"], 1000, session=mock_sess, json={})
+        kestrel_request("POST", "hybrid-search", "items", ["a", "b"], 1000, session=mock_sess, json={})
+        kestrel_request("POST", "vector-search", "items", ["a"], 1000, session=mock_sess, json={})
+        kestrel_request("POST", "vector-search", "items", ["a", "b", "c"], 1000, session=mock_sess, json={})
     finally:
         reset_api_context(token)
         reset_circuit_breaker()
 
-    assert seen_timeouts["text-search"] == config.KESTREL_API_REQUEST_TIMEOUT_S
-    assert seen_timeouts["get-nodes"] == config.KESTREL_API_REQUEST_TIMEOUT_S
-    assert seen_timeouts["hybrid-search"] == config.KESTREL_API_SEARCH_TIMEOUT_S
-    assert seen_timeouts["vector-search"] == config.KESTREL_API_SEARCH_TIMEOUT_S
+    assert seen_calls == [
+        ("text-search", 1, config.KESTREL_API_REQUEST_TIMEOUT_S),
+        ("text-search", 2, config.KESTREL_API_REQUEST_TIMEOUT_S),
+        ("hybrid-search", 1, config.KESTREL_API_SINGLE_SEARCH_TIMEOUT_S),
+        ("hybrid-search", 2, config.KESTREL_API_SEARCH_TIMEOUT_S),
+        ("vector-search", 1, config.KESTREL_API_SINGLE_SEARCH_TIMEOUT_S),
+        ("vector-search", 3, config.KESTREL_API_SEARCH_TIMEOUT_S),
+    ]

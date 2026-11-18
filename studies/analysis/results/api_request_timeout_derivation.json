@@ -25,36 +25,49 @@
     "floor_s": 4.0,
     "recommended_timeout_s": 4.0
   },
-  "vector_search": {
-    "env_var": "BIOMAPPER2_KESTREL_API_SEARCH_TIMEOUT_S",
+  "vector_search_single_item": {
+    "env_var": "BIOMAPPER2_KESTREL_API_SINGLE_SEARCH_TIMEOUT_S",
+    "batch_condition": "batch_items == 1",
     "endpoints": [
       "hybrid-search",
       "vector-search"
     ],
-    "hybrid_search": {
-      "n_live_requests": 28,
-      "percentiles_s": {
-        "p50": 0.5787,
-        "p95": 11.0923,
-        "p99": 11.7738
-      },
-      "max_s": 11.8057
+    "source_artifact": "live_kestrel_latency_uncensored_180s_20261118T181048Z.json",
+    "n_hybrid_search_requests": 28,
+    "hybrid_search_percentiles_s": {
+      "p50": 0.5787,
+      "p95": 11.0923,
+      "p99": 11.7738
     },
-    "vector_search": {
-      "n_live_requests": 3,
-      "percentiles_s": {
-        "p50": 0.8616,
-        "p95": 1.1845,
-        "p99": 1.2132
-      },
-      "max_s": 1.2203
+    "hybrid_search_max_s": 11.8057,
+    "n_vector_search_requests": 3,
+    "vector_search_percentiles_s": {
+      "p50": 0.8616,
+      "p95": 1.1845,
+      "p99": 1.2132
     },
-    "combined_max_s": 11.8057,
+    "vector_search_max_s": 1.2203,
+    "max_s": 11.8057,
     "headroom_multiplier": 2.0,
-    "step1_2x_ceil_s": 24.0,
-    "dev_recommended_timeout_s": 173.0,
-    "step1_justifies_lower_than_dev": false,
-    "justification": "Step 1 only sampled 1-entity requests and 4-to-10-row TSVs (already reaching 11.6876s on 1 entity and 11.8057s on 4 rows), whereas POST /api/v1/map/dataset executes mapper.map_dataset_to_kg with KESTREL_BATCH_SIZE_SEARCH=1000, the same 1000-entity batch regime measured in request_timeout_derivation.json (p50=14.798s, p95=86.08s, max_s=86.433s, recommended_timeout_s=173).",
+    "recommended_timeout_s": 24.0
+  },
+  "vector_search_bulk": {
+    "env_var": "BIOMAPPER2_KESTREL_API_SEARCH_TIMEOUT_S",
+    "batch_condition": "batch_items > 1",
+    "endpoints": [
+      "hybrid-search",
+      "vector-search"
+    ],
+    "source_artifact": "studies/analysis/results/request_timeout_derivation.json",
+    "n_successful_requests": 25,
+    "percentiles_s": {
+      "p50": 14.798,
+      "p90": 85.701,
+      "p95": 86.08,
+      "p99": 86.433
+    },
+    "max_s": 86.433,
+    "headroom_multiplier": 2.0,
     "recommended_timeout_s": 173.0
   }
 }
