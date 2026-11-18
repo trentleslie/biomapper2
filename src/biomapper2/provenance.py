@@ -10,7 +10,7 @@ import logging
 import requests
 from pydantic import BaseModel, ConfigDict, Field
 
-from .utils import _CIRCUIT_BREAKER, CircuitBreakerOpenError, get_current_api_context
+from .utils import _CIRCUIT_BREAKER, get_current_api_context
 
 __all__ = ["KgBuildInfo", "RunProvenance", "fetch_kg_build_info", "build_run_provenance"]
 
@@ -55,21 +55,39 @@ def fetch_kg_build_info(kestrel_url: str) -> tuple[str, KgBuildInfo]:
     """
     api_ctx = get_current_api_context()
     timeout = 5.0
+    breaker_active = False
     if api_ctx is not None:
         timeout = min(2.0, api_ctx.timeout_s)
-        if api_ctx.use_circuit_breaker and not _CIRCUIT_BREAKER.can_attempt():
+        breaker_active = api_ctx.use_circuit_breaker
+        if breaker_active and not _CIRCUIT_BREAKER.can_attempt():
             return "unknown", KgBuildInfo()
+    breaker_settled = False
     try:
         resp = requests.get(f"{kestrel_url.rstrip('/')}/health", timeout=timeout)
         resp.raise_for_status()
         data = resp.json()
-        if api_ctx is not None and api_ctx.use_circuit_breaker:
+        if breaker_active:
             _CIRCUIT_BREAKER.record_success()
-    except Exception as e:
-        if api_ctx is not None and api_ctx.use_circuit_breaker and not isinstance(e, CircuitBreakerOpenError):
-            _CIRCUIT_BREAKER.record_failure()
+            breaker_settled = True
+    except requests.exceptions.HTTPError as e:
+        status = getattr(e.response, "status_code", None)
+        if breaker_active:
+            if status is not None and 400 <= status < 500 and status != 429:
+                _CIRCUIT_BREAKER.record_success()
+            else:
+                _CIRCUIT_BREAKER.record_failure()
+            breaker_settled = True
         logging.warning(f"Could not fetch Kestrel /health for run provenance ({kestrel_url}): {e}; recording 'unknown'")
         return "unknown", KgBuildInfo()
+    except Exception as e:
+        if breaker_active:
+            _CIRCUIT_BREAKER.record_failure()
+            breaker_settled = True
+        logging.warning(f"Could not fetch Kestrel /health for run provenance ({kestrel_url}): {e}; recording 'unknown'")
+        return "unknown", KgBuildInfo()
+    finally:
+        if breaker_active and not breaker_settled:
+            _CIRCUIT_BREAKER.record_failure()
 
     kestrel_version = data.get("kestrel_version", "unknown")
     kg_build_raw = data.get("kg_build") or {}
@@ -80,14 +98,11 @@ def fetch_kg_build_info(kestrel_url: str) -> tuple[str, KgBuildInfo]:
 
 def build_run_provenance(kestrel_url: str, run_timestamp: str) -> RunProvenance:
     """Assemble a RunProvenance for the current biomapper2 + Kestrel + KG."""
-    import re
-
     kestrel_version, kg_build = fetch_kg_build_info(kestrel_url)
-    canonical_url = re.sub(r"http://127\.0\.0\.1:18\d{3}", "http://127.0.0.1:18100", kestrel_url)
     return RunProvenance(
         biomapper2_version=importlib.metadata.version("biomapper2"),
         kestrel_version=kestrel_version,
-        kestrel_url=canonical_url,
+        kestrel_url=kestrel_url,
         run_timestamp=run_timestamp,
         kg_build=kg_build,
     )

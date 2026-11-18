@@ -1,7 +1,9 @@
 """Unit tests for Kestrel fault isolation and transport resilience mechanisms."""
 
+import asyncio
 import threading
 import time
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -9,6 +11,7 @@ import requests
 
 from biomapper2.provenance import fetch_kg_build_info
 from biomapper2.utils import (
+    _CIRCUIT_BREAKER,
     CircuitBreaker,
     get_current_api_context,
     get_session,
@@ -96,7 +99,7 @@ def test_kestrel_request_fast_retry_on_5xx() -> None:
     token = set_api_context(timeout_s=1.0, max_retries=1, retry_backoff_base=0.01)
     call_count = 0
 
-    def mock_post(*args, **kwargs):
+    def mock_post(*args: Any, **kwargs: Any) -> MagicMock:
         nonlocal call_count
         call_count += 1
         resp = MagicMock()
@@ -140,3 +143,99 @@ def test_provenance_fetch_kg_build_info_degrades_gracefully_under_fault() -> Non
             assert info.biolink_version == "unknown"
     finally:
         reset_api_context(token)
+
+
+@pytest.mark.unit
+def test_circuit_breaker_half_open_settles_every_exit_path(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every ``HALF_OPEN`` exit path settles the breaker to ``closed`` or ``open``, never ``half_open``."""
+    monkeypatch.setenv("BIOMAPPER2_KESTREL_BREAKER_FAILURE_THRESHOLD", "2")
+    monkeypatch.setenv("BIOMAPPER2_KESTREL_BREAKER_COOLDOWN_S", "0.02")
+    token = set_api_context(timeout_s=0.5, max_retries=0, retry_backoff_base=0.01, use_circuit_breaker=True)
+
+    def _enter_ready_for_half_open() -> None:
+        reset_circuit_breaker()
+        _CIRCUIT_BREAKER.record_failure()
+        _CIRCUIT_BREAKER.record_failure()
+        assert _CIRCUIT_BREAKER.state == "open"
+        time.sleep(0.03)
+
+    def _http_resp(status_code: int, payload: Any = None) -> MagicMock:
+        resp = MagicMock()
+        resp.status_code = status_code
+        resp.from_cache = False
+        if status_code >= 400:
+            resp.raise_for_status.side_effect = requests.HTTPError(f"HTTP {status_code}", response=resp)
+        else:
+            resp.raise_for_status.return_value = None
+            resp.json.return_value = payload if payload is not None else {"items": {"a": []}}
+        return resp
+
+    def _call_once(side_effect: Any) -> None:
+        mock_sess = MagicMock()
+        mock_sess.request.side_effect = side_effect
+        with patch("biomapper2.utils.get_session", return_value=mock_sess):
+            kestrel_request(
+                method="POST",
+                endpoint="hybrid-search",
+                batch_field="search_texts",
+                batch_items=["a"],
+                batch_size=1,
+                json={},
+            )
+
+    try:
+        # 1. Success (``200`` valid JSON) -> ``closed``
+        _enter_ready_for_half_open()
+        _call_once([_http_resp(200, {"a": []})])
+        assert _CIRCUIT_BREAKER.state == "closed"
+
+        # 2. Timeout -> ``open``
+        _enter_ready_for_half_open()
+        with pytest.raises(requests.Timeout):
+            _call_once(requests.Timeout("read timed out"))
+        assert _CIRCUIT_BREAKER.state == "open"
+
+        # 3a. Non-``429`` ``4xx`` (``404``) -> ``closed``; repeated ``4xx`` in ``closed`` never trips ``open``
+        _enter_ready_for_half_open()
+        with pytest.raises(requests.HTTPError):
+            _call_once([_http_resp(404)])
+        assert _CIRCUIT_BREAKER.state == "closed"
+        for _ in range(5):
+            with pytest.raises(requests.HTTPError):
+                _call_once([_http_resp(400)])
+        assert _CIRCUIT_BREAKER.state == "closed"
+
+        # 3b. ``429`` rate-limit response -> ``open``
+        _enter_ready_for_half_open()
+        with pytest.raises(requests.HTTPError):
+            _call_once([_http_resp(429)])
+        assert _CIRCUIT_BREAKER.state == "open"
+
+        # 4. ``5xx`` server error -> ``open``
+        _enter_ready_for_half_open()
+        with pytest.raises(requests.HTTPError):
+            _call_once([_http_resp(503)])
+        assert _CIRCUIT_BREAKER.state == "open"
+
+        # 5. Non-requests exception (e.g., cache sqlite error or bad JSON ValueError) -> ``open``
+        _enter_ready_for_half_open()
+        with pytest.raises(RuntimeError, match="sqlite cache failure"):
+            _call_once(RuntimeError("sqlite cache failure"))
+        assert _CIRCUIT_BREAKER.state == "open"
+
+        # 6. Cancellation (``BaseException``) on both ``kestrel_request`` and ``fetch_kg_build_info`` -> ``open``
+        _enter_ready_for_half_open()
+        with pytest.raises(asyncio.CancelledError):
+            _call_once(asyncio.CancelledError())
+        assert _CIRCUIT_BREAKER.state == "open"
+
+        _enter_ready_for_half_open()
+        with (
+            patch("biomapper2.provenance.requests.get", side_effect=asyncio.CancelledError()),
+            pytest.raises(asyncio.CancelledError),
+        ):
+            fetch_kg_build_info("http://127.0.0.1:9999")
+        assert _CIRCUIT_BREAKER.state == "open"
+    finally:
+        reset_api_context(token)
+        reset_circuit_breaker()

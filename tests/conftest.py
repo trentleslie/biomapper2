@@ -5,7 +5,6 @@ import subprocess
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
 
 import pytest
 
@@ -55,36 +54,6 @@ def pytest_configure(config: pytest.Config) -> None:
     kestrel_url_opt = config.getoption("--kestrel-url", default=None, skip=True)
     if kestrel_url_opt is not None:
         os.environ["KESTREL_API_URL"] = kestrel_url_opt
-
-    try:
-        import bmt.toolkit as bmt_mod
-
-        orig_bmt_get = bmt_mod.requests.get
-        fixtures_dir = Path(PROJECT_ROOT) / "studies" / "kestrel_fault_benchmark" / "fixtures"
-        pred_path = fixtures_dir / "biolink-predicate-mapping.yaml"
-        if pred_path.exists():
-            pred_text = pred_path.read_text(encoding="utf-8")
-
-            def _safe_bmt_get(url: str, *args: Any, **kwargs: Any) -> Any:
-                try:
-                    return orig_bmt_get(url, *args, **kwargs)
-                except Exception:
-                    import inspect
-
-                    if "predicate_mapping" in str(url) and any(
-                        "bmt/toolkit" in (f.filename or "") for f in inspect.stack()
-                    ):
-                        from unittest.mock import MagicMock
-
-                        resp = MagicMock()
-                        resp.text = pred_text
-                        resp.status_code = 200
-                        return resp
-                    raise
-
-            bmt_mod.requests.get = _safe_bmt_get  # type: ignore[assignment]
-    except Exception:
-        pass
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int | pytest.ExitCode) -> None:
