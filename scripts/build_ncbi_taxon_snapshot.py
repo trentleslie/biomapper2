@@ -303,7 +303,11 @@ def verify_with_taxonkit(taxdump: Path, tables: dict, sample: int = 400, seed: i
             fields = line.split("\t")
             if len(fields) >= 2 and fields[1]:
                 by_name[fields[0]].add(int(fields[1]))
-        errors = [f"name2taxid {name!r}: {tid} not in {sorted(by_name[name])}" for tid, name in picked if tid not in by_name[name]]
+        errors = [
+            f"name2taxid {name!r}: {tid} not in {sorted(by_name[name])}"
+            for tid, name in picked
+            if tid not in by_name[name]
+        ]
         lineage_out = subprocess.run(
             [binary, "lineage", "--data-dir", str(data), "--show-lineage-taxids"],
             input="\n".join(str(tid) for tid, _ in picked) + "\n",

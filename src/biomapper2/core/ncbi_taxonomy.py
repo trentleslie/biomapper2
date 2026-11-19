@@ -116,9 +116,7 @@ def _ids(field: str, source: str, lineno: int) -> list[int]:
 def _parse(taxa_text: str, merged_text: str, homonym_text: str, version_text: str | None, source: str) -> Snapshot:
     names: dict[int, list[tuple[str, str]]] = {}
     info: dict[int, tuple[int | None, str]] = {}
-    for lineno, (tid, parent, rank, name, name_class) in enumerate(
-        _parse_tsv(taxa_text, TAXA_HEADER, source), start=2
-    ):
+    for lineno, (tid, parent, rank, name, name_class) in enumerate(_parse_tsv(taxa_text, TAXA_HEADER, source), start=2):
         if not _INT.match(tid) or (parent and not _INT.match(parent)) or not rank or not name or not name_class:
             raise NcbiTaxonomyError(f"NCBI taxonomy {source}: malformed row {lineno}: {tid!r} {name!r}")
         taxid = int(tid)
