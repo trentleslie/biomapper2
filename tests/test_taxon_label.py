@@ -140,6 +140,31 @@ def test_plain_lineage_species_slot_is_truncated_to_genus(label):
     assert [lv.name for lv in parse.levels].count("Escherichia") == 1
 
 
+@pytest.mark.parametrize(
+    "label, query",
+    [
+        (
+            "Bacteria;Bacillati;Bacillota;Bacilli;Caryophanales;Paenibacillaceae;Aneurinibacillus group;Oxalophagus",
+            "Oxalophagus",
+        ),
+        (
+            "Bacteria;Bacillati;Bacillota;Bacilli;Caryophanales;Paenibacillaceae;Aneurinibacillus group;"
+            "Aneurinibacillus;Aneurinibacillus migulanus",
+            "Aneurinibacillus",
+        ),
+    ],
+)
+def test_plain_lineage_group_name_is_not_truncated_as_a_species(label, query):
+    parse = parse_taxon_label(label)
+    assert "Aneurinibacillus group" in [lv.name for lv in parse.levels]
+    assert parse.query_name == query
+
+
+def test_plain_lineage_ending_in_group_name_keeps_it_whole():
+    parse = parse_taxon_label("Bacteria;Bacillota;Bacilli;Paenibacillaceae;Aneurinibacillus group")
+    assert (parse.query_name, parse.query_rank) == ("Aneurinibacillus group", None)
+
+
 def test_plain_lineage_without_species_keeps_unranked_deepest():
     parse = parse_taxon_label("Bacteria;Firmicutes;Clostridia;Clostridiales;Lachnospiraceae;Dorea")
     assert (parse.query_name, parse.query_rank) == ("Dorea", None)

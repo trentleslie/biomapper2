@@ -23,7 +23,8 @@ Grammar rules:
 * A depth-hinted or unranked level that repeats its parent's name (SILVA padding, ``D_4__X;D_5__X``)
   is dropped. An explicitly ranked repeat (``p__Actinobacteria;c__Actinobacteria``) is kept.
 * In an unprefixed lineage (``Bacteria;...;Escherichia;Escherichia coli``) a binomial slot is the species
-  level: it is truncated to its genus (a rank hint) and parsing stops.
+  level: it is truncated to its genus (a rank hint) and parsing stops. A grouping name
+  (``Aneurinibacillus group``, ``... cluster``) is not a binomial: it is kept and parsing continues.
 * Placeholders (uncultured, unidentified, unclassified, unknown, metagenome, ambiguous_taxa, incertae
   sedis, empty) are never the query name.
 
@@ -77,6 +78,9 @@ _LATIN = re.compile(r"^(Candidatus )?[A-Z][a-z]+$")
 _GLUED_CANDIDATUS = re.compile(r"^Candidatus([A-Z][a-z]+)$")
 # A SILVA genus slot that holds a binomial ("D_5__Enterobacter cancerogenus"): truncate to the genus.
 _GENUS_BINOMIAL = re.compile(r"^((?:Candidatus )?[A-Z][a-z]+) [a-z]+$")
+# Second words that make a two-word unranked level a grouping above genus ("Aneurinibacillus group"),
+# not a species: the level is kept whole and parsing continues to any deeper genus.
+_GROUP_WORD = re.compile(r"^(group|groups|subgroup|cluster|clade|complex|lineage|assemblage)$", re.I)
 _BARE_LATIN = re.compile(r"^(Candidatus )?[A-Z][a-z]+( [a-z]+)?$")
 # Superset suffixes over a Latin base genus. Order matters: the longest suffix forms first.
 _SUPERSET = (
@@ -186,6 +190,10 @@ def _split_levels(label: str) -> tuple[bool, list[TaxonLevel]]:
             # A placeholder ("Ambiguous taxa", "Incertae sedis", "Unknown family") is not a binomial: left
             # whole so the placeholder filter drops it and parsing continues to any deeper real level.
             binomial = None if _is_placeholder(name) else _GENUS_BINOMIAL.match(name)
+            if binomial and _GROUP_WORD.match(name.rsplit(" ", 1)[-1]):
+                # "Aneurinibacillus group" names a grouping above its member genera, not a species: keep it
+                # whole so a deeper genus ("...;Aneurinibacillus group;Oxalophagus") is the query.
+                binomial = None
             if binomial:
                 # An unranked lineage slot holding a binomial ("...;Escherichia;Escherichia coli") is the
                 # species level: keep its genus (a hint the caller confirms) and stop, as at ``s__``.
