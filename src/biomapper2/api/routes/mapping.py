@@ -335,6 +335,12 @@ async def map_batch(
     mapper = get_mapper(request)
     loop = asyncio.get_running_loop()
     kestrel_executor = _get_executor(request, "kestrel_executor")
+    fast_executor = _get_executor(request, "fast_executor")
+    is_non_kestrel_batch = all(
+        e.options.annotation_mode == "none" and not e.identifiers and e.options.kestrel_top_n is None
+        for e in body.entities
+    )
+    batch_executor = fast_executor if (is_non_kestrel_batch and fast_executor is not None) else kestrel_executor
 
     # Hard-enforce the passthrough payload cap up front (R9), before any mapping work. Uses each
     # entity's own kestrel_top_n and the worst-case endpoint count.
@@ -412,7 +418,7 @@ async def map_batch(
         return results, successful, failed
 
     results, successful, failed = await loop.run_in_executor(
-        kestrel_executor,
+        batch_executor,
         _run_with_api_context,
         _process_batch,
     )
@@ -588,6 +594,7 @@ async def map_dataset_stream(
 
     loop = asyncio.get_running_loop()
     kestrel_executor = _get_executor(request, "kestrel_executor")
+    fast_executor = _get_executor(request, "fast_executor")
 
     async def generate_ndjson():
         """Generator that yields NDJSON lines."""
@@ -596,8 +603,17 @@ async def map_dataset_stream(
         for idx, row in df.iterrows():
             try:
                 entity = row.to_dict()
+                has_row_identifiers = any(
+                    col
+                    and col in entity
+                    and pd.notna(entity[col])
+                    and str(entity[col]).strip() not in ("", "-", "NO_MATCH")
+                    for col in id_columns
+                )
+                is_non_kestrel_row = annotation_mode == "none" and not has_row_identifiers and kestrel_top_n is None
+                row_executor = fast_executor if (is_non_kestrel_row and fast_executor is not None) else kestrel_executor
                 mapped = await loop.run_in_executor(
-                    kestrel_executor,
+                    row_executor,
                     _run_with_api_context,
                     lambda ent=entity: mapper.map_entity_to_kg(
                         item=ent,

@@ -63,6 +63,14 @@ class Linker:
             result_type="expand",  # Expands Series into columns
         )
 
+    @staticmethod
+    def empty_dataframe_links(df: pd.DataFrame) -> pd.DataFrame:
+        """Build empty per-row linking columns when bulk canonicalize fails at the API dataset boundary."""
+        return pd.DataFrame(
+            [{"kg_ids": {}, "kg_ids_provided": {}, "kg_ids_assigned": {}} for _ in range(len(df))],
+            index=df.index,
+        )
+
     def _fetch_with_fallback_candidates(self, curies: list[str]) -> tuple[dict[str, str], frozenset[str]]:
         """One batched /canonicalize for ``curies`` plus every ICD-10-CM twin candidate.
 
@@ -151,6 +159,8 @@ class Linker:
         except Exception as exc:
             from .fault_tracking import record_kestrel_fault
 
+            # Records on the active single-entity row context; bulk dataset callers catch at the
+            # dataset boundary in Mapper.map_dataset_to_kg and attribute faults per affected row.
             record_kestrel_fault(None, f"canonicalize: {exc}")
             raise
 

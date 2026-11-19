@@ -91,10 +91,14 @@ class KestrelHybridSearchAnnotator(BaseAnnotator):
             # empty results, or a best-HGNC paralog). For the curated drug-conflated symbols, the human
             # node is unreachable by search, so resolve it deterministically (non-search) and verify.
             if prefer_human and GENE_SYMBOL_FALLBACK_ENABLED and not matched:
-                resolved_curie = self._resolver.resolve(search_term)
+                if isinstance(self._resolver, GeneSymbolResolver) and "resolve" not in vars(self._resolver):
+                    resolved_curie, resolver_faulted = self._resolver.resolve_checked(search_term)
+                else:
+                    resolved_curie = self._resolver.resolve(search_term)
+                    resolver_faulted = self._resolver.last_call_faulted(search_term) is True
                 if resolved_curie is not None:
                     chosen = {"id": resolved_curie, "score": _FALLBACK_SCORE, "resolved_via": "symbol_fallback"}
-                elif self._resolver.last_call_faulted(search_term) is True:
+                elif resolver_faulted:
                     from ..fault_tracking import record_kestrel_fault
 
                     record_kestrel_fault(entity, f"gene-symbol resolver get-nodes fault for {search_term!r}")

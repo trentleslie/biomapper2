@@ -112,6 +112,12 @@ class CircuitBreaker:
                 self._last_failure_time = time.monotonic()
                 self._state = "OPEN"
 
+    def release_cached_probe(self) -> None:
+        """Return ``HALF_OPEN`` to ``OPEN`` without resetting cooldown when a reply came from cache."""
+        with self._lock:
+            if self._state == "HALF_OPEN":
+                self._state = "OPEN"
+
     def reset(self) -> None:
         with self._lock:
             self._consecutive_failures = 0
@@ -598,27 +604,36 @@ def bulk_kestrel_request(
         effective_max_retries = api_ctx.max_retries
         effective_backoff_base = api_ctx.retry_backoff_base
         breaker_active = api_ctx.use_circuit_breaker
-        if breaker_active and not _CIRCUIT_BREAKER.can_attempt():
-            bump(endpoint, "transient_errors")
-            raise CircuitBreakerOpenError(f"Kestrel circuit breaker is OPEN for {endpoint}; failing fast")
     else:
         kwargs.setdefault("timeout", KESTREL_REQUEST_TIMEOUT_S)
         effective_max_retries = max_retries
         effective_backoff_base = retry_backoff_base
 
+    base_url = get_kestrel_api_url()
+
+    headers: dict[str, str] = {}
+    api_key = get_kestrel_api_key() if auth_required else None
+    if api_key:
+        if kestrel_host_accepts_credentials(base_url, api_key):
+            headers[_KESTREL_KEY_HEADER] = api_key
+        else:
+            _warn_key_withheld_once(base_url)
+
+    url = f"{base_url}/{endpoint}"
+
+    if breaker_active:
+        if _CIRCUIT_BREAKER.state != "closed" and isinstance(session, requests_cache.CachedSession):
+            cached_resp = session.request(method, url, headers=headers, only_if_cached=True, **kwargs)
+            if getattr(cached_resp, "from_cache", False) and cached_resp.status_code < 400:
+                bump(endpoint, "requests")
+                bump(endpoint, "from_cache_hits")
+                return cached_resp.json()
+        if not _CIRCUIT_BREAKER.can_attempt():
+            bump(endpoint, "transient_errors")
+            raise CircuitBreakerOpenError(f"Kestrel circuit breaker is OPEN for {endpoint}; failing fast")
+
     breaker_settled = False
     try:
-        base_url = get_kestrel_api_url()
-
-        headers: dict[str, str] = {}
-        api_key = get_kestrel_api_key() if auth_required else None
-        if api_key:
-            if kestrel_host_accepts_credentials(base_url, api_key):
-                headers[_KESTREL_KEY_HEADER] = api_key
-            else:
-                _warn_key_withheld_once(base_url)
-
-        url = f"{base_url}/{endpoint}"
         transient = (
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
@@ -631,11 +646,15 @@ def bulk_kestrel_request(
                 # Cache hit-vs-miss belongs in the manifest: a repeat run that replays a large cache
                 # reports a flip rate near zero and would publish "the backend is perfectly stable"
                 # from an instrument that cannot observe its own failure mode.
-                bump(endpoint, "from_cache_hits" if getattr(response, "from_cache", False) else "from_cache_misses")
+                from_cache = bool(getattr(response, "from_cache", False))
+                bump(endpoint, "from_cache_hits" if from_cache else "from_cache_misses")
                 response.raise_for_status()
                 parsed = response.json()
                 if breaker_active:
-                    _CIRCUIT_BREAKER.record_success()
+                    if from_cache:
+                        _CIRCUIT_BREAKER.release_cached_probe()
+                    else:
+                        _CIRCUIT_BREAKER.record_success()
                     breaker_settled = True
                 return parsed
             except requests.exceptions.HTTPError as e:

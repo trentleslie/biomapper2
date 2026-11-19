@@ -12,6 +12,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+import requests
 
 from . import config
 from .biolink_client import BiolinkClient
@@ -59,7 +60,7 @@ from .core.resolver import (
 )
 from .models import Entity
 from .provenance import build_run_provenance
-from .utils import AnnotationMode, setup_logging
+from .utils import AnnotationMode, get_current_api_context, setup_logging
 
 setup_logging()
 
@@ -818,7 +819,17 @@ class Mapper:
                     entity = entity.update_from(pd.Series({"kestrel_degraded": True}))
                 else:
                     entity = entity.update_from(
-                        pd.Series({"chosen_kg_id": None, "resolution_certificate": None, "chosen_kg_id_review": None})
+                        pd.Series(
+                            {
+                                "chosen_kg_id": None,
+                                "kg_equivalent_ids": {},
+                                "resolution_certificate": None,
+                                "chosen_kg_id_review": None,
+                                "chosen_kg_id_lipid_hint": None,
+                                "lipid_resolution": None,
+                                **mapping_fields(lipid_resolution=None, icd10cm=None),
+                            }
+                        )
                     )
                     fault_msg = "; ".join(row_faults) if row_faults else "Kestrel service fault"
                     raise KestrelFaultError(f"Entity mapping unresolved due to Kestrel fault: {fault_msg}")
@@ -947,7 +958,16 @@ class Mapper:
             logging.info(f"After step 2 (normalization), df is: \n{df}")
 
             # Do Step 3: link curies to KG nodes
-            linked_df = self.linker.link(df)
+            try:
+                linked_df = self.linker.link(df)
+            except (requests.exceptions.RequestException, icd10cm_fallback.Icd10cmFallbackLookupError) as exc:
+                if get_current_api_context() is None:
+                    raise
+                logging.warning("Bulk canonicalize failed during API dataset mapping; marking affected rows: %s", exc)
+                for idx, curies_list in df["curies"].items():
+                    if curies_list:
+                        record_kestrel_fault(idx, f"canonicalize: {exc}")
+                linked_df = self.linker.empty_dataframe_links(df)
             assert isinstance(linked_df, pd.DataFrame)
             # Internal per-row ICD-10-CM fallback side-map: kept aside, never written to the TSV.
             if icd10cm_fallback.SIDE_MAP_FIELD in linked_df.columns:
@@ -963,6 +983,48 @@ class Mapper:
             df = df.join(resolved_df)
             logging.info(f"After step 4 (resolution), df is: \n{df}")
 
+            def _clear_rejected_faulted_matches(frame: pd.DataFrame) -> pd.DataFrame:
+                cleared_ids_local: list[Any] = list(frame["chosen_kg_id"])
+                cleared_reviews_local: list[Any] = list(frame["chosen_kg_id_review"])
+                has_hint = "chosen_kg_id_lipid_hint" in frame.columns
+                cleared_hints_local: list[Any] = list(frame["chosen_kg_id_lipid_hint"]) if has_hint else []
+                has_equiv = "kg_equivalent_ids" in frame.columns
+                cleared_equiv_local: list[Any] = list(frame["kg_equivalent_ids"]) if has_equiv else []
+                any_cleared = False
+                for pos, (r_idx, r_row) in enumerate(frame.iterrows()):
+                    if not has_kestrel_fault(row_idx=r_idx):
+                        continue
+                    c_id = _scalar_or_none(r_row.get("chosen_kg_id"))
+                    if c_id is None:
+                        continue
+                    r_faults = get_kestrel_faults(row_idx=r_idx)
+                    if not _has_non_kestrel_resolution(
+                        c_id,
+                        kg_ids_provided=r_row.get("kg_ids_provided"),
+                        chosen_kg_id_provided=r_row.get("chosen_kg_id_provided"),
+                        kg_ids_assigned=r_row.get("kg_ids_assigned"),
+                        faults=r_faults,
+                    ):
+                        cleared_ids_local[pos] = None
+                        cleared_reviews_local[pos] = None
+                        if has_hint:
+                            cleared_hints_local[pos] = None
+                        if has_equiv:
+                            cleared_equiv_local[pos] = {}
+                        any_cleared = True
+                if any_cleared:
+                    frame["chosen_kg_id"] = pd.Series(cleared_ids_local, index=frame.index, dtype=object)
+                    frame["chosen_kg_id_review"] = pd.Series(cleared_reviews_local, index=frame.index, dtype=object)
+                    if has_hint:
+                        frame["chosen_kg_id_lipid_hint"] = pd.Series(
+                            cleared_hints_local, index=frame.index, dtype=object
+                        )
+                    if has_equiv:
+                        frame["kg_equivalent_ids"] = pd.Series(cleared_equiv_local, index=frame.index, dtype=object)
+                return frame
+
+            df = _clear_rejected_faulted_matches(df)
+
             # Do Step 5: enrich with equivalent IDs from chosen KG nodes
             unique_kg_ids = [kid for kid in df["chosen_kg_id"].dropna().unique()]
             equivalent_ids_lookup_ok = True
@@ -975,6 +1037,8 @@ class Mapper:
                 df["kg_equivalent_ids"] = df["chosen_kg_id"].map(
                     lambda kid: {} if pd.isna(kid) else equiv_map.get(kid, {})
                 )
+                if not equivalent_ids_lookup_ok:
+                    df = _clear_rejected_faulted_matches(df)
             else:
                 df["kg_equivalent_ids"] = pd.Series([{} for _ in range(len(df))], index=df.index)
             logging.info(f"After step 5 (equivalent IDs enrichment), df is: \n{df}")
@@ -1080,17 +1144,14 @@ class Mapper:
                 columns=["annotator_availability", "annotator_source", "kestrel_endpoints_used"], errors="ignore"
             )
 
-            # Check fault isolation contracts for dataset
+            # Check fault isolation contracts for dataset (rejected matches were already cleared before
+            # Step 5 and Step 6 so certificates, lipid columns, and mapping fields match chosen_kg_id)
             row_errors: list[str | None] = []
             row_degraded: list[bool] = []
             has_any_error = False
             has_any_degraded = False
 
-            cleared_ids: list[Any] = list(df["chosen_kg_id"])
-            cleared_reviews: list[Any] = list(df["chosen_kg_id_review"])
-            has_cleared = False
-
-            for i, (idx, row) in enumerate(df.iterrows()):
+            for idx, row in df.iterrows():
                 is_faulted = has_kestrel_fault(row_idx=idx)
                 committed_id = _scalar_or_none(row.get("chosen_kg_id"))
                 row_fault_list = get_kestrel_faults(row_idx=idx) if is_faulted else []
@@ -1106,9 +1167,6 @@ class Mapper:
                         row_degraded.append(True)
                         has_any_degraded = True
                     else:
-                        cleared_ids[i] = None
-                        cleared_reviews[i] = None
-                        has_cleared = True
                         msg = "; ".join(row_fault_list) if row_fault_list else "Kestrel service fault"
                         row_errors.append(f"Kestrel fault: {msg}")
                         row_degraded.append(False)
@@ -1117,14 +1175,12 @@ class Mapper:
                     row_errors.append(None)
                     row_degraded.append(False)
 
-            if has_cleared:
-                df["chosen_kg_id"] = pd.Series(cleared_ids, index=df.index, dtype=object)
-                df["chosen_kg_id_review"] = pd.Series(cleared_reviews, index=df.index, dtype=object)
-
             if has_any_degraded:
+                df = _preserve_input_columns(df, ("kestrel_degraded",))
                 df["kestrel_degraded"] = pd.Series(row_degraded, index=df.index, dtype=bool)
 
             if has_any_error:
+                df = _preserve_input_columns(df, ("error",))
                 df["error"] = pd.Series([err or "" for err in row_errors], index=df.index, dtype=str)
 
             # Dump the final dataframe to a TSV

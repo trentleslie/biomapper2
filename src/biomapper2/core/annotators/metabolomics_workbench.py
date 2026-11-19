@@ -1,5 +1,6 @@
 """Metabolomics Workbench RefMet API annotator for metabolite entities."""
 
+import contextvars
 import logging
 import time
 from collections.abc import Callable
@@ -53,6 +54,11 @@ class RefMetResult:
     version: str | None = None
 
 
+_BATCH_DEADLINES: contextvars.ContextVar[dict[int, float] | None] = contextvars.ContextVar(
+    "_MW_BATCH_DEADLINES", default=None
+)
+
+
 class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     """Annotator that queries the Metabolomics Workbench RefMet match API.
 
@@ -88,9 +94,24 @@ class MetabolomicsWorkbenchAnnotator(BaseAnnotator):
     MAX_RETRIES: int = 1
     RETRY_BACKOFF_S: float = 0.5
     BATCH_DEADLINE_S: float = 120.0
-    # Class-level default so an instance built via __new__ (some tests bypass __init__) still has a
-    # safe unarmed value; the deadline branches then no-op without touching the injectable clock.
-    _batch_deadline: float | None = None
+
+    # Context-local deadline keyed by instance id so concurrent API worker requests never share,
+    # inherit, or disarm another request's RefMet batch deadline, while an instance built via
+    # __new__ (some tests bypass __init__) still reads a safe unarmed None default.
+    @property
+    def _batch_deadline(self) -> float | None:
+        deadlines = _BATCH_DEADLINES.get()
+        return deadlines.get(id(self)) if deadlines is not None else None
+
+    @_batch_deadline.setter
+    def _batch_deadline(self, value: float | None) -> None:
+        current = _BATCH_DEADLINES.get() or {}
+        updated = dict(current)
+        if value is None:
+            updated.pop(id(self), None)
+        else:
+            updated[id(self)] = value
+        _BATCH_DEADLINES.set(updated or None)
 
     # Default-OFF. When a snapshot is present, a freeze MISS resolves deterministically to NO_MATCH
     # (source=not_in_snapshot) with NO network call. Only when this is True does a miss fall through
