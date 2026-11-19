@@ -282,7 +282,11 @@ def test_api_timeout_defaults_match_committed_derivation() -> None:
     assert lex["recommended_timeout_s"] == expected_lex
     assert config.KESTREL_API_REQUEST_TIMEOUT_S >= lex["recommended_timeout_s"]
 
-    assert single["source_artifact"] == "live_kestrel_latency_uncensored_180s_20261118T181048Z.json"
+    expected_live_artifact = "studies/analysis/results/live_kestrel_latency_uncensored_180s_20261118T181048Z.json"
+    assert derivation["source_artifact"] == expected_live_artifact
+    assert (Path(config.PROJECT_ROOT) / expected_live_artifact).exists()
+
+    assert single["source_artifact"] == expected_live_artifact
     assert single["n_hybrid_search_requests"] == 28
     expected_single = float(math.ceil(single["headroom_multiplier"] * single["max_s"]))
     assert single["recommended_timeout_s"] == expected_single

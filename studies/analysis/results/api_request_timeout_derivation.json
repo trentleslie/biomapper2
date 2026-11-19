@@ -1,5 +1,5 @@
 {
-  "source_artifact": "live_kestrel_latency_uncensored_180s_20261118T181048Z.json",
+  "source_artifact": "studies/analysis/results/live_kestrel_latency_uncensored_180s_20261118T181048Z.json",
   "dev_reference_artifact": "studies/analysis/results/request_timeout_derivation.json",
   "measured_at_utc": "2026-11-18T18:11:57.044367+00:00",
   "git_sha": "c6d8463713022e5bf585982a61ed2c5c8d71bfd6",
@@ -32,7 +32,7 @@
       "hybrid-search",
       "vector-search"
     ],
-    "source_artifact": "live_kestrel_latency_uncensored_180s_20261118T181048Z.json",
+    "source_artifact": "studies/analysis/results/live_kestrel_latency_uncensored_180s_20261118T181048Z.json",
     "n_hybrid_search_requests": 28,
     "hybrid_search_percentiles_s": {
       "p50": 0.5787,

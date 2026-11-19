@@ -1,0 +1,2974 @@
+{
+  "summary": {
+    "timestamp_utc": "2026-11-18T18:11:57.044367+00:00",
+    "git_sha": "c6d8463713022e5bf585982a61ed2c5c8d71bfd6",
+    "worktree": "/home/trentleslie/agy-team-competition/kestrel/worktrees/kestrel-hardening",
+    "biomapper2_version": "0.1.0",
+    "kestrel_api_url": "https://kestrel.krakenkg.com/api",
+    "default_settings": {
+      "BIOMAPPER2_KESTREL_API_REQUEST_TIMEOUT_S": 4.0,
+      "BIOMAPPER2_KESTREL_API_MAX_RETRIES": 1,
+      "BIOMAPPER2_KESTREL_API_RETRY_BACKOFF_S": 0.2,
+      "BIOMAPPER2_KESTREL_STARTUP_REQUEST_TIMEOUT_S": 2.5,
+      "BIOMAPPER2_KESTREL_STARTUP_TOTAL_TIMEOUT_S": 8.0,
+      "BIOMAPPER2_KESTREL_API_WORKER_THREADS": 12,
+      "BIOMAPPER2_KESTREL_NON_KESTREL_WORKER_THREADS": 4,
+      "BIOMAPPER2_KESTREL_BREAKER_FAILURE_THRESHOLD": 6,
+      "BIOMAPPER2_KESTREL_BREAKER_COOLDOWN_S": 5.0
+    },
+    "startup_ready_s": 6.915,
+    "regression_suite_wall_s": 60.724,
+    "regression_checks_count": 35,
+    "suite_sha256": "33410e590ba31b3e51ba5552ccd2b46bc20de2b87e20422d6aad683437321ec5",
+    "kestrel_requests": {
+      "total_calls": 254,
+      "live_network_calls": 120,
+      "in_run_cache_hits": 134,
+      "http_errors_or_exceptions": [],
+      "live_latency_s": {
+        "min_s": 0.0398,
+        "p50_s": 0.0796,
+        "p95_s": 1.0778,
+        "p95_nearest_rank_s": 1.0703,
+        "max_s": 11.8057,
+        "mean_s": 0.5192,
+        "timeout_s": 4.0
+      },
+      "all_calls_including_in_run_cache_latency_s": {
+        "p50_s": 0.0023,
+        "p95_s": 0.6493,
+        "max_s": 11.8057
+      },
+      "endpoint_breakdown_live_s": {
+        "hybrid-search": {
+          "n": 28,
+          "min_s": 0.3064,
+          "p50_s": 0.5787,
+          "p95_s": 11.0923,
+          "p95_nearest_rank_s": 11.6876,
+          "p99_s": 11.7738,
+          "p99_nearest_rank_s": 11.8057,
+          "max_s": 11.8057,
+          "mean_s": 1.9186
+        },
+        "vector-search": {
+          "n": 3,
+          "min_s": 0.4264,
+          "p50_s": 0.8616,
+          "p95_s": 1.1845,
+          "p95_nearest_rank_s": 1.2203,
+          "p99_s": 1.2132,
+          "p99_nearest_rank_s": 1.2203,
+          "max_s": 1.2203,
+          "mean_s": 0.8361
+        },
+        "vector_combined": {
+          "n": 31,
+          "min_s": 0.3064,
+          "p50_s": 0.6121,
+          "p95_s": 10.8372,
+          "p95_nearest_rank_s": 11.6876,
+          "p99_s": 11.7703,
+          "p99_nearest_rank_s": 11.8057,
+          "max_s": 11.8057,
+          "mean_s": 1.8138
+        },
+        "lexical_and_metadata": {
+          "n": 89,
+          "min_s": 0.0398,
+          "p50_s": 0.0551,
+          "p95_s": 0.1099,
+          "p95_nearest_rank_s": 0.1108,
+          "p99_s": 0.1494,
+          "p99_nearest_rank_s": 0.1503,
+          "max_s": 0.1503,
+          "mean_s": 0.0682
+        },
+        "per_endpoint": {
+          "canonicalize": {
+            "n": 26,
+            "min_s": 0.0398,
+            "p50_s": 0.0493,
+            "p95_s": 0.0562,
+            "p95_nearest_rank_s": 0.0563,
+            "p99_s": 0.0652,
+            "p99_nearest_rank_s": 0.0682,
+            "max_s": 0.0682,
+            "mean_s": 0.0486
+          },
+          "categories": {
+            "n": 1,
+            "min_s": 0.1493,
+            "p50_s": 0.1493,
+            "p95_s": 0.1493,
+            "p95_nearest_rank_s": 0.1493,
+            "p99_s": 0.1493,
+            "p99_nearest_rank_s": 0.1493,
+            "max_s": 0.1493,
+            "mean_s": 0.1493
+          },
+          "get-nodes": {
+            "n": 28,
+            "min_s": 0.0429,
+            "p50_s": 0.0516,
+            "p95_s": 0.074,
+            "p95_nearest_rank_s": 0.079,
+            "p99_s": 0.086,
+            "p99_nearest_rank_s": 0.0885,
+            "max_s": 0.0885,
+            "mean_s": 0.0539
+          },
+          "health": {
+            "n": 3,
+            "min_s": 0.1298,
+            "p50_s": 0.1429,
+            "p95_s": 0.1496,
+            "p95_nearest_rank_s": 0.1503,
+            "p99_s": 0.1502,
+            "p99_nearest_rank_s": 0.1503,
+            "max_s": 0.1503,
+            "mean_s": 0.141
+          },
+          "hybrid-search": {
+            "n": 28,
+            "min_s": 0.3064,
+            "p50_s": 0.5787,
+            "p95_s": 11.0923,
+            "p95_nearest_rank_s": 11.6876,
+            "p99_s": 11.7738,
+            "p99_nearest_rank_s": 11.8057,
+            "max_s": 11.8057,
+            "mean_s": 1.9186
+          },
+          "text-search": {
+            "n": 31,
+            "min_s": 0.0523,
+            "p50_s": 0.0898,
+            "p95_s": 0.1075,
+            "p95_nearest_rank_s": 0.1087,
+            "p99_s": 0.1101,
+            "p99_nearest_rank_s": 0.1108,
+            "max_s": 0.1108,
+            "mean_s": 0.088
+          },
+          "vector-search": {
+            "n": 3,
+            "min_s": 0.4264,
+            "p50_s": 0.8616,
+            "p95_s": 1.1845,
+            "p95_nearest_rank_s": 1.2203,
+            "p99_s": 1.2132,
+            "p99_nearest_rank_s": 1.2203,
+            "max_s": 1.2203,
+            "mean_s": 0.8361
+          }
+        }
+      }
+    },
+    "row_outcomes": {
+      "total_rows_evaluated": 72,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0,
+      "rows_with_error_or_kestrel_degraded": 0,
+      "row_issues": []
+    },
+    "stop_gate": {
+      "any_healthy_row_errored": false,
+      "any_healthy_row_degraded": false,
+      "p95_above_2_0s": false
+    }
+  },
+  "per_check_summary": [
+    {
+      "check_id": "batch_all_20",
+      "check_type": "batch",
+      "rows": 20,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "dataset_disease_reg",
+      "check_type": "dataset",
+      "rows": 5,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0,
+      "has_error_column": false,
+      "has_kestrel_degraded_column": false
+    },
+    {
+      "check_id": "dataset_metab_reg",
+      "check_type": "dataset",
+      "rows": 6,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0,
+      "has_error_column": false,
+      "has_kestrel_degraded_column": false
+    },
+    {
+      "check_id": "entity_01_leukemia",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_02_leukemea",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_03_heart_attack",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_04_type_2_diabetes",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_05_crohn_s_disease",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_06_nonexistent_disease_zzz_404",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_07_glucose",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_08_lactate",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_09_isoleucine",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_10_creatine",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_11_cholic_acid",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_12_definitely_not_a_real_metabolite",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_13_pc_16_0_18_1",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_14_12_hete",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_15_tnfrsf1a",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_16_tnfrsf1b",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_17_ldlr",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_18_gh1",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_19_calca",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "entity_20_type_2_diabetes_without_complications",
+      "check_type": "entity",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_01_leukemia",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_02_isoleucine",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_03_heart_attack",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_04_creatine",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_05_creatine",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_06_leukemia",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_07_aspirin",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_08_cholesterol",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_09_brca1",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "probe_10_tp53",
+      "check_type": "probe",
+      "rows": 1,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "stream_disease_reg",
+      "check_type": "dataset_stream",
+      "rows": 5,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    },
+    {
+      "check_id": "stream_metab_reg",
+      "check_type": "dataset_stream",
+      "rows": 6,
+      "errored_rows": 0,
+      "kestrel_degraded_rows": 0
+    }
+  ],
+  "per_request_timings": [
+    {
+      "ts_utc": "2026-11-18T18:10:53.319353+00:00",
+      "method": "GET",
+      "endpoint": "categories",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.149273,
+      "elapsed_ms": 149.27,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:53.409342+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.089494,
+      "elapsed_ms": 89.49,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:53.508035+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.097875,
+      "elapsed_ms": 97.88,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:53.608716+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.099921,
+      "elapsed_ms": 99.92,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:53.715632+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.106254,
+      "elapsed_ms": 106.25,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:53.815896+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.099963,
+      "elapsed_ms": 99.96,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:53.902895+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.086412,
+      "elapsed_ms": 86.41,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:53.983498+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.080144,
+      "elapsed_ms": 80.14,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.069731+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.08534,
+      "elapsed_ms": 85.34,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.153765+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.083308,
+      "elapsed_ms": 83.31,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.236907+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.082535,
+      "elapsed_ms": 82.54,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.335089+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.097275,
+      "elapsed_ms": 97.27,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.427740+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.092249,
+      "elapsed_ms": 92.25,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.536913+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.108669,
+      "elapsed_ms": 108.67,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.647995+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.110783,
+      "elapsed_ms": 110.78,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.748275+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.099565,
+      "elapsed_ms": 99.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.823176+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.073357,
+      "elapsed_ms": 73.36,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.911586+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.088016,
+      "elapsed_ms": 88.02,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:54.990778+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.078244,
+      "elapsed_ms": 78.24,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.091478+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.099855,
+      "elapsed_ms": 99.85,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.197002+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.104337,
+      "elapsed_ms": 104.34,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.256553+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.058955,
+      "elapsed_ms": 58.96,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.351843+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.094755,
+      "elapsed_ms": 94.75,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.452680+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.099843,
+      "elapsed_ms": 99.84,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.546516+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.093284,
+      "elapsed_ms": 93.28,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.629247+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.081824,
+      "elapsed_ms": 81.82,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.702701+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.072761,
+      "elapsed_ms": 72.76,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:55.793118+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.089823,
+      "elapsed_ms": 89.82,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:56.568857+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.620606,
+      "elapsed_ms": 620.61,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:56.623205+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050326,
+      "elapsed_ms": 50.33,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:10:56.677974+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.053562,
+      "elapsed_ms": 53.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:06.670117+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 9.986727,
+      "elapsed_ms": 9986.73,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:06.713236+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.041705,
+      "elapsed_ms": 41.71,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:06.767058+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.052518,
+      "elapsed_ms": 52.52,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:07.582657+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.808495,
+      "elapsed_ms": 808.49,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:07.652505+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.068188,
+      "elapsed_ms": 68.19,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:07.701220+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.047961,
+      "elapsed_ms": 47.96,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:08.243993+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.536068,
+      "elapsed_ms": 536.07,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:08.293334+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.047992,
+      "elapsed_ms": 47.99,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:08.350901+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.056179,
+      "elapsed_ms": 56.18,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:09.003404+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.645021,
+      "elapsed_ms": 645.02,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:09.044250+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.040042,
+      "elapsed_ms": 40.04,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:09.100610+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.054844,
+      "elapsed_ms": 54.84,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:20.791506+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 11.687594,
+      "elapsed_ms": 11687.59,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:20.844219+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050565,
+      "elapsed_ms": 50.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:20.889483+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.043075,
+      "elapsed_ms": 43.08,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:20.957244+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.056281,
+      "elapsed_ms": 56.28,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:21.002613+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.043096,
+      "elapsed_ms": 43.1,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:21.061832+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050188,
+      "elapsed_ms": 50.19,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:21.116221+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.05207,
+      "elapsed_ms": 52.07,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:21.516134+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.389793,
+      "elapsed_ms": 389.79,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:21.559751+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.041866,
+      "elapsed_ms": 41.87,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:21.603423+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.042876,
+      "elapsed_ms": 42.88,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:25.674638+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 4.062519,
+      "elapsed_ms": 4062.52,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:25.722611+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.045767,
+      "elapsed_ms": 45.77,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:25.778366+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.054678,
+      "elapsed_ms": 54.68,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:26.398686+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.612099,
+      "elapsed_ms": 612.1,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:26.442184+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.042461,
+      "elapsed_ms": 42.46,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:26.492550+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.049008,
+      "elapsed_ms": 49.01,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:26.971682+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.4717,
+      "elapsed_ms": 471.7,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:27.018816+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.044116,
+      "elapsed_ms": 44.12,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:27.080683+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.059503,
+      "elapsed_ms": 59.5,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:27.612162+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.52278,
+      "elapsed_ms": 522.78,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:28.134852+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.521528,
+      "elapsed_ms": 521.53,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:28.186952+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.049705,
+      "elapsed_ms": 49.71,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:28.252906+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.064638,
+      "elapsed_ms": 64.64,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:28.421423+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.061976,
+      "elapsed_ms": 61.98,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:28.429852+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.006392,
+      "elapsed_ms": 6.39,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:28.432270+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001575,
+      "elapsed_ms": 1.58,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:28.932807+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.494631,
+      "elapsed_ms": 494.63,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:29.447655+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.513757,
+      "elapsed_ms": 513.76,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:29.500752+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.049595,
+      "elapsed_ms": 49.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:29.552297+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.049521,
+      "elapsed_ms": 49.52,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:29.606608+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050535,
+      "elapsed_ms": 50.54,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:29.612538+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002623,
+      "elapsed_ms": 2.62,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:29.616409+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002485,
+      "elapsed_ms": 2.48,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:30.081518+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.455123,
+      "elapsed_ms": 455.12,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:30.134198+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050532,
+      "elapsed_ms": 50.53,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:30.187547+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.051018,
+      "elapsed_ms": 51.02,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:30.660164+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.467073,
+      "elapsed_ms": 467.07,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:30.718368+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.055927,
+      "elapsed_ms": 55.93,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:30.771302+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.051035,
+      "elapsed_ms": 51.04,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:31.165202+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.386616,
+      "elapsed_ms": 386.62,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:31.215676+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.048919,
+      "elapsed_ms": 48.92,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:31.264578+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.047336,
+      "elapsed_ms": 47.34,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:31.699522+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.426984,
+      "elapsed_ms": 426.98,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:31.750770+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.04739,
+      "elapsed_ms": 47.39,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:31.802345+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.048147,
+      "elapsed_ms": 48.15,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:32.777414+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.966954,
+      "elapsed_ms": 966.95,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:32.824705+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.046564,
+      "elapsed_ms": 46.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:32.904440+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.078985,
+      "elapsed_ms": 78.99,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:32.964308+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050177,
+      "elapsed_ms": 50.18,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:32.965922+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000742,
+      "elapsed_ms": 0.74,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.116610+00:00",
+      "method": "GET",
+      "endpoint": "health",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.150305,
+      "elapsed_ms": 150.3,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.218649+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.094124,
+      "elapsed_ms": 94.12,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.222425+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001611,
+      "elapsed_ms": 1.61,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.227036+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002585,
+      "elapsed_ms": 2.58,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.302566+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.069656,
+      "elapsed_ms": 69.66,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.305937+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001597,
+      "elapsed_ms": 1.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.310397+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002669,
+      "elapsed_ms": 2.67,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.743887+00:00",
+      "method": "POST",
+      "endpoint": "vector-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.426356,
+      "elapsed_ms": 426.36,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.746380+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001081,
+      "elapsed_ms": 1.08,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:33.748872+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001347,
+      "elapsed_ms": 1.35,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:34.975496+00:00",
+      "method": "POST",
+      "endpoint": "vector-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 1.220338,
+      "elapsed_ms": 1220.34,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:34.979662+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001796,
+      "elapsed_ms": 1.8,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:34.985200+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002859,
+      "elapsed_ms": 2.86,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:35.050941+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.057582,
+      "elapsed_ms": 57.58,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:35.052919+00:00",
+      "method": "POST",
+      "endpoint": "vector-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001516,
+      "elapsed_ms": 1.52,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:35.054426+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001167,
+      "elapsed_ms": 1.17,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:35.056637+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000949,
+      "elapsed_ms": 0.95,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:35.059063+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001312,
+      "elapsed_ms": 1.31,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:35.113135+00:00",
+      "method": "POST",
+      "endpoint": "text-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.052342,
+      "elapsed_ms": 52.34,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:35.975045+00:00",
+      "method": "POST",
+      "endpoint": "vector-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.861564,
+      "elapsed_ms": 861.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:36.777347+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.801752,
+      "elapsed_ms": 801.75,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:36.786788+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001739,
+      "elapsed_ms": 1.74,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:36.788958+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000893,
+      "elapsed_ms": 0.89,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:36.790984+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001092,
+      "elapsed_ms": 1.09,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:37.098729+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.306448,
+      "elapsed_ms": 306.45,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:38.173441+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 1.070286,
+      "elapsed_ms": 1070.29,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:38.222011+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.04772,
+      "elapsed_ms": 47.72,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:38.268449+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.04539,
+      "elapsed_ms": 45.39,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:38.817316+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.545336,
+      "elapsed_ms": 545.34,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:41.576106+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 2.758395,
+      "elapsed_ms": 2758.4,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:41.616800+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.039756,
+      "elapsed_ms": 39.76,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:41.706292+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.088546,
+      "elapsed_ms": 88.55,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:41.759561+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050651,
+      "elapsed_ms": 50.65,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:41.764229+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002437,
+      "elapsed_ms": 2.44,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:41.767438+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002155,
+      "elapsed_ms": 2.16,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:42.305536+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.531364,
+      "elapsed_ms": 531.36,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:42.346584+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.040324,
+      "elapsed_ms": 40.32,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:42.402130+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.054754,
+      "elapsed_ms": 54.75,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.076892+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.668053,
+      "elapsed_ms": 668.05,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.135281+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.055129,
+      "elapsed_ms": 55.13,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.184676+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.047984,
+      "elapsed_ms": 47.98,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.193867+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001731,
+      "elapsed_ms": 1.73,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.196922+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001507,
+      "elapsed_ms": 1.51,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.199838+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001367,
+      "elapsed_ms": 1.37,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.203733+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001793,
+      "elapsed_ms": 1.79,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.206922+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001451,
+      "elapsed_ms": 1.45,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.211400+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002134,
+      "elapsed_ms": 2.13,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.215600+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001838,
+      "elapsed_ms": 1.84,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.218089+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001132,
+      "elapsed_ms": 1.13,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.220942+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001558,
+      "elapsed_ms": 1.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.223656+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001122,
+      "elapsed_ms": 1.12,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.226150+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000983,
+      "elapsed_ms": 0.98,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.228420+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001093,
+      "elapsed_ms": 1.09,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.231246+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001204,
+      "elapsed_ms": 1.2,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.233182+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00093,
+      "elapsed_ms": 0.93,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.235573+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001339,
+      "elapsed_ms": 1.34,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.238474+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001137,
+      "elapsed_ms": 1.14,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.240486+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000729,
+      "elapsed_ms": 0.73,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.242154+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000966,
+      "elapsed_ms": 0.97,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.244660+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000699,
+      "elapsed_ms": 0.7,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.246538+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001035,
+      "elapsed_ms": 1.03,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.249723+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000799,
+      "elapsed_ms": 0.8,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.252069+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001286,
+      "elapsed_ms": 1.29,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.255478+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001082,
+      "elapsed_ms": 1.08,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.257275+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000786,
+      "elapsed_ms": 0.79,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.259123+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000769,
+      "elapsed_ms": 0.77,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.260900+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000683,
+      "elapsed_ms": 0.68,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.262213+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.0006,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.263880+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000907,
+      "elapsed_ms": 0.91,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.267174+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001173,
+      "elapsed_ms": 1.17,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.269634+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001193,
+      "elapsed_ms": 1.19,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.274036+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.002209,
+      "elapsed_ms": 2.21,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.279827+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001266,
+      "elapsed_ms": 1.27,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.281752+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000825,
+      "elapsed_ms": 0.82,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.283881+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001155,
+      "elapsed_ms": 1.16,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.287857+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.001106,
+      "elapsed_ms": 1.11,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.289190+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000965,
+      "elapsed_ms": 0.96,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.291074+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000699,
+      "elapsed_ms": 0.7,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.292459+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000738,
+      "elapsed_ms": 0.74,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.294586+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000852,
+      "elapsed_ms": 0.85,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.296961+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000972,
+      "elapsed_ms": 0.97,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.298423+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000933,
+      "elapsed_ms": 0.93,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.301577+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000736,
+      "elapsed_ms": 0.74,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.302336+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000535,
+      "elapsed_ms": 0.54,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.303276+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000381,
+      "elapsed_ms": 0.38,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.304259+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000534,
+      "elapsed_ms": 0.53,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.305691+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000517,
+      "elapsed_ms": 0.52,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.306877+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000511,
+      "elapsed_ms": 0.51,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.307886+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000691,
+      "elapsed_ms": 0.69,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.309707+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000624,
+      "elapsed_ms": 0.62,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.310680+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000419,
+      "elapsed_ms": 0.42,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.311746+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00054,
+      "elapsed_ms": 0.54,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.313195+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000563,
+      "elapsed_ms": 0.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.314041+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000371,
+      "elapsed_ms": 0.37,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.314997+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000511,
+      "elapsed_ms": 0.51,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.316209+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000556,
+      "elapsed_ms": 0.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.317008+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000363,
+      "elapsed_ms": 0.36,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.317989+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000543,
+      "elapsed_ms": 0.54,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.319198+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000556,
+      "elapsed_ms": 0.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.320157+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000427,
+      "elapsed_ms": 0.43,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.321242+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000602,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.322611+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000597,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.323546+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000409,
+      "elapsed_ms": 0.41,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.324687+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000666,
+      "elapsed_ms": 0.67,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.326214+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00042,
+      "elapsed_ms": 0.42,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.327373+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000602,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.333964+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000717,
+      "elapsed_ms": 0.72,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.335028+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000456,
+      "elapsed_ms": 0.46,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.336161+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000624,
+      "elapsed_ms": 0.62,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.337822+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000608,
+      "elapsed_ms": 0.61,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.338778+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000418,
+      "elapsed_ms": 0.42,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.339864+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000589,
+      "elapsed_ms": 0.59,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.341666+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00069,
+      "elapsed_ms": 0.69,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.342627+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00043,
+      "elapsed_ms": 0.43,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.343772+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000605,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.345476+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000613,
+      "elapsed_ms": 0.61,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.346496+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000439,
+      "elapsed_ms": 0.44,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.347577+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000589,
+      "elapsed_ms": 0.59,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.349410+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000458,
+      "elapsed_ms": 0.46,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.350605+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000598,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.357360+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000641,
+      "elapsed_ms": 0.64,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.358695+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000739,
+      "elapsed_ms": 0.74,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.360921+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00077,
+      "elapsed_ms": 0.77,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.362005+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000436,
+      "elapsed_ms": 0.44,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.363359+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000795,
+      "elapsed_ms": 0.8,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.365454+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000616,
+      "elapsed_ms": 0.62,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.366498+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000464,
+      "elapsed_ms": 0.46,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.367660+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000577,
+      "elapsed_ms": 0.58,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.370144+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000641,
+      "elapsed_ms": 0.64,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.371158+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000437,
+      "elapsed_ms": 0.44,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.372246+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000602,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.374729+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000696,
+      "elapsed_ms": 0.7,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.375615+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00065,
+      "elapsed_ms": 0.65,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.376798+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000477,
+      "elapsed_ms": 0.48,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.377967+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000639,
+      "elapsed_ms": 0.64,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.379738+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000651,
+      "elapsed_ms": 0.65,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.381190+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000656,
+      "elapsed_ms": 0.66,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.382100+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000614,
+      "elapsed_ms": 0.61,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.384999+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000657,
+      "elapsed_ms": 0.66,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.385799+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000578,
+      "elapsed_ms": 0.58,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.386880+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00044,
+      "elapsed_ms": 0.44,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.388069+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.00065,
+      "elapsed_ms": 0.65,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.389843+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000658,
+      "elapsed_ms": 0.66,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.391376+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000668,
+      "elapsed_ms": 0.67,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:43.392319+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000636,
+      "elapsed_ms": 0.64,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:55.206217+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 11.805676,
+      "elapsed_ms": 11805.68,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:55.285384+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.051468,
+      "elapsed_ms": 51.47,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:55.371279+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.05606,
+      "elapsed_ms": 56.06,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:55.541073+00:00",
+      "method": "GET",
+      "endpoint": "health",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.12978,
+      "elapsed_ms": 129.78,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:55.569556+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000685,
+      "elapsed_ms": 0.69,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:55.570885+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000559,
+      "elapsed_ms": 0.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.228852+00:00",
+      "method": "POST",
+      "endpoint": "hybrid-search",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.657365,
+      "elapsed_ms": 657.36,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.307161+00:00",
+      "method": "POST",
+      "endpoint": "canonicalize",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.050447,
+      "elapsed_ms": 50.45,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.333467+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000714,
+      "elapsed_ms": 0.71,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.335058+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000595,
+      "elapsed_ms": 0.6,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.336314+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000544,
+      "elapsed_ms": 0.54,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.337777+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000556,
+      "elapsed_ms": 0.56,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.401967+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.052671,
+      "elapsed_ms": 52.67,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.430161+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000701,
+      "elapsed_ms": 0.7,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.431459+00:00",
+      "method": "POST",
+      "endpoint": "get-nodes",
+      "status_code": 200,
+      "from_cache": true,
+      "elapsed_s": 0.000592,
+      "elapsed_ms": 0.59,
+      "error": null
+    },
+    {
+      "ts_utc": "2026-11-18T18:11:56.600045+00:00",
+      "method": "GET",
+      "endpoint": "health",
+      "status_code": 200,
+      "from_cache": false,
+      "elapsed_s": 0.142897,
+      "elapsed_ms": 142.9,
+      "error": null
+    }
+  ]
+}
