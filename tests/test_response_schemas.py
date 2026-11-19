@@ -91,7 +91,7 @@ def test_entity_mapping_result_and_embedding_schemas_preserve_property_sets() ->
     assert set(ser_schema["properties"]) == EXPECTED_ENTITY_MAPPING_RESULT_PROPERTIES
     assert "kestrel_degraded" not in ser_schema.get("required", [])
     kd_ser = ser_schema["properties"]["kestrel_degraded"]
-    assert {"type": "boolean"} in kd_ser["anyOf"]
+    assert {"type": "boolean", "const": True} in kd_ser["anyOf"]
     assert {"type": "null"} in kd_ser["anyOf"]
 
     # Embedding model 1: EntityMappingResponse
@@ -113,7 +113,7 @@ def test_entity_mapping_result_and_embedding_schemas_preserve_property_sets() ->
     oa_emr = oa_schemas["EntityMappingResult"]
     assert set(oa_emr["properties"]) == EXPECTED_ENTITY_MAPPING_RESULT_PROPERTIES
     assert "kestrel_degraded" not in oa_emr.get("required", [])
-    assert {"type": "boolean"} in oa_emr["properties"]["kestrel_degraded"]["anyOf"]
+    assert {"type": "boolean", "const": True} in oa_emr["properties"]["kestrel_degraded"]["anyOf"]
     assert {"type": "null"} in oa_emr["properties"]["kestrel_degraded"]["anyOf"]
 
     assert set(oa_schemas["EntityMappingResponse"]["properties"]) == {"result", "metadata"}
@@ -277,3 +277,17 @@ def test_pyproject_requires_pydantic_with_exclude_if() -> None:
     deps: list[str] = ast.literal_eval("\n".join(cleaned_lines))
     pydantic_specs = [d for d in deps if d.startswith("pydantic")]
     assert pydantic_specs == ["pydantic>=2.12.0"]
+
+
+@pytest.mark.unit
+def test_entity_mapping_result_kestrel_degraded_literal_true_type() -> None:
+    """EntityMappingResult only allows Literal true or None for kestrel_degraded."""
+    import pydantic
+
+    valid_true = EntityMappingResult(name="glucose", kestrel_degraded=True)
+    assert valid_true.kestrel_degraded is True
+    valid_none = EntityMappingResult(name="glucose", kestrel_degraded=None)
+    assert valid_none.kestrel_degraded is None
+
+    with pytest.raises(pydantic.ValidationError):
+        EntityMappingResult(name="glucose", kestrel_degraded=False)  # type: ignore[arg-type]
