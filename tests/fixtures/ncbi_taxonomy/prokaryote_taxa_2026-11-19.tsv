@@ -1,0 +1,103 @@
+taxid	parent_taxid	rank	name	name_class
+2		domain	Bacteria	scientific name
+2		domain	Bacteria (ex Cavalier-Smith 1987)	synonym
+2		domain	Bacteria Woese et al. 2024	synonym
+2		domain	Bacteriobiota	synonym
+583	1903414	genus	Proteus	scientific name
+583	1903414	genus	Liquidobacterium	synonym
+641	135623	family	Vibrionaceae	scientific name
+662	641	genus	Vibrio	scientific name
+662	641	genus	Beneckea	synonym
+662	641	genus	Listonella	synonym
+662	641	genus	Microspira	synonym
+662	641	genus	Pacinia	synonym
+815	171549	family	Bacteroidaceae	scientific name
+816	815	genus	Bacteroides	scientific name
+816	815	genus	Capsularis	synonym
+816	815	genus	Ristella	synonym
+976	68336	phylum	Bacteroidota	scientific name
+976	68336	phylum	BCF group	equivalent name
+976	68336	phylum	CFB group	equivalent name
+976	68336	phylum	Kapaibacteriota	equivalent name
+976	68336	phylum	CFB group bacteria	genbank common name
+976	68336	phylum	"Bacteroidota" Whitman et al. 2018	synonym
+976	68336	phylum	Bacteroidetes	synonym
+976	68336	phylum	Candidatus Kapaibacteriota	synonym
+976	68336	phylum	Sphingobacteria	synonym
+1224	3379134	phylum	Pseudomonadota	scientific name
+1224	3379134	phylum	proteobacteria	genbank common name
+1224	3379134	phylum	"Alphaproteobacteriota" Whitman et al. 2018	synonym
+1224	3379134	phylum	Alphaproteobacteriota	synonym
+1224	3379134	phylum	Proteobacteria	synonym
+1224	3379134	phylum	Proteobacteriota	synonym
+1236	1224	class	Gammaproteobacteria	scientific name
+1236	1224	class	Proteobacteria gamma subdivision	synonym
+1236	1224	class	Pseudomonadia	synonym
+1236	1224	class	Purple bacteria, gamma subdivision	synonym
+1236	1224	class	gamma proteobacteria	synonym
+1236	1224	class	gamma subdivision	synonym
+1236	1224	class	gamma subgroup	synonym
+1239	1783272	phylum	Bacillota	scientific name
+1239	1783272	phylum	firmicutes	genbank common name
+1239	1783272	phylum	Bacillaeota	synonym
+1239	1783272	phylum	Bacillota corrig. Gibbons and Murray 2021	synonym
+1239	1783272	phylum	Bacillus/Clostridium group	synonym
+1239	1783272	phylum	Clostridium group firmicutes	synonym
+1239	1783272	phylum	Low G+C firmicutes	synonym
+1263	216572	genus	Ruminococcus	scientific name
+1385	91061	order	Caryophanales	scientific name
+1385	91061	order	Bacillales	synonym
+1385	91061	order	Bacillus/Staphylococcus group	synonym
+1386	186817	genus	Bacillus	scientific name
+1760	201174	class	Actinomycetes	scientific name
+1760	201174	class	Actinobacteridae	includes
+1760	201174	class	Actinobacteria Stackebrandt et al. 1997	synonym
+1760	201174	class	Actinomycetia	synonym
+1760	201174	class	Actinobacteria	synonym (authority stripped)
+68336	1783270	clade	Bacteroidota/Chlorobiota group	scientific name
+68336	1783270	clade	Bacteroidetes/Chlorobi group	equivalent name
+68336	1783270	clade	CFB/Chlorobi group	synonym
+68336	1783270	clade	CFB/Green sulfur bacteria group	synonym
+68336	1783270	clade	Cytophagales/Green sulfur bacteria group	synonym
+91061	1239	class	Bacilli	scientific name
+91061	1239	class	Bacillus/Lactobacillus/Streptococcus group	synonym
+91061	1239	class	Firmibacteria	synonym
+91347	1236	order	Enterobacterales	scientific name
+91347	1236	order	Enterobacteriaceae and related endosymbionts	synonym
+91347	1236	order	Enterobacteriaceae group	synonym
+91347	1236	order	Enterobacteriales	synonym
+135623	1236	order	Vibrionales	scientific name
+135623	1236	order	'Vibrionales'	synonym
+135623	1236	order	Vibrionaceae group	synonym
+171549	200643	order	Bacteroidales	scientific name
+171552	171549	family	Prevotellaceae	scientific name
+186801	1239	class	Clostridia	scientific name
+186802	186801	order	Eubacteriales	scientific name
+186802	186801	order	Clostridiales	synonym
+186803	3085636	family	Lachnospiraceae	scientific name
+186817	1385	family	Bacillaceae	scientific name
+189330	186803	genus	Dorea	scientific name
+200643	976	class	Bacteroidia	scientific name
+200643	976	class	Bacteroidetes	synonym
+201174	1783272	phylum	Actinomycetota	scientific name
+201174	1783272	phylum	actinobacteria	genbank common name
+201174	1783272	phylum	Actinobacteraeota	synonym
+201174	1783272	phylum	Actinobacteria	synonym
+201174	1783272	phylum	Actinobacteriota	synonym
+216572	186802	family	Oscillospiraceae	scientific name
+216572	186802	family	Hungateiclostridiaceae	synonym
+216572	186802	family	Ruminococcaceae	synonym
+572511	186803	genus	Blautia	scientific name
+1783270	3379134	clade	FCB group	scientific name
+1783270	3379134	clade	Fibrobacteres-Chlorobi-Bacteroidetes superphylum	synonym
+1783272	2	kingdom	Bacillati	scientific name
+1783272	2	kingdom	Firmacutes	synonym
+1783272	2	kingdom	Firmicuteota	synonym
+1783272	2	kingdom	Firmicutes	synonym
+1783272	2	kingdom	Firmicutes corrig. Gibbons and Murray 1978 (Approved Lists 1980)	synonym
+1783272	2	kingdom	Terrabacteria	synonym
+1783272	2	kingdom	Terrabacterida	synonym
+1903414	91347	family	Morganellaceae	scientific name
+1903414	91347	family	Morganellaceae Adeolu et al. 2016	synonym
+3085636	186801	order	Lachnospirales	scientific name
+3379134	2	kingdom	Pseudomonadati	scientific name

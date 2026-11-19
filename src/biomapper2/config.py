@@ -524,6 +524,12 @@ ICD10CM_WALKUP_ENABLED = os.getenv("BIOMAPPER2_ICD10CM_WALKUP_ENABLED", "1").str
 # missing or malformed snapshot fails Mapper init while the walk-up is enabled.
 ICD10CM_HIERARCHY_PATH: str | None = os.getenv("BIOMAPPER2_ICD10CM_HIERARCHY_PATH") or None
 
+# Override for the packaged NCBI prokaryote taxonomy snapshot used by the 16S taxon annotator
+# (biomapper2/data/ncbi_taxonomy/prokaryote_taxa_<date>.tsv, read via importlib.resources). Point it at a
+# ``prokaryote_taxa_<date>.tsv``; its merged_/homonyms_ companions and ``.version`` sidecar sit next to it.
+# A missing or malformed snapshot raises at first use on the taxon path (see core/ncbi_taxonomy.py).
+NCBI_TAXONOMY_SNAPSHOT_PATH: str | None = os.getenv("BIOMAPPER2_NCBI_TAXONOMY_SNAPSHOT_PATH") or None
+
 # Per-category preferred (canonical) namespace prefixes for the prefer_canonical re-ranking. Within a
 # Biolink category, hybrid-search ranks across all namespaces at once, so a non-canonical same-text node
 # (UMLS/ICD/KEGG/PANTHER) frequently outranks the canonical one. These prefixes mark the canonical node so
