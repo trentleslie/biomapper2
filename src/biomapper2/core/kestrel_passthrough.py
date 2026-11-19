@@ -61,7 +61,7 @@ def collect(
     search_text: str,
     category: str,
     prefixes: list[str] | None,
-    endpoints: list[str],
+    endpoints: list[str | dict[str, str]],
     n: int,
 ) -> list[KestrelSearchResult]:
     """Fetch the top-N raw rows for each RECORDED Kestrel endpoint (``separate_call``).
@@ -71,14 +71,23 @@ def collect(
         category: Biolink category the selection call sent (row + cache-key parity).
         prefixes: Allowed CURIE prefixes the selection call sent (or None/empty for none).
         endpoints: Kestrel endpoints the pipeline RECORDED as used (e.g. ``["hybrid-search"]``);
-            empty → ``[]`` (R6).
+            empty → ``[]`` (R6). An entry may instead be ``{"endpoint", "search_text", "category"}``
+            when the annotator searched a rewritten query (the taxon-label annotator's cleaned name);
+            its values override ``search_text`` / ``category`` for that endpoint.
         n: Number of raw rows to return per endpoint (the request's ``kestrel_top_n``).
 
     Returns:
         One ``KestrelSearchResult`` per endpoint, in the recorded order. Never raises (R7).
     """
     results: list[KestrelSearchResult] = []
-    for endpoint in endpoints:
+    default_text, default_category = search_text, category
+    for entry in endpoints:
+        if isinstance(entry, dict):
+            endpoint = entry["endpoint"]
+            search_text = entry.get("search_text") or default_text
+            category = entry.get("category") or default_category
+        else:
+            endpoint, search_text, category = entry, default_text, default_category
         request_params = KestrelRequestParams(
             search_text=search_text,
             limit=n,

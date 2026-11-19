@@ -123,6 +123,34 @@ def test_binomial_in_silva_genus_slot_is_truncated_to_genus():
     assert (parse.query_name, parse.query_rank, parse.label_class) == ("Enterobacter", "genus", "latin")
 
 
+@pytest.mark.parametrize(
+    "label",
+    [
+        "Bacteria;Proteobacteria;Gammaproteobacteria;Enterobacterales;Enterobacteriaceae;Escherichia;"
+        "Escherichia coli",
+        "Bacteria;Proteobacteria;Gammaproteobacteria;Enterobacterales;Enterobacteriaceae;Escherichia coli",
+        "Root;Bacteria;Proteobacteria;Enterobacteriaceae;Escherichia;Escherichia coli;strain K-12",
+    ],
+)
+def test_plain_lineage_species_slot_is_truncated_to_genus(label):
+    parse = parse_taxon_label(label)
+    assert parse.is_16s_format
+    assert (parse.query_name, parse.query_rank, parse.rank_is_hint) == ("Escherichia", "genus", True)
+    assert parse.label_class == "latin"
+    assert [lv.name for lv in parse.levels].count("Escherichia") == 1
+
+
+def test_plain_lineage_without_species_keeps_unranked_deepest():
+    parse = parse_taxon_label("Bacteria;Firmicutes;Clostridia;Clostridiales;Lachnospiraceae;Dorea")
+    assert (parse.query_name, parse.query_rank) == ("Dorea", None)
+
+
+def test_explicit_rank_repeating_its_parent_is_kept():
+    parse = parse_taxon_label("k__Bacteria;p__Actinobacteria;c__Actinobacteria;o__;f__;g__")
+    assert (parse.query_name, parse.query_rank) == ("Actinobacteria", "class")
+    assert [lv.rank for lv in parse.levels] == ["domain", "phylum", "class"]
+
+
 def test_trailing_unprefixed_placeholder_is_ignored():
     parse = parse_taxon_label(
         "D_0__Bacteria;D_1__Firmicutes;D_2__Clostridia;D_3__Clostridiales;D_4__Lachnospiraceae;"

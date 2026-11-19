@@ -43,13 +43,17 @@ _KESTREL_SLUG_TO_ENDPOINT: dict[str, str] = {
 }
 
 
-def _row_kestrel_endpoints(annotators: list, caches: list, entity: Any, name_field: str) -> list[str]:
+def _row_kestrel_endpoints(annotators: list, caches: list, entity: Any, name_field: str) -> list[str | dict[str, str]]:
     """The Kestrel endpoints actually invoked for ONE row, in run order.
 
     An annotator that reports ``kestrel_searched`` decides for itself; otherwise the row searched iff its
     name is non-empty (every Kestrel annotator returns before issuing a request on an empty name).
+
+    An entry is the endpoint name when the annotator searched the row's raw name under the job category,
+    or ``{"endpoint", "search_text", "category"}`` when it reports (``kestrel_search_request``) that it
+    sent a rewritten query, so the passthrough replays the search selection actually used.
     """
-    endpoints: list[str] = []
+    endpoints: list[str | dict[str, str]] = []
     named = text_is_not_empty(entity.get(name_field))
     for annotator, cache in zip(annotators, caches):
         endpoint = _KESTREL_SLUG_TO_ENDPOINT.get(getattr(annotator, "slug", ""))
@@ -57,7 +61,8 @@ def _row_kestrel_endpoints(annotators: list, caches: list, entity: Any, name_fie
             continue
         searched = annotator.kestrel_searched(entity, name_field, cache=cache)
         if searched if searched is not None else named:
-            endpoints.append(endpoint)
+            request = annotator.kestrel_search_request(entity, name_field, cache=cache)
+            endpoints.append({"endpoint": endpoint, **request} if request else endpoint)
     return endpoints
 
 

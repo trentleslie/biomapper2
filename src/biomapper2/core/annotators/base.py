@@ -185,6 +185,18 @@ class BaseAnnotator(ABC):  # Inherit from ABC
         """
         return None
 
+    def kestrel_search_request(
+        self, entity: dict | pd.Series, name_field: str, cache: dict | None = None
+    ) -> dict[str, str] | None:
+        """The ``search_text`` / ``category`` this annotator actually sent to Kestrel for this row.
+
+        ``None`` (the default) means "the row's raw name and the job category", which is what every generic
+        Kestrel annotator searches. An annotator that rewrites the query (the taxon-label annotator searches
+        a cleaned name under ``biolink:OrganismTaxon``) overrides this, so the raw passthrough replays the
+        search selection actually saw instead of the raw label.
+        """
+        return None
+
     @abstractmethod
     def get_annotations(
         self,

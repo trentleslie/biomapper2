@@ -272,3 +272,12 @@ class TaxonLabelAnnotator(BaseAnnotator):
             return False
         plan = cache["plans"].get(self._key(entity.get(name_field)))
         return bool(plan is not None and plan["abstain"] is None and cache["searched"])
+
+    def kestrel_search_request(
+        self, entity: dict | pd.Series, name_field: str, cache: dict | None = None
+    ) -> dict[str, str] | None:
+        """The cleaned query name and taxon category the bulk search sent for this row (None if none)."""
+        if not self.kestrel_searched(entity, name_field, cache=cache):
+            return None
+        plan = cast(dict[str, Any], cache)["plans"][self._key(entity.get(name_field))]
+        return {"search_text": plan["query"], "category": TAXON_CATEGORY}

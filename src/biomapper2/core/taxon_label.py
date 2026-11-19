@@ -20,7 +20,10 @@ Grammar rules:
 * ``d__`` is the domain, unless its value is a ``denovo...`` OTU code, which ends parsing.
 * SILVA ``D_n__`` gives a depth, used only as a rank hint (``rank_is_hint``); the caller confirms it.
 * Parsing stops at ``s__``, ``t__``, ``D_6__`` and deeper, and ``d__denovo...``: no species resolution.
-* A level that repeats its parent's name (SILVA padding, ``D_4__X;D_5__X``) is dropped.
+* A depth-hinted or unranked level that repeats its parent's name (SILVA padding, ``D_4__X;D_5__X``)
+  is dropped. An explicitly ranked repeat (``p__Actinobacteria;c__Actinobacteria``) is kept.
+* In an unprefixed lineage (``Bacteria;...;Escherichia;Escherichia coli``) a binomial slot is the species
+  level: it is truncated to its genus (a rank hint) and parsing stops.
 * Placeholders (uncultured, unidentified, unclassified, unknown, metagenome, ambiguous_taxa, incertae
   sedis, empty) are never the query name.
 
@@ -179,7 +182,14 @@ def _split_levels(label: str) -> tuple[bool, list[TaxonLevel]]:
                 break
             levels.append(TaxonLevel(_SILVA_DEPTH[depth], _normalize_name(silva.group(2)), rank_is_hint=True))
         else:
-            levels.append(TaxonLevel(None, _normalize_name(part)))
+            name = _normalize_name(part)
+            binomial = _GENUS_BINOMIAL.match(name)
+            if binomial:
+                # An unranked lineage slot holding a binomial ("...;Escherichia;Escherichia coli") is the
+                # species level: keep its genus (a hint the caller confirms) and stop, as at ``s__``.
+                levels.append(TaxonLevel("genus", binomial.group(1), rank_is_hint=True))
+                break
+            levels.append(TaxonLevel(None, name))
     return is_16s, levels
 
 
@@ -206,7 +216,13 @@ def parse_taxon_label(label: str | None) -> TaxonParse:
         if _is_placeholder(level.name):
             continue
         if named and named[-1].name.casefold() == level.name.casefold():
-            continue  # padded repeat: the child repeats its parent's name
+            if level.rank is None or level.rank_is_hint:
+                # Padded repeat (SILVA depth padding, or a plain lineage's species slot truncated to the
+                # genus it repeats): drop the child, but let a ranked child name an unranked parent.
+                if named[-1].rank is None and level.rank is not None:
+                    named[-1] = level
+                continue
+            # An explicitly ranked child (``p__Actinobacteria;c__Actinobacteria``) is a real level: keep it.
         named.append(level)
     levels = tuple(named)
 

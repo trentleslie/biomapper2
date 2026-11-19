@@ -333,12 +333,17 @@ def test_dataset_path_makes_one_bulk_search_and_records_endpoints_per_row(fake):
     out = _engine().annotate(pd.DataFrame({"name": labels}), "name", [], TAXON, [], mode="all")
     assert len(fake.calls) == 1
     assert sorted(fake.calls[0]) == ["Dorea", "Homo sapiens", "Prevotellaceae"]
+
+    def hybrid(query):
+        return [{"endpoint": "hybrid-search", "search_text": query, "category": "biolink:OrganismTaxon"}]
+
+    # Each row records the CLEANED query the bulk search sent, not the raw classifier label.
     assert list(out["kestrel_endpoints_used"]) == [
-        ["hybrid-search"],
-        ["hybrid-search"],
+        hybrid("Dorea"),
+        hybrid("Prevotellaceae"),
         [],
-        ["hybrid-search"],
-        ["hybrid-search"],
+        hybrid("Dorea"),
+        hybrid("Homo sapiens"),
     ]
     assert out["annotator_source"].iloc[2]["taxon-label"] == "abstain:host_or_organelle"
     assert "NCBITaxon" in out["assigned_ids"].iloc[0]["taxon-label"]
@@ -348,4 +353,6 @@ def test_single_path_records_no_endpoint_for_a_pre_search_abstention(fake):
     out = _engine().annotate({"name": "sk__Eukaryota;k__Metazoa"}, "name", [], TAXON, [], mode="all")
     assert list(out["kestrel_endpoints_used"]) == []
     out = _engine().annotate({"name": "k__Bacteria;g__Dorea"}, "name", [], TAXON, [], mode="all")
-    assert list(out["kestrel_endpoints_used"]) == ["hybrid-search"]
+    assert list(out["kestrel_endpoints_used"]) == [
+        {"endpoint": "hybrid-search", "search_text": "Dorea", "category": "biolink:OrganismTaxon"}
+    ]
