@@ -147,6 +147,19 @@ For a local server, the API docs are available at:
   `icd10cm_snapshot_version`; fallback rows carry `kg_build`. `BIOMAPPER2_ICD10CM_FALLBACK_ENABLED=0`
   turns off both; `BIOMAPPER2_ICD10CM_WALKUP_ENABLED=0` turns off the walk-up only. Refresh the snapshot
   for a new fiscal year with `scripts/build_icd10cm_hierarchy.py` (pinned URL + SHA-256).
+- **16S taxon labels:** send classifier labels (Greengenes 13_8, SILVA, RDP, MGnify, Greengenes2, or a
+  bare name) with `entity_type="microbiome"`. The aliases `microbiome`, `microbe(s)`, `taxon`, `taxa`,
+  `taxonomy`, `organism`, `bacteria`, `bacterium` and `16s` all route to `biolink:OrganismTaxon`
+  (`organism`, `bacteria` and `bacterium` used to resolve to `IndividualOrganism`/`Bacterium`). The
+  `taxon-label` annotator parses each label, abstains on empty, host, organelle and clone-code labels
+  without searching, and only commits NCBITaxon nodes that a pinned NCBI prokaryote snapshot
+  (`biomapper2/data/ncbi_taxonomy/`, rebuilt with `scripts/build_ncbi_taxon_snapshot.py`) confirms: a
+  prokaryote at the label's rank whose NCBI names include the label's name. Bare names absent from the
+  snapshot (e.g. `Homo sapiens`) are delegated to search, minus the non-prokaryote side of known
+  homonyms (Bacillus, Proteus). `assigned_ids` records the route in `resolved_via`
+  (`taxon_label:exact|synonym|superset|delegated`). Passing an explicit `annotators` list bypasses the
+  taxon annotator and its guarantees. `BIOMAPPER2_TAXON_LABEL_ANNOTATOR=0` restores the generic hybrid
+  annotator for `OrganismTaxon` (the aliases and the NCBITaxon preference stay).
 
 ### Raw Kestrel passthrough (`kestrel_top_n`)
 
