@@ -224,7 +224,7 @@ flowchart LR
 
 ### PR1
 
-- [ ] **U1: 16S label parser**
+- [x] **U1: 16S label parser**
 
 **Goal:** Turn a label string into a deterministic parse: levels, query name and rank, label class, and whether it is in 16S format.
 **Requirements:** R2, R3
@@ -278,7 +278,7 @@ flowchart LR
 
 **Verification:** every format row in the baseline `labels.tsv` parses without error. The parse class distribution is recorded in the PR body.
 
-- [ ] **U2: Aliases and NCBITaxon preference**
+- [x] **U2: Aliases and NCBITaxon preference**
 
 **Goal:** Route taxon entity types to OrganismTaxon and make NCBITaxon the canonical namespace.
 **Requirements:** R1, R4
@@ -302,7 +302,7 @@ flowchart LR
 
 **Verification:** the alias tests pass. The SmallMolecule/Disease canonical tests pass with only the unconfigured-category test retargeted.
 
-- [ ] **U3: NCBI prokaryote taxonomy snapshot and homonym list**
+- [x] **U3: NCBI prokaryote taxonomy snapshot and homonym list**
 
 **Goal:** A pinned, packaged, versioned snapshot plus a loader exposing only what PR1 uses, offline: prokaryote membership, homonymy, rank-scoped name lookup and merged ids. The data file keeps parent pointers, so U8 adds the lineage and LCA helpers without a rebuild (challenge c3). If the U4 truth fix turns out to need lineage, add the lineage helper here and defer only LCA.
 **Requirements:** R6, R9, R14 (fail loud)
@@ -349,7 +349,7 @@ flowchart LR
 - `git ls-files` shows the data files.
 - The TaxonKit cross-check report is attached to the PR.
 
-- [ ] **U4: Truth re-adjudication and benchmark harness**
+- [x] **U4: Truth re-adjudication and benchmark harness**
 
 **Goal:** Fix the no-node truth rows (R19), pin the panel in the repo, and run it through `Mapper`, saving results by default.
 **Requirements:** R16, R19
@@ -384,7 +384,7 @@ flowchart LR
 - `.gitignore` gets negations `!studies/analysis/data/taxon_16s/**/*.tsv` and `!studies/analysis/data/taxon_16s/**/*.json`, and every data file is confirmed with `git ls-files`. The global `*.tsv`/`*.json` rules ignore them today.
 - Known limit: outside an API context the mapper re-raises a link-stage canonicalize failure, so a Kestrel outage at link time aborts the run (fail loud). Only annotation-stage faults are excluded and counted.
 
-- [ ] **U5: TaxonLabelAnnotator (PR1 form) and engine wiring**
+- [x] **U5: TaxonLabelAnnotator (PR1 form) and engine wiring**
 
 **Goal:** For OrganismTaxon, clean labels, search in bulk, keep only prokaryote NCBITaxon hits, and abstain on placeholder, clone-code, host and organelle labels.
 **Requirements:** R4, R9, R10, R11, R12 (guard), R14 (kill switch)
