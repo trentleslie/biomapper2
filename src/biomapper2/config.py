@@ -524,6 +524,24 @@ ICD10CM_WALKUP_ENABLED = os.getenv("BIOMAPPER2_ICD10CM_WALKUP_ENABLED", "1").str
 # missing or malformed snapshot fails Mapper init while the walk-up is enabled.
 ICD10CM_HIERARCHY_PATH: str | None = os.getenv("BIOMAPPER2_ICD10CM_HIERARCHY_PATH") or None
 
+# Kill switch for the 16S taxon-label annotator (see core/annotators/taxon_label.py). Default ON: an
+# OrganismTaxon job runs the taxon annotator INSTEAD of the generic hybrid annotator. Set
+# BIOMAPPER2_TAXON_LABEL_ANNOTATOR=0/false/no/off to restore the generic hybrid annotator for OrganismTaxon.
+# The taxon entity-type aliases and the NCBITaxon preference stay either way (reverting the aliases needs a
+# release). Read at call time, so tests monkeypatch it.
+TAXON_LABEL_ANNOTATOR_ENABLED = os.getenv("BIOMAPPER2_TAXON_LABEL_ANNOTATOR", "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
+
+# Override for the packaged NCBI prokaryote taxonomy snapshot used by the 16S taxon annotator
+# (biomapper2/data/ncbi_taxonomy/prokaryote_taxa_<date>.tsv, read via importlib.resources). Point it at a
+# ``prokaryote_taxa_<date>.tsv``; its merged_/homonyms_ companions and ``.version`` sidecar sit next to it.
+# A missing or malformed snapshot raises at first use on the taxon path (see core/ncbi_taxonomy.py).
+NCBI_TAXONOMY_SNAPSHOT_PATH: str | None = os.getenv("BIOMAPPER2_NCBI_TAXONOMY_SNAPSHOT_PATH") or None
+
 # Per-category preferred (canonical) namespace prefixes for the prefer_canonical re-ranking. Within a
 # Biolink category, hybrid-search ranks across all namespaces at once, so a non-canonical same-text node
 # (UMLS/ICD/KEGG/PANTHER) frequently outranks the canonical one. These prefixes mark the canonical node so
@@ -533,10 +551,34 @@ ICD10CM_HIERARCHY_PATH: str | None = os.getenv("BIOMAPPER2_ICD10CM_HIERARCHY_PAT
 #
 # Prefix strings are the *actual* Kestrel KG prefixes, verified live 2026-06-18 against hybrid-search rows
 # (e.g. RefMet is "RM", not "REFMET"). A wrong string is a silent no-op (the filter matches nothing).
+#
+# OrganismTaxon -> NCBITaxon: verified live 2026-11-19 against public Kestrel (KG 2.3.0) hybrid-search rows
+# (recorded in tests/fixtures/organism_taxon_hybrid_search_recorded.json): "Prevotellaceae" ranks
+# UMLS:C1080666 above NCBITaxon:171552, so without this the UMLS duplicate is committed (16S plan R4).
 CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
     "biolink:SmallMolecule": {"CHEBI", "HMDB", "RM"},
     "biolink:Disease": {"MONDO"},
+    "biolink:OrganismTaxon": {"NCBITaxon"},
 }
+
+# Entity-type aliases that route to biolink:OrganismTaxon (16S plan R1). ONE source of truth, read by both
+# BiolinkClient.standardize_entity_type (what is accepted) and api/kestrel_discovery.ALIASES (what
+# /entity-types advertises), so the two cannot drift. Matched on the normalized raw string BEFORE
+# singularize, which deliberately overrides two Biolink matches: "bacteria"/"bacterium" would otherwise
+# resolve to biolink:Bacterium and "organism" to biolink:IndividualOrganism, and "16s" would singularize
+# to "16". Callers sending those types move to OrganismTaxon (release note).
+TAXON_ENTITY_TYPE_ALIASES: tuple[str, ...] = (
+    "microbiome",
+    "microbe",
+    "microbes",
+    "taxon",
+    "taxa",
+    "taxonomy",
+    "organism",
+    "bacteria",
+    "bacterium",
+    "16s",
+)
 
 # Per-category Biolink acceptance root for the category *validator* (see
 # core/annotators/kestrel_hybrid.py:_is_on_category). Hybrid search ranks across categories as well as

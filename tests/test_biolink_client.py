@@ -97,3 +97,39 @@ def test_atomic_write_leaves_no_partial_on_failure(tmp_path, monkeypatch):
         bc._atomic_write_text(str(target), "partial content")
     assert not target.exists()
     assert not list(tmp_path.glob("*.tmp"))
+
+
+# ------------------------------------------------------------------ taxon entity-type aliases (16S, R1)
+
+from biomapper2.config import TAXON_ENTITY_TYPE_ALIASES  # noqa: E402
+
+
+@pytest.mark.parametrize(
+    "alias",
+    ["microbiome", "microbe", "microbes", "taxon", "taxa", "taxonomy", "organism", "bacteria", "bacterium", "16s"],
+)
+def test_taxon_aliases_route_to_organism_taxon(alias):
+    assert alias in TAXON_ENTITY_TYPE_ALIASES
+    assert BiolinkClient().standardize_entity_type(alias) == "biolink:OrganismTaxon"
+
+
+@pytest.mark.parametrize("alias", ["Bacteria", "ORGANISM", "16S", " Microbiome "])
+def test_taxon_aliases_are_case_and_space_insensitive(alias):
+    # Matched on the normalized raw string BEFORE singularize: "16S" would otherwise become "16", and
+    # bacteria/organism would otherwise hit biolink:Bacterium / biolink:IndividualOrganism.
+    assert BiolinkClient().standardize_entity_type(alias) == "biolink:OrganismTaxon"
+
+
+@pytest.mark.parametrize(
+    "entity_type, category",
+    [("metabolite", "biolink:SmallMolecule"), ("lipid", "biolink:SmallMolecule"), ("protein", "biolink:Protein")],
+)
+def test_non_taxon_aliases_are_unchanged(entity_type, category):
+    assert BiolinkClient().standardize_entity_type(entity_type) == category
+
+
+def test_discovery_and_standardization_share_one_taxon_alias_set():
+    from biomapper2.api.kestrel_discovery import ALIASES
+
+    served = {alias for alias, category in ALIASES.items() if category == "biolink:OrganismTaxon"}
+    assert served == set(TAXON_ENTITY_TYPE_ALIASES)

@@ -194,3 +194,28 @@ def test_collect_one_endpoint_fails_others_succeed(monkeypatch):
     assert by_ep["text-search"].rows == []
     assert by_ep["hybrid-search"].error is None
     assert len(by_ep["hybrid-search"].rows) == 1
+
+
+def test_recorded_search_request_overrides_text_and_category(monkeypatch):
+    sent: list[tuple] = []
+
+    def fake_request(**kwargs):
+        sent.append((kwargs["endpoint"], kwargs["batch_items"], kwargs["json"]["category"]))
+        return {kwargs["batch_items"][0]: [{"id": "NCBITaxon:189330"}]}
+
+    monkeypatch.setattr(kestrel_passthrough, "kestrel_request", fake_request)
+    results = kestrel_passthrough.collect(
+        search_text="k__Bacteria;g__Dorea",
+        category="biolink:NamedThing",
+        prefixes=None,
+        endpoints=[
+            {"endpoint": "hybrid-search", "search_text": "Dorea", "category": "biolink:OrganismTaxon"},
+            "text-search",
+        ],
+        n=3,
+    )
+    assert sent == [
+        ("hybrid-search", ["Dorea"], "biolink:OrganismTaxon"),
+        ("text-search", ["k__Bacteria;g__Dorea"], "biolink:NamedThing"),
+    ]
+    assert [r.request.search_text for r in results] == ["Dorea", "k__Bacteria;g__Dorea"]

@@ -1,0 +1,9 @@
+ncbi-taxdump/2026-11-19/sha256:d8cf5a3f1da6/built:2026-11-19
+taxdump_date: 2026-11-19
+taxdump_sha256: d8cf5a3f1da672d78aafeccd33be007c22f20eeb3d6917951dfc94987fff04c4
+taxdump_md5: 8eeb45e6483e77bd7236a476820ab43d
+subset: yes
+nodes: 34
+names: 102
+merged: 10
+homonyms: 4

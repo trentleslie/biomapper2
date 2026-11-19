@@ -57,8 +57,8 @@ ALIASES: dict[str, str] = {
     "drug": "biolink:Drug",
     "clinicallab": "biolink:ClinicalFinding",
     "lab": "biolink:ClinicalFinding",
-    "microbiome": "biolink:OrganismTaxon",
-    "taxonomy": "biolink:OrganismTaxon",
+    # Taxon aliases come from the one shared constant that standardize_entity_type also reads.
+    **{alias: "biolink:OrganismTaxon" for alias in config.TAXON_ENTITY_TYPE_ALIASES},
 }
 
 # Sample search terms per category for prefix derivation

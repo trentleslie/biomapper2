@@ -1,0 +1,110 @@
+{
+ "vault_run": "run_20261118T182527Z",
+ "vault_inputs_sha256": {
+  "labels.tsv": "476b2327bf4f17b80136e12e35a8f75fe2cad3499caa5e18f8491b7d145eed52",
+  "truth.json": "ec1fb3027509039949721ec79e51c84413c679f810961225855e5c85d7131f3c",
+  "scored.tsv": "e3e24e5d8f58fc449d9507b4560dc67dad85988fa4d1f3d3330c96265dc4cfec"
+ },
+ "snapshot_version": "ncbi-taxdump/2026-11-19/sha256:d8cf5a3f1da6/built:2026-11-19",
+ "eutils_calls_uncached": 0,
+ "no_node_rows_before": 108,
+ "decisions": {
+  "human": 13,
+  "keep": 94,
+  "move": 1
+ },
+ "no_node_rows_after": 107,
+ "human_list": [
+  "hmp_v13:004",
+  "hmp_v35:004",
+  "microbiomehd:009",
+  "agp_fecal:019",
+  "mgnify_mouse:010",
+  "mgnify_mouse:081",
+  "mgnify_mouse:082",
+  "mgnify_mouse:083",
+  "mgnify_mouse:084",
+  "mgnify_mouse:085",
+  "mgnify_mouse:086",
+  "mgnify_mouse:087",
+  "mgnify_mouse:188"
+ ],
+ "baseline_hybrid_clean_top1_on_corrected_truth": {
+  "mock_gg138": {
+   "n_scored": 101,
+   "acceptable": 99,
+   "units": 532,
+   "acceptable_units": 526,
+   "acceptable_rate": 0.9802,
+   "acceptable_unit_wt": 0.9887
+  },
+  "ALL": {
+   "n_scored": 1713,
+   "acceptable": 1462,
+   "units": 758171,
+   "acceptable_units": 612354,
+   "no_node_rows": 107,
+   "no_node_abstained": 1,
+   "acceptable_rate": 0.8535,
+   "acceptable_unit_wt": 0.8077
+  },
+  "mock_silva123": {
+   "n_scored": 120,
+   "acceptable": 115,
+   "units": 589,
+   "acceptable_units": 558,
+   "acceptable_rate": 0.9583,
+   "acceptable_unit_wt": 0.9474
+  },
+  "hmp_v13": {
+   "n_scored": 300,
+   "acceptable": 249,
+   "units": 143718,
+   "acceptable_units": 139914,
+   "no_node_rows": 24,
+   "no_node_abstained": 0,
+   "acceptable_rate": 0.83,
+   "acceptable_unit_wt": 0.9735
+  },
+  "hmp_v35": {
+   "n_scored": 300,
+   "acceptable": 258,
+   "units": 116802,
+   "acceptable_units": 114966,
+   "no_node_rows": 22,
+   "no_node_abstained": 0,
+   "acceptable_rate": 0.86,
+   "acceptable_unit_wt": 0.9843
+  },
+  "microbiomehd": {
+   "n_scored": 299,
+   "acceptable": 252,
+   "units": 495876,
+   "acceptable_units": 355842,
+   "no_node_rows": 12,
+   "no_node_abstained": 0,
+   "acceptable_rate": 0.8428,
+   "acceptable_unit_wt": 0.7176
+  },
+  "agp_fecal": {
+   "n_scored": 299,
+   "acceptable": 218,
+   "units": 299,
+   "acceptable_units": 218,
+   "no_node_rows": 39,
+   "no_node_abstained": 1,
+   "acceptable_rate": 0.7291,
+   "acceptable_unit_wt": 0.7291
+  },
+  "mgnify_mouse": {
+   "n_scored": 294,
+   "acceptable": 271,
+   "units": 355,
+   "acceptable_units": 330,
+   "no_node_rows": 10,
+   "no_node_abstained": 0,
+   "acceptable_rate": 0.9218,
+   "acceptable_unit_wt": 0.9296
+  }
+ }
+}

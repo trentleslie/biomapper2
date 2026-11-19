@@ -99,7 +99,12 @@ class TestCanonicalPolicyResolution:
 
     def test_unconfigured_category_yields_none(self):
         engine, spy = _engine()
-        assert _resolve(engine, spy, "biolink:OrganismTaxon") is None
+        assert _resolve(engine, spy, "biolink:Pathway") is None
+
+    def test_organism_taxon_receives_ncbitaxon(self):
+        # 16S plan R4: NCBITaxon is the canonical namespace for OrganismTaxon (prefix verified live).
+        engine, spy = _engine()
+        assert _resolve(engine, spy, "biolink:OrganismTaxon") == {"NCBITaxon"}
 
     def test_precedence_human_wins_when_category_in_both_sets(self):
         # A category that is BOTH a gene descendant AND in a preferred-namespace key resolves to None
