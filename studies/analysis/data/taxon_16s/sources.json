@@ -1,0 +1,421 @@
+{
+ "seed": 20261118,
+ "cap": 300,
+ "sources": {
+  "mock_gg138": {
+   "host": "none (mock community)",
+   "region": "V4",
+   "reference": "Greengenes 13_8 (99% OTUs)",
+   "url": "https://github.com/caporaso-lab/mockrobiota (data/mock-*/greengenes/13-8/99-otus/expected-taxonomy.tsv)",
+   "n_unique_genus_labels": 101,
+   "n_sampled": 101,
+   "total_units": 532,
+   "total_reads": 0.0,
+   "sampled_unit_share": 1.0,
+   "sampled_read_share": null,
+   "files": [
+    [
+     "mockrobiota/data/mock-1/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "6d1617343afd2fb2"
+    ],
+    [
+     "mockrobiota/data/mock-12/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "7614d304940596bc"
+    ],
+    [
+     "mockrobiota/data/mock-13/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "1cbb020fcd150a47"
+    ],
+    [
+     "mockrobiota/data/mock-14/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "1cbb020fcd150a47"
+    ],
+    [
+     "mockrobiota/data/mock-15/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "1cbb020fcd150a47"
+    ],
+    [
+     "mockrobiota/data/mock-16/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "0609ffe1273f4008"
+    ],
+    [
+     "mockrobiota/data/mock-18/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "d5597c8b84bccdd3"
+    ],
+    [
+     "mockrobiota/data/mock-19/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "b57601473bcf845b"
+    ],
+    [
+     "mockrobiota/data/mock-2/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "d53241565dbb156b"
+    ],
+    [
+     "mockrobiota/data/mock-20/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "d9065f7b96af0708"
+    ],
+    [
+     "mockrobiota/data/mock-21/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "2f19bcd7ac08c2b9"
+    ],
+    [
+     "mockrobiota/data/mock-22/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "d9065f7b96af0708"
+    ],
+    [
+     "mockrobiota/data/mock-23/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "2f19bcd7ac08c2b9"
+    ],
+    [
+     "mockrobiota/data/mock-3/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "8503f3ad9f753d80"
+    ],
+    [
+     "mockrobiota/data/mock-4/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "26235dd7eac24b43"
+    ],
+    [
+     "mockrobiota/data/mock-5/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "93b8e6780b60de17"
+    ],
+    [
+     "mockrobiota/data/mock-6/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "204f47384cb9c0b7"
+    ],
+    [
+     "mockrobiota/data/mock-7/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "204f47384cb9c0b7"
+    ],
+    [
+     "mockrobiota/data/mock-8/greengenes/13-8/99-otus/expected-taxonomy.tsv",
+     "204f47384cb9c0b7"
+    ]
+   ]
+  },
+  "mock_silva123": {
+   "host": "none (mock community)",
+   "region": "V4",
+   "reference": "SILVA 123 (99% OTUs)",
+   "url": "https://github.com/caporaso-lab/mockrobiota (data/mock-*/silva/123/99-otus/expected-taxonomy.tsv)",
+   "n_unique_genus_labels": 120,
+   "n_sampled": 120,
+   "total_units": 589,
+   "total_reads": 0.0,
+   "sampled_unit_share": 1.0,
+   "sampled_read_share": null,
+   "files": [
+    [
+     "mockrobiota/data/mock-1/silva/123/99-otus/expected-taxonomy.tsv",
+     "e5e5845d8d04206b"
+    ],
+    [
+     "mockrobiota/data/mock-12/silva/123/99-otus/expected-taxonomy.tsv",
+     "e054bf54f1181699"
+    ],
+    [
+     "mockrobiota/data/mock-13/silva/123/99-otus/expected-taxonomy.tsv",
+     "509f16d04fc66b1c"
+    ],
+    [
+     "mockrobiota/data/mock-14/silva/123/99-otus/expected-taxonomy.tsv",
+     "509f16d04fc66b1c"
+    ],
+    [
+     "mockrobiota/data/mock-15/silva/123/99-otus/expected-taxonomy.tsv",
+     "509f16d04fc66b1c"
+    ],
+    [
+     "mockrobiota/data/mock-16/silva/123/99-otus/expected-taxonomy.tsv",
+     "79ae3858548aab6b"
+    ],
+    [
+     "mockrobiota/data/mock-18/silva/123/99-otus/expected-taxonomy.tsv",
+     "dae5c11cf9dc1ab7"
+    ],
+    [
+     "mockrobiota/data/mock-19/silva/123/99-otus/expected-taxonomy.tsv",
+     "620e0aaecd02abdc"
+    ],
+    [
+     "mockrobiota/data/mock-2/silva/123/99-otus/expected-taxonomy.tsv",
+     "0f8661c62e16e0e3"
+    ],
+    [
+     "mockrobiota/data/mock-20/silva/123/99-otus/expected-taxonomy.tsv",
+     "cc535bcc66f39304"
+    ],
+    [
+     "mockrobiota/data/mock-21/silva/123/99-otus/expected-taxonomy.tsv",
+     "482b906b8fd456dd"
+    ],
+    [
+     "mockrobiota/data/mock-22/silva/123/99-otus/expected-taxonomy.tsv",
+     "cc535bcc66f39304"
+    ],
+    [
+     "mockrobiota/data/mock-23/silva/123/99-otus/expected-taxonomy.tsv",
+     "482b906b8fd456dd"
+    ],
+    [
+     "mockrobiota/data/mock-3/silva/123/99-otus/expected-taxonomy.tsv",
+     "5d4053d199118723"
+    ],
+    [
+     "mockrobiota/data/mock-4/silva/123/99-otus/expected-taxonomy.tsv",
+     "5d4053d199118723"
+    ],
+    [
+     "mockrobiota/data/mock-5/silva/123/99-otus/expected-taxonomy.tsv",
+     "5d4053d199118723"
+    ],
+    [
+     "mockrobiota/data/mock-6/silva/123/99-otus/expected-taxonomy.tsv",
+     "701315be8b8be0d8"
+    ],
+    [
+     "mockrobiota/data/mock-7/silva/123/99-otus/expected-taxonomy.tsv",
+     "701315be8b8be0d8"
+    ],
+    [
+     "mockrobiota/data/mock-8/silva/123/99-otus/expected-taxonomy.tsv",
+     "701315be8b8be0d8"
+    ]
+   ]
+  },
+  "hmp_v13": {
+   "host": "human (18 body sites)",
+   "region": "V1-V3",
+   "reference": "RDP classifier 2.2 via QIIME (HMP DACC HMQCP)",
+   "url": "https://experimenthub.bioconductor.org/fetch/1117 (HMP16SData EH1117, 20180328.V13.rda)",
+   "n_unique_genus_labels": 618,
+   "n_sampled": 300,
+   "total_units": 255714,
+   "total_reads": 0.0,
+   "sampled_unit_share": 0.562,
+   "sampled_read_share": null,
+   "files": [
+    [
+     "hmp/EH1117.rda",
+     "b647f32ab78083e7"
+    ]
+   ]
+  },
+  "hmp_v35": {
+   "host": "human (18 body sites)",
+   "region": "V3-V5",
+   "reference": "RDP classifier 2.2 via QIIME (HMP DACC HMQCP)",
+   "url": "https://experimenthub.bioconductor.org/fetch/1118 (HMP16SData EH1118, 20180328.V35.rda)",
+   "n_unique_genus_labels": 663,
+   "n_sampled": 300,
+   "total_units": 271122,
+   "total_reads": 0.0,
+   "sampled_unit_share": 0.4308,
+   "sampled_read_share": null,
+   "files": [
+    [
+     "hmp/EH1118.rda",
+     "6abbf99729b62ad6"
+    ]
+   ]
+  },
+  "microbiomehd": {
+   "host": "human gut (28+ case-control studies)",
+   "region": "mixed (per study)",
+   "reference": "RDP classifier c=0.5 (Alm lab pipeline)",
+   "url": "https://zenodo.org/records/840333 (*_results.tar.gz, RDP/*.rdp_assigned)",
+   "n_unique_genus_labels": 608,
+   "n_sampled": 300,
+   "total_units": 1051723,
+   "total_reads": 88254023.0,
+   "sampled_unit_share": 0.481,
+   "sampled_read_share": 0.4687,
+   "files": [
+    [
+     "mhd/asd_son_results/RDP/asd_son.otu_table.100.denovo.rdp_assigned",
+     "86284accbf326e26"
+    ],
+    [
+     "mhd/asd_son_results/RDP/asd_son.otu_table.dbOTU.rdp_assigned",
+     "8c152d2010867097"
+    ],
+    [
+     "mhd/autism_kb_results/RDP/autism_kb.otu_table.100.denovo.rdp_assigned",
+     "06db3caf6e912ee8"
+    ],
+    [
+     "mhd/autism_kb_results/RDP/autism_kb.otu_table.dbOTU.rdp_assigned",
+     "2989da31949345cf"
+    ],
+    [
+     "mhd/cdi_schubert_results/RDP/cdi_schubert.otu_table.100.denovo.rdp_assigned",
+     "aefe7015fa5c2fab"
+    ],
+    [
+     "mhd/cdi_schubert_results/RDP/cdi_schubert.otu_table.dbOTU.rdp_assigned",
+     "ba7082c53377d803"
+    ],
+    [
+     "mhd/cdi_vincent_v3v5_results/RDP/cdi_vincent_v3v5.otu_table.100.denovo.rdp_assigned",
+     "df42d4e1af631ef6"
+    ],
+    [
+     "mhd/cdi_vincent_v3v5_results/RDP/cdi_vincent_v3v5.otu_table.dbOTU.rdp_assigned",
+     "072e65cd5f3cd93e"
+    ],
+    [
+     "mhd/cdi_youngster_results/RDP/cdi_youngster.otu_table.100.denovo.rdp_assigned",
+     "53cfed717526d499"
+    ],
+    [
+     "mhd/crc_baxter_results/RDP/crc_baxter.otu_table.100.denovo.rdp_assigned",
+     "cf9aeb9c3e4e7d2e"
+    ],
+    [
+     "mhd/crc_xiang_results/RDP/crc_xiang.otu_table.100.denovo.rdp_assigned",
+     "a141f7631e34cb2c"
+    ],
+    [
+     "mhd/crc_zackular_results/RDP/crc_zackular.otu_table.100.denovo.rdp_assigned",
+     "2cde0916d6785573"
+    ],
+    [
+     "mhd/crc_zeller_results/RDP/crc_zeller.otu_table.100.denovo.rdp_assigned",
+     "0bc402154a63eec6"
+    ],
+    [
+     "mhd/crc_zhao_results/RDP/crc_zhao.otu_table.100.denovo.rdp_assigned",
+     "1e02350616565455"
+    ],
+    [
+     "mhd/crc_zhao_results/RDP/crc_zhao.otu_table.dbOTU.rdp_assigned",
+     "1844f6e811d0c687"
+    ],
+    [
+     "mhd/crc_zhu_results/RDP/crc_zhu.otu_table.100.denovo.rdp_assigned",
+     "f5f8034b75cb436f"
+    ],
+    [
+     "mhd/hiv_dinh_results/RDP/hiv_dinh.otu_table.100.denovo.rdp_assigned",
+     "f58ec5aca3269153"
+    ],
+    [
+     "mhd/hiv_lozupone_results/RDP/hiv_lozupone.otu_table.100.denovo.rdp_assigned",
+     "89449937b312017e"
+    ],
+    [
+     "mhd/hiv_noguerajulian_results/RDP/hiv_noguerajulian.otu_table.100.denovo.rdp_assigned",
+     "789ade90175c4556"
+    ],
+    [
+     "mhd/ibd_engstrand_maxee_results/RDP/ibd_engstrand_maxee.otu_table.100.denovo.rdp_assigned",
+     "9574818c5f1fbe70"
+    ],
+    [
+     "mhd/ibd_engstrand_maxee_results/RDP/ibd_engstrand_maxee.otu_table.dbOTU.rdp_assigned",
+     "cbbfa335a370fb1d"
+    ],
+    [
+     "mhd/ibd_gevers_2014_results/RDP/ibd_gevers_2014.otu_table.100.denovo.rdp_assigned",
+     "4d486f3c2fb188cd"
+    ],
+    [
+     "mhd/ibd_huttenhower_results/RDP/ibd_huttenhower.otu_table.100.denovo.rdp_assigned",
+     "b46d14d168d883e0"
+    ],
+    [
+     "mhd/mhe_zhang_results/RDP/mhe_zhang.otu_table.100.denovo.rdp_assigned",
+     "91ed4755c0a98af1"
+    ],
+    [
+     "mhd/nash_chan_results/RDP/nash_chan.otu_table.100.denovo.rdp_assigned",
+     "2b888097c822d7ed"
+    ],
+    [
+     "mhd/nash_ob_baker_results/RDP/nash_ob_baker.otu_table.100.denovo.rdp_assigned",
+     "bb034f649a984095"
+    ],
+    [
+     "mhd/ob_escobar_results/RDP/ob_escobar.otu_table.100.denovo.rdp_assigned",
+     "71b61dbcd9cddc1d"
+    ],
+    [
+     "mhd/ob_goodrich_results/RDP/ob_goodrich.otu_table.100.denovo.rdp_assigned",
+     "c287ad459f54ed51"
+    ],
+    [
+     "mhd/ob_gordon_2008_v2_results/RDP/ob_gordon_2008_v2.otu_table.100.denovo.rdp_assigned",
+     "71cea1c1cb36d53e"
+    ],
+    [
+     "mhd/ob_ross_results/RDP/ob_ross.otu_table.100.denovo.rdp_assigned",
+     "7a900426d5a68e82"
+    ],
+    [
+     "mhd/ob_zupancic_results/RDP/ob_zupancic.otu_table.100.denovo.rdp_assigned",
+     "354149e3ca6c4743"
+    ],
+    [
+     "mhd/par_scheperjans_results/RDP/par_scheperjans.otu_table.100.denovo.rdp_assigned",
+     "f79fdde003f971d3"
+    ],
+    [
+     "mhd/ra_littman_results/RDP/ra_littman.otu_table.100.denovo.rdp_assigned",
+     "38c0d06fe46b8bb5"
+    ],
+    [
+     "mhd/ra_littman_results/RDP/ra_littman.otu_table.dbOTU.rdp_assigned",
+     "200fd6d9eb87989f"
+    ],
+    [
+     "mhd/t1d_alkanani_results/RDP/t1d_alkanani.otu_table.100.denovo.rdp_assigned",
+     "b3e230965106cad5"
+    ],
+    [
+     "mhd/t1d_mejialeon_results/RDP/t1d_mejialeon.otu_table.100.denovo.rdp_assigned",
+     "44df3b80db0147a3"
+    ]
+   ]
+  },
+  "agp_fecal": {
+   "host": "human gut",
+   "region": "V4 (515f/806r), 100nt",
+   "reference": "Greengenes 13_8 97% (closed ref, rounds 1-25)",
+   "url": "https://ftp.microbio.me/AmericanGut/rounds-1-25/07-taxa/100nt/otu_table_fecal_L6.biom",
+   "n_unique_genus_labels": 1747,
+   "n_sampled": 300,
+   "total_units": 1747,
+   "total_reads": 7330.0,
+   "sampled_unit_share": 0.1717,
+   "sampled_read_share": 0.2178,
+   "files": [
+    [
+     "agp/otu_table_fecal_L6.biom",
+     "5ab45f717ff90fbe"
+    ]
+   ]
+  },
+  "mgnify_mouse": {
+   "host": "mouse gut",
+   "region": "per study (MGnify v4.1 SSU)",
+   "reference": "MGnify pipeline v4.1 (MAPseq, SILVA-derived)",
+   "url": "https://www.ebi.ac.uk/metagenomics/api/v1/studies/MGYS00005168 (SRP111822_taxonomy_abundances_SSU_v4.1.tsv)",
+   "n_unique_genus_labels": 1287,
+   "n_sampled": 300,
+   "total_units": 1654,
+   "total_reads": 86414829.0,
+   "sampled_unit_share": 0.2183,
+   "sampled_read_share": 0.2422,
+   "files": [
+    [
+     "mgnify/MGYS00005168_SSU_v4.1.tsv",
+     "f8c0ea17cec36d47"
+    ]
+   ]
+  },
+  "bare_controls": {
+   "host": "none (bare-name controls)",
+   "reference": "hand-picked; each verified against live NCBI E-utilities by taxon_16s_truth_fix.py",
+   "n_sampled": 11
+  }
+ }
+}

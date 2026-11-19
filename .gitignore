@@ -54,6 +54,10 @@ data/**/*.json
 !studies/kestrel_fault_benchmark/fixtures/*.tsv
 !studies/kestrel_fault_benchmark/fixtures/*.json
 
+# 16S taxon benchmark panel, corrected truth and truth-fix log (pinned inputs of taxon_16s_benchmark.py).
+!studies/analysis/data/taxon_16s/**/*.tsv
+!studies/analysis/data/taxon_16s/**/*.json
+
 # Analysis artifacts that back numbers asserted in source comments. These MUST stay tracked --
 # a blanket *.json ignore is exactly how a number ends up cited with no artifact behind it.
 !studies/analysis/results/*.json

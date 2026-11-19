@@ -1,0 +1,109 @@
+id	source	label	old_cat	old_rule	new_cat	decision	reason	name	rank	eutils_ids	eutils_how	snapshot_ids	bracket_stripped_eutils_ids
+hmp_v13:004	hmp_v13	Root;p__Actinobacteria;c__Actinobacteria;o__;f__;g__	c	C	c	human	paths disagree	Actinobacteria	class			1760	
+hmp_v13:065	hmp_v13	Root;p__Actinobacteria;c__Actinobacteria;o__koll13;f__;g__	c	C	c	keep	no NCBI node on either path	koll13	order				
+hmp_v13:098	hmp_v13	Root;p__Chlorobi;c__OPB56;o__;f__;g__	c	C	c	keep	no NCBI node on either path	OPB56	class				
+hmp_v13:101	hmp_v13	Root;p__Chloroflexi;c__Anaerolineae;o__A4b;f__;g__	c	C	c	keep	no NCBI node on either path	A4b	order				
+hmp_v13:103	hmp_v13	Root;p__Chloroflexi;c__SOGA31;o__;f__;g__	c	C	c	keep	no NCBI node on either path	SOGA31	class				
+hmp_v13:104	hmp_v13	Root;p__Chloroflexi;c__Thermomicrobia;o__HN1-15;f__;g__	c	C	c	keep	no NCBI node on either path	HN1-15	order				
+hmp_v13:106	hmp_v13	Root;p__Cyanobacteria;c__Chloroplast;o__Chlorophyta;f__Trebouxiophyceae;g__	c	C	c	keep	no NCBI node on either path	Trebouxiophyceae	family				
+hmp_v13:109	hmp_v13	Root;p__Cyanobacteria;c__Oscillatoriophycideae	c	C	c	keep	no NCBI node on either path	Oscillatoriophycideae	class				
+hmp_v13:110	hmp_v13	Root;p__Cyanobacteria;c__Oscillatoriophycideae;o__;f__;g__	c	C	c	keep	no NCBI node on either path	Oscillatoriophycideae	class				
+hmp_v13:176	hmp_v13	Root;p__Firmicutes;c__Clostridia;o__OPB54;f__;g__	c	C	c	keep	no NCBI node on either path	OPB54	order				
+hmp_v13:179	hmp_v13	Root;p__GN02	c	C	c	keep	no NCBI node on either path	GN02	phylum				
+hmp_v13:234	hmp_v13	Root;p__Proteobacteria;c__Deltaproteobacteria;o__CTD005-82B-02;f__;g__	c	C	c	keep	no NCBI node on either path	CTD005-82B-02	order				
+hmp_v13:237	hmp_v13	Root;p__Proteobacteria;c__Deltaproteobacteria;o__MIZ46;f__;g__	c	C	c	keep	no NCBI node on either path	MIZ46	order				
+hmp_v13:270	hmp_v13	Root;p__SC4;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	SC4	phylum				
+hmp_v13:271	hmp_v13	Root;p__SPAM;c__0319-6G9;o__;f__;g__	c	C	c	keep	no NCBI node on either path	0319-6G9	class				
+hmp_v13:272	hmp_v13	Root;p__SR1;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	SR1	phylum				
+hmp_v13:280	hmp_v13	Root;p__TM7	c	C	c	keep	no NCBI node on either path	TM7	phylum				
+hmp_v13:281	hmp_v13	Root;p__TM7;c__TM7-1;o__;f__;g__	c	C	c	keep	no NCBI node on either path	TM7-1	class				
+hmp_v13:282	hmp_v13	Root;p__TM7;c__TM7-3;o__EW055;f__;g__	c	C	c	keep	no NCBI node on either path	EW055	order				
+hmp_v13:283	hmp_v13	Root;p__TM7;c__TM7-3;o__I025;f__Rs-045;g__	c	C	c	keep	no NCBI node on either path	Rs-045	family				
+hmp_v13:291	hmp_v13	Root;p__Tenericutes;c__ML615J-28;o__;f__;g__	c	C	c	keep	no NCBI node on either path	ML615J-28	class				
+hmp_v13:296	hmp_v13	Root;p__Verrucomicrobia;c__Spartobacteria;o__Spartobacteriales;f__Spartobacteriaceae	c	C	c	keep	no NCBI node on either path	Spartobacteriaceae	family				
+hmp_v13:297	hmp_v13	Root;p__Verrucomicrobia;c__Spartobacteria;o__Spartobacteriales;f__Spartobacteriaceae;g__MC18	c	C	c	keep	no NCBI node on either path	MC18	genus				
+hmp_v13:299	hmp_v13	Root;p__WPS-2;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	WPS-2	phylum				
+hmp_v35:002	hmp_v35	Root;p__Acidobacteria;c__iii1-8;o__DS-18;f__;g__	c	C	c	keep	no NCBI node on either path	DS-18	order				
+hmp_v35:003	hmp_v35	Root;p__Actinobacteria;c__Actinobacteria;o__0319-7L14;f__;g__	c	C	c	keep	no NCBI node on either path	0319-7L14	order				
+hmp_v35:004	hmp_v35	Root;p__Actinobacteria;c__Actinobacteria;o__;f__;g__	c	C	c	human	paths disagree	Actinobacteria	class			1760	
+hmp_v35:047	hmp_v35	Root;p__Actinobacteria;c__Actinobacteria;o__Euzebiales;f__Euzebiaceae;g__Euzebia	c	C	c	keep	no NCBI node on either path	Euzebia	genus				
+hmp_v35:048	hmp_v35	Root;p__Actinobacteria;c__Actinobacteria;o__MC47;f__;g__	c	C	c	keep	no NCBI node on either path	MC47	order				
+hmp_v35:054	hmp_v35	Root;p__Actinobacteria;c__Actinobacteria;o__koll13;f__;g__	c	C	c	keep	no NCBI node on either path	koll13	order				
+hmp_v35:055	hmp_v35	Root;p__Armatimonadetes;c__CH21;o__;f__;g__	c	C	c	keep	no NCBI node on either path	CH21	class				
+hmp_v35:057	hmp_v35	Root;p__Bacteroidetes;c__;o__;f__;g__CandidatusCardinium	c	C	a	move	both paths agree	Candidatus Cardinium	genus	273135	exact	273135	
+hmp_v35:083	hmp_v35	Root;p__Chloroflexi;c__Anaerolineae;o__A4b;f__;g__	c	C	c	keep	no NCBI node on either path	A4b	order				
+hmp_v35:084	hmp_v35	Root;p__Chloroflexi;c__Anaerolineae;o__envOPS12;f__;g__	c	C	c	keep	no NCBI node on either path	envOPS12	order				
+hmp_v35:086	hmp_v35	Root;p__Chloroflexi;c__SOGA31;o__;f__;g__	c	C	c	keep	no NCBI node on either path	SOGA31	class				
+hmp_v35:089	hmp_v35	Root;p__Cyanobacteria;c__4C0d-2;o__SM1D11;f__;g__	c	C	c	keep	no NCBI node on either path	SM1D11	order				
+hmp_v35:090	hmp_v35	Root;p__Cyanobacteria;c__4C0d-2;o__YS2;f__;g__	c	C	c	keep	no NCBI node on either path	YS2	order				
+hmp_v35:091	hmp_v35	Root;p__Cyanobacteria;c__Chloroplast;o__Chlorophyta;f__Chlamydomonadaceae;g__	c	C	c	keep	no NCBI node on either path	Chlamydomonadaceae	family				
+hmp_v35:092	hmp_v35	Root;p__Cyanobacteria;c__Chloroplast;o__Stramenopiles;f__;g__	c	C	c	keep	no NCBI node on either path	Stramenopiles	order				
+hmp_v35:093	hmp_v35	Root;p__Cyanobacteria;c__Chloroplast;o__Streptophyta;f__;g__	c	C	c	keep	no NCBI node on either path	Streptophyta	order				
+hmp_v35:094	hmp_v35	Root;p__Cyanobacteria;c__Oscillatoriophycideae	c	C	c	keep	no NCBI node on either path	Oscillatoriophycideae	class				
+hmp_v35:169	hmp_v35	Root;p__Firmicutes;c__Clostridia;o__OPB54;f__;g__	c	C	c	keep	no NCBI node on either path	OPB54	order				
+hmp_v35:244	hmp_v35	Root;p__Proteobacteria;c__Deltaproteobacteria;o__MIZ46;f__;g__	c	C	c	keep	no NCBI node on either path	MIZ46	order				
+hmp_v35:279	hmp_v35	Root;p__SC4;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	SC4	phylum				
+hmp_v35:280	hmp_v35	Root;p__SR1;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	SR1	phylum				
+hmp_v35:285	hmp_v35	Root;p__TM7;c__TM7-3;o__EW055;f__;g__	c	C	c	keep	no NCBI node on either path	EW055	order				
+hmp_v35:294	hmp_v35	Root;p__Tenericutes;c__ML615J-28;o__;f__;g__	c	C	c	keep	no NCBI node on either path	ML615J-28	class				
+microbiomehd:000	microbiomehd	k__;p__;c__;o__;f__;g__	c	C-empty	c	keep	no named level						
+microbiomehd:007	microbiomehd	k__Bacteria;p__Acidobacteria;c__Acidobacteria_Gp4;o__;f__;g__Gp4	c	C	c	keep	no NCBI node on either path	Gp4	genus				
+microbiomehd:008	microbiomehd	k__Bacteria;p__Acidobacteria;c__Acidobacteria_Gp5;o__;f__;g__Gp5	c	C	c	keep	no NCBI node on either path	Gp5	genus				
+microbiomehd:009	microbiomehd	k__Bacteria;p__Actinobacteria;c__Actinobacteria;o__;f__;g__	c	C	c	human	paths disagree	Actinobacteria	class			1760	
+microbiomehd:072	microbiomehd	k__Bacteria;p__Candidatus_Saccharibacteria;c__;o__;f__;g__Saccharibacteria_genera_incertae_sedis	c	C	c	keep	no NCBI node on either path	Saccharibacteria genera incertae sedis	genus				
+microbiomehd:074	microbiomehd	k__Bacteria;p__Cyanobacteria/Chloroplast;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	Cyanobacteria/Chloroplast	phylum				
+microbiomehd:075	microbiomehd	k__Bacteria;p__Cyanobacteria/Chloroplast;c__Chloroplast;o__;f__Chloroplast;g__	c	C	c	keep	no NCBI node on either path	Chloroplast	family				
+microbiomehd:076	microbiomehd	k__Bacteria;p__Cyanobacteria/Chloroplast;c__Chloroplast;o__;f__Chloroplast;g__Streptophyta	c	C	c	keep	no NCBI node on either path	Streptophyta	genus				
+microbiomehd:077	microbiomehd	k__Bacteria;p__Cyanobacteria/Chloroplast;c__Cyanobacteria;o__;f__;g__	c	C	c	keep	no NCBI node on either path	Cyanobacteria	class				
+microbiomehd:078	microbiomehd	k__Bacteria;p__Cyanobacteria/Chloroplast;c__Cyanobacteria;o__;f__Family_I;g__GpI	c	C	c	keep	no NCBI node on either path	GpI	genus				
+microbiomehd:079	microbiomehd	k__Bacteria;p__Cyanobacteria/Chloroplast;c__Cyanobacteria;o__;f__Family_II;g__GpIIb	c	C	c	keep	no NCBI node on either path	GpIIb	genus				
+microbiomehd:297	microbiomehd	k__Bacteria;p__Verrucomicrobia;c__Subdivision5;o__;f__;g__Subdivision5_genera_incertae_sedis	c	C	c	keep	no NCBI node on either path	Subdivision5 genera incertae sedis	genus				
+agp_fecal:003	agp_fecal	k__Archaea;p__Euryarchaeota;c__Thermoplasmata;o__E2;f__Marine group III;g__	c	C	c	keep	no NCBI node on either path	Marine group III	family				
+agp_fecal:007	agp_fecal	k__Bacteria;p__Acidobacteria;c__BPC102;o__B110;f__;g__	c	C	c	keep	no NCBI node on either path	B110	order				
+agp_fecal:008	agp_fecal	k__Bacteria;p__Acidobacteria;c__BPC102;o__MVS-40;f__;g__	c	C	c	keep	no NCBI node on either path	MVS-40	order				
+agp_fecal:012	agp_fecal	k__Bacteria;p__Acidobacteria;c__[Chloracidobacteria];o__Ellin7246;f__;g__	c	C	c	keep	no NCBI node on either path	Ellin7246	order				
+agp_fecal:013	agp_fecal	k__Bacteria;p__Acidobacteria;c__[Chloracidobacteria];o__PK29;f__;g__	c	C	c	keep	no NCBI node on either path	PK29	order				
+agp_fecal:014	agp_fecal	k__Bacteria;p__Acidobacteria;c__[Chloracidobacteria];o__RB41;f__;g__	c	C	c	keep	no NCBI node on either path	RB41	order				
+agp_fecal:015	agp_fecal	k__Bacteria;p__Acidobacteria;c__iii1-8;o__32-20;f__;g__	c	C	c	keep	no NCBI node on either path	32-20	order				
+agp_fecal:019	agp_fecal	k__Bacteria;p__Actinobacteria;c__Actinobacteria;o__;f__;g__	c	C	c	human	paths disagree	Actinobacteria	class			1760	
+agp_fecal:054	agp_fecal	k__Bacteria;p__Actinobacteria;c__OPB41;o__;f__;g__	c	C	c	keep	no NCBI node on either path	OPB41	class				
+agp_fecal:056	agp_fecal	k__Bacteria;p__AncK6;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	AncK6	phylum				
+agp_fecal:058	agp_fecal	k__Bacteria;p__BRC1;c__PRR-11;o__;f__;g__	c	C	c	keep	no NCBI node on either path	PRR-11	class				
+agp_fecal:090	agp_fecal	k__Bacteria;p__Chlorobi;c__BSV26;o__A89;f__;g__	c	C	c	keep	no NCBI node on either path	A89	order				
+agp_fecal:091	agp_fecal	k__Bacteria;p__Chlorobi;c__BSV26;o__PK329;f__;g__	c	C	c	keep	no NCBI node on either path	PK329	order				
+agp_fecal:092	agp_fecal	k__Bacteria;p__Chlorobi;c__BSV26;o__VC38;f__;g__	c	C	c	keep	no NCBI node on either path	VC38	order				
+agp_fecal:094	agp_fecal	k__Bacteria;p__Chloroflexi;c__Anaerolineae;o__DRC31;f__;g__	c	C	c	keep	no NCBI node on either path	DRC31	order				
+agp_fecal:095	agp_fecal	k__Bacteria;p__Chloroflexi;c__Anaerolineae;o__SBR1031;f__SHA-31;g__	c	C	c	keep	no NCBI node on either path	SHA-31	family				
+agp_fecal:096	agp_fecal	k__Bacteria;p__Chloroflexi;c__Anaerolineae;o__SJA-15;f__;g__	c	C	c	keep	no NCBI node on either path	SJA-15	order				
+agp_fecal:097	agp_fecal	k__Bacteria;p__Chloroflexi;c__Anaerolineae;o__WCHB1-50;f__;g__	c	C	c	keep	no NCBI node on either path	WCHB1-50	order				
+agp_fecal:098	agp_fecal	k__Bacteria;p__Chloroflexi;c__C0119;o__;f__;g__	c	C	c	keep	no NCBI node on either path	C0119	class				
+agp_fecal:099	agp_fecal	k__Bacteria;p__Chloroflexi;c__Chloroflexi;o__AKIW781;f__;g__	c	C	c	keep	no NCBI node on either path	AKIW781	order				
+agp_fecal:114	agp_fecal	k__Bacteria;p__Elusimicrobia;c__Elusimicrobia;o__IIb;f__;g__	c	C	c	keep	no NCBI node on either path	IIb	order				
+agp_fecal:116	agp_fecal	k__Bacteria;p__FBP;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	FBP	phylum				
+agp_fecal:119	agp_fecal	k__Bacteria;p__Fibrobacteres;c__TG3;o__TG3-1;f__;g__	c	C	c	keep	no NCBI node on either path	TG3-1	order				
+agp_fecal:134	agp_fecal	k__Bacteria;p__Firmicutes;c__Bacilli;o__Gemellales;f__;g__	c	C	c	keep	no NCBI node on either path	Gemellales	order				
+agp_fecal:169	agp_fecal	k__Bacteria;p__Firmicutes;c__Clostridia;o__MBA08;f__;g__	c	C	c	keep	no NCBI node on either path	MBA08	order				
+agp_fecal:171	agp_fecal	k__Bacteria;p__Gemmatimonadetes;c__Gemm-2;o__;f__;g__	c	C	c	keep	no NCBI node on either path	Gemm-2	class				
+agp_fecal:172	agp_fecal	k__Bacteria;p__Gemmatimonadetes;c__Gemm-3;o__;f__;g__	c	C	c	keep	no NCBI node on either path	Gemm-3	class				
+agp_fecal:173	agp_fecal	k__Bacteria;p__Gemmatimonadetes;c__Gemm-4;o__;f__;g__	c	C	c	keep	no NCBI node on either path	Gemm-4	class				
+agp_fecal:181	agp_fecal	k__Bacteria;p__OP11;c__WCHB1-64;o__;f__;g__	c	C	c	keep	no NCBI node on either path	WCHB1-64	class				
+agp_fecal:182	agp_fecal	k__Bacteria;p__OP1;c__MSBL6;o__;f__;g__	c	C	c	keep	no NCBI node on either path	MSBL6	class				
+agp_fecal:184	agp_fecal	k__Bacteria;p__Planctomycetes;c__Phycisphaerae;o__Pla1;f__;g__	c	C	c	keep	no NCBI node on either path	Pla1	order				
+agp_fecal:186	agp_fecal	k__Bacteria;p__Planctomycetes;c__vadinHA49;o__p04_C01;f__;g__	c	C	c	keep	no NCBI node on either path	p04 C01	order				
+agp_fecal:217	agp_fecal	k__Bacteria;p__Proteobacteria;c__Betaproteobacteria;o__A21b;f__;g__	c	C	c	keep	no NCBI node on either path	A21b	order				
+agp_fecal:245	agp_fecal	k__Bacteria;p__Proteobacteria;c__Deltaproteobacteria;o__NB1-j;f__MND4;g__	c	C	c	keep	no NCBI node on either path	MND4	family				
+agp_fecal:287	agp_fecal	k__Bacteria;p__Tenericutes;c__RF3;o__ML615J-28;f__;g__	c	C	c	keep	no NCBI node on either path	ML615J-28	order				
+agp_fecal:289	agp_fecal	k__Bacteria;p__Verrucomicrobia;c__Verruco-5;o__WCHB1-41;f__WCHB1-25;g__	c	C	c	keep	no NCBI node on either path	WCHB1-25	family				
+agp_fecal:291	agp_fecal	k__Bacteria;p__Verrucomicrobia;c__[Methylacidiphilae];o__S-BQ2-57;f__;g__	c	C	c	keep	no NCBI node on either path	S-BQ2-57	order				
+agp_fecal:295	agp_fecal	k__Bacteria;p__WPS-2;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	WPS-2	phylum				
+agp_fecal:296	agp_fecal	k__Bacteria;p__ZB3;c__;o__;f__;g__	c	C	c	keep	no NCBI node on either path	ZB3	phylum				
+mgnify_mouse:010	mgnify_mouse	sk__Bacteria;k__;p__Actinobacteria;c__Actinobacteria	c	C	c	human	paths disagree	Actinobacteria	class			1760	
+mgnify_mouse:081	mgnify_mouse	sk__Bacteria;k__;p__Candidatus_Amesbacteria	c	C	c	human	paths disagree	Candidatus Amesbacteria	phylum			1752730	
+mgnify_mouse:082	mgnify_mouse	sk__Bacteria;k__;p__Candidatus_Buchananbacteria	c	C	c	human	paths disagree	Candidatus Buchananbacteria	phylum			1817903	
+mgnify_mouse:083	mgnify_mouse	sk__Bacteria;k__;p__Candidatus_Campbellbacteria	c	C	c	human	paths disagree	Candidatus Campbellbacteria	phylum			1752727	
+mgnify_mouse:084	mgnify_mouse	sk__Bacteria;k__;p__Candidatus_Cloacimonetes	c	C	c	human	paths disagree	Candidatus Cloacimonetes	phylum			456828	
+mgnify_mouse:085	mgnify_mouse	sk__Bacteria;k__;p__Candidatus_Pacebacteria	c	C	c	human	paths disagree	Candidatus Pacebacteria	phylum			1752724	
+mgnify_mouse:086	mgnify_mouse	sk__Bacteria;k__;p__Candidatus_Saccharibacteria	c	C	c	human	paths disagree	Candidatus Saccharibacteria	phylum			95818	
+mgnify_mouse:087	mgnify_mouse	sk__Bacteria;k__;p__Candidatus_Vogelbacteria	c	C	c	human	paths disagree	Candidatus Vogelbacteria	phylum			1817922	
+mgnify_mouse:102	mgnify_mouse	sk__Bacteria;k__;p__Deferribacteres	c	C	c	keep	no NCBI node on either path	Deferribacteres	phylum				
+mgnify_mouse:188	mgnify_mouse	sk__Bacteria;k__;p__Kiritimatiellaeota;c__Kiritimatiellae	c	C	c	human	paths disagree	Kiritimatiellae	class			1921781	
