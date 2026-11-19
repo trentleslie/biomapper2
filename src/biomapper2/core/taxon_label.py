@@ -77,7 +77,7 @@ _LATIN_TOKEN = re.compile(r"[A-Z][a-z]{3,}")
 _LATIN = re.compile(r"^(Candidatus )?[A-Z][a-z]+$")
 _GLUED_CANDIDATUS = re.compile(r"^Candidatus([A-Z][a-z]+)$")
 # A SILVA genus slot that holds a binomial ("D_5__Enterobacter cancerogenus"): truncate to the genus.
-_GENUS_BINOMIAL = re.compile(r"^((?:Candidatus )?[A-Z][a-z]+) [a-z]+$")
+_GENUS_BINOMIAL = re.compile(r"^((?:Candidatus )?[A-Z][a-z]+) ([a-z]+)$")
 # Second words that make a two-word unranked level a grouping above genus ("Aneurinibacillus group"),
 # not a species: the level is kept whole and parsing continues to any deeper genus.
 _GROUP_WORD = re.compile(r"^(group|groups|subgroup|cluster|clade|complex|lineage|assemblage)$", re.I)
@@ -190,7 +190,7 @@ def _split_levels(label: str) -> tuple[bool, list[TaxonLevel]]:
             # A placeholder ("Ambiguous taxa", "Incertae sedis", "Unknown family") is not a binomial: left
             # whole so the placeholder filter drops it and parsing continues to any deeper real level.
             binomial = None if _is_placeholder(name) else _GENUS_BINOMIAL.match(name)
-            if binomial and _GROUP_WORD.match(name.rsplit(" ", 1)[-1]):
+            if binomial and _GROUP_WORD.match(binomial.group(2)):
                 # "Aneurinibacillus group" names a grouping above its member genera, not a species: keep it
                 # whole so a deeper genus ("...;Aneurinibacillus group;Oxalophagus") is the query.
                 binomial = None
