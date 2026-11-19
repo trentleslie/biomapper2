@@ -345,6 +345,9 @@ def main(argv: list[str] | None = None) -> int:
     out_path = args.out or (RESULTS_DIR / f"taxon_16s_{stamp}.json")
     inputs = {p.name: _sha256(p) for p in sorted(args.data_dir.iterdir()) if p.is_file()}
     labels = pd.read_csv(args.data_dir / "labels.tsv", sep="\t", dtype=str, keep_default_na=False)
+    # The expected 16S population comes from the PINNED panel, never from the scored rows, so the
+    # fail-closed shrink check in checkpoint_verdict can actually fire.
+    panel_16s = int((labels["source"] != "bare_controls").sum())
     if args.limit:
         labels = labels.head(args.limit)
     truth = json.loads((args.data_dir / "truth.json").read_text())
@@ -356,6 +359,9 @@ def main(argv: list[str] | None = None) -> int:
         mapped = run_mapper(labels, Path(tmp))
 
     pins_end = {"git": _git(), "kg": _metagraph(), "snapshot_version": ncbi_taxonomy.version()}
+    if len(mapped) != len(labels):
+        # zip() below would silently drop the unmatched rows; the shrink check must see them as missing.
+        print(f"WARNING: mapper returned {len(mapped)} rows for {len(labels)} labels; the verdict will refuse")
     rows = []
     for (_, lab), (_, m) in zip(labels.iterrows(), mapped.iterrows()):
         rows.append(
@@ -391,7 +397,6 @@ def main(argv: list[str] | None = None) -> int:
         "linked": sum(bool(r["chosen"]) for r in voted),
         "rate": round(sum(bool(r["chosen"]) for r in voted) / len(voted), 4) if voted else None,
     }
-    panel_16s = sum(1 for r in scored if r["source"] != "bare_controls")
     verdict = (
         {"status": "REFUSED", "reason": "--limit smoke run"}
         if args.limit

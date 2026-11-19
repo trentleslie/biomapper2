@@ -298,7 +298,12 @@ class AnnotationEngine:
 
         # 16S taxon labels: the taxon annotator REPLACES the generic hybrid annotator (whose canonical
         # selector falls back to a non-NCBITaxon top-1, breaking R4). The kill switch restores today's list.
-        if config.TAXON_LABEL_ANNOTATOR_ENABLED and category_with_descendants.intersection({"biolink:OrganismTaxon"}):
+        # Gate on the job category BEING OrganismTaxon (or a subcategory), not on OrganismTaxon appearing
+        # among its descendants: an ancestor such as biolink:NamedThing (the fallback for every
+        # unrecognized entity type) also has OrganismTaxon below it and must keep the generic annotator.
+        if config.TAXON_LABEL_ANNOTATOR_ENABLED and category in self.biolink_client.get_descendants(
+            "biolink:OrganismTaxon"
+        ):
             annotators.append(TaxonLabelAnnotator.slug)
             return annotators
 
@@ -369,7 +374,7 @@ class AnnotationEngine:
                     accepted_categories=accepted_categories,
                     candidate_limit=candidate_limit,
                 )
-                # Only the RefMet annotator returns a cache and accepts the kwarg; others build none.
+                # Only the RefMet and taxon-label annotators return a cache and accept the kwarg.
                 if availability_cache is not None:
                     bulk_kwargs["cache"] = availability_cache
                 annotations_col = annotator.get_annotations_bulk(
@@ -524,8 +529,9 @@ class AnnotationEngine:
         missing key, whether or not the row was annotated.
 
         Availability tracks whether a source answered for the row (live / snapshot / unavailable /
-        no_match). Only the RefMet annotator (Metabolomics Workbench) is INSTRUMENTED for it: it alone
-        overrides the base ``not_queried`` (F8). Every other annotator inherits ``not_queried`` here BY
+        no_match). The RefMet annotator (Metabolomics Workbench) is INSTRUMENTED for it (F8), and the
+        taxon-label annotator reports voted / no_match / unavailable for its own rows. Every other
+        annotator inherits ``not_queried`` here BY
         DESIGN even when it voted, regardless of whether it hits an external service. That covers both a
         purely local parser like ``goslin-lipid`` (no external call to instrument) and
         ``kestrel-hybrid-search``, which DOES call an external Kestrel API and can fail when that service

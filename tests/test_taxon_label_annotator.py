@@ -266,6 +266,20 @@ def test_kill_switch_restores_the_generic_hybrid_annotator(monkeypatch):
     assert _engine()._select_annotators(TAXON) == ["kestrel-hybrid-search"]
 
 
+def test_ancestor_category_keeps_the_generic_hybrid_annotator():
+    # biolink:NamedThing (the fallback for every unrecognized entity type) has OrganismTaxon among its
+    # descendants; it must keep the generic annotator, not be routed to the taxon annotator.
+    bc = MagicMock()
+    bc.get_descendants.side_effect = lambda c: (
+        {"biolink:NamedThing", TAXON, "biolink:SmallMolecule"} if c == "biolink:NamedThing" else {c}
+    )
+    assert AnnotationEngine(biolink_client=bc)._select_annotators("biolink:NamedThing") == [
+        "metabolomics-workbench",
+        "goslin-lipid",
+        "kestrel-hybrid-search",
+    ]
+
+
 def test_small_molecule_selection_is_unchanged():
     assert _engine()._select_annotators("biolink:SmallMolecule") == [
         "metabolomics-workbench",
