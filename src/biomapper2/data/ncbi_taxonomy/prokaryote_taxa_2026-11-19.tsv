@@ -79,6 +79,7 @@ taxid	parent_taxid	rank	name	name_class
 157	2845253	genus	Treponema	scientific name
 157	2845253	genus	"Spironema" Vuillemin 1905	synonym
 157	2845253	genus	Microspironema	synonym
+157	2845253	genus	Spironema	synonym (authority stripped)
 170	1643688	family	Leptospiraceae	scientific name
 170	1643688	family	Leptospiraceae Hovind-Hougen 1979 (Approved Lists 1980)	synonym
 171	170	genus	Leptospira	scientific name
@@ -108,8 +109,10 @@ taxid	parent_taxid	rank	name	name_class
 286	135621	genus	Pseudomonas Migula 1894 (Approved Lists 1980)	synonym
 286	135621	genus	Serpens	synonym
 286	135621	genus	Serpens Hespell 1977 (Approved Lists 1980)	synonym
+286	135621	genus	Chlorobacterium	synonym (authority stripped)
 338	32033	genus	Xanthomonas	scientific name
 338	32033	genus	"Phytomonas" Bergey et al. 1923	synonym
+338	32033	genus	Phytomonas	synonym (authority stripped)
 349	2008794	genus	Zoogloea	scientific name
 351	135621	subfamily	Azotobacter group	scientific name
 351	135621	subfamily	Azotobacteraceae	synonym
@@ -129,6 +132,7 @@ taxid	parent_taxid	rank	name	name_class
 403	135618	family	Methylococcaceae	scientific name
 403	135618	family	"Methylomonadaceae" Leadbetter 1974	synonym
 403	135618	family	type I methanotrophs	synonym
+403	135618	family	Methylomonadaceae	synonym (authority stripped)
 404	32011	genus	Methylobacillus	scientific name
 407	119045	genus	Methylobacterium	scientific name
 413	403	genus	Methylococcus	scientific name
@@ -144,6 +148,7 @@ taxid	parent_taxid	rank	name	name_class
 434	433	genus	Mycoderma	synonym
 434	433	genus	Termobacterium	synonym
 434	433	genus	Ulvina	synonym
+434	433	genus	Acetobacterium	synonym (authority stripped)
 441	433	genus	Gluconobacter	scientific name
 441	433	genus	Acetomonas	synonym
 444	118969	family	Legionellaceae	scientific name
@@ -164,6 +169,7 @@ taxid	parent_taxid	rank	name	name_class
 482	481	genus	Neisseria	scientific name
 482	481	genus	"Merismopedia" Zopf 1885	synonym
 482	481	genus	Gonococcus	synonym
+482	481	genus	Merismopedia	synonym (authority stripped)
 497	468	genus	Psychrobacter	scientific name
 499	189777	genus	Thermomicrobium	scientific name
 506	80840	family	Alcaligenaceae	scientific name
@@ -183,6 +189,7 @@ taxid	parent_taxid	rank	name	name_class
 547	543	genus	Enterobacter	scientific name
 547	543	genus	"Aerobacter" Hormaeche and Edwards 1958	synonym
 547	543	genus	Cloaca	synonym
+547	543	genus	Aerobacter	synonym (authority stripped)
 551	1903409	genus	Erwinia	scientific name
 561	543	genus	Escherichia	scientific name
 568	1903412	genus	Hafnia	scientific name
@@ -234,6 +241,7 @@ taxid	parent_taxid	rank	name	name_class
 773	772	genus	Grahmia	synonym
 773	772	genus	Rocha-Limae	synonym
 773	772	genus	Rochalimaea	synonym
+773	772	genus	Bartonia	synonym (authority stripped)
 775	766	family	Rickettsiaceae	scientific name
 776	118968	genus	Coxiella	scientific name
 776	118968	genus	Burnetia	synonym
@@ -249,6 +257,7 @@ taxid	parent_taxid	rank	name	name_class
 810	1113537	genus	Miyagawanella	synonym
 810	1113537	genus	Rakeia	synonym
 810	1113537	genus	Rickettsiaformis	synonym
+810	1113537	genus	Prowazekia	synonym (authority stripped)
 815	171549	family	Bacteroidaceae	scientific name
 816	815	genus	Bacteroides	scientific name
 816	815	genus	Capsularis	synonym
@@ -756,6 +765,7 @@ taxid	parent_taxid	rank	name	name_class
 2422	1643950	genus	Fervidibacterium	equivalent name
 2425	1706371	genus	Teredinibacter	scientific name
 2425	1706371	genus	"Teredinobacter" Waterbury et al. 1989	synonym
+2425	1706371	genus	Teredinobacter	synonym (authority stripped)
 2433	2854170	genus	Roseobacter	scientific name
 2697	31984	genus	Heliobacterium	scientific name
 2701	31953	genus	Gardnerella	scientific name
@@ -878,6 +888,8 @@ taxid	parent_taxid	rank	name	name_class
 28889	1783275	phylum	Thermoproteota corrig. Garrity and Holt 2021	synonym
 28889	1783275	phylum	Xenarchaea	synonym
 28889	1783275	phylum	Xenarchaeota	synonym
+28889	1783275	phylum	Candidatus Marsarchaeota	synonym (authority stripped)
+28889	1783275	phylum	Candidatus Verstraetearchaeota	synonym (authority stripped)
 28890	3366610	phylum	Methanobacteriota	scientific name
 28890	3366610	phylum	euryarchaeotes	genbank common name
 28890	3366610	phylum	Euryarchaeota	synonym
@@ -1005,6 +1017,7 @@ taxid	parent_taxid	rank	name	name_class
 33042	186803	genus	Coprococcus	scientific name
 33055	119066	genus	Candidatus Kinetoplastidibacterium	scientific name
 33055	119066	genus	"Candidatus Kinetoplastibacterium" Du et al. 1994 in Teixeira et al. 2011	synonym
+33055	119066	genus	Candidatus Kinetoplastibacterium	synonym (authority stripped)
 33057	2008794	genus	Thauera	scientific name
 33071	1890422	genus	Gloeobacter	scientific name
 33073	114403	genus	Zymobacter	scientific name
@@ -1049,6 +1062,7 @@ taxid	parent_taxid	rank	name	name_class
 34019	82115	genus	Liberibacter	scientific name
 34019	82115	genus	"Candidatus Liberobacter" Jagoueix et al. 1997	synonym
 34019	82115	genus	Candidatus Liberibacter	synonym
+34019	82115	genus	Candidatus Liberobacter	synonym (authority stripped)
 34023	2829815	genus	Rhodocista	scientific name
 34035	29547	no rank	Campylobacterota incertae sedis	scientific name
 34035	29547	no rank	unclassified epsilon proteobacteria	synonym
@@ -1113,6 +1127,7 @@ taxid	parent_taxid	rank	name	name_class
 40118	3137695	genus	Magnetobacterium (SeqCode)	scientific name
 40118	3137695	genus	Candidatus Magnetobacterium	equivalent name
 40118	3137695	genus	"Magnetobacterium" Chuvochina et al. 2023	synonym
+40118	3137695	genus	Magnetobacterium	synonym (authority stripped)
 40222	135616	genus	Methylophaga	scientific name
 40222	135616	genus	Methyliphaga	equivalent name
 40323	32033	genus	Stenotrophomonas	scientific name
@@ -1138,6 +1153,7 @@ taxid	parent_taxid	rank	name	name_class
 41949	1798913	genus	Candidatus Neomicrothrix	scientific name
 41949	1798913	genus	Neomicrothrix	equivalent name
 41949	1798913	genus	"Candidatus Microthrix" Blackall et al. 1996	synonym
+41949	1798913	genus	Candidatus Microthrix	synonym (authority stripped)
 41980	118883	genus	Metallosphaera	scientific name
 42054	28256	genus	Chromohalobacter	scientific name
 42232	28056	genus	Spirilliplanes	scientific name
@@ -1432,6 +1448,8 @@ taxid	parent_taxid	rank	name	name_class
 62680	1783270	phylum	"Candidatus Marinimicrobia" Rinke et al. 2013	synonym
 62680	1783270	phylum	"Candidatus Marinisomatota" Royalty and Steen 2019	synonym
 62680	1783270	phylum	Candidatus Neomarinimicrobiota	synonym
+62680	1783270	phylum	Candidatus Marinimicrobia	synonym (authority stripped)
+62680	1783270	phylum	Candidatus Marinisomatota	synonym (authority stripped)
 63132	3079752	genus	Geitlerinema	scientific name
 63132	3079752	genus	Phormidium subg. Geitlerinema	synonym
 63742	1644061	genus	Natrialba	scientific name
@@ -1488,6 +1506,7 @@ taxid	parent_taxid	rank	name	name_class
 67812	1783257	phylum	Candidatus Omnitrophicaeota	synonym
 67812	1783257	phylum	Omnitrophota (SeqCode)	synonym
 67812	1783257	phylum	candidate division OP3	synonym
+67812	1783257	phylum	Candidatus Omnitrophica	synonym (authority stripped)
 67814	2498710	phylum	Caldisericota	scientific name
 67814	2498710	phylum	Caldiserica	equivalent name
 67814	2498710	phylum	Caldisericaeota	synonym
@@ -1497,9 +1516,11 @@ taxid	parent_taxid	rank	name	name_class
 67817	1783234	phylum	candidate division Obsidian Pool 8	equivalent name
 67817	1783234	phylum	"Candidatus Aminicenantes" Rinke et al. 2013	synonym
 67817	1783234	phylum	candidate division OP8	synonym
+67817	1783234	phylum	Candidatus Aminicenantes	synonym (authority stripped)
 67818	3379134	phylum	Atribacterota	scientific name
 67818	3379134	phylum	candidate division Obsidian Pool 9	equivalent name
 67818	3379134	phylum	"Candidatus Atribacteria" Dodsworth et al. 2013	synonym
+67818	3379134	phylum	Candidatus Atribacteria	synonym (authority stripped)
 67819	1783272	phylum	Armatimonadota	scientific name
 67819	1783272	phylum	Armatimonadetes	equivalent name
 67819	1783272	phylum	Armatimonadaeota	synonym
@@ -1511,6 +1532,7 @@ taxid	parent_taxid	rank	name	name_class
 67820	1794810	phylum	Candidatus Microgenomatota	scientific name
 67820	1794810	phylum	"Candidatus Microgenomates" Rinke et al. 2013	synonym
 67820	1794810	phylum	"Candidatus Microgenomatota" corrig. Rinke et al. 2013	synonym
+67820	1794810	phylum	Candidatus Microgenomates	synonym (authority stripped)
 68034	2867375	genus	Sporotomaculum	scientific name
 68287	69277	genus	Mesorhizobium	scientific name
 68288	563798	genus	Cyclobacterium	scientific name
@@ -1597,6 +1619,7 @@ taxid	parent_taxid	rank	name	name_class
 74015	1783270	phylum	"Candidatus Latescibacteria" Rinke et al. 2013	synonym
 74015	1783270	phylum	candidate division WS3	synonym
 74015	1783270	phylum	candidate division Wurtsmith 3	synonym
+74015	1783270	phylum	Candidatus Latescibacteria	synonym (authority stripped)
 74030	2854170	genus	Roseovarius	scientific name
 74032	2854170	genus	Antarctobacter	scientific name
 74032	2854170	genus	Alkalimicrobium	synonym
@@ -1919,6 +1942,7 @@ taxid	parent_taxid	rank	name	name_class
 95818	1783234	phylum	Saccharimonadota	equivalent name
 95818	1783234	phylum	candidate division 'Torf, mittlere Schicht' 7	equivalent name
 95818	1783234	phylum	"Candidatus Saccharibacteria" Albertsen et al. 2013	synonym
+95818	1783234	phylum	Candidatus Saccharibacteria	synonym (authority stripped)
 95900	95818	no rank	environmental samples	scientific name
 95901	1783234	clade	Candidatus Babelota	scientific name
 95901	1783234	clade	Babelota	equivalent name
@@ -1927,6 +1951,7 @@ taxid	parent_taxid	rank	name	name_class
 95901	1783234	clade	domain cluster TM6	equivalent name
 95901	1783234	clade	"Candidatus Dependentiae" Yeoh et al. 2016	synonym
 95901	1783234	clade	candidate division TM6	synonym
+95901	1783234	clade	Candidatus Dependentiae	synonym (authority stripped)
 96492	85023	genus	Frigoribacterium	scientific name
 97050	2854170	genus	Ruegeria	scientific name
 97050	2854170	genus	Silicibacter	synonym
@@ -1941,6 +1966,7 @@ taxid	parent_taxid	rank	name	name_class
 99479	85021	genus	Candidatus Nostocoides	synonym
 99479	85021	genus	Tetrasphaera	synonym
 99479	85021	genus	Tetrasphaera Maszenan et al. 2000	synonym
+99479	85021	genus	Candidatus Nostocoida	synonym (authority stripped)
 99593	2848916	genus	Thermohalobacter	scientific name
 99906	186828	genus	Alkalibacterium	scientific name
 100132	186803	genus	Sporobacterium	scientific name
@@ -1962,6 +1988,7 @@ taxid	parent_taxid	rank	name	name_class
 102926	89373	genus	Candidatus Magnispira	scientific name
 102926	89373	genus	Magnispira	equivalent name
 102926	89373	genus	"Candidatus Magnospira" Snaidr et al. 1999	synonym
+102926	89373	genus	Candidatus Magnospira	synonym (authority stripped)
 104174	1508594	family	Oscillochloridaceae	scientific name
 104175	104174	genus	Oscillochloris	scientific name
 104175	104174	genus	Oscillantichloris	synonym
@@ -2198,6 +2225,7 @@ taxid	parent_taxid	rank	name	name_class
 142187	1783270	phylum	Candidatus Hydrogenedentota	scientific name
 142187	1783270	phylum	Hydrogenedentota	equivalent name
 142187	1783270	phylum	"Candidatus Hydrogenedentes" Rinke et al. 2013	synonym
+142187	1783270	phylum	Candidatus Hydrogenedentes	synonym (authority stripped)
 142577	2070	genus	Prauserella	scientific name
 142587	186828	genus	Isobaculum	scientific name
 142841	53434	genus	Selenihalanaerobacter	scientific name
@@ -2326,6 +2354,7 @@ taxid	parent_taxid	rank	name	name_class
 167946	224469	genus	Candidatus Procaibacter	scientific name
 167946	224469	genus	Procaibacter	equivalent name
 167946	224469	genus	"Candidatus Procabacter" Horn et al. 2002	synonym
+167946	224469	genus	Candidatus Procabacter	synonym (authority stripped)
 167963	200795	no rank	Chloroflexota incertae sedis	scientific name
 167963	200795	no rank	unclassified Green non-sulfur bacteria	synonym
 168470	2897176	genus	Laribacter	scientific name
@@ -2477,6 +2506,7 @@ taxid	parent_taxid	rank	name	name_class
 189384	119066	genus	Candidatus Tremblayella	scientific name
 189384	119066	genus	Tremblayella	equivalent name
 189384	119066	genus	"Candidatus Tremblaya" Thao et al. 2002	synonym
+189384	119066	genus	Candidatus Tremblaya	synonym (authority stripped)
 189769	118001	order	Chrysiogenales	scientific name
 189770	189769	family	Chrysiogenaceae	scientific name
 189772	32061	order	Herpetosiphonales	scientific name
@@ -2503,6 +2533,7 @@ taxid	parent_taxid	rank	name	name_class
 191410	1090	class	Chlorobiia	scientific name
 191410	1090	class	"Chlorobia" (ex Garrity and Holt 2001) Bello et al. 2022	synonym
 191410	1090	class	Chlorobea	synonym
+191410	1090	class	Chlorobia	synonym (authority stripped)
 191411	191410	order	Chlorobiales	scientific name
 191412	191411	family	Chlorobiaceae	scientific name
 191412	191411	family	Chlorobiaceae Copeland 1956	synonym
@@ -2550,6 +2581,9 @@ taxid	parent_taxid	rank	name	name_class
 198346	118884	genus	"Candidatus Baumannia" Moran et al. 2003	synonym
 198346	118884	genus	"Candidatus Lindabaumannia" corrig. Moran et al. 2003	synonym
 198346	118884	genus	"Candidatus Paulbaumannia" corrig. Moran et al. 2003	synonym
+198346	118884	genus	Candidatus Baumannia	synonym (authority stripped)
+198346	118884	genus	Candidatus Lindabaumannia	synonym (authority stripped)
+198346	118884	genus	Candidatus Paulbaumannia	synonym (authority stripped)
 198592	3079761	genus	Umezakia	scientific name
 198705	80864	genus	Lampropedia	scientific name
 200295	1783234	phylum	Candidatus Sumerlaeota	scientific name
@@ -2651,6 +2685,7 @@ taxid	parent_taxid	rank	name	name_class
 203804	84564	genus	Sphingobacterium camponotii	includes
 203804	84564	genus	"Candidatus Blochmannia" Sauer et al. 2000	synonym
 203804	84564	genus	Candidatus camponotii	synonym
+203804	84564	genus	Candidatus Blochmannia	synonym (authority stripped)
 203861	942	genus	Aegyptianella	scientific name
 204037	1903410	genus	Dickeya	scientific name
 204286	28256	genus	Cobetia	scientific name
@@ -2805,6 +2840,7 @@ taxid	parent_taxid	rank	name	name_class
 221235	1783234	phylum	Absconditibacteriota	equivalent name
 221235	1783234	phylum	candidate division Sulphur River 1	equivalent name
 221235	1783234	phylum	"Candidatus Absconditabacteria" Hug et al. 2016	synonym
+221235	1783234	phylum	Candidatus Absconditabacteria	synonym (authority stripped)
 221239	255531	genus	Sinorickettsia	scientific name
 221239	255531	genus	'Sinorickettsia'	synonym
 221279	1400857	genus	Candidatus Competibacter	scientific name
@@ -2849,9 +2885,11 @@ taxid	parent_taxid	rank	name	name_class
 224468	28216	order	Candidatus Procabacteriales	scientific name
 224468	28216	order	Procabacteriales	equivalent name
 224468	28216	order	"Candidatus Procaibacterales" corrig. Garrity et al. 2003	synonym
+224468	28216	order	Candidatus Procaibacterales	synonym (authority stripped)
 224469	224468	family	Candidatus Procabacteriaceae	scientific name
 224469	224468	family	Procabacteriaceae	equivalent name
 224469	224468	family	"Candidatus Procaibacteraceae" corrig. Garrity et al. 2003	synonym
+224469	224468	family	Candidatus Procaibacteraceae	synonym (authority stripped)
 224471	80840	no rank	Burkholderiales genera incertae sedis	scientific name
 224474	3064025	genus	Desulfothermus	scientific name
 224756	2290931	class	Methanomicrobia	scientific name
@@ -2979,6 +3017,8 @@ taxid	parent_taxid	rank	name	name_class
 257502	3058403	genus	Candidatus Chlorotrichoides	scientific name
 257502	3058403	genus	"Candidatus Chlorothrix" Klappenbach and Pierson 2004	synonym
 257502	3058403	genus	"Candidatus Chlorotrichopsis" corrig. Klappenbach and Pierson 2004	synonym
+257502	3058403	genus	Candidatus Chlorothrix	synonym (authority stripped)
+257502	3058403	genus	Candidatus Chlorotrichopsis	synonym (authority stripped)
 257820	506	genus	Kerstersia	scientific name
 258255	2821832	genus	Pseudovibrio	scientific name
 258514	216572	genus	Acetanaerobacterium	scientific name
@@ -3134,6 +3174,7 @@ taxid	parent_taxid	rank	name	name_class
 292630	213849	family	Hydrogenimonadaceae	scientific name
 292630	213849	family	"Hydrogenimonaceae" Garrity et al. 2004	synonym
 292630	213849	family	Hydrogenimonadaceae Waite et al. 2020	synonym
+292630	213849	family	Hydrogenimonaceae	synonym (authority stripped)
 292632	216572	genus	Subdoligranulum	scientific name
 292635	186824	genus	Laceyella	scientific name
 292636	186824	genus	Thermoflavimicrobium	scientific name
@@ -3153,6 +3194,7 @@ taxid	parent_taxid	rank	name	name_class
 295595	3132029	genus	Hepatoplasma (SeqCode)	scientific name
 295595	3132029	genus	"Hepatoplasma" Chuvochina et al. 2023	synonym
 295595	3132029	genus	Candidatus Hepatoplasma	synonym
+295595	3132029	genus	Hepatoplasma	synonym (authority stripped)
 296014	267888	genus	Algicola	scientific name
 296051	563835	genus	Terrimonas	scientific name
 296141	65842	class	Chitinivibrionia	scientific name
@@ -3232,6 +3274,7 @@ taxid	parent_taxid	rank	name	name_class
 330062	92486	genus	Candidatus Endecteinascidia	scientific name
 330062	92486	genus	Endecteinascidia	equivalent name
 330062	92486	genus	"Candidatus Endoecteinascidia" Moss et al. 2003	synonym
+330062	92486	genus	Candidatus Endoecteinascidia	synonym (authority stripped)
 330923	2323	genus	Chlorochromatium	scientific name
 330923	2323	genus	'Chlorochromatium'	synonym
 331525	85021	genus	Kribbia	scientific name
@@ -3282,6 +3325,7 @@ taxid	parent_taxid	rank	name	name_class
 336809	313602	genus	Candidatus Karelsulcia	scientific name
 336809	313602	genus	Karelsulcia	equivalent name
 336809	313602	genus	"Candidatus Sulcia" Moran et al. 2005	synonym
+336809	313602	genus	Candidatus Sulcia	synonym (authority stripped)
 336827	89373	genus	Rhodonellum	scientific name
 336830	1046	genus	Arsukibacterium	scientific name
 337004	85023	genus	Microcella	scientific name
@@ -3344,6 +3388,8 @@ taxid	parent_taxid	rank	name	name_class
 356778	2066434	genus	"Candidatus Alysiosphaera" Levantesi et al. 2004	synonym
 356778	2066434	genus	"Candidatus Halyseosphaera" corrig. (ex Levantesi et al. 2004) Kragelund et al. 2006	synonym
 356778	2066434	genus	Alisphaera	synonym
+356778	2066434	genus	Candidatus Alysiosphaera	synonym (authority stripped)
+356778	2066434	genus	Candidatus Halyseosphaera	synonym (authority stripped)
 356787	2066434	genus	Candidatus Catenimonas	scientific name
 356787	2066434	genus	Catenimonas	equivalent name
 356797	2814874	genus	Neomegalonema	scientific name
@@ -3375,6 +3421,7 @@ taxid	parent_taxid	rank	name	name_class
 363278	1127830	genus	Candidatus Anammoxiglobus	scientific name
 363278	1127830	genus	Anammoxiglobus	equivalent name
 363278	1127830	genus	"Candidatus Anammoxoglobus" Kartal et al. 2007	synonym
+363278	1127830	genus	Candidatus Anammoxoglobus	synonym (authority stripped)
 363408	49546	genus	Nonlabens	scientific name
 363408	49546	genus	Donghaeana	synonym
 363408	49546	genus	Persicivirga	synonym
@@ -3386,6 +3433,7 @@ taxid	parent_taxid	rank	name	name_class
 363464	1783273	phylum	candidate division BD1-5	includes
 363464	1783273	phylum	"Candidatus Gracilibacteria" Rinke et al. 2013	synonym
 363464	1783273	phylum	candidate division GN02	synonym
+363464	1783273	phylum	Candidatus Gracilibacteria	synonym (authority stripped)
 364031	135616	genus	Sulfurivirga	scientific name
 364316	80864	genus	Verminephrobacter	scientific name
 364409	433	genus	Granulibacter	scientific name
@@ -3412,6 +3460,7 @@ taxid	parent_taxid	rank	name	name_class
 374666	118884	genus	Candidatus Thiobius	scientific name
 374666	118884	genus	Thiobius	equivalent name
 374666	118884	genus	"Candidatus Thiobios" Rinke et al. 2006	synonym
+374666	118884	genus	Candidatus Thiobios	synonym (authority stripped)
 375288	2005525	genus	Parabacteroides	scientific name
 375673	267892	genus	Paraferrimonas	scientific name
 375928	485255	genus	Natranaerobius	scientific name
@@ -3535,6 +3584,7 @@ taxid	parent_taxid	rank	name	name_class
 409304	543	genus	Candidatus Ishikawella	scientific name
 409304	543	genus	Ishikawella	equivalent name
 409304	543	genus	"Candidatus Ishikawaella" Hosokawa et al. 2006	synonym
+409304	543	genus	Candidatus Ishikawaella	synonym (authority stripped)
 411566	1328881	genus	Candidatus Midichloria	scientific name
 411566	1328881	genus	Midichloria	equivalent name
 411918	171551	genus	Candidatus Vestibaculum	scientific name
@@ -3627,6 +3677,7 @@ taxid	parent_taxid	rank	name	name_class
 439486	2323	genus	Candidatus Ovibacter	scientific name
 439486	2323	genus	Ovibacter	equivalent name
 439486	2323	genus	"Candidatus Ovobacter" Fenchel and Thar 2004	synonym
+439486	2323	genus	Candidatus Ovobacter	synonym (authority stripped)
 439698	28056	genus	Pseudosporangium	scientific name
 442155	543	genus	Candidatus Stammerula	scientific name
 442155	543	genus	Stammerula	equivalent name
@@ -3714,11 +3765,14 @@ taxid	parent_taxid	rank	name	name_class
 456826	3039865	genus	"Candidatus Cloacamonas" Pelletier et al. 2008	synonym
 456826	3039865	genus	"Candidatus Cloacimonas" corrig. Pelletier et al. 2008	synonym
 456826	3039865	genus	"Cloacimonas" Chuvochina et al. 2023	synonym
+456826	3039865	genus	Candidatus Cloacamonas	synonym (authority stripped)
+456826	3039865	genus	Cloacimonas	synonym (authority stripped)
 456828	1783270	phylum	Candidatus Cloacimonadota	scientific name
 456828	1783270	phylum	Cloacimonadota	equivalent name
 456828	1783270	phylum	candidate division Waste Water of Evry 1	equivalent name
 456828	1783270	phylum	"Candidatus Cloacimonetes" Rinke et al. 2013	synonym
 456828	1783270	phylum	candidate division WWE1	synonym
+456828	1783270	phylum	Candidatus Cloacimonetes	synonym (authority stripped)
 457476	118882	genus	Daeguia	scientific name
 457933	2690195	genus	Elioraea	scientific name
 458031	57723	no rank	Acidobacteriota incertae sedis	scientific name
@@ -3737,6 +3791,7 @@ taxid	parent_taxid	rank	name	name_class
 467747	39945	genus	Candidatus Bacilliplasma	scientific name
 467747	39945	genus	Bacilliplasma	equivalent name
 467747	39945	genus	"Candidatus Bacilloplasma" Kostanjsek et al. 2007	synonym
+467747	39945	genus	Candidatus Bacilloplasma	synonym (authority stripped)
 467749	942	genus	Candidatus Neoehrlichia	scientific name
 467749	942	genus	Neoehrlichia	equivalent name
 467975	633392	genus	Iamia	scientific name
@@ -3746,6 +3801,7 @@ taxid	parent_taxid	rank	name	name_class
 469811	1692504	genus	Candidatus Clavichlamydia	scientific name
 469811	1692504	genus	Clavichlamydia	equivalent name
 469811	1692504	genus	"Candidatus Clavochlamydia" Karlsen et al. 2008	synonym
+469811	1692504	genus	Candidatus Clavochlamydia	synonym (authority stripped)
 470208	1890430	genus	Coelosphaerium	scientific name
 470491	118884	genus	Burzellia	scientific name
 470491	118884	genus	'Burzellia'	synonym
@@ -3793,6 +3849,7 @@ taxid	parent_taxid	rank	name	name_class
 483197	540501	genus	Candidatus Lumbricincola	scientific name
 483197	540501	genus	Lumbricincola	equivalent name
 483197	540501	genus	"Candidatus Lumbricoplasma" Nechitaylo 2007	synonym
+483197	540501	genus	Candidatus Lumbricoplasma	synonym (authority stripped)
 483422	412447	genus	Estrella	scientific name
 483695	1892252	genus	Blennothrix	scientific name
 484508	186817	genus	Ornithinibacillus	scientific name
@@ -3812,6 +3869,7 @@ taxid	parent_taxid	rank	name	name_class
 493405	49546	genus	Candidatus Haematobacterium	scientific name
 493405	49546	genus	Haematobacterium	equivalent name
 493405	49546	genus	"Candidatus Hemobacterium" Zhang and Rikihisa 2004	synonym
+493405	49546	genus	Candidatus Hemobacterium	synonym (authority stripped)
 495819	2024980	genus	Spirobacillus	scientific name
 496430	213119	genus	Algorimarina	scientific name
 496496	186818	genus	Viridibacillus	scientific name
@@ -3859,6 +3917,7 @@ taxid	parent_taxid	rank	name	name_class
 511434	333046	genus	Azobacteroides (SeqCode)	scientific name
 511434	333046	genus	"Azobacteroides" Chuvochina et al. 2023	synonym
 511434	333046	genus	Candidatus Azobacteroides	synonym
+511434	333046	genus	Azobacteroides	synonym (authority stripped)
 511678	641	genus	Aliivibrio	scientific name
 511745	717964	genus	Methylacidiphilum (ex Ratnadevi et al. 2023)	scientific name
 511745	717964	genus	Acidimethylosilex	equivalent name
@@ -3875,6 +3934,7 @@ taxid	parent_taxid	rank	name	name_class
 513570	89374	genus	Candidatus Epifloribacter	scientific name
 513570	89374	genus	Epifloribacter	equivalent name
 513570	89374	genus	"Candidatus Epiflobacter" Xia et al. 2008	synonym
+513570	89374	genus	Candidatus Epiflobacter	synonym (authority stripped)
 515417	135620	genus	Amphritea	scientific name
 516086	2848916	genus	Clostridiisalibacter	scientific name
 518700	84566	genus	Hevizibacter	scientific name
@@ -3938,6 +3998,7 @@ taxid	parent_taxid	rank	name	name_class
 544448	1783272	phylum	"Mollicutaeota" Oren et al. 2015	synonym
 544448	1783272	phylum	"Tenericutes" Murray 1984	synonym
 544448	1783272	phylum	Mollicutota	synonym
+544448	1783272	phylum	Mollicutaeota	synonym (authority stripped)
 545865	2945021	genus	Calditerrivibrio	scientific name
 551208	2897177	genus	Chitinilyticum	scientific name
 551759	75787	genus	Aromatoleum	scientific name
@@ -3982,12 +4043,16 @@ taxid	parent_taxid	rank	name	name_class
 568987	146507	genus	"Candidatus Hamiltonella" Moran et al. 2005	synonym
 568987	146507	genus	"Candidatus Williamhamiltonia" corrig. Moran et al. 2005	synonym
 568987	146507	genus	Candidatus Consessor	synonym
+568987	146507	genus	Candidatus Consessoris	synonym (authority stripped)
+568987	146507	genus	Candidatus Hamiltonella	synonym (authority stripped)
+568987	146507	genus	Candidatus Williamhamiltonia	synonym (authority stripped)
 568988	146507	genus	Candidatus Regiella	scientific name
 568988	146507	genus	Adiacens	equivalent name
 568988	146507	genus	Regiella	equivalent name
 568988	146507	genus	"Candidatus Adiacens" corrig. Darby et al. 2005	synonym
 568988	146507	genus	"Candidatus Adiaceo" Darby et al. 2005	synonym
 568988	146507	genus	Candidatus Adiacens	synonym
+568988	146507	genus	Candidatus Adiaceo	synonym (authority stripped)
 570264	224756	order	Methanocellales	scientific name
 570265	570264	family	Methanocellaceae	scientific name
 570266	570265	genus	Methanocella	scientific name
@@ -4129,6 +4194,7 @@ taxid	parent_taxid	rank	name	name_class
 658061	3121618	genus	Candidatus Korobacter	scientific name
 658061	3121618	genus	Korobacter	equivalent name
 658061	3121618	genus	"Candidatus Koribacter" Ward et al. 2009	synonym
+658061	3121618	genus	Candidatus Koribacter	synonym (authority stripped)
 658428	84994	genus	Acidithiomicrobium	scientific name
 658623	712	genus	Chelonobacter	scientific name
 659427	2854170	genus	Sediminimonas	scientific name
@@ -4170,6 +4236,7 @@ taxid	parent_taxid	rank	name	name_class
 672771	33988	genus	Candidatus Cryptoprodota	scientific name
 672771	33988	genus	Cryptoprodota	equivalent name
 672771	33988	genus	"Candidatus Cryptoprodotis" Ferrantini et al. 2009	synonym
+672771	33988	genus	Candidatus Cryptoprodotis	synonym (authority stripped)
 673534	28056	genus	Plantactinospora	scientific name
 673534	28056	genus	Actinaurispora	synonym
 674734	2070	genus	Alloactinosynnema	scientific name
@@ -4239,9 +4306,11 @@ taxid	parent_taxid	rank	name	name_class
 743724	1783276	phylum	Aenigmatarchaeota	equivalent name
 743724	1783276	phylum	candidate division DUSEL2	equivalent name
 743724	1783276	phylum	"Candidatus Aenigmarchaeota" Rinke et al. 2013	synonym
+743724	1783276	phylum	Candidatus Aenigmarchaeota	synonym (authority stripped)
 743725	1783276	phylum	Candidatus Iainarchaeota	scientific name
 743725	1783276	phylum	Iainarchaeota	equivalent name
 743725	1783276	phylum	"Candidatus Diapherotrites" Rinke et al. 2013	synonym
+743725	1783276	phylum	Candidatus Diapherotrites	synonym (authority stripped)
 744724	2236	genus	Halarchaeum	scientific name
 745153	1706371	genus	Umboniibacter	scientific name
 745364	145357	genus	Luteipulveratus	scientific name
@@ -4264,6 +4333,7 @@ taxid	parent_taxid	rank	name	name_class
 767891	3119833	genus	Puniceispirillum (SeqCode)	scientific name
 767891	3119833	genus	"Puniceispirillum" Chuvochina et al. 2023	synonym
 767891	3119833	genus	Candidatus Puniceispirillum	synonym
+767891	3119833	genus	Puniceispirillum	synonym (authority stripped)
 768503	976	class	Cytophagia	scientific name
 768507	768503	order	Cytophagales	scientific name
 768649	388448	family	Thermosporotrichaceae	scientific name
@@ -4295,6 +4365,7 @@ taxid	parent_taxid	rank	name	name_class
 869714	651142	genus	Giganthauma	equivalent name
 869714	651142	genus	Gigantothauma	equivalent name
 869714	651142	genus	"Candidatus Giganthauma" Muller et al. 2010	synonym
+869714	651142	genus	Candidatus Giganthauma	synonym (authority stripped)
 869806	2762301	genus	Marivirga	scientific name
 869896	1644056	genus	Halonotius	scientific name
 871006	183924	order	Acidilobales	scientific name
@@ -4376,6 +4447,7 @@ taxid	parent_taxid	rank	name	name_class
 990719	3082768	family	Candidatus Borkfalkiaceae	synonym
 990719	3082768	family	Catabacteraceae	synonym
 990719	3082768	family	Catabacteriaceae	synonym
+990719	3082768	family	Candidatus Comantemaea	synonym (authority stripped)
 990721	990719	genus	Christensenella	scientific name
 990721	990719	genus	Catabacter	synonym
 991903	31989	genus	Polymorphum	scientific name
@@ -4385,6 +4457,7 @@ taxid	parent_taxid	rank	name	name_class
 995729	189779	genus	Candidatus Magnetovum	scientific name
 995729	189779	genus	Magnetovum	equivalent name
 995729	189779	genus	"Candidatus Magnetoovum" Lefevre et al. 2011	synonym
+995729	189779	genus	Candidatus Magnetoovum	synonym (authority stripped)
 996924	1892263	genus	Mastigocoleus	scientific name
 998014	135617	genus	Cocleimonas	scientific name
 999488	118882	genus	Paenochrobactrum	scientific name
@@ -4404,14 +4477,17 @@ taxid	parent_taxid	rank	name	name_class
 1006482	3104716	genus	Desulfitispora	scientific name
 1007082	338190	genus	Nitrosarchaeum	scientific name
 1007082	338190	genus	"Candidatus Nitrosoarchaeum" Blainey et al. 2011	synonym
+1007082	338190	genus	Candidatus Nitrosoarchaeum	synonym (authority stripped)
 1007342	189770	genus	Desulfurispira	scientific name
 1008195	1644056	genus	Halopelagius	scientific name
 1008944	543	genus	Candidatus Typhincola	scientific name
 1008944	543	genus	Typhincola	equivalent name
 1008944	543	genus	"Candidatus Rohrkolberia" Kuechler et al. 2011	synonym
+1008944	543	genus	Candidatus Rohrkolberia	synonym (authority stripped)
 1010679	39782	genus	Candidatus Spencerbrownia	scientific name
 1010679	39782	genus	Spencerbrownia	equivalent name
 1010679	39782	genus	"Candidatus Brownia" Gruwell et al. 2010	synonym
+1010679	39782	genus	Candidatus Brownia	synonym (authority stripped)
 1017183	2036754	genus	Camelimonas	scientific name
 1017280	216572	genus	Pseudoflavonifractor	scientific name
 1029631	85023	genus	Amnibacterium	scientific name
@@ -4443,6 +4519,7 @@ taxid	parent_taxid	rank	name	name_class
 1048752	3071583	genus	Candidatus Caldarchaeum	scientific name
 1048752	3071583	genus	Caldarchaeum	equivalent name
 1048752	3071583	genus	"Candidatus Caldiarchaeum" Nunoura et al. 2011	synonym
+1048752	3071583	genus	Candidatus Caldiarchaeum	synonym (authority stripped)
 1048757	543	genus	Candidatus Moranella	scientific name
 1048757	543	genus	Moranella	equivalent name
 1048851	3079754	genus	Wilmottia	scientific name
@@ -4457,16 +4534,19 @@ taxid	parent_taxid	rank	name	name_class
 1051667	1051663	genus	Candidatus Nanosalinicola	scientific name
 1051667	1051663	genus	Nanosalinicola	equivalent name
 1051667	1051663	genus	"Candidatus Nanosalinarum" Narasingarao et al. 2012	synonym
+1051667	1051663	genus	Candidatus Nanosalinarum	synonym (authority stripped)
 1051898	75682	genus	Actimicrobium	scientific name
 1052197	1783234	phylum	Candidatus Calescibacteriota	scientific name
 1052197	1783234	phylum	Calescibacteriota	equivalent name
 1052197	1783234	phylum	candidate division EM19	equivalent name
 1052197	1783234	phylum	"Candidatus Calescamantes" Rinke et al. 2013	synonym
 1052197	1783234	phylum	candidate division EM 19	synonym
+1052197	1783234	phylum	Candidatus Calescamantes	synonym (authority stripped)
 1052815	1783234	phylum	Candidatus Aerophobota	scientific name
 1052815	1783234	phylum	Aerophobota	equivalent name
 1052815	1783234	phylum	"Candidatus Aerophobetes" Rinke et al. 2013	synonym
 1052815	1783234	phylum	candidate division CD12	synonym
+1052815	1783234	phylum	Candidatus Aerophobetes	synonym (authority stripped)
 1054211	2008793	genus	Sulfuritalea	scientific name
 1055323	186817	genus	Aeribacillus	scientific name
 1055686	3031712	family	Sandaracinaceae	scientific name
@@ -4593,6 +4673,8 @@ taxid	parent_taxid	rank	name	name_class
 1154676	1783272	phylum	"Candidatus Eremiobacteraeota" Ji et al. 2017	synonym
 1154676	1783272	phylum	"Candidatus Eremiobacterota" corrig. Ji et al. 2017	synonym
 1154676	1783272	phylum	Eremiobacterota	synonym
+1154676	1783272	phylum	Candidatus Eremiobacteraeota	synonym (authority stripped)
+1154676	1783272	phylum	Candidatus Eremiobacterota	synonym (authority stripped)
 1154686	118884	genus	Thiotaurens	scientific name
 1155385	31979	genus	Proteiniclasticum	scientific name
 1155385	31979	genus	Proteiniclasticum Zhang et al. 2010	synonym
@@ -4618,6 +4700,7 @@ taxid	parent_taxid	rank	name	name_class
 1170227	3159504	genus	Methylomirabilis (SeqCode)	scientific name
 1170227	3159504	genus	"Methylomirabilis" Chuvochina et al. 2023	synonym
 1170227	3159504	genus	Candidatus Methylomirabilis	synonym
+1170227	3159504	genus	Methylomirabilis	synonym (authority stripped)
 1172191	72275	genus	Catenovulum	scientific name
 1172428	2562244	genus	Thermotomaculum	scientific name
 1175554	1328881	genus	Candidatus Lariskella	scientific name
@@ -4705,10 +4788,12 @@ taxid	parent_taxid	rank	name	name_class
 1234547	34064	genus	Candidatus Nebulibacter	scientific name
 1234547	34064	genus	Nebulibacter	equivalent name
 1234547	34064	genus	"Candidatus Nebulobacter" Boscaro et al. 2012	synonym
+1234547	34064	genus	Candidatus Nebulobacter	synonym (authority stripped)
 1234605	72275	genus	Gayadomonas	scientific name
 1234608	44746	genus	Candidatus Goertzia	scientific name
 1234608	44746	genus	Goertzia	equivalent name
 1234608	44746	genus	"Candidatus Gortzia" Boscaro et al. 2013	synonym
+1234608	44746	genus	Candidatus Gortzia	synonym (authority stripped)
 1235438	49546	genus	Snuella	scientific name
 1235850	183967	order	Methanomassiliicoccales	scientific name
 1235850	183967	order	Methanoplasmatales	synonym
@@ -4755,6 +4840,7 @@ taxid	parent_taxid	rank	name	name_class
 1274401	44746	genus	Hepatobacter (SeqCode)	scientific name
 1274401	44746	genus	"Hepatobacter" Chuvochina et al. 2023	synonym
 1274401	44746	genus	Candidatus Hepatobacter	synonym
+1274401	44746	genus	Hepatobacter	synonym (authority stripped)
 1276290	186817	genus	Caldibacillus	scientific name
 1277353	45404	genus	Methylorosula	scientific name
 1278161	2815910	genus	Annamia	scientific name
@@ -4817,6 +4903,7 @@ taxid	parent_taxid	rank	name	name_class
 1331051	2171986	genus	Saccharimonas (SeqCode)	scientific name
 1331051	2171986	genus	"Saccharimonas" Chuvochina et al. 2023	synonym
 1331051	2171986	genus	Candidatus Saccharimonas	synonym
+1331051	2171986	genus	Saccharimonas	synonym (authority stripped)
 1331736	85006	family	Ruaniaceae	scientific name
 1331809	362534	family	Kordiimonadaceae	scientific name
 1332063	1182	genus	Chakia	scientific name
@@ -4856,6 +4943,7 @@ taxid	parent_taxid	rank	name	name_class
 1379697	1783270	phylum	Zixiibacteriota	equivalent name
 1379697	1783270	phylum	candidate division Zixibacteria	equivalent name
 1379697	1783270	phylum	"Candidatus Zixibacteria" Castelle et al. 2013	synonym
+1379697	1783270	phylum	Candidatus Zixibacteria	synonym (authority stripped)
 1379908	1853232	genus	Rufibacter	scientific name
 1381133	119066	genus	Candidatus Profftella	scientific name
 1381133	119066	genus	Profftella	equivalent name
@@ -4888,6 +4976,7 @@ taxid	parent_taxid	rank	name	name_class
 1392996	588816	family	Candidatus Methanoperedentaceae	scientific name
 1392996	588816	family	Methanoperedentaceae	equivalent name
 1392996	588816	family	"Candidatus Methanoperedenaceae" Haroon et al. 2013	synonym
+1392996	588816	family	Candidatus Methanoperedenaceae	synonym (authority stripped)
 1392997	1392996	genus	Candidatus Methanoperedens	scientific name
 1392997	1392996	genus	Methanoperedens	equivalent name
 1395974	41294	genus	Tardiphaga	scientific name
@@ -4914,6 +5003,7 @@ taxid	parent_taxid	rank	name	name_class
 1400859	1400857	genus	Candidatus Contendibacter	scientific name
 1400859	1400857	genus	Contendibacter	equivalent name
 1400859	1400857	genus	"Candidatus Contendobacter" McIlroy et al. 2014	synonym
+1400859	1400857	genus	Candidatus Contendobacter	synonym (authority stripped)
 1403538	31979	genus	Fervidicella	scientific name
 1403697	49546	genus	Maritimimonas	scientific name
 1403714	506	genus	Parapusillimonas	scientific name
@@ -4930,12 +5020,14 @@ taxid	parent_taxid	rank	name	name_class
 1410382	84563	genus	Candidatus Parastrichiiphilus	scientific name
 1410382	84563	genus	Parastrichiiphilus	equivalent name
 1410382	84563	genus	"Candidatus Benitsuchiphilus" Hosokawa et al. 2010	synonym
+1410382	84563	genus	Candidatus Benitsuchiphilus	synonym (authority stripped)
 1410680	403	genus	Methyloglobulus	scientific name
 1414835	84563	genus	Candidatus Rosenkranzia	scientific name
 1414835	84563	genus	Rosenkranzia	equivalent name
 1415196	119060	genus	Candidatus Protistibacter	scientific name
 1415196	119060	genus	Protistibacter	equivalent name
 1415196	119060	genus	"Candidatus Protistobacter" Vannini et al. 2013	synonym
+1415196	119060	genus	Candidatus Protistobacter	synonym (authority stripped)
 1417297	2904714	genus	Desulfonatronobacter	scientific name
 1418588	1268	genus	Tersicoccus	scientific name
 1424614	2004	genus	Thermoactinospora	scientific name
@@ -5049,6 +5141,7 @@ taxid	parent_taxid	rank	name	name_class
 1446465	67810	genus	Candidatus Acetithermum	scientific name
 1446465	67810	genus	Acetithermum	equivalent name
 1446465	67810	genus	"Candidatus Acetothermum" Takami et al. 2012	synonym
+1446465	67810	genus	Candidatus Acetothermum	synonym (authority stripped)
 1448051	1783272	phylum	Candidatus Sysuimicrobiota	scientific name
 1448051	1783272	phylum	Sysuimicrobiota	equivalent name
 1448051	1783272	phylum	candidate division Galena 15	equivalent name
@@ -5090,9 +5183,11 @@ taxid	parent_taxid	rank	name	name_class
 1462427	3444701	genus	Candidatus Aenigmatarchaeum	scientific name
 1462427	3444701	genus	Aenigmatarchaeum	equivalent name
 1462427	3444701	genus	"Candidatus Aenigmarchaeum" Rinke et al. 2013	synonym
+1462427	3444701	genus	Candidatus Aenigmarchaeum	synonym (authority stripped)
 1462430	1783276	phylum	Candidatus Nanohalarchaeota	scientific name
 1462430	1783276	phylum	Nanohalarchaeota	equivalent name
 1462430	1783276	phylum	"Candidatus Nanohaloarchaeota" Rinke et al. 2013	synonym
+1462430	1783276	phylum	Candidatus Nanohaloarchaeota	synonym (authority stripped)
 1465824	577468	genus	Timonella	scientific name
 1470349	128827	genus	Candidatus Stoquefichus	scientific name
 1470349	128827	genus	Stoquefichus	equivalent name
@@ -5133,6 +5228,7 @@ taxid	parent_taxid	rank	name	name_class
 1491194	3056381	genus	Candidatus Nucleicoccus	scientific name
 1491194	3056381	genus	Nucleicoccus	equivalent name
 1491194	3056381	genus	"Candidatus Nucleococcus" Sato et al. 2014	synonym
+1491194	3056381	genus	Candidatus Nucleococcus	synonym (authority stripped)
 1491775	186802	family	Proteinivoracaceae	scientific name
 1491775	186802	family	Proteinivoracaceae corrig.	synonym
 1491775	186802	family	Proteinivoracaceae corrig. Kevbrin et al. 2014	synonym
@@ -5155,6 +5251,8 @@ taxid	parent_taxid	rank	name	name_class
 1495768	3399796	genus	"Candidatus Johnevansia" corrig. Kuechler et al. 2013	synonym
 1495768	3399796	genus	"Johnevansia" Chuvochina et al. 2023	synonym
 1495768	3399796	genus	Candidatus Johnevansia	synonym
+1495768	3399796	genus	Candidatus Evansia	synonym (authority stripped)
+1495768	3399796	genus	Johnevansia	synonym (authority stripped)
 1497346	201174	class	Thermoleophilia	scientific name
 1499082	2008793	genus	Sulfurisoma	scientific name
 1499108	1890464	genus	Johanseninema	scientific name
@@ -5196,6 +5294,7 @@ taxid	parent_taxid	rank	name	name_class
 1509243	3399800	genus	Nucleicultrix (SeqCode)	scientific name
 1509243	3399800	genus	"Nucleicultrix" Chuvochina et al. 2023	synonym
 1509243	3399800	genus	Candidatus Nucleicultrix	synonym
+1509243	3399800	genus	Nucleicultrix	synonym (authority stripped)
 1511635	1763524	genus	Aquisphaera	scientific name
 1511643	49546	genus	Corallibacter	scientific name
 1511648	1643949	genus	Defluviitoga	scientific name
@@ -5221,6 +5320,7 @@ taxid	parent_taxid	rank	name	name_class
 1522200	33988	genus	Candidatus Gigantorickettsia	scientific name
 1522200	33988	genus	Gigantorickettsia	equivalent name
 1522200	33988	genus	"Candidatus Gigarickettsia" Vannini et al. 2014	synonym
+1522200	33988	genus	Candidatus Gigarickettsia	synonym (authority stripped)
 1522201	33988	genus	Candidatus Trichorickettsia	scientific name
 1522201	33988	genus	Trichorickettsia	equivalent name
 1522420	135616	genus	Galenea	scientific name
@@ -5252,10 +5352,12 @@ taxid	parent_taxid	rank	name	name_class
 1541445	2813035	genus	Candidatus Phaeomarinibacter	scientific name
 1541445	2813035	genus	Phaeomarinibacter	equivalent name
 1541445	2813035	genus	"Candidatus Phaeomarinobacter" Dittami et al. 2014	synonym
+1541445	2813035	genus	Candidatus Phaeomarinobacter	synonym (authority stripped)
 1541670	326457	genus	Methylacidimicrobium	scientific name
 1541743	3399801	genus	Candidatus Ruthturnera	scientific name
 1541743	3399801	genus	Ruthturnera	equivalent name
 1541743	3399801	genus	"Candidatus Ruthia" Newton et al. 2007	synonym
+1541743	3399801	genus	Candidatus Ruthia	synonym (authority stripped)
 1541817	49546	genus	Hoppeia	scientific name
 1541818	31989	genus	Sedimentitalea	scientific name
 1541822	2854170	genus	Pseudophaeobacter	scientific name
@@ -5346,6 +5448,7 @@ taxid	parent_taxid	rank	name	name_class
 1612341	1892264	genus	Roholtiella	scientific name
 1612611	227290	genus	Pararhizobium	scientific name
 1612611	227290	genus	"Neopararhizobium" Hoerdt et al. 2020	synonym
+1612611	227290	genus	Neopararhizobium	synonym (authority stripped)
 1615910	186822	genus	Ammoniibacillus	scientific name
 1616789	137	genus	Salinispira	scientific name
 1616833	1890497	genus	Hydrococcus	scientific name
@@ -5366,6 +5469,7 @@ taxid	parent_taxid	rank	name	name_class
 1619053	1783234	phylum	Candidatus Peregrinibacteriota	scientific name
 1619053	1783234	phylum	Peregrinibacteriota	equivalent name
 1619053	1783234	phylum	"Candidatus Peregrinibacteria" Brown et al. 2015	synonym
+1619053	1783234	phylum	Candidatus Peregrinibacteria	synonym (authority stripped)
 1620699	1890438	genus	Pantanalinema	scientific name
 1620700	1890438	genus	Alkalinema	scientific name
 1620790	3079761	genus	Halotia	scientific name
@@ -5539,6 +5643,7 @@ taxid	parent_taxid	rank	name	name_class
 1655637	3366644	genus	Candidatus Lokiarchaeum	scientific name
 1655637	3366644	genus	Lokiarchaeum	equivalent name
 1655637	3366644	genus	"Candidatus Lokiarchaeon" Spang et al. 2015	synonym
+1655637	3366644	genus	Candidatus Lokiarchaeon	synonym (authority stripped)
 1656823	2236	genus	Halanaeroarchaeum	scientific name
 1658781	31989	genus	Aliiroseovarius	scientific name
 1658781	31989	genus	Pseudoroseovarius	synonym
@@ -5550,6 +5655,8 @@ taxid	parent_taxid	rank	name	name_class
 1662329	3399771	genus	"Candidatus Kapaibacterium" corrig. Kantor et al. 2015	synonym
 1662329	3399771	genus	"Kapaibacterium" Chuvochina et al. 2023	synonym
 1662329	3399771	genus	Candidatus Kapaibacterium	synonym
+1662329	3399771	genus	Candidatus Kapabacteria	synonym (authority stripped)
+1662329	3399771	genus	Kapaibacterium	synonym (authority stripped)
 1663419	67819	class	Fimbriimonadia	scientific name
 1663425	1663419	order	Fimbriimonadales	scientific name
 1663426	1663425	family	Fimbriimonadaceae	scientific name
@@ -5561,6 +5668,7 @@ taxid	parent_taxid	rank	name	name_class
 1671257	2092	genus	Mariniplasma	equivalent name
 1671257	2092	genus	"Candidatus Mariniplasma" corrig. Mortzfeld et al. 2016	synonym
 1671257	2092	genus	"Candidatus Marinoplasma" Mortzfeld et al. 2016	synonym
+1671257	2092	genus	Candidatus Marinoplasma	synonym (authority stripped)
 1671851	2303527	genus	Pinocchia	scientific name
 1676125	2691358	genus	Thermogutta	scientific name
 1676141	135613	family	Wenzhouxiangellaceae	scientific name
@@ -5595,6 +5703,7 @@ taxid	parent_taxid	rank	name	name_class
 1699066	3844227	genus	Candidatus Arcanibacter	scientific name
 1699066	3844227	genus	Arcanibacter	equivalent name
 1699066	3844227	genus	"Candidatus Arcanobacter" Martijn et al. 2015	synonym
+1699066	3844227	genus	Candidatus Arcanobacter	synonym (authority stripped)
 1699375	1644061	genus	Natribaculum	scientific name
 1699375	1644061	genus	Halovarius	synonym
 1699619	84564	genus	Candidatus Westeberhardia	scientific name
@@ -5607,7 +5716,7 @@ taxid	parent_taxid	rank	name	name_class
 1703755	3379134	phylum	"Candidatus Hydrothermae" Jungbluth et al. 2017	synonym
 1703755	3379134	phylum	Candidatus Hydrothermota	synonym
 1703755	3379134	phylum	Candidatus Hydrothermota (ex Chuvochina et al. 2019)	synonym
-1703755	3379134	phylum	Candidatus	synonym (authority stripped)
+1703755	3379134	phylum	Candidatus Hydrothermae	synonym (authority stripped)
 1704031	1783234	phylum	candidate division KD3-62	scientific name
 1704031	1783234	phylum	candidate phylum KD3-62	synonym
 1704230	49546	genus	Aureisphaera	scientific name
@@ -5616,6 +5725,7 @@ taxid	parent_taxid	rank	name	name_class
 1705400	2290931	class	Candidatus Methanofastidiosia	scientific name
 1705400	2290931	class	Methanofastidiosia	equivalent name
 1705400	2290931	class	"Candidatus Methanofastidiosa" Nobu et al. 2016	synonym
+1705400	2290931	class	Candidatus Methanofastidiosa	synonym (authority stripped)
 1705729	3031654	genus	Candidatus Adiutrix	scientific name
 1705729	3031654	genus	Adiutrix	equivalent name
 1706033	3385906	genus	Sediminicoccus	scientific name
@@ -5631,6 +5741,7 @@ taxid	parent_taxid	rank	name	name_class
 1706441	1935183	phylum	Candidatus Thorarchaeota	scientific name
 1706441	1935183	phylum	Thorarchaeota	equivalent name
 1706441	1935183	phylum	"Candidatus Thorarchaeia" Seitz et al. 2016	synonym
+1706441	1935183	phylum	Candidatus Thorarchaeia	synonym (authority stripped)
 1707752	49546	genus	Hanstruepera	scientific name
 1707752	49546	genus	Pseudobizionia	synonym
 1709445	31984	genus	Candidatus Heliomonas	scientific name
@@ -5642,10 +5753,12 @@ taxid	parent_taxid	rank	name	name_class
 1718587	942	genus	Candidatus Allocryptoplasma	scientific name
 1718587	942	genus	Allocryptoplasma	equivalent name
 1718587	942	genus	"Candidatus Cryptoplasma" Eshoo et al. 2015	synonym
+1718587	942	genus	Candidatus Cryptoplasma	synonym (authority stripped)
 1729679	128827	genus	Faecalibaculum	scientific name
 1729712	1783270	phylum	Candidatus Fermentibacterota	scientific name
 1729712	1783270	phylum	"Candidatus Fermentibacteria" Kirkegaard et al. 2016 (phylum)	synonym
 1729712	1783270	phylum	candidate division Hyd24-12	synonym
+1729712	1783270	phylum	Candidatus Fermentibacteria	synonym (authority stripped)
 1730861	31953	genus	Neoscardovia	scientific name
 1732520	221216	genus	Candidatus Sonnebornia	scientific name
 1732520	221216	genus	Sonnebornia	equivalent name
@@ -5673,6 +5786,7 @@ taxid	parent_taxid	rank	name	name_class
 1742636	775	genus	Candidatus Megaera	scientific name
 1742636	775	genus	Megaera	equivalent name
 1742636	775	genus	"Candidatus Megaira" Schrallhammer et al. 2013	synonym
+1742636	775	genus	Candidatus Megaira	synonym (authority stripped)
 1742708	51291	family	Candidatus Actinochlamydiaceae	scientific name
 1742708	51291	family	Actinochlamydiaceae	equivalent name
 1742709	1742708	genus	Candidatus Actinochlamydia	scientific name
@@ -5706,29 +5820,37 @@ taxid	parent_taxid	rank	name	name_class
 1751872	72275	genus	Lacimicrobium	scientific name
 1752708	1783234	phylum	Candidatus Rokuibacteriota	scientific name
 1752708	1783234	phylum	"Candidatus Rokubacteria" Hug et al. 2016	synonym
+1752708	1783234	phylum	Candidatus Rokubacteria	synonym (authority stripped)
 1752716	200940	class	Candidatus Dadabacteria	scientific name
 1752716	200940	class	Dadabacteria	equivalent name
 1752717	1794810	phylum	Candidatus Curtissiibacteriota	scientific name
 1752717	1794810	phylum	Curtissiibacteriota	equivalent name
 1752717	1794810	phylum	"Candidatus Curtissbacteria" Brown et al. 2015	synonym
+1752717	1794810	phylum	Candidatus Curtissbacteria	synonym (authority stripped)
 1752718	1794810	phylum	Candidatus Daviesiibacteriota	scientific name
 1752718	1794810	phylum	Daviesiibacteriota	equivalent name
 1752718	1794810	phylum	"Candidatus Daviesbacteria" Brown et al. 2015	synonym
+1752718	1794810	phylum	Candidatus Daviesbacteria	synonym (authority stripped)
 1752719	1794810	phylum	Candidatus Levyibacteriota	scientific name
 1752719	1794810	phylum	Levyibacteriota	equivalent name
 1752719	1794810	phylum	"Candidatus Levybacteria" Brown et al. 2015	synonym
+1752719	1794810	phylum	Candidatus Levybacteria	synonym (authority stripped)
 1752720	1794810	phylum	Candidatus Gottesmaniibacteriota	scientific name
 1752720	1794810	phylum	Gottesmaniibacteriota	equivalent name
 1752720	1794810	phylum	"Candidatus Gottesmanbacteria" Brown et al. 2015	synonym
+1752720	1794810	phylum	Candidatus Gottesmanbacteria	synonym (authority stripped)
 1752721	1794810	phylum	Candidatus Shapironibacteriota	scientific name
 1752721	1794810	phylum	Shapironibacteriota	equivalent name
 1752721	1794810	phylum	"Candidatus Shapirobacteria" Brown et al. 2015	synonym
+1752721	1794810	phylum	Candidatus Shapirobacteria	synonym (authority stripped)
 1752722	1794810	phylum	Candidatus Woeseibacteriota	scientific name
 1752722	1794810	phylum	Woeseibacteriota	equivalent name
 1752722	1794810	phylum	"Candidatus Woesebacteria" Brown et al. 2015	synonym
+1752722	1794810	phylum	Candidatus Woesebacteria	synonym (authority stripped)
 1752723	1794810	phylum	Candidatus Roizmaniibacteriota	scientific name
 1752723	1794810	phylum	Roizmaniibacteriota	equivalent name
 1752723	1794810	phylum	"Candidatus Roizmanbacteria" Brown et al. 2015	synonym
+1752723	1794810	phylum	Candidatus Roizmanbacteria	synonym (authority stripped)
 1752724	1783272	phylum	Minisyncoccota	scientific name
 1752724	1783272	phylum	Paceibacterota	equivalent name
 1752724	1783272	phylum	"Candidatus Pacebacteria" Brown et al. 2015	synonym
@@ -5737,56 +5859,73 @@ taxid	parent_taxid	rank	name	name_class
 1752724	1783272	phylum	Candidatus Patescibacteriota	synonym
 1752724	1783272	phylum	Patescibacteriota	synonym
 1752724	1783272	phylum	Patescibacteriota (SeqCode)	synonym
+1752724	1783272	phylum	Candidatus Pacebacteria	synonym (authority stripped)
 1752725	1794810	phylum	Candidatus Collieribacteriota	scientific name
 1752725	1794810	phylum	Collieribacteriota	equivalent name
 1752725	1794810	phylum	"Candidatus Collierbacteria" Brown et al. 2015	synonym
+1752725	1794810	phylum	Candidatus Collierbacteria	synonym (authority stripped)
 1752726	1794810	phylum	Candidatus Beckwithiibacteriota	scientific name
 1752726	1794810	phylum	Beckwithiibacteriota	equivalent name
 1752726	1794810	phylum	"Candidatus Beckwithbacteria" Brown et al. 2015	synonym
+1752726	1794810	phylum	Candidatus Beckwithbacteria	synonym (authority stripped)
 1752727	1794811	phylum	Candidatus Campbelliibacteriota	scientific name
 1752727	1794811	phylum	Campbelliibacteriota	equivalent name
 1752727	1794811	phylum	"Candidatus Campbellbacteria" Brown et al. 2015	synonym
+1752727	1794811	phylum	Candidatus Campbellbacteria	synonym (authority stripped)
 1752728	1794811	phylum	Candidatus Falkowiibacteriota	scientific name
 1752728	1794811	phylum	Falkowiibacteriota	equivalent name
 1752728	1794811	phylum	Candidatus Falkowbacteria	synonym
 1752729	1794811	phylum	Candidatus Nomuraibacteriota	scientific name
 1752729	1794811	phylum	Nomuraibacteriota	equivalent name
 1752729	1794811	phylum	"Candidatus Nomurabacteria" Brown et al. 2015	synonym
+1752729	1794811	phylum	Candidatus Nomurabacteria	synonym (authority stripped)
 1752730	1794810	phylum	Candidatus Amesiibacteriota	scientific name
 1752730	1794810	phylum	Amesiibacteriota	equivalent name
 1752730	1794810	phylum	"Candidatus Amesbacteria" Brown et al. 2015	synonym
+1752730	1794810	phylum	Candidatus Amesbacteria	synonym (authority stripped)
 1752731	1794811	phylum	Candidatus Magasanikiibacteriota	scientific name
 1752731	1794811	phylum	"Candidatus Magasanikbacteria" Brown et al. 2015	synonym
+1752731	1794811	phylum	Candidatus Magasanikbacteria	synonym (authority stripped)
 1752732	1794811	phylum	Candidatus Uhriibacteriota	scientific name
 1752732	1794811	phylum	Uhriibacteriota	equivalent name
 1752732	1794811	phylum	"Candidatus Uhrbacteria" Brown et al. 2015	synonym
+1752732	1794811	phylum	Candidatus Uhrbacteria	synonym (authority stripped)
 1752733	1794811	phylum	Candidatus Yanofskyibacteriota	scientific name
 1752733	1794811	phylum	Yanofskyibacteriota	equivalent name
 1752733	1794811	phylum	"Candidatus Yanofskybacteria" Brown et al. 2015	synonym
+1752733	1794811	phylum	Candidatus Yanofskybacteria	synonym (authority stripped)
 1752734	1794811	phylum	Candidatus Kaiseribacteriota	scientific name
 1752734	1794811	phylum	Kaiseribacteriota	equivalent name
 1752734	1794811	phylum	"Candidatus Kaiserbacteria" Brown et al. 2015	synonym
+1752734	1794811	phylum	Candidatus Kaiserbacteria	synonym (authority stripped)
 1752735	1794811	phylum	Candidatus Wolfeibacteriota	scientific name
 1752735	1794811	phylum	Wolfeibacteriota	equivalent name
 1752735	1794811	phylum	"Candidatus Wolfebacteria" Brown et al. 2015	synonym
+1752735	1794811	phylum	Candidatus Wolfebacteria	synonym (authority stripped)
 1752736	1794811	phylum	Candidatus Adleribacteriota	scientific name
 1752736	1794811	phylum	Adleribacteriota	equivalent name
 1752736	1794811	phylum	"Candidatus Adlerbacteria" Brown et al. 2015	synonym
+1752736	1794811	phylum	Candidatus Adlerbacteria	synonym (authority stripped)
 1752737	1794811	phylum	Candidatus Moraniibacteriota	scientific name
 1752737	1794811	phylum	Moraniibacteriota	equivalent name
 1752737	1794811	phylum	"Candidatus Moranbacteria" Brown et al. 2015	synonym
+1752737	1794811	phylum	Candidatus Moranbacteria	synonym (authority stripped)
 1752738	1794811	phylum	Candidatus Giovannoniibacteriota	scientific name
 1752738	1794811	phylum	Giovannoniibacteriota	equivalent name
 1752738	1794811	phylum	"Candidatus Giovannonibacteria" Brown et al. 2015	synonym
+1752738	1794811	phylum	Candidatus Giovannonibacteria	synonym (authority stripped)
 1752739	1794811	phylum	Candidatus Joergenseniibacteriota	scientific name
 1752739	1794811	phylum	Joergenseniibacteriota	equivalent name
 1752739	1794811	phylum	"Candidatus Jorgensenbacteria" Brown et al. 2015	synonym
+1752739	1794811	phylum	Candidatus Jorgensenbacteria	synonym (authority stripped)
 1752740	1794811	phylum	Candidatus Kueneniibacteriota	scientific name
 1752740	1794811	phylum	Kueneniibacteriota	equivalent name
 1752740	1794811	phylum	"Candidatus Kuenenbacteria" Brown et al. 2015	synonym
+1752740	1794811	phylum	Candidatus Kuenenbacteria	synonym (authority stripped)
 1752741	1794811	phylum	Candidatus Azamiibacteriota	scientific name
 1752741	1794811	phylum	Azamiibacteriota	equivalent name
 1752741	1794811	phylum	"Candidatus Azambacteria" Brown et al. 2015	synonym
+1752741	1794811	phylum	Candidatus Azambacteria	synonym (authority stripped)
 1755672	712	genus	Testudinibacter	scientific name
 1755683	3345222	genus	Candidatus Berkiella	scientific name
 1755683	3345222	genus	Berkiella	equivalent name
@@ -5882,6 +6021,7 @@ taxid	parent_taxid	rank	name	name_class
 1775750	3055124	class	"Hadarchaeia" Chuvochina et al. 2023	synonym
 1775750	3055124	class	Candidatus Hadarchaeia	synonym
 1775750	3055124	class	Hadesarchaea	synonym
+1775750	3055124	class	Hadarchaeia	synonym (authority stripped)
 1777752	1921002	family	Candidatus Paracaedibacteraceae	scientific name
 1777752	1921002	family	Paracaedibacteraceae	equivalent name
 1777753	1777752	genus	Candidatus Finniella	scientific name
@@ -5959,6 +6099,7 @@ taxid	parent_taxid	rank	name	name_class
 1802339	1802340	phylum	Candidatus Tectimicrobiota	scientific name
 1802339	1802340	phylum	Tectimicrobiota	equivalent name
 1802339	1802340	phylum	"Candidatus Tectomicrobia" Wilson et al. 2014	synonym
+1802339	1802340	phylum	Candidatus Tectomicrobia	synonym (authority stripped)
 1802340	3379134	clade	Nitrospinota/Tectimicrobiota group	scientific name
 1802983	1328881	genus	Candidatus Fokinia	scientific name
 1802983	1328881	genus	Fokinia	equivalent name
@@ -5973,9 +6114,11 @@ taxid	parent_taxid	rank	name	name_class
 1803511	3121605	order	Candidatus Altarchaeales	scientific name
 1803511	3121605	order	"Candidatus Altiarchaeales" Probst et al. 2014	equivalent name
 1803511	3121605	order	Altarchaeales	equivalent name
+1803511	3121605	order	Candidatus Altiarchaeales	synonym (authority stripped)
 1803512	3097033	genus	Candidatus Altarchaeum	scientific name
 1803512	3097033	genus	Altarchaeum	equivalent name
 1803512	3097033	genus	"Candidatus Altiarchaeum" Probst et al. 2014	synonym
+1803512	3097033	genus	Candidatus Altiarchaeum	synonym (authority stripped)
 1803801	92712	genus	Candidatus Syngnamydia	scientific name
 1803801	92712	genus	Syngnamydia	equivalent name
 1804663	3031145	genus	Haematospirillum	scientific name
@@ -5993,15 +6136,19 @@ taxid	parent_taxid	rank	name	name_class
 1812916	204430	order	Candidatus Fibrimonadales	scientific name
 1812916	204430	order	Fibrimonadales	equivalent name
 1812916	204430	order	"Candidatus Fibromonadales" Abdul Rahman et al. 2016	synonym
+1812916	204430	order	Candidatus Fibromonadales	synonym (authority stripped)
 1812917	1812916	family	Candidatus Fibrimonadaceae	scientific name
 1812917	1812916	family	Fibrimonadaceae	equivalent name
 1812917	1812916	family	"Candidaus Fibromonadaceae" Abdul Rahman et al. 2016	synonym
+1812917	1812916	family	Candidaus	synonym (authority stripped)
 1812918	1812917	genus	Candidatus Fibrimonas	scientific name
 1812918	1812917	genus	Fibrimonas	equivalent name
 1812918	1812917	genus	"Candidatus Fibromonas" Abdul Rahman et al. 2016	synonym
+1812918	1812917	genus	Candidatus Fibromonas	synonym (authority stripped)
 1813600	3399798	genus	Tenderia (SeqCode)	scientific name
 1813600	3399798	genus	"Tenderia" Chuvochina et al. 2023	synonym
 1813600	3399798	genus	Candidatus Tenderia	synonym
+1813600	3399798	genus	Tenderia	synonym (authority stripped)
 1813601	31989	genus	Pseudoroseicyclus	scientific name
 1813606	1853223	family	Balneolaceae	scientific name
 1813735	57723	class	Vicinamibacteria	scientific name
@@ -6015,145 +6162,191 @@ taxid	parent_taxid	rank	name	name_class
 1817796	1783234	phylum	Candidatus Abawacaibacteriota	scientific name
 1817796	1783234	phylum	Abawacaibacteriota	equivalent name
 1817796	1783234	phylum	"Candidatus Abawacabacteria" Anantharaman et al. 2016	synonym
+1817796	1783234	phylum	Candidatus Abawacabacteria	synonym (authority stripped)
 1817797	1783234	phylum	Candidatus Coatesiibacteriota	scientific name
 1817797	1783234	phylum	Coatesiibacteriota	equivalent name
 1817797	1783234	phylum	"Candidatus Coatesbacteria" Anantharaman et al. 2016	synonym
+1817797	1783234	phylum	Candidatus Coatesbacteria	synonym (authority stripped)
 1817798	1783234	phylum	Candidatus Delongiibacteriota	scientific name
 1817798	1783234	phylum	Delongiibacteriota	equivalent name
 1817798	1783234	phylum	"Candidatus Delongbacteria" Anantharaman et al. 2016	synonym
+1817798	1783234	phylum	Candidatus Delongbacteria	synonym (authority stripped)
 1817799	1783234	phylum	Candidatus Doudnaibacteriota	scientific name
 1817799	1783234	phylum	Doudnaibacteriota	equivalent name
 1817799	1783234	phylum	"Candidatus Doudnabacteria" Anantharaman et al. 2016	synonym
+1817799	1783234	phylum	Candidatus Doudnabacteria	synonym (authority stripped)
 1817800	1783234	phylum	Candidatus Edwardsiibacteriota	scientific name
 1817800	1783234	phylum	Edwardsiibacteriota	equivalent name
 1817800	1783234	phylum	"Candidatus Edwardsbacteria" Anantharaman et al. 2016	synonym
+1817800	1783234	phylum	Candidatus Edwardsbacteria	synonym (authority stripped)
 1817801	1783234	phylum	Candidatus Eiseniibacteriota	scientific name
 1817801	1783234	phylum	Eiseniibacteriota	equivalent name
 1817801	1783234	phylum	"Candidatus Eisenbacteria" Anantharaman et al. 2016	synonym
+1817801	1783234	phylum	Candidatus Eisenbacteria	synonym (authority stripped)
 1817802	1783234	phylum	Candidatus Firestoneibacteriota	scientific name
 1817802	1783234	phylum	Firestoneibacteriota	equivalent name
 1817802	1783234	phylum	"Candidatus Firestonebacteria" Anantharaman et al. 2016	synonym
+1817802	1783234	phylum	Candidatus Firestonebacteria	synonym (authority stripped)
 1817803	1783234	phylum	Candidatus Fischeribacteriota	scientific name
 1817803	1783234	phylum	Fischeribacteriota	equivalent name
 1817803	1783234	phylum	"Candidatus Fischerbacteria" Anantharaman et al. 2016	synonym
+1817803	1783234	phylum	Candidatus Fischerbacteria	synonym (authority stripped)
 1817804	1783234	phylum	Candidatus Fraseribacteriota	scientific name
 1817804	1783234	phylum	Fraseribacteriota	equivalent name
 1817804	1783234	phylum	"Candidatus Fraserbacteria" Anantharaman et al. 2016	synonym
+1817804	1783234	phylum	Candidatus Fraserbacteria	synonym (authority stripped)
 1817805	1783234	phylum	Candidatus Glassiibacteriota	scientific name
 1817805	1783234	phylum	Glassiibacteriota	equivalent name
 1817805	1783234	phylum	"Candidatus Glassbacteria" Anantharaman et al. 2016	synonym
+1817805	1783234	phylum	Candidatus Glassbacteria	synonym (authority stripped)
 1817806	1783234	phylum	Candidatus Handelsmaniibacteriota	scientific name
 1817806	1783234	phylum	Handelsmaniibacteriota	equivalent name
 1817806	1783234	phylum	"Candidatus Handelsmanbacteria" Anantharaman et al. 2016	synonym
+1817806	1783234	phylum	Candidatus Handelsmanbacteria	synonym (authority stripped)
 1817807	1783234	phylum	Candidatus Lindowiibacteriota	scientific name
 1817807	1783234	phylum	Lindowiibacteriota	equivalent name
 1817807	1783234	phylum	"Candidatus Lindowbacteria" Anantharaman et al. 2016	synonym
+1817807	1783234	phylum	Candidatus Lindowbacteria	synonym (authority stripped)
 1817808	1798711	phylum	Candidatus Margulisiibacteriota	scientific name
 1817808	1798711	phylum	Margulisiibacteriota	equivalent name
 1817808	1798711	phylum	"Candidatus Margulisbacteria" Anantharaman et al. 2016	synonym
+1817808	1798711	phylum	Candidatus Margulisbacteria	synonym (authority stripped)
 1817809	1783234	phylum	Candidatus Raymondiibacteriota	scientific name
 1817809	1783234	phylum	Raymondiibacteriota	equivalent name
 1817809	1783234	phylum	"Candidatus Raymondbacteria" Anantharaman et al. 2016	synonym
+1817809	1783234	phylum	Candidatus Raymondbacteria	synonym (authority stripped)
 1817810	1783234	phylum	Candidatus Rifleibacteriota	scientific name
 1817810	1783234	phylum	Rifleibacteriota	equivalent name
 1817810	1783234	phylum	"Candidatus Riflebacteria" Anantharaman et al. 2016	synonym
+1817810	1783234	phylum	Candidatus Riflebacteria	synonym (authority stripped)
 1817811	1783234	phylum	Candidatus Schekmaniibacteriota	scientific name
 1817811	1783234	phylum	Schekmaniibacteriota	equivalent name
 1817811	1783234	phylum	"Candidatus Schekmanbacteria" Anantharaman et al. 2016	synonym
+1817811	1783234	phylum	Candidatus Schekmanbacteria	synonym (authority stripped)
 1817812	1783234	phylum	Candidatus Walliibacteriota	scientific name
 1817812	1783234	phylum	Walliibacteriota	equivalent name
 1817812	1783234	phylum	"Candidatus Wallbacteria" Anantharaman et al. 2016	synonym
+1817812	1783234	phylum	Candidatus Wallbacteria	synonym (authority stripped)
 1817898	1794810	phylum	Candidatus Blackburniibacteriota	scientific name
 1817898	1794810	phylum	Blackburniibacteriota	equivalent name
 1817898	1794810	phylum	"Candidatus Blackburnbacteria" Anantharaman et al. 2016	synonym
+1817898	1794810	phylum	Candidatus Blackburnbacteria	synonym (authority stripped)
 1817899	1794810	phylum	Candidatus Woykeibacteriota	scientific name
 1817899	1794810	phylum	Woykeibacteriota	equivalent name
 1817899	1794810	phylum	"Candidatus Woykebacteria" Anantharaman et al. 2016	synonym
+1817899	1794810	phylum	Candidatus Woykebacteria	synonym (authority stripped)
 1817900	1794810	phylum	Candidatus Chisholmiibacteriota	scientific name
 1817900	1794810	phylum	Chisholmiibacteriota	equivalent name
 1817900	1794810	phylum	"Candidatus Chisholmbacteria" Anantharaman et al. 2016	synonym
+1817900	1794810	phylum	Candidatus Chisholmbacteria	synonym (authority stripped)
 1817901	1794811	phylum	Candidatus Anderseniibacteriota	scientific name
 1817901	1794811	phylum	Anderseniibacteriota	equivalent name
 1817901	1794811	phylum	"Candidatus Andersenbacteria" Anantharaman et al. 2016	synonym
+1817901	1794811	phylum	Candidatus Andersenbacteria	synonym (authority stripped)
 1817902	1794811	phylum	Candidatus Brenneribacteriota	scientific name
 1817902	1794811	phylum	Brenneribacteriota	equivalent name
 1817902	1794811	phylum	"Candidatus Brennerbacteria" Anantharaman et al. 2016	synonym
+1817902	1794811	phylum	Candidatus Brennerbacteria	synonym (authority stripped)
 1817903	1794811	phylum	Candidatus Buchananiibacteriota	scientific name
 1817903	1794811	phylum	Buchananiibacteriota	equivalent name
 1817903	1794811	phylum	"Candidatus Buchananbacteria" Anantharaman et al. 2016	synonym
+1817903	1794811	phylum	Candidatus Buchananbacteria	synonym (authority stripped)
 1817904	1794811	phylum	Candidatus Colwelliibacteriota	scientific name
 1817904	1794811	phylum	Colwelliibacteriota	equivalent name
 1817904	1794811	phylum	"Candidatus Colwellbacteria" Anantharaman et al. 2016	synonym
+1817904	1794811	phylum	Candidatus Colwellbacteria	synonym (authority stripped)
 1817905	1794811	phylum	Candidatus Harrisoniibacteriota	scientific name
 1817905	1794811	phylum	Harrisoniibacteriota	equivalent name
 1817905	1794811	phylum	"Candidatus Harrisonbacteria" Anantharaman et al. 2016	synonym
+1817905	1794811	phylum	Candidatus Harrisonbacteria	synonym (authority stripped)
 1817906	1794811	phylum	Candidatus Jacksoniibacteriota	scientific name
 1817906	1794811	phylum	Jacksoniibacteriota	equivalent name
 1817906	1794811	phylum	"Candidatus Jacksonbacteria" Anantharaman et al. 2016	synonym
+1817906	1794811	phylum	Candidatus Jacksonbacteria	synonym (authority stripped)
 1817907	1794811	phylum	Candidatus Kerfeldiibacteriota	scientific name
 1817907	1794811	phylum	Kerfeldiibacteriota	equivalent name
 1817907	1794811	phylum	"Candidatus Kerfeldbacteria" Anantharaman et al. 2016	synonym
+1817907	1794811	phylum	Candidatus Kerfeldbacteria	synonym (authority stripped)
 1817908	1794811	phylum	Candidatus Komeiliibacteriota	scientific name
 1817908	1794811	phylum	Komeiliibacteriota	equivalent name
 1817908	1794811	phylum	"Candidatus Komeilibacteria" Anantharaman et al. 2016	synonym
+1817908	1794811	phylum	Candidatus Komeilibacteria	synonym (authority stripped)
 1817909	1794811	phylum	Candidatus Liptoniibacteriota	scientific name
 1817909	1794811	phylum	Liptoniibacteriota	equivalent name
 1817909	1794811	phylum	"Candidatus Liptonbacteria" Anantharaman et al. 2016	synonym
+1817909	1794811	phylum	Candidatus Liptonbacteria	synonym (authority stripped)
 1817910	1794811	phylum	Candidatus Lloydiibacteriota	scientific name
 1817910	1794811	phylum	Lloydiibacteriota	equivalent name
 1817910	1794811	phylum	"Candidatus Lloydbacteria" Anantharaman et al. 2016	synonym
+1817910	1794811	phylum	Candidatus Lloydbacteria	synonym (authority stripped)
 1817911	1794811	phylum	Candidatus Nealsoniibacteriota	scientific name
 1817911	1794811	phylum	Nealsoniibacteriota	equivalent name
 1817911	1794811	phylum	"Candidatus Nealsonbacteria" Anantharaman et al. 2016	synonym
+1817911	1794811	phylum	Candidatus Nealsonbacteria	synonym (authority stripped)
 1817912	1794811	phylum	Candidatus Niyogiibacteriota	scientific name
 1817912	1794811	phylum	Niyogiibacteriota	equivalent name
 1817912	1794811	phylum	"Candidatus Niyogibacteria" Anantharaman et al. 2016	synonym
+1817912	1794811	phylum	Candidatus Niyogibacteria	synonym (authority stripped)
 1817913	1794811	phylum	Candidatus Portnoyibacteriota	scientific name
 1817913	1794811	phylum	Portnoyibacteriota	equivalent name
 1817913	1794811	phylum	"Candidatus Portnoybacteria" Anantharaman et al. 2016	synonym
+1817913	1794811	phylum	Candidatus Portnoybacteria	synonym (authority stripped)
 1817914	1794811	phylum	Candidatus Ryaniibacteriota	scientific name
 1817914	1794811	phylum	Ryaniibacteriota	equivalent name
 1817914	1794811	phylum	"Candidatus Ryanbacteria" Anantharaman et al. 2016	synonym
+1817914	1794811	phylum	Candidatus Ryanbacteria	synonym (authority stripped)
 1817915	1794811	phylum	Candidatus Spechtiibacteriota	scientific name
 1817915	1794811	phylum	Spechtiibacteriota	equivalent name
 1817915	1794811	phylum	"Candidatus Spechtbacteria" Anantharaman et al. 2016	synonym
+1817915	1794811	phylum	Candidatus Spechtbacteria	synonym (authority stripped)
 1817916	1794811	phylum	Candidatus Staskawicziibacteriota	scientific name
 1817916	1794811	phylum	Staskawicziibacteriota	equivalent name
 1817916	1794811	phylum	"Candidatus Staskawiczbacteria" Anantharaman et al. 2016	synonym
+1817916	1794811	phylum	Candidatus Staskawiczbacteria	synonym (authority stripped)
 1817917	1794811	phylum	Candidatus Sungiibacteriota	scientific name
 1817917	1794811	phylum	Sungbacteria	equivalent name
 1817917	1794811	phylum	Sungiibacteriota	equivalent name
 1817917	1794811	phylum	"Candidatus Sungbacteria" Anantharaman et al. 2016	synonym
+1817917	1794811	phylum	Candidatus Sungbacteria	synonym (authority stripped)
 1817918	1794811	phylum	Candidatus Tagaibacteriota	scientific name
 1817918	1794811	phylum	Tagaibacteriota	equivalent name
 1817918	1794811	phylum	"Candidatus Tagabacteria" Anantharaman et al. 2016	synonym
+1817918	1794811	phylum	Candidatus Tagabacteria	synonym (authority stripped)
 1817919	1794811	phylum	Candidatus Tayloriibacteriota	scientific name
 1817919	1794811	phylum	Tayloriibacteriota	equivalent name
 1817919	1794811	phylum	"Candidatus Taylorbacteria" Anantharaman et al. 2016	synonym
+1817919	1794811	phylum	Candidatus Taylorbacteria	synonym (authority stripped)
 1817920	1794811	phylum	Candidatus Terryibacteriota	scientific name
 1817920	1794811	phylum	Terryibacteriota	equivalent name
 1817920	1794811	phylum	"Candidatus Terrybacteria" Anantharaman et al. 2016	synonym
+1817920	1794811	phylum	Candidatus Terrybacteria	synonym (authority stripped)
 1817921	1794811	phylum	Candidatus Vebleniibacteriota	scientific name
 1817921	1794811	phylum	Vebleniibacteriota	equivalent name
 1817921	1794811	phylum	"Candidatus Veblenbacteria" Anantharaman et al. 2016	synonym
+1817921	1794811	phylum	Candidatus Veblenbacteria	synonym (authority stripped)
 1817922	1794811	phylum	Candidatus Vogeliibacteriota	scientific name
 1817922	1794811	phylum	Vogeliibacteriota	equivalent name
 1817922	1794811	phylum	"Candidatus Vogelbacteria" Anantharaman et al. 2016	synonym
+1817922	1794811	phylum	Candidatus Vogelbacteria	synonym (authority stripped)
 1817923	1794811	phylum	Candidatus Wildermuthiibacteriota	scientific name
 1817923	1794811	phylum	Wildermuthiibacteriota	equivalent name
 1817923	1794811	phylum	"Candidatus Wildermuthbacteria" Anantharaman et al. 2016	synonym
+1817923	1794811	phylum	Candidatus Wildermuthbacteria	synonym (authority stripped)
 1817924	1794811	phylum	Candidatus Yonathiibacteriota	scientific name
 1817924	1794811	phylum	Yonathiibacteriota	equivalent name
 1817924	1794811	phylum	"Candidatus Yonathbacteria" Anantharaman et al. 2016	synonym
+1817924	1794811	phylum	Candidatus Yonathbacteria	synonym (authority stripped)
 1817925	1794811	phylum	Candidatus Zambryskiibacteriota	scientific name
 1817925	1794811	phylum	Zambryskiibacteriota	equivalent name
 1817925	1794811	phylum	"Candidatus Zambryskibacteria" Anantharaman et al. 2016	synonym
+1817925	1794811	phylum	Candidatus Zambryskibacteria	synonym (authority stripped)
 1817926	1783234	phylum	Candidatus Wirthbacteria	scientific name
 1817926	1783234	phylum	Wirthbacteria	equivalent name
 1819672	49546	genus	Spongiiferula	scientific name
 1819803	1783234	phylum	Candidatus Desantisiibacteriota	scientific name
 1819803	1783234	phylum	Desantisiibacteriota	equivalent name
 1819803	1783234	phylum	"Candidatus Desantisbacteria" Probst et al. 2017	synonym
+1819803	1783234	phylum	Candidatus Desantisbacteria	synonym (authority stripped)
 1820275	49546	genus	Aestuariivivens	scientific name
 1820337	1644056	genus	Haloparvum	scientific name
 1820341	3385906	genus	Crenalkalicoccus	scientific name
@@ -6245,11 +6438,13 @@ taxid	parent_taxid	rank	name	name_class
 1855361	1783270	phylum	Candidatus Kryptoniota	scientific name
 1855361	1783270	phylum	Kryptoniota	equivalent name
 1855361	1783270	phylum	"Candidatus Kryptonia" Eloe-Fadrosh et al. 2016	synonym
+1855361	1783270	phylum	Candidatus Kryptonia	synonym (authority stripped)
 1855362	1855361	genus	Candidatus Thermokryptus	scientific name
 1855362	1855361	genus	Thermokryptus	equivalent name
 1855363	1855361	genus	Candidatus Chryseopegocella	scientific name
 1855363	1855361	genus	Chryseopegocella	equivalent name
 1855363	1855361	genus	"Candidatus Chrysopegis" Eloe-Fadrosh et al. 2016	synonym
+1855363	1855361	genus	Candidatus Chrysopegis	synonym (authority stripped)
 1855364	1855361	genus	Candidatus Kryptobacter	scientific name
 1855364	1855361	genus	Kryptobacter	equivalent name
 1855365	1855361	genus	Candidatus Kryptonium	scientific name
@@ -6316,10 +6511,12 @@ taxid	parent_taxid	rank	name	name_class
 1885582	118968	genus	Candidatus Ovatibacter	scientific name
 1885582	118968	genus	Ovatibacter	equivalent name
 1885582	118968	genus	"Candidatus Ovatusbacter" Dirren and Posch 2016	synonym
+1885582	118968	genus	Candidatus Ovatusbacter	synonym (authority stripped)
 1885584	1777752	genus	Candidatus Intestinibacterium	scientific name
 1885584	1777752	genus	Intestinibacterium	equivalent name
 1885584	1777752	genus	"Candidatus Intestinibacterium" corrig. Dirren and Posch 2016	synonym
 1885584	1777752	genus	"Candidatus Intestinusbacter" Dirren and Posch 2016	synonym
+1885584	1777752	genus	Candidatus Intestinusbacter	synonym (authority stripped)
 1885586	118884	genus	Candidatus Endonucleariobacter	scientific name
 1885586	118884	genus	Endonucleariobacter	equivalent name
 1886696	3079761	genus	Goleter	scientific name
@@ -6370,6 +6567,7 @@ taxid	parent_taxid	rank	name	name_class
 1891669	92712	genus	Candidatus Neptunichlamydia	scientific name
 1891669	92712	genus	Neptunichlamydia	equivalent name
 1891669	92712	genus	"Candidatus Neptunochlamydia" Pizzetti et al. 2016	synonym
+1891669	92712	genus	Candidatus Neptunochlamydia	synonym (authority stripped)
 1891672	1328881	genus	Candidatus Jidaibacter	scientific name
 1891672	1328881	genus	Jidaibacter	equivalent name
 1891915	2070	genus	Actinocrispum	scientific name
@@ -6424,6 +6622,7 @@ taxid	parent_taxid	rank	name	name_class
 1905838	118884	genus	Candidatus Navoides	scientific name
 1905838	118884	genus	Navoides	equivalent name
 1905838	118884	genus	"Candidatus Navis" Schuster and Bright 2016	synonym
+1905838	118884	genus	Candidatus Navis	synonym (authority stripped)
 1906119	1798710	order	Candidatus Gastranaerophilales	scientific name
 1906119	1798710	order	Gastranaerophilales	equivalent name
 1906119	1798710	order	o__Gastranaerophilales	equivalent name
@@ -6431,11 +6630,13 @@ taxid	parent_taxid	rank	name	name_class
 1906125	3022868	genus	Gastranaerophilus	equivalent name
 1906150	3118680	order	Candidatus Caenarcanales	scientific name
 1906150	3118680	order	"Candidatus Caenarcaniphilales" Soo et al. 2014	synonym
+1906150	3118680	order	Candidatus Caenarcaniphilales	synonym (authority stripped)
 1906152	1798710	order	Candidatus Obscuribacterales	scientific name
 1906152	1798710	order	Obscuribacterales	equivalent name
 1906156	3121626	genus	Obscuribacter (SeqCode)	scientific name
 1906156	3121626	genus	"Obscuribacter" Chuvochina et al. 2023	synonym
 1906156	3121626	genus	Candidatus Obscuribacter	synonym
+1906156	3121626	genus	Obscuribacter	synonym (authority stripped)
 1906162	3133414	genus	Candidatus Caenarcanum	scientific name
 1906162	3133414	genus	Caenarcanum	equivalent name
 1906657	84563	genus	Candidatus Doolittlea	scientific name
@@ -6466,6 +6667,7 @@ taxid	parent_taxid	rank	name	name_class
 1912923	3568217	genus	Candidatus Syntropharchaeum	scientific name
 1912923	3568217	genus	Syntropharchaeum	equivalent name
 1912923	3568217	genus	"Candidatus Syntrophoarchaeum" Laso-Perez et al. 2016	synonym
+1912923	3568217	genus	Candidatus Syntrophoarchaeum	synonym (authority stripped)
 1913444	3067276	genus	Candidatus Thiodiazotropha	scientific name
 1913444	3067276	genus	Thiodiazotropha	equivalent name
 1913599	3118655	genus	Peptoanaerobacter	scientific name
@@ -6491,12 +6693,15 @@ taxid	parent_taxid	rank	name	name_class
 1915411	1915415	genus	Methanomethylicus	equivalent name
 1915412	1915415	genus	Candidatus Methanosuratincola (ex Vanwonterghem et al. 2016)	scientific name
 1915412	1915415	genus	"Candidatus Methanosuratus" Vanwonterghem et al. 2016	synonym
+1915412	1915415	genus	Candidatus Methanosuratus	synonym (authority stripped)
 1915414	3415498	order	Candidatus Methanomethylicales	scientific name
 1915414	3415498	order	Methanomethylicales	equivalent name
 1915414	3415498	order	"Candidatus Methanomethyliales" Vanwonterghem et al. 2016	synonym
+1915414	3415498	order	Candidatus Methanomethyliales	synonym (authority stripped)
 1915415	1915414	family	Candidatus Methanomethylicaceae	scientific name
 1915415	1915414	family	Methanomethylicaceae	equivalent name
 1915415	1915414	family	"Candidatus Methanomethyliaceae" Vanwonterghem et al. 2016	synonym
+1915415	1915414	family	Candidatus Methanomethyliaceae	synonym (authority stripped)
 1916646	49546	genus	Ochrovirga	scientific name
 1916908	2303507	genus	Toxifilum	scientific name
 1918385	3082771	genus	Acutalibacter	scientific name
@@ -6548,6 +6753,7 @@ taxid	parent_taxid	rank	name	name_class
 1921933	2066474	genus	Candidatus Endonucleibacter	scientific name
 1921933	2066474	genus	Endonucleibacter	equivalent name
 1921933	2066474	genus	"Candidatus Endonucleobacter" Zielinski et al. 2009	synonym
+1921933	2066474	genus	Candidatus Endonucleobacter	synonym (authority stripped)
 1922299	128827	genus	Beduini	scientific name
 1923867	171551	genus	Gabonia	scientific name
 1923871	186817	genus	Massilibacterium	scientific name
@@ -6643,7 +6849,6 @@ taxid	parent_taxid	rank	name	name_class
 1936272	1935183	phylum	Heimdallarchaeota	equivalent name
 1936272	1935183	phylum	Candidatus Heimdallarchaeia	synonym
 1936272	1935183	phylum	Candidatus Heimdallarchaeota (ex Bulzu et al. 2019)	synonym
-1936272	1935183	phylum	Candidatus	synonym (authority stripped)
 1936987	68336	phylum	Balneolota	scientific name
 1936987	68336	phylum	Balneolota corrig. Hahnke et al. 2021	synonym
 1936988	1937959	order	Saprospirales	scientific name
@@ -6670,6 +6875,7 @@ taxid	parent_taxid	rank	name	name_class
 1940141	1644056	genus	Candidatus Halectosymbiota	scientific name
 1940141	1644056	genus	Halectosymbiota	equivalent name
 1940141	1644056	genus	"Candidatus Haloectosymbiotes" Filker et al. 2014	synonym
+1940141	1644056	genus	Candidatus Haloectosymbiotes	synonym (authority stripped)
 1940143	3385906	genus	Dankookia	scientific name
 1940255	216572	genus	Allofournierella	scientific name
 1940255	216572	genus	Fournierella	synonym
@@ -6778,6 +6984,8 @@ taxid	parent_taxid	rank	name	name_class
 1988031	3085097	genus	"Candidatus Promineofilum" McIlroy et al. 2016	synonym
 1988031	3085097	genus	"Promineifilum" Chuvochina et al. 2023	synonym
 1988031	3085097	genus	Candidatus Promineifilum	synonym
+1988031	3085097	genus	Candidatus Promineofilum	synonym (authority stripped)
+1988031	3085097	genus	Promineifilum	synonym (authority stripped)
 1993653	338190	genus	Candidatus Nitrosomarinus	scientific name
 1993653	338190	genus	Nitrosomarinus	equivalent name
 1996557	1890942	genus	Candidatus Nanobsidianus	scientific name
@@ -6817,6 +7025,7 @@ taxid	parent_taxid	rank	name	name_class
 2013583	1783234	phylum	Candidatus Goldiibacteriota	scientific name
 2013583	1783234	phylum	Goldiibacteriota	equivalent name
 2013583	1783234	phylum	"Candidatus Goldbacteria" Hernsdorf et al. 2017	synonym
+2013583	1783234	phylum	Candidatus Goldbacteria	synonym (authority stripped)
 2014233	641	genus	Thaumasiovibrio	scientific name
 2017546	506	genus	Paracandidimonas	scientific name
 2017961	118883	genus	Sulfodiicoccus	scientific name
@@ -6826,11 +7035,14 @@ taxid	parent_taxid	rank	name	name_class
 2018044	119060	genus	Vallotiella	equivalent name
 2018044	119060	genus	"Candidatus Neovallotia" corrig. Toenshoff et al. 2012	synonym
 2018044	119060	genus	"Candidatus Vallotia" Toenshoff et al. 2012	synonym
+2018044	119060	genus	Candidatus Neovallotia	synonym (authority stripped)
+2018044	119060	genus	Candidatus Vallotia	synonym (authority stripped)
 2018663	3118657	genus	Marinisporobacter	scientific name
 2018671	1046	genus	Imhoffiella	scientific name
 2019482	292628	genus	Candidatus Brevifilum	scientific name
 2019482	292628	genus	Brevifilum	equivalent name
 2019482	292628	genus	"Candidatus Brevefilum" McIlroy et al. 2017	synonym
+2019482	292628	genus	Candidatus Brevefilum	synonym (authority stripped)
 2022127	1162	genus	Komarekiella	scientific name
 2022711	2202724	genus	Methanonatronarchaeum	scientific name
 2022712	2202724	genus	Candidatus Methanohalarchaeum	scientific name
@@ -6945,6 +7157,7 @@ taxid	parent_taxid	rank	name	name_class
 2045213	1655514	genus	"Candidatus Allofontibacter" corrig. Henson et al. 2018	synonym
 2045213	1655514	genus	"Fontibacterium" Fernandes et al. 2025	synonym
 2045213	1655514	genus	Candidatus Fontibacterium	synonym
+2045213	1655514	genus	Fontibacterium	synonym (authority stripped)
 2045304	3090659	genus	Ghiorsea	scientific name
 2045408	85022	genus	Populibacterium	scientific name
 2045416	49546	genus	Oceanihabitans	scientific name
@@ -6970,6 +7183,7 @@ taxid	parent_taxid	rank	name	name_class
 2052312	1783272	phylum	Dormibacteraeota	equivalent name
 2052312	1783272	phylum	Dormiibacterota	equivalent name
 2052312	1783272	phylum	"Candidatus Dormibacteraeota" Ji et al. 2017	synonym
+2052312	1783272	phylum	Candidatus Dormibacteraeota	synonym (authority stripped)
 2052313	1783234	phylum	candidate division AD1	scientific name
 2052314	1783234	phylum	candidate division AD2	scientific name
 2052329	1783234	phylum	candidate division FCPU426	scientific name
@@ -7003,6 +7217,7 @@ taxid	parent_taxid	rank	name	name_class
 2066459	2066434	genus	Candidatus Halysiomicrobium	scientific name
 2066459	2066434	genus	Halysiomicrobium	equivalent name
 2066459	2066434	genus	"Candidatus Alysiomicrobium" Levantesi et al. 2004	synonym
+2066459	2066434	genus	Candidatus Alysiomicrobium	synonym (authority stripped)
 2066470	82117	genus	Candidatus Sphaeronema	scientific name
 2066470	82117	genus	Sphaeronema	equivalent name
 2066472	2066434	genus	Candidatus Combothrix	scientific name
@@ -7045,6 +7260,7 @@ taxid	parent_taxid	rank	name	name_class
 2093740	3844230	genus	Candidatus Poriferisulfidus	scientific name
 2093740	3844230	genus	Poriferisulfidus	equivalent name
 2093740	3844230	genus	"Candidatus Porisulfidus" Lavy et al. 2018	synonym
+2093740	3844230	genus	Candidatus Porisulfidus	synonym (authority stripped)
 2093783	1843490	genus	Methylomusa	scientific name
 2093818	95818	class	Candidatus Saccharimonadia	scientific name
 2093818	95818	class	Candidatus Saccharimonia	synonym
@@ -7059,6 +7275,7 @@ taxid	parent_taxid	rank	name	name_class
 2093825	2093818	order	"Candidatus Saccharimonales" McLean et al. 2020	synonym
 2093825	2093818	order	Candidatus Saccharimonadales	synonym
 2093825	2093818	order	Saccharimonadales	synonym
+2093825	2093818	order	Candidatus Saccharimonales	synonym (authority stripped)
 2094023	712	genus	Glaesserella	scientific name
 2100208	1921002	family	Caedimonadaceae	scientific name
 2100210	2100208	genus	Caedimonas	scientific name
@@ -7096,6 +7313,7 @@ taxid	parent_taxid	rank	name	name_class
 2126330	118884	genus	Kentrum	equivalent name
 2126330	118884	genus	"Candidatus Kentron" Seah et al. 2017	synonym
 2126330	118884	genus	"Candidatus Kentrum" corrig. Seah et al. 2017	synonym
+2126330	118884	genus	Candidatus Kentron	synonym (authority stripped)
 2126544	216572	genus	Neobittarella (ex Bilen et al. 2018)	scientific name
 2126544	216572	genus	Neobittarella	synonym
 2126544	216572	genus	Neobittarella (ex Liu et al. 2021)	synonym
@@ -7109,6 +7327,7 @@ taxid	parent_taxid	rank	name	name_class
 2136117	204434	genus	Candidatus Sulfuritelmatomonas	scientific name
 2136117	204434	genus	Sulfuritelmatomonas	equivalent name
 2136117	204434	genus	"Candidatus Sulfotelmatomonas" Hausmann et al. 2018	synonym
+2136117	204434	genus	Candidatus Sulfotelmatomonas	synonym (authority stripped)
 2136118	332161	genus	Candidatus Sulfopaludibacter	scientific name
 2136118	332161	genus	Sulfopaludibacter	equivalent name
 2137249	31989	genus	Neptunicoccus	scientific name
@@ -7135,10 +7354,12 @@ taxid	parent_taxid	rank	name	name_class
 2163168	186803	genus	Kineothrix	scientific name
 2164137	85023	genus	Candidatus Lumbricidiphila	scientific name
 2164137	85023	genus	"Candidatus Lumbricidophila" Lund et al. 2018	synonym
+2164137	85023	genus	Candidatus Lumbricidophila	synonym (authority stripped)
 2170427	1890426	genus	Vulcanococcus	scientific name
 2170555	539003	genus	Candidatus Carbonibacillus	scientific name
 2170555	539003	genus	Carbonibacillus	equivalent name
 2170555	539003	genus	"Candidatus Carbobacillus" Kadnikov et al. 2018	synonym
+2170555	539003	genus	Candidatus Carbobacillus	synonym (authority stripped)
 2171981	95818	class	Candidatus Nanoperiomorbia	scientific name
 2171981	95818	class	Nanoperiomorbia	equivalent name
 2171982	95818	class	Candidatus Nanosyncoccalia	scientific name
@@ -7151,6 +7372,7 @@ taxid	parent_taxid	rank	name	name_class
 2171986	2093825	family	"Candidatus Sacchiramonaceae" McLean et al. 2020	synonym
 2171986	2093825	family	Candidatus Saccharimonadaceae	synonym
 2171986	2093825	family	Saccharimonadaceae	synonym
+2171986	2093825	family	Candidatus Sacchiramonaceae	synonym (authority stripped)
 2171987	2171983	family	Candidatus Nanoperiomorbaceae	scientific name
 2171987	2171983	family	Nanoperiomorbaceae	equivalent name
 2171988	2171987	genus	Candidatus Nanoperiomorbus	scientific name
@@ -7180,6 +7402,7 @@ taxid	parent_taxid	rank	name	name_class
 2175151	2175150	genus	Candidatus Micropelagius	scientific name
 2175151	2175150	genus	Micropelagius	equivalent name
 2175151	2175150	genus	"Candidatus Micropelagos" Jinenez-Infante et al. 2014	synonym
+2175151	2175150	genus	Candidatus Micropelagos	synonym (authority stripped)
 2175957	3056374	genus	Ruficoccus	scientific name
 2182780	1185	genus	Nunduva	scientific name
 2183612	85030	genus	Klenkia	scientific name
@@ -7190,6 +7413,7 @@ taxid	parent_taxid	rank	name	name_class
 2202177	1920887	genus	Candidatus Methylumidiphilus	scientific name
 2202177	1920887	genus	Methylumidiphilus	equivalent name
 2202177	1920887	genus	"Candidatus Methyloumidiphilus" Rissanen et al. 2018	synonym
+2202177	1920887	genus	Candidatus Methyloumidiphilus	synonym (authority stripped)
 2202723	171536	order	Methanonatronarchaeales	scientific name
 2202724	2202723	family	Methanonatronarchaeaceae	scientific name
 2204160	403	genus	Methylocucumis	scientific name
@@ -7221,6 +7445,7 @@ taxid	parent_taxid	rank	name	name_class
 2250122	3121609	genus	Bipolaricaulis (SeqCode)	scientific name
 2250122	3121609	genus	"Bipolaricaulis" Chuvochina et al. 2023	synonym
 2250122	3121609	genus	Candidatus Bipolaricaulis	synonym
+2250122	3121609	genus	Bipolaricaulis	synonym (authority stripped)
 2250589	31989	genus	Xinfangfangia	scientific name
 2269381	255475	genus	Mangrovicella	scientific name
 2282523	119045	genus	Methylorubrum	scientific name
@@ -7282,6 +7507,7 @@ taxid	parent_taxid	rank	name	name_class
 2307008	186803	genus	Candidatus Galacturonatibacter	scientific name
 2307008	186803	genus	Galacturonatibacter	equivalent name
 2307008	186803	genus	"Candidatus Galacturonibacter" Valk et al. 2018	synonym
+2307008	186803	genus	Candidatus Galacturonibacter	synonym (authority stripped)
 2307285	563835	genus	Flavipsychrobacter	scientific name
 2315418	2315421	genus	Candidatus Sumerlaea	scientific name
 2315418	2315421	genus	Sumerlaea	equivalent name
@@ -7310,30 +7536,37 @@ taxid	parent_taxid	rank	name	name_class
 2321204	2808963	genus	Candidatus Marinarcus	scientific name
 2321204	2808963	genus	Marinarcus	equivalent name
 2321204	2808963	genus	"Candidatus Arcomarinus" Perez-Cataluna et al. 2018	synonym
+2321204	2808963	genus	Candidatus Arcomarinus	synonym (authority stripped)
 2338561	31989	genus	Pelagivirga	scientific name
 2364196	200795	class	Candidatus Thermofontia	scientific name
 2364196	200795	class	Thermofontia	equivalent name
 2364196	200795	class	"Candidatus Thermofonsia" Ward et al. 2018	synonym
+2364196	200795	class	Candidatus Thermofonsia	synonym (authority stripped)
 2364208	2364196	order	Phototrophicales	scientific name
 2364209	2364196	clade	Candidatus Thermofonsia Clade 3	scientific name
 2419830	1817810	class	Candidatus Ozemibacteria	scientific name
 2419830	1817810	class	Ozemibacteria	equivalent name
 2419830	1817810	class	"Candidatus Ozemobacteria" Kadnikov et al. 2018	synonym
+2419830	1817810	class	Candidatus Ozemobacteria	synonym (authority stripped)
 2419831	2419830	clade	Candidatus Ozemibacterales	scientific name
 2419831	2419830	clade	Ozemibacterales	equivalent name
 2419831	2419830	clade	"Candidatus Ozemobacterales" Kadnikov et al. 2018	synonym
+2419831	2419830	clade	Candidatus Ozemobacterales	synonym (authority stripped)
 2419832	2419831	family	Candidatus Ozemibacteraceae	scientific name
 2419832	2419831	family	Ozemibacteraceae	equivalent name
 2419832	2419831	family	"Candidatus Ozemobacteraceae" Kadnikov et al. 2018	synonym
+2419832	2419831	family	Candidatus Ozemobacteraceae	synonym (authority stripped)
 2419833	2419832	genus	Candidatus Ozemibacter	scientific name
 2419833	2419832	genus	Ozemibacter	equivalent name
 2419833	2419832	genus	"Candidatus Ozemobacter" Kadnikov et al. 2018	synonym
+2419833	2419832	genus	Candidatus Ozemobacter	synonym (authority stripped)
 2448023	84993	family	Ilumatobacteraceae	scientific name
 2448024	2448023	genus	Desertimonas	scientific name
 2478349	2829815	genus	Indioceanicola	scientific name
 2480624	3056381	genus	Candidatus Moanibacter	scientific name
 2480624	3056381	genus	Moanibacter	equivalent name
 2480624	3056381	genus	"Candidatus Moanabacter" Vosseberg et al. 2018	synonym
+2480624	3056381	genus	Candidatus Moanabacter	synonym (authority stripped)
 2483366	666505	order	Sedimentisphaerales	scientific name
 2483367	2483366	family	Sedimentisphaeraceae	scientific name
 2483368	2483367	genus	Sedimentisphaera	scientific name
@@ -7349,6 +7582,7 @@ taxid	parent_taxid	rank	name	name_class
 2491977	1328881	genus	Candidatus Aquarickettsia	scientific name
 2491977	1328881	genus	Aquarickettsia	equivalent name
 2491977	1328881	genus	"Candidatus Marinoinvertebrata" Klinges et al. 2018	synonym
+2491977	1328881	genus	Candidatus Marinoinvertebrata	synonym (authority stripped)
 2493627	28211	order	Minwuiales	scientific name
 2493628	2493627	family	Minwuiaceae	scientific name
 2493629	2493628	genus	Minwuia	scientific name
@@ -7368,10 +7602,12 @@ taxid	parent_taxid	rank	name	name_class
 2497644	2497643	order	Babelales	equivalent name
 2497644	2497643	order	Babeliales	equivalent name
 2497644	2497643	order	"Candidatus Babelales" corrig. Yeoh et al. 2016	synonym
+2497644	2497643	order	Candidatus Babelales	synonym (authority stripped)
 2497645	2497644	family	Candidatus Babeliaceae	scientific name
 2497645	2497644	family	Babelaceae	equivalent name
 2497645	2497644	family	Babeliaceae	equivalent name
 2497645	2497644	family	"Candidatus Babelaceae" corrig. Yeoh et al. 2016	synonym
+2497645	2497644	family	Candidatus Babelaceae	synonym (authority stripped)
 2498454	31977	genus	Allolucifera	scientific name
 2498454	31977	genus	Lucifera Sanchez-Andrea et al. 2019	synonym
 2498454	31977	genus	Lucifera	synonym (authority stripped)
@@ -7442,6 +7678,7 @@ taxid	parent_taxid	rank	name	name_class
 2545700	3342189	genus	Candidatus Methanodesulfokora	scientific name
 2545700	3342189	genus	Methanodesulfokora	equivalent name
 2545700	3342189	genus	"Candidatus Methanodesulfokores" McKay et al. 2019	synonym
+2545700	3342189	genus	Candidatus Methanodesulfokores	synonym (authority stripped)
 2546364	1890450	genus	Zehria	scientific name
 2546365	1890450	genus	Rippkaea	scientific name
 2546568	1783275	phylum	Candidatus Nezhaarchaeota	scientific name
@@ -7458,6 +7695,7 @@ taxid	parent_taxid	rank	name	name_class
 2563090	1328881	genus	Candidatus Grelliella	scientific name
 2563090	1328881	genus	Grelliella	equivalent name
 2563090	1328881	genus	"Candidatus Grellia" Gruber-Vodicka et al. 2019	synonym
+2563090	1328881	genus	Candidatus Grellia	synonym (authority stripped)
 2563092	447827	order	Candidatus Ruthmanniales	scientific name
 2563093	2563092	family	Candidatus Ruthmanniaceae	scientific name
 2563094	2563093	genus	Candidatus Ruthmannia	scientific name
@@ -7484,12 +7722,15 @@ taxid	parent_taxid	rank	name	name_class
 2582935	1783276	phylum	Candidatus Altarchaeota	scientific name
 2582935	1783276	phylum	Altarchaeota	equivalent name
 2582935	1783276	phylum	"Candidatus Altiarchaeota" Probst et al. 2018	synonym
+2582935	1783276	phylum	Candidatus Altiarchaeota	synonym (authority stripped)
 2582950	1783276	phylum	Candidatus Huberarchaeota	scientific name
 2582950	1783276	phylum	Huberarchaeota	equivalent name
 2582950	1783276	phylum	"Candidatus Huberarchaea" Probst et al. 2018	synonym
+2582950	1783276	phylum	Candidatus Huberarchaea	synonym (authority stripped)
 2582955	3342185	genus	Candidatus Huberarchaeum	scientific name
 2582955	3342185	genus	Huberarchaeum	equivalent name
 2582955	3342185	genus	"Candidatus Huberiarchaeum" Probst et al. 2018	synonym
+2582955	3342185	genus	Candidatus Huberiarchaeum	synonym (authority stripped)
 2584823	2815311	genus	Laspinema	scientific name
 2584824	1969992	genus	Klisinema	scientific name
 2586030	3079754	genus	Ramsaria	scientific name
@@ -7514,6 +7755,7 @@ taxid	parent_taxid	rank	name	name_class
 2597219	3757841	order	Candidatus Acidulidesulfobacterales	scientific name
 2597219	3757841	order	Acidulidesulfobacterales	equivalent name
 2597219	3757841	order	"Candidatus Acidulodesulfobacterales" Tan et al. 2019	synonym
+2597219	3757841	order	Candidatus Acidulodesulfobacterales	synonym (authority stripped)
 2597221	3696221	genus	Candidatus Acidulidesulfobacter	scientific name
 2597221	3696221	genus	Acididesulfobacter	equivalent name
 2597221	3696221	genus	Acidulidesulfobacter	equivalent name
@@ -7521,6 +7763,7 @@ taxid	parent_taxid	rank	name	name_class
 2597222	3696221	genus	Candidatus Acidulidesulfobacterium	scientific name
 2597222	3696221	genus	Acidulidesulfobacterium	equivalent name
 2597222	3696221	genus	"Candidatus Acidulodesulfobacterium" Tan et al. 2019	synonym
+2597222	3696221	genus	Candidatus Acidulodesulfobacterium	synonym (authority stripped)
 2597258	72276	genus	Candidatus Macondimonas	scientific name
 2597258	72276	genus	Macondimonas	equivalent name
 2599185	2283796	class	Candidatus Poseidoniia	scientific name
@@ -7528,6 +7771,7 @@ taxid	parent_taxid	rank	name	name_class
 2599185	2283796	class	Thalassarchaea	equivalent name
 2599185	2283796	class	"Candidatus Thalassoarchaea" Martin-Cuadrado et al. 2015	synonym
 2599185	2283796	class	Candidatus Thalassarchaea	synonym
+2599185	2283796	class	Candidatus Thalassoarchaea	synonym (authority stripped)
 2599196	133814	family	Candidatus Thalassarchaeaceae	scientific name
 2599196	133814	family	Thalassarchaeaceae	equivalent name
 2599197	133814	family	Candidatus Poseidoniaceae	scientific name
@@ -7540,6 +7784,7 @@ taxid	parent_taxid	rank	name	name_class
 2599625	3126998	genus	Candidatus Dormiibacter	scientific name
 2599625	3126998	genus	Dormiibacter	equivalent name
 2599625	3126998	genus	"Candidatus Dormibacter" Ji et al. 2017	synonym
+2599625	3126998	genus	Candidatus Dormibacter	synonym (authority stripped)
 2599631	2829293	order	Candidatus Eremiobacterales	scientific name
 2599631	2829293	order	"Candidatus Eremiobacterales" Ward et al. 2019	equivalent name
 2599632	2829293	order	Vulcanimicrobiales	scientific name
@@ -7726,6 +7971,7 @@ taxid	parent_taxid	rank	name	name_class
 2698789	2698788	class	Candidatus Krumholzibacteriia	scientific name
 2698789	2698788	class	Krumholzibacteriia	equivalent name
 2698789	2698788	class	"Candidatus Krumholzibacteria" Youssef et al. 2019	synonym
+2698789	2698788	class	Candidatus Krumholzibacteria	synonym (authority stripped)
 2698803	2698789	order	Candidatus Krumholzibacteriales	scientific name
 2698803	2698789	order	Krumholzibacteriales	equivalent name
 2698813	2698803	family	Candidatus Krumholzibacteriaceae	scientific name
@@ -7741,6 +7987,7 @@ taxid	parent_taxid	rank	name	name_class
 2703810	1783234	phylum	Candidatus Macinerneyibacteriota	scientific name
 2703810	1783234	phylum	Macinerneyibacteriota	equivalent name
 2703810	1783234	phylum	"Candidatus Mcinerneyibacteriota" Yadav et al. 2020	synonym
+2703810	1783234	phylum	Candidatus Mcinerneyibacteriota	synonym (authority stripped)
 2703811	2703810	class	Candidatus Mcinerneyibacteria	scientific name
 2703811	2703810	class	Ca. Mcinerneyibacteria	equivalent name
 2703811	2703810	class	Mcinerneyibacteria	equivalent name
@@ -7793,6 +8040,7 @@ taxid	parent_taxid	rank	name	name_class
 2714957	3079741	genus	Candidatus Cyanaurora	scientific name
 2714957	3079741	genus	Cyanaurora	equivalent name
 2714957	3079741	genus	"Candidatus Aurora" Grettenberger et al. 2020	synonym
+2714957	3079741	genus	Candidatus Aurora	synonym (authority stripped)
 2715289	49546	genus	Amniculibacterium	scientific name
 2715732	1794810	no rank	Microgenomates group incertae sedis	scientific name
 2715733	2715732	family	Candidatus Chazhemtobacteraceae	scientific name
@@ -7849,6 +8097,7 @@ taxid	parent_taxid	rank	name	name_class
 2720805	189325	genus	Candidatus Flemingiibacterium	scientific name
 2720805	189325	genus	Flemingiibacterium	equivalent name
 2720805	189325	genus	"Candidatus Flemingibacterium" Glendinning et al. 2021	synonym
+2720805	189325	genus	Candidatus Flemingibacterium	synonym (authority stripped)
 2720806	189325	genus	Candidatus Gallimonas	scientific name
 2720806	189325	genus	Gallimonas	equivalent name
 2720807	189325	genus	Candidatus Gallispira	scientific name
@@ -7860,6 +8109,7 @@ taxid	parent_taxid	rank	name	name_class
 2721098	112452	genus	Candidatus Harrysmithiimonas	scientific name
 2721098	112452	genus	Harrysmithiimonas	equivalent name
 2721098	112452	genus	"Candidatus Harrysmithimonas" Glendinning et al. 2021	synonym
+2721098	112452	genus	Candidatus Harrysmithimonas	synonym (authority stripped)
 2721100	189325	genus	Candidatus Heritagella	scientific name
 2721100	189325	genus	Heritagella	equivalent name
 2721103	189325	genus	Candidatus Heteroclostridium	scientific name
@@ -7869,6 +8119,7 @@ taxid	parent_taxid	rank	name	name_class
 2721105	189325	genus	Candidatus Heteroscillospira	scientific name
 2721105	189325	genus	Heteroscillospira	equivalent name
 2721105	189325	genus	"Candidatus Heteroscilispira" Glendinning et al. 2021	synonym
+2721105	189325	genus	Candidatus Heteroscilispira	synonym (authority stripped)
 2721106	189325	genus	Candidatus Howiella	scientific name
 2721106	189325	genus	Howiella	equivalent name
 2721107	189325	genus	Candidatus Metalachnospira	scientific name
@@ -7900,6 +8151,7 @@ taxid	parent_taxid	rank	name	name_class
 2721120	189325	genus	Candidatus Pseudoscillospira	scientific name
 2721120	189325	genus	Pseudoscillospira	equivalent name
 2721120	189325	genus	"Candidatus Pseudoscilispira" Glendinning et al. 2021	synonym
+2721120	189325	genus	Candidatus Pseudoscilispira	synonym (authority stripped)
 2721121	189325	genus	Candidatus Roslinia	scientific name
 2721121	189325	genus	Roslinia	equivalent name
 2721122	189325	genus	Candidatus Schneewindia	scientific name
@@ -7911,6 +8163,7 @@ taxid	parent_taxid	rank	name	name_class
 2721125	189325	genus	Candidatus Woodwardiibium	scientific name
 2721125	189325	genus	Woodwardiibium	equivalent name
 2721125	189325	genus	"Candidatus Woodwardibium" Glendinning et al. 2021	synonym
+2721125	189325	genus	Candidatus Woodwardibium	synonym (authority stripped)
 2723775	356	family	Lichenihabitantaceae	scientific name
 2723775	356	family	Lichenibacteriaceae	synonym
 2723776	2723775	genus	Lichenihabitans	scientific name
@@ -7924,10 +8177,12 @@ taxid	parent_taxid	rank	name	name_class
 2731992	1783234	phylum	Candidatus Caldipriscota	scientific name
 2731992	1783234	phylum	Caldipriscota	equivalent name
 2731992	1783234	phylum	"Candidatus Pyropristinus" Coleman et al. 2016	synonym
+2731992	1783234	phylum	Candidatus Pyropristinus	synonym (authority stripped)
 2732368	1963268	genus	Salinibaculum	scientific name
 2732587	3399801	genus	Candidatus Vesicomyidisocius	scientific name
 2732587	3399801	genus	Vesicomyidisocius	equivalent name
 2732587	3399801	genus	"Candidatus Vesicomyosocius" Kuwahara et al. 2007	synonym
+2732587	3399801	genus	Candidatus Vesicomyosocius	synonym (authority stripped)
 2735474	49546	genus	Paramesonia	scientific name
 2738399	31989	genus	Parasedimentitalea	scientific name
 2738399	31989	genus	Parasedimentitalea Ding et al. 2020	synonym
@@ -7957,6 +8212,7 @@ taxid	parent_taxid	rank	name	name_class
 2750082	1783234	phylum	Candidatus Stahliibacteriota	scientific name
 2750082	1783234	phylum	Stahliibacteriota	equivalent name
 2750082	1783234	phylum	"Candidatus Stahlbacteria" Dombrowski et al. 2017	synonym
+2750082	1783234	phylum	Candidatus Stahlbacteria	synonym (authority stripped)
 2750262	145357	genus	Leekyejoonella	scientific name
 2750653	1921782	family	Pontiellaceae	scientific name
 2750657	2750653	genus	Pontiella	scientific name
@@ -7969,6 +8225,7 @@ taxid	parent_taxid	rank	name	name_class
 2754714	3073607	genus	Candidatus Hakubella	scientific name
 2754714	3073607	genus	Hakubella	equivalent name
 2754714	3073607	genus	"Candidatus Hakubanella" Merino et al. 2020	synonym
+2754714	3073607	genus	Candidatus Hakubanella	synonym (authority stripped)
 2755140	1129771	genus	Pseudoleptotrichia	scientific name
 2756134	186824	genus	Paenactinomyces	scientific name
 2756312	85022	genus	Flavimobilis	scientific name
@@ -8016,23 +8273,30 @@ taxid	parent_taxid	rank	name	name_class
 2767079	2785443	genus	Binatus (SeqCode)	scientific name
 2767079	2785443	genus	Candidatus Binatus	equivalent name
 2767079	2785443	genus	"Binatus" Chuvochina et al. 2023	synonym
+2767079	2785443	genus	Binatus	synonym (authority stripped)
 2767080	3072871	genus	Hydrothermarchaeum (SeqCode)	scientific name
 2767080	3072871	genus	"Hydrothermarchaeum" Chuvochina et al. 2023	synonym
 2767080	3072871	genus	Candidatus Hydrothermarchaeum	synonym
+2767080	3072871	genus	Hydrothermarchaeum	synonym (authority stripped)
 2767083	3055127	genus	Hadarchaeum (SeqCode)	scientific name
 2767083	3055127	genus	"Hadarchaeum" Chuvochina et al. 2023	synonym
 2767083	3055127	genus	Candidatus Hadarchaeum	synonym
+2767083	3055127	genus	Hadarchaeum	synonym (authority stripped)
 2767186	3788926	genus	Hydrothermus (SeqCode)	scientific name
 2767186	3788926	genus	"Hydrothermus" Chuvochina et al. 2023	synonym
 2767186	3788926	genus	Candidatus Hydrothermus	synonym
+2767186	3788926	genus	Hydrothermus	synonym (authority stripped)
 2767197	1783234	phylum	Candidatus Muiribacteriota	scientific name
 2767197	1783234	phylum	Muiribacteriota	equivalent name
 2767197	1783234	phylum	"Candidatus Muirbacteria" Barnum et al. 2018	synonym
+2767197	1783234	phylum	Candidatus Muirbacteria	synonym (authority stripped)
 2767204	3399774	genus	Muiribacterium (SeqCode)	scientific name
 2767204	3399774	genus	"Candidatus Muirbacterium" Barnum et al. 2018	equivalent name
 2767204	3399774	genus	"Candidatus Muiribacterium" corrig. Barnum et al. 2018	equivalent name
 2767204	3399774	genus	Candidatus Muiribacterium	equivalent name
 2767204	3399774	genus	"Muiribacterium" Chuvochina et al. 2023	synonym
+2767204	3399774	genus	Candidatus Muirbacterium	synonym (authority stripped)
+2767204	3399774	genus	Muiribacterium	synonym (authority stripped)
 2767206	186822	genus	Candidatus Reconcilbacillus	scientific name
 2767206	186822	genus	Reconcilbacillus	equivalent name
 2767318	2049	genus	Boudabousia	scientific name
@@ -8206,6 +8470,7 @@ taxid	parent_taxid	rank	name	name_class
 2796146	1046	genus	Candidatus Nitrosacidicoccus	scientific name
 2796146	1046	genus	Nitrosacidicoccus	equivalent name
 2796146	1046	genus	"Candidatus Nitrosacidococcus" Picone et al. 2021	synonym
+2796146	1046	genus	Candidatus Nitrosacidococcus	synonym (authority stripped)
 2797878	49546	genus	Pareuzebyella	scientific name
 2798042	1890464	genus	Pseudochroococcus	scientific name
 2798274	651137	class	Conexivisphaeria	scientific name
@@ -8226,7 +8491,6 @@ taxid	parent_taxid	rank	name	name_class
 2798909	1935183	phylum	Candidatus Baldrarchaeota	scientific name
 2798909	1935183	phylum	Baldrarchaeota	equivalent name
 2798909	1935183	phylum	Candidatus Baldrarchaeota (ex Caceres 2019)	synonym
-2798909	1935183	phylum	Candidatus	synonym (authority stripped)
 2798910	1935183	phylum	Candidatus Hermodarchaeota	scientific name
 2798910	1935183	phylum	Hermodarchaeota	equivalent name
 2798912	2798905	class	Candidatus Wukongarchaeia	scientific name
@@ -8306,6 +8570,7 @@ taxid	parent_taxid	rank	name	name_class
 2802654	2802718	order	Limnocylindrales	equivalent name
 2802654	2802718	order	o__CSP1-4	equivalent name
 2802654	2802718	order	"Candidatus Edaphomicrobiales" Ortiz et al. 2021	synonym
+2802654	2802718	order	Candidatus Edaphomicrobiales	synonym (authority stripped)
 2802693	2802654	family	Candidatus Limnocylindraceae	scientific name
 2802693	2802654	family	Limnocylindraceae	equivalent name
 2802694	2802693	genus	Candidatus Limnocylindrus	scientific name
@@ -8313,6 +8578,7 @@ taxid	parent_taxid	rank	name	name_class
 2802718	200795	class	Candidatus Limnocylindria	scientific name
 2802718	200795	class	Limnocylindria	equivalent name
 2802718	200795	class	"Candidatus Edaphomicrobia" Ortiz et al. 2021	synonym
+2802718	200795	class	Candidatus Edaphomicrobia	synonym (authority stripped)
 2802942	2802718	genus	Candidatus Aquidulcis	scientific name
 2802942	2802718	genus	Aquidulcis	equivalent name
 2803301	666507	genus	Poriferisphaera	scientific name
@@ -8376,6 +8642,7 @@ taxid	parent_taxid	rank	name	name_class
 2807459	1783270	phylum	Candidatus Tianyaibacteriota	scientific name
 2807459	1783270	phylum	Tianyaibacteriota	equivalent name
 2807459	1783270	phylum	"Candidatus Tianyabacteria" Cui et al. 2021	synonym
+2807459	1783270	phylum	Candidatus Tianyabacteria	synonym (authority stripped)
 2807469	183967	order	Candidatus Gimiplasmatales	scientific name
 2807496	485256	family	Natranaerofabaceae	scientific name
 2807497	2807496	genus	Natranaerofaba	scientific name
@@ -8388,6 +8655,7 @@ taxid	parent_taxid	rank	name	name_class
 2810010	31979	genus	Anaerophilus	scientific name
 2810280	526525	family	Coprobacillaceae	scientific name
 2810280	526525	family	"Erysipelatoclostridiaceae" Zakham et al. 2019	synonym
+2810280	526525	family	Erysipelatoclostridiaceae	synonym (authority stripped)
 2810281	526525	family	Turicibacteraceae	scientific name
 2811373	1903410	genus	Acerihabitans	scientific name
 2811380	433	genus	Entomobacter	scientific name
@@ -8412,6 +8680,7 @@ taxid	parent_taxid	rank	name	name_class
 2813035	356	family	"Candidatus Phaeomarinibacteraceae" corrig. Dittami et al. 2014	synonym
 2813035	356	family	"Candidatus Phaeomarinobacteraceae" Dittami et al. 2014	synonym
 2813035	356	family	Candidatus Phaeomarinibacteraceae	synonym
+2813035	356	family	Candidatus Phaeomarinobacteraceae	synonym (authority stripped)
 2813041	31989	genus	Vannielia	scientific name
 2813041	31989	genus	"Vannielia" Pringsheim 1955	synonym
 2813205	2813274	genus	Candidatus Mesopelagibacter	scientific name
@@ -8478,9 +8747,11 @@ taxid	parent_taxid	rank	name	name_class
 2817523	204432	order	Candidatus Acidiferrales	scientific name
 2817523	204432	order	Acidiferrales	equivalent name
 2817523	204432	order	"Candidatus Acidoferrales" Epihov et al. 2021	synonym
+2817523	204432	order	Candidatus Acidoferrales	synonym (authority stripped)
 2817524	2817523	genus	Candidatus Acidiferrum	scientific name
 2817524	2817523	genus	Acidiferrum	equivalent name
 2817524	2817523	genus	"Candidatus Acidoferrum" Epihov et al. 2021	synonym
+2817524	2817523	genus	Candidatus Acidoferrum	synonym (authority stripped)
 2818469	31989	genus	Fuscovulum	scientific name
 2818505	3379134	phylum	Myxococcota	scientific name
 2819026	119066	genus	Candidatus Desulfobacillus	scientific name
@@ -8550,7 +8821,6 @@ taxid	parent_taxid	rank	name	name_class
 2827219	1935183	phylum	Candidatus Freyarchaeota	scientific name
 2827219	1935183	phylum	Freyarchaeota	equivalent name
 2827219	1935183	phylum	Candidatus Freyarchaeota (ex Caceres 2019)	synonym
-2827219	1935183	phylum	Candidatus	synonym (authority stripped)
 2827220	1935183	phylum	Candidatus Gefionarchaeota	scientific name
 2827220	1935183	phylum	Gefionarchaeota	equivalent name
 2827221	1935183	phylum	Candidatus Friggarchaeota	scientific name
@@ -8574,6 +8844,7 @@ taxid	parent_taxid	rank	name	name_class
 2829293	1154676	class	"Candidatus Eremiobacteriia" corrig. Ward et al. 2019	synonym
 2829293	1154676	class	Candidatus Eremiobacteria	synonym
 2829293	1154676	class	Eremiobacteriia	synonym
+2829293	1154676	class	Candidatus Eremiobacteriia	synonym (authority stripped)
 2829294	2829292	order	Candidatus Xenobiales	scientific name
 2829294	2829292	order	Xenobiales	equivalent name
 2829295	2829294	family	Candidatus Xenobiaceae	scientific name
@@ -8679,6 +8950,8 @@ taxid	parent_taxid	rank	name	name_class
 2840476	31979	genus	Dwaynesavagella	equivalent name
 2840476	31979	genus	"Candidatus Dwaynia" corrig. Thompson et al. 2012	synonym
 2840476	31979	genus	"Candidatus Savagella" Thompson et al. 2012	synonym
+2840476	31979	genus	Candidatus Dwaynia	synonym (authority stripped)
+2840476	31979	genus	Candidatus Savagella	synonym (authority stripped)
 2840480	31957	no rank	Propionibacteriaceae incertae sedis	scientific name
 2840481	84998	no rank	Coriobacteriia incertae sedis	scientific name
 2840482	84107	no rank	Coriobacteriaceae incertae sedis	scientific name
@@ -8776,6 +9049,7 @@ taxid	parent_taxid	rank	name	name_class
 2840542	2840488	genus	Candidatus Alloenteromonas	scientific name
 2840542	2840488	genus	Alloenteromonas	equivalent name
 2840542	2840488	genus	"Candidatus Enteromonas" Gilroy et al. 2021	synonym
+2840542	2840488	genus	Candidatus Enteromonas	synonym (authority stripped)
 2840543	2840488	genus	Candidatus Faecenecus	scientific name
 2840543	2840488	genus	Faecenecus	equivalent name
 2840544	112452	genus	Candidatus Alectryobacillus	scientific name
@@ -8911,6 +9185,7 @@ taxid	parent_taxid	rank	name	name_class
 2840609	2840491	genus	Scatovivens	equivalent name
 2840610	2840492	genus	Candidatus Allocopromorpha	scientific name
 2840610	2840492	genus	"Candidatus Copromorpha" Gilroy et al. 2021	synonym
+2840610	2840492	genus	Candidatus Copromorpha	synonym (authority stripped)
 2840611	2840493	genus	Candidatus Cottocaccamicrobium	scientific name
 2840611	2840493	genus	Cottocaccamicrobium	equivalent name
 2840612	2840493	genus	Candidatus Pullilachnospira	scientific name
@@ -8927,6 +9202,7 @@ taxid	parent_taxid	rank	name	name_class
 2840617	2840493	genus	Scatomonas	equivalent name
 2840618	2840493	genus	Candidatus Scybalocola (ex Gilroy et al. 2021)	scientific name
 2840618	2840493	genus	"Candidatus Scybalocola" Gilroy et al. 2021 non Gilroy et al. 2022	synonym
+2840618	2840493	genus	Candidatus Scybalocola	synonym (authority stripped)
 2840619	2840493	genus	Candidatus Scybalomonas	scientific name
 2840619	2840493	genus	Scybalomonas	equivalent name
 2840620	2840493	genus	Candidatus Fimousia	scientific name
@@ -9031,6 +9307,7 @@ taxid	parent_taxid	rank	name	name_class
 2841677	3399801	genus	Pseudothioglobus (SeqCode)	scientific name
 2841677	3399801	genus	"Pseudothioglobus" Chuvochina et al. 2023	synonym
 2841677	3399801	genus	Candidatus Pseudothioglobus	synonym
+2841677	3399801	genus	Pseudothioglobus	synonym (authority stripped)
 2841678	213121	genus	Candidatus Desulfatifera	scientific name
 2841678	213121	genus	Desulfatifera	equivalent name
 2841679	45456	genus	Candidatus Desulfacyla	scientific name
@@ -9074,6 +9351,7 @@ taxid	parent_taxid	rank	name	name_class
 2844887	2844884	family	Candidatus Zymogenaceae	scientific name
 2844887	2844884	family	Zymogenaceae	equivalent name
 2844887	2844884	family	"Candidatus Zymogeniaceaea" Murphy et al. 2021	synonym
+2844887	2844884	family	Candidatus Zymogeniaceaea	synonym (authority stripped)
 2844888	2844885	genus	Candidatus Anaeroferrophillus	scientific name
 2844888	2844885	genus	Anaeroferrophillus	equivalent name
 2844889	2844886	genus	Candidatus Anaeropigmentus	scientific name
@@ -9133,6 +9411,7 @@ taxid	parent_taxid	rank	name	name_class
 2856065	2856064	genus	Candidatus Nanohalarchaeum	scientific name
 2856065	2856064	genus	Nanohalarchaeum	equivalent name
 2856065	2856064	genus	"Candidatus Nanohaloarchaeum" Hamm et al. 2019	synonym
+2856065	2856064	genus	Candidatus Nanohaloarchaeum	synonym (authority stripped)
 2856573	114378	genus	Infirmifilum	scientific name
 2856573	114378	genus	Infirmifilum Zayulina et al. 2024	synonym
 2856582	183924	order	Thermofilales	scientific name
@@ -9369,6 +9648,7 @@ taxid	parent_taxid	rank	name	name_class
 2897349	2897348	genus	Candidatus Uabimicrobium	scientific name
 2897349	2897348	genus	Uabimicrobium	equivalent name
 2897349	2897348	genus	"Candidatus Uab" Shiratori et al. 2019	synonym
+2897349	2897348	genus	Candidatus Uab	synonym (authority stripped)
 2898489	481	genus	Paralysiella	scientific name
 2898533	135619	family	Zooshikellaceae	scientific name
 2898582	2913507	genus	Candidatus Biekeibacterium	scientific name
@@ -9702,6 +9982,7 @@ taxid	parent_taxid	rank	name	name_class
 2945045	2945042	genus	Candidatus Haladaptatiplasma	scientific name
 2945045	2945042	genus	Haladaptatiplasma	equivalent name
 2945045	2945042	genus	"Candidatus Haladaptoplasma" Zhou et al. 2022	synonym
+2945045	2945042	genus	Candidatus Haladaptoplasma	synonym (authority stripped)
 2945046	2945042	genus	Candidatus Saliniplasma	scientific name
 2945046	2945042	genus	Saliniplasma	equivalent name
 2945047	2945042	genus	Candidatus Natronoplasma	scientific name
@@ -9750,9 +10031,12 @@ taxid	parent_taxid	rank	name	name_class
 2953756	2497644	family	Chromulinivoracaceae	equivalent name
 2953756	2497644	family	"Candidatus Chromulinavoraceae" Deeg et al. 2019	synonym
 2953756	2497644	family	"Candidatus Chromulinivoraceae" Deeg et al. 2019	synonym
+2953756	2497644	family	Candidatus Chromulinavoraceae	synonym (authority stripped)
+2953756	2497644	family	Candidatus Chromulinivoraceae	synonym (authority stripped)
 2953757	2953756	genus	Candidatus Chromulinivorax	scientific name
 2953757	2953756	genus	Chromulinivorax	equivalent name
 2953757	2953756	genus	"Candidatus Chromulinavorax" Deeg et al. 2019	synonym
+2953757	2953756	genus	Candidatus Chromulinavorax	synonym (authority stripped)
 2953811	126	genus	Thalassoroseus	scientific name
 2953857	246874	genus	Candidatus Marisimplicoccus	scientific name
 2953857	246874	genus	Marisimplicoccus	equivalent name
@@ -9779,6 +10063,7 @@ taxid	parent_taxid	rank	name	name_class
 2959522	2171986	genus	Candidatus Chaera	scientific name
 2959522	2171986	genus	Chaera	equivalent name
 2959522	2171986	genus	"Candidatus Chaer" Lemos et al. 2019	synonym
+2959522	2171986	genus	Candidatus Chaer	synonym (authority stripped)
 2959523	2171986	genus	Candidatus Microsaccharimonas	scientific name
 2959523	2171986	genus	Microsaccharimonas	equivalent name
 2959523	2171986	genus	Candidatus Saccharibacter	synonym
@@ -9839,15 +10124,18 @@ taxid	parent_taxid	rank	name	name_class
 2975519	31969	order	Candidatus Izemoplasmatales	scientific name
 2975519	31969	order	Izemoplasmatales	equivalent name
 2975519	31969	order	"Candidatus Izemoplasmales" Zheng et al. 2021	synonym
+2975519	31969	order	Candidatus Izemoplasmales	synonym (authority stripped)
 2975520	2975519	family	Candidatus Izemoplasmataceae	scientific name
 2975520	2975519	family	Izemoplasmataceae	equivalent name
 2975520	2975519	family	"Candidatus Izemoplasmaceae" Zheng et al. 2021	synonym
+2975520	2975519	family	Candidatus Izemoplasmaceae	synonym (authority stripped)
 2975521	2975520	genus	Candidatus Xianfuyuplasma	scientific name
 2975521	2975520	genus	Xianfuyuplasma	equivalent name
 2975549	2975520	genus	Candidatus Izemoplasma	scientific name
 2975549	2975520	genus	Izemoplasma	equivalent name
 2975549	2975520	genus	"Candidatus Izimaplasma" Skennerton et al. 2016	synonym
 2975549	2975520	genus	Candidatus Izemoplasma corrig.	synonym
+2975549	2975520	genus	Candidatus Izimaplasma	synonym (authority stripped)
 2976153	543	genus	Huaxiibacter	scientific name
 2976171	213465	genus	Desulfoferrobacter	scientific name
 2976354	2235	family	Natronoarchaeaceae	scientific name
@@ -9932,12 +10220,14 @@ taxid	parent_taxid	rank	name	name_class
 2983161	84992	order	Spongiisociales	equivalent name
 2983161	84992	order	"Candidatus Spongiisociudales" Nguyen 2022	synonym
 2983161	84992	order	Candidatus Atilosales	synonym
+2983161	84992	order	Candidatus Spongiisociudales	synonym (authority stripped)
 2983162	2983161	family	Candidatus Spongiisociaceae	scientific name
 2983162	2983161	family	Cofanosaceae	equivalent name
 2983162	2983161	family	Spongiisociaceae	equivalent name
 2983162	2983161	family	f__SZUA-232	equivalent name
 2983162	2983161	family	"Candidatus Spongiisociaeae" Nguyen 2022	synonym
 2983162	2983161	family	Candidatus Cofanosaceae	synonym
+2983162	2983161	family	Candidatus Spongiisociaeae	synonym (authority stripped)
 2983163	2983162	genus	Candidatus Spongiisocius	scientific name
 2983163	2983162	genus	Phabigana	equivalent name
 2983163	2983162	genus	Spongiisocius	equivalent name
@@ -9947,17 +10237,20 @@ taxid	parent_taxid	rank	name	name_class
 2983180	84993	family	Naporanaceae	equivalent name
 2983180	84993	family	"Candidatus Aldehyrespiratoraceae" Nguyen 2022	synonym
 2983180	84993	family	Candidatus Naporanaceae	synonym
+2983180	84993	family	Candidatus Aldehyrespiratoraceae	synonym (authority stripped)
 2983181	2983180	genus	Candidatus Aldehydirespirator	scientific name
 2983181	2983180	genus	Aldehydirespirator	equivalent name
 2983181	2983180	genus	Drirexana	equivalent name
 2983181	2983180	genus	"Candidatus Aldehyrespirator" Nguyen 2022	synonym
 2983181	2983180	genus	Candidatus Drirexana	synonym
+2983181	2983180	genus	Candidatus Aldehyrespirator	synonym (authority stripped)
 2983183	84993	family	Candidatus Hopanoidivoransaceae	scientific name
 2983183	84993	family	Hopanoidiivorantaceae	equivalent name
 2983183	84993	family	Hopanoidivoransaceae	equivalent name
 2983183	84993	family	Ifrisanaceae	equivalent name
 2983183	84993	family	"Candidatus Hopanoidivoraceae" Nguyen 2022	synonym
 2983183	84993	family	Candidatus Ifrisanaceae	synonym
+2983183	84993	family	Candidatus Hopanoidivoraceae	synonym (authority stripped)
 2983184	2983183	genus	Candidatus Hopanoidivorans	scientific name
 2983184	2983183	genus	Hopanoidiivorans	equivalent name
 2983184	2983183	genus	Hopanoidivorans	equivalent name
@@ -9968,6 +10261,7 @@ taxid	parent_taxid	rank	name	name_class
 2983189	84993	family	Rafemanaceae	equivalent name
 2983189	84993	family	"Candidatus Poriferisodaliceae" Nguyen 2022	synonym
 2983189	84993	family	Candidatus Rafemanaceae	synonym
+2983189	84993	family	Candidatus Poriferisodaliceae	synonym (authority stripped)
 2983190	2983189	genus	Candidatus Poriferisodalis	scientific name
 2983190	2983189	genus	Cexitella	equivalent name
 2983190	2983189	genus	Poriferisodalis	equivalent name
@@ -10588,12 +10882,15 @@ taxid	parent_taxid	rank	name	name_class
 3055124	3366610	phylum	Hadarchaeota (SeqCode)	scientific name
 3055124	3366610	phylum	"Hadarchaeota" Chuvochina et al. 2023	synonym
 3055124	3366610	phylum	Candidatus Hadarchaeota	synonym
+3055124	3366610	phylum	Hadarchaeota	synonym (authority stripped)
 3055126	1775750	order	Hadarchaeales (SeqCode)	scientific name
 3055126	1775750	order	"Hadarchaeales" Chuvochina et al. 2023	synonym
 3055126	1775750	order	Candidatus Hadarchaeales	synonym
+3055126	1775750	order	Hadarchaeales	synonym (authority stripped)
 3055127	3055126	family	Hadarchaeaceae (SeqCode)	scientific name
 3055127	3055126	family	"Hadarchaeaceae" Chuvochina et al. 2023	synonym
 3055127	3055126	family	Candidatus Hadarchaeaceae	synonym
+3055127	3055126	family	Hadarchaeaceae	synonym (authority stripped)
 3055516	135617	genus	Candidatus Venteria	scientific name
 3055516	135617	genus	Venteria	equivalent name
 3056331	33958	genus	Philodulcilactobacillus	scientific name
@@ -10681,12 +10978,10 @@ taxid	parent_taxid	rank	name	name_class
 3067288	2823876	class	Asgardarchaeia	equivalent name
 3067288	2823876	class	Candidatus Asgardarchaeia	synonym
 3067288	2823876	class	Candidatus Asgardarchaeia (ex Eme et al. 2023)	synonym
-3067288	2823876	class	Candidatus	synonym (authority stripped)
 3067289	3067288	order	Candidatus Asgardarchaeales (ex Tamarit et al. 2024)	scientific name
 3067289	3067288	order	Asgardarchaeales	equivalent name
 3067289	3067288	order	Candidatus Asgardarchaeales	synonym
 3067289	3067288	order	Candidatus Asgardarchaeales (ex Eme et al. 2023)	synonym
-3067289	3067288	order	Candidatus	synonym (authority stripped)
 3067290	3067289	family	Candidatus Asgardarchaeaceae	scientific name
 3067290	3067289	family	Asgardarchaceae	equivalent name
 3067290	3067289	family	Asgardarchaeaceae	equivalent name
@@ -10695,7 +10990,6 @@ taxid	parent_taxid	rank	name	name_class
 3067291	3067290	genus	Asgardarchaeum	equivalent name
 3067291	3067290	genus	Candidatus Asgardarchaeum	synonym
 3067291	3067290	genus	Candidatus Asgardarchaeum (ex Eme et al. 2023)	synonym
-3067291	3067290	genus	Candidatus	synonym (authority stripped)
 3069972	1748771	family	Arenimicrobiaceae	scientific name
 3070949	82115	genus	Flavimaribacter	scientific name
 3070954	82115	genus	Ectorhizobium	scientific name
@@ -10716,6 +11010,7 @@ taxid	parent_taxid	rank	name	name_class
 3071582	651142	order	Candidatus Caldarchaeales	scientific name
 3071582	651142	order	Caldarchaeales	equivalent name
 3071582	651142	order	"Candidatus Caldiarchaeales" Cavalier-Smith 2014	synonym
+3071582	651142	order	Candidatus Caldiarchaeales	synonym (authority stripped)
 3071583	3071582	family	Candidatus Caldarchaeaceae	scientific name
 3071583	3071582	family	Caldarchaeaceae	equivalent name
 3071583	3071582	family	"Candidatus Caldarchaeaceae" corrig. Rinke et al. 2021	synonym
@@ -10724,6 +11019,7 @@ taxid	parent_taxid	rank	name	name_class
 3071909	2	phylum	Candidatus Moduliflexota	scientific name
 3071909	2	phylum	Moduliflexota	equivalent name
 3071909	2	phylum	"Candidatus Modulibacteria" Sekiguchi et al. 2015	synonym
+3071909	2	phylum	Candidatus Modulibacteria	synonym (authority stripped)
 3071910	3071909	class	Candidatus Moduliflexia	scientific name
 3071910	3071909	class	Moduliflexia	equivalent name
 3071911	3071909	class	Candidatus Vecturitrichia	scientific name
@@ -10808,12 +11104,15 @@ taxid	parent_taxid	rank	name	name_class
 3073605	2754713	class	Candidatus Syntrophaliphaticia	scientific name
 3073605	2754713	class	Syntrophaliphaticia	equivalent name
 3073605	2754713	class	"Candidatus Syntraliphaticia" Liu et al. 2020	synonym
+3073605	2754713	class	Candidatus Syntraliphaticia	synonym (authority stripped)
 3073606	2754713	order	Candidatus Hakubellales	scientific name
 3073606	2754713	order	Hakubellales	equivalent name
 3073606	2754713	order	"Candidatus Hakubanellales" Merino et al. 2020	synonym
+3073606	2754713	order	Candidatus Hakubanellales	synonym (authority stripped)
 3073607	3073606	family	Candidatus Hakubellaceae	scientific name
 3073607	3073606	family	Hakubellaceae	equivalent name
 3073607	3073606	family	"Candidatus Hakubanellaceae" Merino et al. 2020	synonym
+3073607	3073606	family	Candidatus Hakubanellaceae	synonym (authority stripped)
 3074014	1890426	genus	Candidatus Regnicoccus	scientific name
 3074014	1890426	genus	Regnicoccus	equivalent name
 3074468	574976	genus	Mesoterricola	scientific name
@@ -10950,6 +11249,7 @@ taxid	parent_taxid	rank	name	name_class
 3082381	3082380	family	Darwinibacteraceae	equivalent name
 3082381	3082380	family	Darwinibacteriaceae	equivalent name
 3082381	3082380	family	"Candidatus Darwinibacteraceae" corrig. Puchol-Royo et al. 2025	synonym
+3082381	3082380	family	Candidatus Darwinibacteraceae	synonym (authority stripped)
 3082382	3082381	genus	Candidatus Darwinibacter	scientific name
 3082382	3082381	genus	Darwinibacter	equivalent name
 3082384	3082380	family	Candidatus Wallacebacteriaceae	scientific name
@@ -10978,6 +11278,7 @@ taxid	parent_taxid	rank	name	name_class
 3082798	3082771	genus	Equinaster	equivalent name
 3082799	3082771	genus	Candidatus Limimonas	scientific name
 3082799	3082771	genus	Limimonas (ex Gilroy et al. 2022)	equivalent name
+3082799	3082771	genus	Limimonas	synonym (authority stripped)
 3082800	216572	genus	Candidatus Apopatocola	scientific name
 3082800	216572	genus	Apopatocola	equivalent name
 3082801	2791015	genus	Candidatus Physcosoma	scientific name
@@ -11062,6 +11363,7 @@ taxid	parent_taxid	rank	name	name_class
 3082844	333046	genus	Scybalousia	equivalent name
 3082845	2005523	genus	Candidatus Scybalocola (ex Gilroy et al. 2022)	scientific name
 3082845	2005523	genus	Scybalocola (ex Gilroy et al. 2022)	equivalent name
+3082845	2005523	genus	Scybalocola	synonym (authority stripped)
 3083039	333046	genus	Candidatus Limimorpha	scientific name
 3083039	333046	genus	Limimorpha	equivalent name
 3084968	1236	order	Thiohalomonadales	scientific name
@@ -11155,6 +11457,7 @@ taxid	parent_taxid	rank	name	name_class
 3097033	1803511	family	Candidatus Altarchaeaceae	scientific name
 3097033	1803511	family	Altarchaeaceae	equivalent name
 3097033	1803511	family	"Candidatus Altiarchaeaceae" Probst et al. 2014	synonym
+3097033	1803511	family	Candidatus Altiarchaeaceae	synonym (authority stripped)
 3097285	3379134	phylum	Candidatus Caldatribacteriota	scientific name
 3097285	3379134	phylum	"Candidatus Caldatribacteriota" Hahn et al. 2020	synonym
 3097381	2194	genus	Methanovulcanius	scientific name
@@ -11416,6 +11719,7 @@ taxid	parent_taxid	rank	name	name_class
 3121605	2582935	class	Candidatus Altarchaeia	scientific name
 3121605	2582935	class	Altarchaeia	equivalent name
 3121605	2582935	class	"Candidatus Altiarchaeia" Chuvochina et al. 2023	synonym
+3121605	2582935	class	Candidatus Altiarchaeia	synonym (authority stripped)
 3121607	67810	class	Bipolaricaulia (SeqCode)	scientific name
 3121607	67810	class	Candidatus Bipolaricaulia	equivalent name
 3121607	67810	class	Bipolaricaulia	synonym
@@ -11911,6 +12215,7 @@ taxid	parent_taxid	rank	name	name_class
 3342871	2843305	genus	"Raskinella" Sudarshan et al. 2024	synonym
 3342871	2843305	genus	Candidatus Gasuxana	synonym
 3342871	2843305	genus	Candidatus Raskinella	synonym
+3342871	2843305	genus	Raskinella	synonym (authority stripped)
 3343722	543	genus	Candidatus Malihini	scientific name
 3343722	543	genus	Malihini	equivalent name
 3343723	451511	genus	Candidatus Makana	scientific name
@@ -11972,6 +12277,7 @@ taxid	parent_taxid	rank	name	name_class
 3366644	3366643	family	Candidatus Prometheoarchaeaceae	synonym
 3366645	3366644	genus	Promethearchaeum	scientific name
 3366645	3366644	genus	"Candidatus Prometheoarchaeum" Imachi et al. 2020	synonym
+3366645	3366644	genus	Candidatus Prometheoarchaeum	synonym (authority stripped)
 3366852	1676649	family	Allogeochordaceae	scientific name
 3366852	1676649	family	Geochordaceae Karnachuk et al. 2025	synonym
 3366852	1676649	family	Geochordaceae	synonym (authority stripped)
@@ -12106,6 +12412,7 @@ taxid	parent_taxid	rank	name	name_class
 3378229	3378215	genus	Candidatus Sordicultor	scientific name
 3378229	3378215	genus	Sordicultor	equivalent name
 3378229	3378215	genus	"Candidatus Phoxesisca" Pallen et al. 2022	synonym
+3378229	3378215	genus	Candidatus Phoxesisca	synonym (authority stripped)
 3378230	3378215	genus	Candidatus Profundicultor	scientific name
 3378230	3378215	genus	Profundicultor	equivalent name
 3378231	3378215	genus	Candidatus Nitricultor	scientific name
@@ -12151,6 +12458,8 @@ taxid	parent_taxid	rank	name	name_class
 3381692	1655514	genus	"Candidatus Esacigena" Pallen et al. 2022	synonym
 3381692	1655514	genus	"Candidatus Hypereutrophica" Prabhu et al. 2024	synonym
 3381692	1655514	genus	Pelagilacustribacter	synonym
+3381692	1655514	genus	Candidatus Esacigena	synonym (authority stripped)
+3381692	1655514	genus	Candidatus Hypereutrophica	synonym (authority stripped)
 3381693	3377310	genus	Candidatus Marisalimonas	scientific name
 3381693	3377310	genus	Marisalimonas	equivalent name
 3381693	3377310	genus	Otrunosa	equivalent name
@@ -12228,18 +12537,22 @@ taxid	parent_taxid	rank	name	name_class
 3386153	80864	genus	"Candidatus Hagefella" Pallen et al. 2022	equivalent name
 3386153	80864	genus	g__JAAFJR01	equivalent name
 3386153	80864	genus	Aalborgiella	synonym
+3386153	80864	genus	Candidatus Hagefella	synonym (authority stripped)
 3386154	80864	genus	Candidatus Skiveiella	scientific name
 3386154	80864	genus	Skiveiella	equivalent name
 3386154	80864	genus	g__JAABQG01	equivalent name
 3386154	80864	genus	"Candidatus Forusella" Pallen et al. 2022	synonym
+3386154	80864	genus	Candidatus Forusella	synonym (authority stripped)
 3386155	80864	genus	Candidatus Defluviibacillus	scientific name
 3386155	80864	genus	Defluviibacillus	equivalent name
 3386155	80864	genus	g__JADJBS01	equivalent name
 3386155	80864	genus	"Candidatus Clipososa" Pallen et al. 2022	synonym
+3386155	80864	genus	Candidatus Clipososa	synonym (authority stripped)
 3386156	80864	genus	Candidatus Egaibacter	scientific name
 3386156	80864	genus	Egaibacter	equivalent name
 3386156	80864	genus	g__JAABRC01	equivalent name
 3386156	80864	genus	"Candidatus Quexurosa" Pallen et al. 2022	synonym
+3386156	80864	genus	Candidatus Quexurosa	synonym (authority stripped)
 3386184	80864	genus	Allorhodoferax (SeqCode)	scientific name
 3386184	80864	genus	g__Rhodoferax_C	equivalent name
 3386184	80864	genus	Aalborgicola	synonym
@@ -12260,6 +12573,7 @@ taxid	parent_taxid	rank	name	name_class
 3386242	588816	family	Candidatus Methanogasteraceae	scientific name
 3386242	588816	family	Methanogasteraceae	equivalent name
 3386242	588816	family	"Candidatus Methanogastraceae" corrig. Chadwick et al. 2022	synonym
+3386242	588816	family	Candidatus Methanogastraceae	synonym (authority stripped)
 3386252	3386242	genus	Candidatus Methanogaster	scientific name
 3386252	3386242	genus	Methanogaster	equivalent name
 3386556	2235	family	Halalkalicoccaceae	scientific name
@@ -12563,9 +12877,11 @@ taxid	parent_taxid	rank	name	name_class
 3414684	795747	order	Usuriscales	equivalent name
 3414684	795747	order	"Candidatus Tepidiaquacellales" Kadnikov et al. 2020	synonym
 3414684	795747	order	Candidatus Usuriscales	synonym
+3414684	795747	order	Candidatus Tepidiaquacellales	synonym (authority stripped)
 3414685	3414684	family	Candidatus Tepidaquicellaceae	scientific name
 3414685	3414684	family	Tepidaquicellaceae	equivalent name
 3414685	3414684	family	"Candidatus Tepidiaquacellaceae" Kadnikov et al. 2020	synonym
+3414685	3414684	family	Candidatus Tepidiaquacellaceae	synonym (authority stripped)
 3414686	3414685	genus	Candidatus Tepidiaquacella	scientific name
 3414686	3414685	genus	Tepidiaquacella	equivalent name
 3414946	433	genus	Endosaccharibacter	scientific name
@@ -12581,6 +12897,7 @@ taxid	parent_taxid	rank	name	name_class
 3415498	28889	class	"Candidatus Methanomethylia" Vanwonterghem et al. 2016	synonym
 3415498	28889	class	Candidatus Methanomethylicia	synonym
 3415498	28889	class	Candidatus Methanosuratincolia	synonym
+3415498	28889	class	Candidatus Methanomethylia	synonym (authority stripped)
 3415499	3415498	order	Methanosuratincolales	scientific name
 3415499	3415498	order	Candidatus Methanosuratincolales	synonym
 3415500	3415499	family	Methanosuratincolaceae	scientific name
@@ -12630,6 +12947,7 @@ taxid	parent_taxid	rank	name	name_class
 3422601	119060	genus	Imbroritus	scientific name
 3423309	3423361	genus	Candidatus Fodinibacter (ex Bertin et al. 2011)	scientific name
 3423309	3423361	genus	"Candidatus Fodinabacter" Bertin et al. 2011	synonym
+3423309	3423361	genus	Candidatus Fodinabacter	synonym (authority stripped)
 3423361	1783272	no rank	Bacillati incertae sedis	scientific name
 3423712	204457	family	Pedomonadaceae	scientific name
 3423713	204457	family	Sphingomicrobiaceae	scientific name
@@ -12655,6 +12973,7 @@ taxid	parent_taxid	rank	name	name_class
 3425870	3067276	genus	Magnetovirga	scientific name
 3425870	3067276	genus	g__JADGBD01	equivalent name
 3425870	3067276	genus	"Candidatus Grisomibra" Pallen et al. 2022	synonym
+3425870	3067276	genus	Candidatus Grisomibra	synonym (authority stripped)
 3434272	31	genus	Pseudomyxococcus	scientific name
 3434680	49546	genus	Meishania	scientific name
 3435218	1860138	genus	Cellulosispirillum	scientific name
@@ -12721,6 +13040,7 @@ taxid	parent_taxid	rank	name	name_class
 3443719	333046	genus	Candidatus Hemicellulosilyticus	scientific name
 3443719	333046	genus	Hemicellulosilyticus	equivalent name
 3443719	333046	genus	"Candidatus Hemicellulyticus" Solden et al. 2017	synonym
+3443719	333046	genus	Candidatus Hemicellulyticus	synonym (authority stripped)
 3444169	468	genus	Lwoffella	scientific name
 3444225	203683	order	Kolteriales	scientific name
 3444226	3444225	family	Kolteriaceae	scientific name
@@ -12753,6 +13073,7 @@ taxid	parent_taxid	rank	name	name_class
 3448448	118968	genus	Candidatus Cochliopodiiphilus	scientific name
 3448448	118968	genus	Cochliopodiiphilus	equivalent name
 3448448	118968	genus	"Candidatus Cochliophilus" Tsao et al. 2017	synonym
+3448448	118968	genus	Candidatus Cochliophilus	synonym (authority stripped)
 3448876	1334117	genus	Pyranulibacter	scientific name
 3448955	41294	genus	Astrobacterium	scientific name
 3449104	224379	genus	Thermohahella	scientific name
@@ -12762,9 +13083,11 @@ taxid	parent_taxid	rank	name	name_class
 3449317	186803	genus	Candidatus Epulonipiscioides	scientific name
 3449317	186803	genus	Epulonipiscioides	equivalent name
 3449317	186803	genus	"Candidatus Epulopisciides" Ngugi et al. 2017	synonym
+3449317	186803	genus	Candidatus Epulopisciides	synonym (authority stripped)
 3449322	186803	genus	Candidatus Parepulonipiscium	scientific name
 3449322	186803	genus	Parepulonipiscium	equivalent name
 3449322	186803	genus	"Candidatus Parepulopiscium" Ngugi et al. 2017	synonym
+3449322	186803	genus	Candidatus Parepulopiscium	synonym (authority stripped)
 3449744	633392	genus	Actinospongiicola	scientific name
 3449744	633392	genus	Actinospongicola	synonym
 3449744	633392	genus	Actinospongiicola corrig.	synonym
@@ -12780,6 +13103,7 @@ taxid	parent_taxid	rank	name	name_class
 3452224	45404	genus	Candidatus Methylaffinis	scientific name
 3452224	45404	genus	Methylaffinis	equivalent name
 3452224	45404	genus	"Candidatus Methyloaffinis" Pratscher et al. 2018	synonym
+3452224	45404	genus	Candidatus Methyloaffinis	synonym (authority stripped)
 3452864	1182	genus	Kalymmatonema	scientific name
 3453326	62680	no rank	Fidelibacterota incertae sedis	scientific name
 3453327	3453326	genus	Candidatus Neomarinimicrobium	scientific name
@@ -12790,9 +13114,11 @@ taxid	parent_taxid	rank	name	name_class
 3453501	82115	genus	Oryzifoliimicrobium	scientific name
 3453629	118968	genus	Candidatus Nucleiphilum	scientific name
 3453629	118968	genus	"Candidatus Nucleophilum" Schulz et al. 2015	synonym
+3453629	118968	genus	Candidatus Nucleophilum	synonym (authority stripped)
 3453630	118968	genus	Candidatus Occultibacter	scientific name
 3453630	118968	genus	Occultibacter	equivalent name
 3453630	118968	genus	"Candidatus Occultobacter" Schulz et al. 2015	synonym
+3453630	118968	genus	Candidatus Occultobacter	synonym (authority stripped)
 3453998	712	genus	Alitibacter	scientific name
 3454182	72274	family	Dasaniaceae	scientific name
 3454185	72274	family	Nitrincolaceae	scientific name
@@ -12914,6 +13240,7 @@ taxid	parent_taxid	rank	name	name_class
 3568216	3388402	order	Candidatus Syntropharchaeales	scientific name
 3568216	3388402	order	Syntropharchaeales	equivalent name
 3568216	3388402	order	"Candidatus Syntrophoarchaeales" Borrel et al. 2019	synonym
+3568216	3388402	order	Candidatus Syntrophoarchaeales	synonym (authority stripped)
 3568217	3568216	no rank	Candidatus Syntropharchaeales incertae sedis	scientific name
 3568316	49546	genus	Croceiramulus	scientific name
 3568570	1747776	genus	Caldiplasma	scientific name
@@ -12998,6 +13325,8 @@ taxid	parent_taxid	rank	name	name_class
 3693713	2798275	family	"Candidatus Sistogarchaceae" Pallen et al. 2023	synonym
 3693713	2798275	family	"Thermosulfuridaceae" Chang et al. 2026	synonym
 3693713	2798275	family	Candidatus Thermosulfuridaceae	synonym
+3693713	2798275	family	Candidatus Sistogarchaceae	synonym (authority stripped)
+3693713	2798275	family	Thermosulfuridaceae	synonym (authority stripped)
 3693714	3693713	genus	Acidarchaeum (SeqCode)	scientific name
 3693714	3693713	genus	Candidatus Acidarchaeum	equivalent name
 3693714	3693713	genus	g__JAJZYL01	equivalent name
@@ -13017,10 +13346,12 @@ taxid	parent_taxid	rank	name	name_class
 3695778	1836792	genus	Chthoniomicrobium	equivalent name
 3695778	1836792	genus	g__UBA695	equivalent name
 3695778	1836792	genus	"Candidatus Tesumibra" Pallen et al. 2022	synonym
+3695778	1836792	genus	Candidatus Tesumibra	synonym (authority stripped)
 3696197	3039986	genus	Krienitziella	scientific name
 3696221	2597219	family	Candidatus Acidulidesulfobacteraceae	scientific name
 3696221	2597219	family	Acidulidesulfobacteraceae	equivalent name
 3696221	2597219	family	"Candidatus Acidulodesulfobacteraceae" Tan et al. 2019	synonym
+3696221	2597219	family	Candidatus Acidulodesulfobacteraceae	synonym (authority stripped)
 3696447	2004	genus	Dolomitihabitans	scientific name
 3697039	2303507	genus	Tusconia	scientific name
 3697218	2800061	genus	Apolloniradiicaulis	scientific name
@@ -13110,6 +13441,7 @@ taxid	parent_taxid	rank	name	name_class
 3712082	2802654	family	Edaphomicrobiaceae	equivalent name
 3712082	2802654	family	f__CSP1-4	equivalent name
 3712082	2802654	family	"Candidatus Siluxanaceae" Pallen et al. 2022	synonym
+3712082	2802654	family	Candidatus Siluxanaceae	synonym (authority stripped)
 3712083	3712082	genus	Candidatus Edaphomicrobium	scientific name
 3712083	3712082	genus	Edaphomicrobium	equivalent name
 3712258	1033997	genus	Nitrosomicrobium (SeqCode)	scientific name
@@ -13282,6 +13614,7 @@ taxid	parent_taxid	rank	name	name_class
 3722584	2974821	order	Pacearchaeales (nom. nud.)	scientific name
 3722584	2974821	order	"Candidatus Pacearchaeales" Cabello-Yeves et al. 2020	synonym
 3722584	2974821	order	Pacearchaeales	synonym
+3722584	2974821	order	Candidatus Pacearchaeales	synonym (authority stripped)
 3722675	49546	genus	Algorimicrobium	scientific name
 3722675	49546	genus	Algorimicrobium Garcia-Lopez et al. 2026	synonym
 3722680	563835	genus	Paraniabella	scientific name
@@ -13342,6 +13675,7 @@ taxid	parent_taxid	rank	name	name_class
 3740419	119060	genus	g__UBA954	equivalent name
 3740419	119060	genus	"Candidatus Tiseritia" Pallen et al. 2022	synonym
 3740419	119060	genus	Lacustribacter	synonym
+3740419	119060	genus	Candidatus Tiseritia	synonym (authority stripped)
 3754966	3422293	genus	Candidatus Ymjarchaeum	scientific name
 3754966	3422293	genus	Ymjarchaeum	equivalent name
 3757841	2	phylum	Candidatus Acidulodesulfobacteriota	scientific name
@@ -13417,6 +13751,7 @@ taxid	parent_taxid	rank	name	name_class
 3842916	74015	class	Candidatus Latescibacteria (ex Chuvochina et al. 2023)	scientific name
 3842916	74015	class	Latescibacteria (ex Chuvochina et al. 2023)	equivalent name
 3842916	74015	class	Candidatus Latescibacteria	synonym
+3842916	74015	class	Latescibacteria	synonym (authority stripped)
 3842917	1052197	order	Candidatus Calescibacteriales	scientific name
 3842917	1052197	order	Calescibacteriales	equivalent name
 3842918	1052815	class	Candidatus Aerophobia	scientific name
@@ -13446,14 +13781,17 @@ taxid	parent_taxid	rank	name	name_class
 3853865	3853864	genus	"Candidatus Sobomella" Pallen et al. 2022	equivalent name
 3853865	3853864	genus	g__F1-20-MAGs160	equivalent name
 3853865	3853864	genus	Acidimicrobilacustris	synonym
+3853865	3853864	genus	Candidatus Sobomella	synonym (authority stripped)
 3853866	717963	family	Verrucolacustridaceae (SeqCode)	scientific name
 3853866	717963	family	f__UBA3015	equivalent name
 3853866	717963	family	"Candidatus Sifomanaceae" Pallen et al. 2022	synonym
 3853866	717963	family	Verrucolacustridaceae	synonym
+3853866	717963	family	Candidatus Sifomanaceae	synonym (authority stripped)
 3853867	3853866	genus	Verrucolacustris (SeqCode)	scientific name
 3853867	3853866	genus	g__UBA3015	equivalent name
 3853867	3853866	genus	"Candidatus Sifomana" Pallen et al. 2022	synonym
 3853867	3853866	genus	Verrucolacustris	synonym
+3853867	3853866	genus	Candidatus Sifomana	synonym (authority stripped)
 3853868	1663426	genus	Fimbriicoccus (SeqCode)	scientific name
 3853868	1663426	genus	Fimbriicoccus	synonym
 3853869	31989	genus	Allotabrizicola (SeqCode)	scientific name
@@ -13463,10 +13801,12 @@ taxid	parent_taxid	rank	name	name_class
 3853870	119060	genus	g__SYFN01	equivalent name
 3853870	119060	genus	"Candidatus Nutrorosa" Pallen et al. 2022	synonym
 3853870	119060	genus	Pernthalerella	synonym
+3853870	119060	genus	Candidatus Nutrorosa	synonym (authority stripped)
 3853871	119060	genus	Hahnella (SeqCode)	scientific name
 3853871	119060	genus	g__UBA2463	equivalent name
 3853871	119060	genus	"Candidatus Phepafana" Pallen et al. 2022	synonym
 3853871	119060	genus	Hahnella	synonym
+3853871	119060	genus	Candidatus Phepafana	synonym (authority stripped)
 3853872	32011	genus	Novimethylotenera (SeqCode)	scientific name
 3853872	32011	genus	g__Methylotenera_A	equivalent name
 3853872	32011	genus	Novimethylotenera	synonym
@@ -13475,14 +13815,17 @@ taxid	parent_taxid	rank	name	name_class
 3864587	3138738	family	Lutivulcanarchaeaceae	equivalent name
 3864587	3138738	family	f__B79-G9	equivalent name
 3864587	3138738	family	"Candidatus Gunesarchaceae" Pallen et al. 2022	synonym
+3864587	3138738	family	Candidatus Gunesarchaceae	synonym (authority stripped)
 3864588	3864587	genus	Candidatus Lutivulcanarchaeum	scientific name
 3864588	3864587	genus	Lutivulcanarchaeum	equivalent name
 3864588	3864587	genus	g__GLR112	equivalent name
 3864588	3864587	genus	"Candidatus Frasaxarcha" Pallen et al. 2022	synonym
+3864588	3864587	genus	Candidatus Frasaxarcha	synonym (authority stripped)
 3865218	1783276	phylum	Candidatus Terrarchaeota	scientific name
 3865218	1783276	phylum	Terrarchaeota	equivalent name
 3865218	1783276	phylum	p__EX4484-52	equivalent name
 3865218	1783276	phylum	"Candidatus Axalarchota" Pallen et al. 2022	synonym
+3865218	1783276	phylum	Candidatus Axalarchota	synonym (authority stripped)
 3865735	3865218	class	Candidatus Terrarchaeia	scientific name
 3865735	3865218	class	Terrarchaeia	equivalent name
 3865736	3865735	order	Candidatus Terrarchaeales	scientific name

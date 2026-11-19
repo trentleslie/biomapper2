@@ -95,7 +95,9 @@ NAME_CLASSES = ("scientific name", "synonym", "equivalent name", "includes")
 PHYLUM_ONLY_CLASS = "genbank common name"
 STRIPPED_CLASS = "synonym (authority stripped)"
 HOMONYM_SOURCE_CLASSES = frozenset(NAME_CLASSES)
-_AUTHORITY = re.compile(r"^((?:Candidatus )?[A-Z][a-z]+)\s+(?:corrig\.\s+)?[\"(]?[A-Z].*\b(?:1[789]\d\d|20\d\d)\b")
+_AUTHORITY = re.compile(
+    r'^"?((?:Candidatus )?[A-Z][a-z]+)"?\s+(?:corrig\.\s+)?[\"(]?(?:ex\s+)?[A-Z].*\b(?:1[789]\d\d|20\d\d)\b'
+)
 
 
 def _dmp_rows(handle: io.TextIOBase):
@@ -189,7 +191,7 @@ def build(taxdump: Path, subset: set[int] | None = None) -> dict:
                         prok_names_cf[name.casefold()].add(tid)
                 if name_class in ("synonym", "equivalent name"):
                     stripped = _AUTHORITY.match(name)
-                    if stripped and stripped.group(1) != name:
+                    if stripped and stripped.group(1) != name.strip('"'):
                         names.append((tid, stripped.group(1), STRIPPED_CLASS))
         for row in _dmp_rows(_open_member(tar, "names.dmp")):  # second pass: the non-prokaryote side
             tid, name, name_class = int(row[0]), row[1], row[3]

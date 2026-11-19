@@ -4,7 +4,7 @@ taxdump_sha256: d8cf5a3f1da672d78aafeccd33be007c22f20eeb3d6917951dfc94987fff04c4
 taxdump_md5: 8eeb45e6483e77bd7236a476820ab43d
 subset: no
 nodes: 8901
-names: 13563
+names: 13906
 merged: 531
 homonyms: 90
 taxonkit: taxonkit v0.20.0
