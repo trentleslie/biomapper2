@@ -397,6 +397,61 @@ def test_dataset_link_fault_preserves_input_columns_and_clears_rejected_certific
         assert out_df2.loc[0, "chosen_kg_id_review"] == ""
         assert out_df2.loc[0, "certificate_state"] == "unavailable"
         assert "gene-symbol" in str(out_df2.loc[0, "error"])
+
+        # Verify RERESOLUTION_ENABLED swapping a provided-ID match to a Kestrel-only candidate on a
+        # faulted row also clears chosen_kg_id and rebuilds an unresolved certificate
+        monkeypatch.setattr(mapper_module.config, "RERESOLUTION_ENABLED", True)
+
+        def _annot_with_search_fault(item: pd.DataFrame, **kw: Any) -> pd.DataFrame:
+            record_kestrel_fault(0, "kestrel-vector-search: simulated outage")
+            return pd.DataFrame([{"assigned_ids": {"kestrel-hybrid-search": {"CHEBI": {"2": {}}}}}], index=item.index)
+
+        mapper.annotation_engine.annotate.side_effect = _annot_with_search_fault
+        mapper.normalizer.normalize.return_value = pd.DataFrame(
+            [
+                {
+                    "curies": ["CHEBI:1", "CHEBI:2"],
+                    "curies_provided": ["CHEBI:1"],
+                    "curies_assigned": {"kestrel-hybrid-search": ["CHEBI:2"]},
+                }
+            ]
+        )
+        mapper.linker.link.return_value = pd.DataFrame(
+            [
+                {
+                    "kg_ids": {"CHEBI:1": ["CHEBI:1"], "CHEBI:2": ["CHEBI:2"]},
+                    "kg_ids_provided": {"CHEBI:1": ["CHEBI:1"]},
+                    "kg_ids_assigned": {"kestrel-hybrid-search": {"CHEBI:2": ["CHEBI:2"]}},
+                }
+            ]
+        )
+        mapper.linker.get_equivalent_ids_checked.return_value = ({"CHEBI:1": {"INCHIKEY": ["AAAA"]}}, True)
+        mapper.resolver.resolve.return_value = pd.DataFrame(
+            [{"chosen_kg_id": "CHEBI:1", "chosen_kg_id_review": None, "chosen_kg_id_lipid_hint": "hint"}]
+        )
+        real_certify = mapper._certify_and_reresolve
+
+        def _swap_to_kestrel_only(**ckw: Any) -> Any:
+            if ckw.get("chosen_kg_id") == "CHEBI:1":
+                cert, _, _, _ = real_certify(**ckw)
+                return cert, "CHEBI:2", {"INCHIKEY": ["BBBB"]}, None
+            return real_certify(**ckw)
+
+        monkeypatch.setattr(mapper, "_certify_and_reresolve", _swap_to_kestrel_only)
+
+        out_path3, _ = mapper.map_dataset_to_kg(
+            dataset=pd.DataFrame({"name": ["glucose"], "chebi": ["1"]}),
+            entity_type="metabolite",
+            name_column="name",
+            provided_id_columns=["chebi"],
+            output_dir=tmp_path,
+            output_prefix="reresolved_fault",
+        )
+        out_df3 = pd.read_csv(out_path3, sep="\t", keep_default_na=False)
+        assert out_df3.loc[0, "chosen_kg_id"] == ""
+        assert out_df3.loc[0, "chosen_kg_id_lipid_hint"] == ""
+        assert out_df3.loc[0, "certificate_state"] == "unavailable"
+        assert "kestrel-vector-search" in str(out_df3.loc[0, "error"])
     finally:
         reset_api_context(token)
 

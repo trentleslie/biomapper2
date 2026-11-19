@@ -1053,10 +1053,11 @@ class Mapper:
             certificate_rows = []
             reresolved_ids: list[str | None] = []
             reresolved_equiv: list[dict[str, list[str]]] = []
+            reresolved_cleared_positions: set[int] = set()
             # Unit 5: per-row lipid_resolution as lipid_-prefixed flat columns (null off the lipid path).
             lipid_column_rows: list[dict[str, Any]] = []
             mapping_column_rows: list[dict[str, Any]] = []
-            for index, row in df.iterrows():
+            for row_pos, (index, row) in enumerate(df.iterrows()):
                 row_icd10cm_map = icd10cm_maps.get(index) or {}
                 committed = _scalar_or_none(row.get("chosen_kg_id"))
                 equiv = row.get("kg_equivalent_ids") or {}
@@ -1080,6 +1081,35 @@ class Mapper:
                     lipid_row=row,
                     icd10cm_fallback_map=row_icd10cm_map,
                 )
+                if (
+                    config.RERESOLUTION_ENABLED
+                    and new_id is not None
+                    and new_id != committed
+                    and has_kestrel_fault(row_idx=index)
+                    and not _has_non_kestrel_resolution(
+                        new_id,
+                        kg_ids_provided=row.get("kg_ids_provided"),
+                        chosen_kg_id_provided=row.get("chosen_kg_id_provided"),
+                        kg_ids_assigned=row.get("kg_ids_assigned"),
+                        faults=get_kestrel_faults(row_idx=index),
+                    )
+                ):
+                    certificate, new_id, new_equiv, lipid_resolution = self._certify_and_reresolve(
+                        query_name=_scalar_or_none(row.get(name_column)),
+                        category=entity_type,
+                        chosen_kg_id=None,
+                        kg_equivalent_ids={},
+                        equivalent_ids_lookup_ok=equivalent_ids_lookup_ok,
+                        selection_conflict=None,
+                        kg_ids=row.get("kg_ids") or {},
+                        kg_ids_assigned=row.get("kg_ids_assigned") or {},
+                        refmet_availability=row_availability.get(REFMET_ANNOTATOR, "not_queried"),
+                        refmet_source=refmet_source,
+                        refmet_snapshot_version=_refmet_snapshot_version_for(refmet_source),
+                        lipid_row=row,
+                        icd10cm_fallback_map=row_icd10cm_map,
+                    )
+                    reresolved_cleared_positions.add(row_pos)
                 certificate_rows.append(certificate)
                 reresolved_ids.append(new_id)
                 reresolved_equiv.append(new_equiv or {})
@@ -1096,6 +1126,12 @@ class Mapper:
             if config.RERESOLUTION_ENABLED:
                 df["chosen_kg_id"] = pd.Series(reresolved_ids, index=df.index, dtype=object)
                 df["kg_equivalent_ids"] = pd.Series(reresolved_equiv, index=df.index, dtype=object)
+                if reresolved_cleared_positions and "chosen_kg_id_lipid_hint" in df.columns:
+                    cleared_hints = [
+                        None if pos in reresolved_cleared_positions else val
+                        for pos, val in enumerate(df["chosen_kg_id_lipid_hint"])
+                    ]
+                    df["chosen_kg_id_lipid_hint"] = pd.Series(cleared_hints, index=df.index, dtype=object)
             df = df.join(pd.DataFrame([c.to_flat_columns() for c in certificate_rows], index=df.index))
             # Unit 5: lipid_-prefixed flat columns, one column set for every row (null off the lipid path).
             df = df.join(pd.DataFrame(lipid_column_rows, index=df.index))
