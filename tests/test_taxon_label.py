@@ -143,6 +143,10 @@ def test_plain_lineage_species_slot_is_truncated_to_genus(label):
 def test_plain_lineage_without_species_keeps_unranked_deepest():
     parse = parse_taxon_label("Bacteria;Firmicutes;Clostridia;Clostridiales;Lachnospiraceae;Dorea")
     assert (parse.query_name, parse.query_rank) == ("Dorea", None)
+    # Two-word placeholders are not binomials: they are dropped, never truncated into a query.
+    assert parse_taxon_label("Bacteria;Firmicutes;Ambiguous taxa").query_name == "Firmicutes"
+    assert parse_taxon_label("Bacteria;Firmicutes;Incertae sedis").query_name == "Firmicutes"
+    assert parse_taxon_label("Bacteria;Firmicutes;Clostridia;Unknown family;Dorea").query_name == "Dorea"
 
 
 def test_explicit_rank_repeating_its_parent_is_kept():

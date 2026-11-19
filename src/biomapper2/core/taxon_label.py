@@ -183,7 +183,9 @@ def _split_levels(label: str) -> tuple[bool, list[TaxonLevel]]:
             levels.append(TaxonLevel(_SILVA_DEPTH[depth], _normalize_name(silva.group(2)), rank_is_hint=True))
         else:
             name = _normalize_name(part)
-            binomial = _GENUS_BINOMIAL.match(name)
+            # A placeholder ("Ambiguous taxa", "Incertae sedis", "Unknown family") is not a binomial: left
+            # whole so the placeholder filter drops it and parsing continues to any deeper real level.
+            binomial = None if _is_placeholder(name) else _GENUS_BINOMIAL.match(name)
             if binomial:
                 # An unranked lineage slot holding a binomial ("...;Escherichia;Escherichia coli") is the
                 # species level: keep its genus (a hint the caller confirms) and stop, as at ``s__``.

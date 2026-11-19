@@ -80,23 +80,21 @@ def collect(
         One ``KestrelSearchResult`` per endpoint, in the recorded order. Never raises (R7).
     """
     results: list[KestrelSearchResult] = []
-    default_text, default_category = search_text, category
     for entry in endpoints:
-        if isinstance(entry, dict):
-            endpoint = entry["endpoint"]
-            search_text = entry.get("search_text") or default_text
-            category = entry.get("category") or default_category
-        else:
-            endpoint, search_text, category = entry, default_text, default_category
+        # A recorded entry is an endpoint name, or a dict whose search_text / category override the defaults.
+        spec = entry if isinstance(entry, dict) else {"endpoint": entry}
+        endpoint = spec["endpoint"]
+        text = spec.get("search_text") or search_text
+        cat = spec.get("category") or category
         request_params = KestrelRequestParams(
-            search_text=search_text,
+            search_text=text,
             limit=n,
-            category=category,
+            category=cat,
             prefix=list(prefixes) if prefixes else None,
         )
         # Byte-for-byte the selection payload shape (see kestrel_{text,vector,hybrid}._kestrel_*_search)
         # with limit=n, so the row set and the requests_cache key line up with what selection saw.
-        payload: dict = {"limit": n, "category": category}
+        payload: dict = {"limit": n, "category": cat}
         if prefixes:
             payload["prefix"] = list(prefixes)
         try:
@@ -104,7 +102,7 @@ def collect(
                 method="POST",
                 endpoint=endpoint,
                 batch_field="search_text",
-                batch_items=[search_text],
+                batch_items=[text],
                 batch_size=KESTREL_BATCH_SIZE_SEARCH,
                 json=payload,
                 # Provenance isolation: a response-only option must not move the shared request/cache/
@@ -115,7 +113,7 @@ def collect(
             )
             # Verbatim passthrough: the raw dicts Kestrel returned, untouched (no model round-trip →
             # no coercion, no null-fill, no dropped/added field). Truncated to N, Kestrel's order (R3).
-            rows = list(raw.get(search_text) or [])[:n]
+            rows = list(raw.get(text) or [])[:n]
             results.append(
                 KestrelSearchResult(
                     endpoint=endpoint,  # type: ignore[arg-type]
@@ -130,7 +128,7 @@ def collect(
             logger.warning(
                 "kestrel passthrough failed on %s for %r (classified=%s)",
                 endpoint,
-                search_text,
+                text,
                 error,
                 exc_info=True,
             )
