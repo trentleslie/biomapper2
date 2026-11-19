@@ -16,7 +16,7 @@ Grammar rules:
 
 * ``Root;`` is optional and ignored.
 * ``sk__`` is the domain. ``k__`` is the domain when the label has no ``sk__``, and the kingdom when it
-  does (MGnify writes the 2025 NCBI kingdom there, e.g. ``k__Bacillati``).
+  does (MGnify writes the current NCBI kingdom there, e.g. ``k__Bacillati``).
 * ``d__`` is the domain, unless its value is a ``denovo...`` OTU code, which ends parsing.
 * SILVA ``D_n__`` gives a depth, used only as a rank hint (``rank_is_hint``); the caller confirms it.
 * Parsing stops at ``s__``, ``t__``, ``D_6__`` and deeper, and ``d__denovo...``: no species resolution.

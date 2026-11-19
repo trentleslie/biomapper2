@@ -6,7 +6,7 @@ from pathlib import Path
 from biomapper2.config import CATEGORY_PREFERRED_NAMESPACES
 from biomapper2.core.annotators.kestrel_hybrid import KestrelHybridSearchAnnotator
 
-_FIXTURE = Path(__file__).parent / "fixtures" / "kestrel_hybrid_search_organism_taxon.json"
+_FIXTURE = Path(__file__).parent / "fixtures" / "organism_taxon_hybrid_search_recorded.json"
 
 
 def _rows(term: str) -> list[dict]:

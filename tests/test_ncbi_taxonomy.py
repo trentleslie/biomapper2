@@ -21,8 +21,8 @@ FIXTURE_DIR = Path(__file__).parent / "fixtures" / "ncbi_taxonomy"
 FIXTURE = next(FIXTURE_DIR.glob("prokaryote_taxa_*.tsv"))
 PACKAGED_DIR = Path(nt.__file__).resolve().parents[1] / "data" / "ncbi_taxonomy"
 
-# Legacy phylum names (the pre-2021 forms used by Greengenes 13_8, SILVA 132 and RDP; renamed by Oren &
-# Garrity 2021, doi:10.1099/ijsem.0.005056, and later NCBI updates) that NCBI still carries ON the phylum
+# Legacy phylum names (the older forms used by Greengenes, SILVA and RDP, renamed by Oren & Garrity and
+# by later NCBI updates; see the plan's External References) that NCBI still carries ON the phylum
 # node as a synonym or phylum-rank genbank common name. Each must resolve at PHYLUM rank (R6), never at the
 # kingdom ("Firmicutes" is also a Synonym of kingdom Bacillati 1783272).
 LEGACY_PHYLUM_NAMES = {

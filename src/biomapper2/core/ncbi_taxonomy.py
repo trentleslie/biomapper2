@@ -3,7 +3,7 @@
 Why this exists
 ---------------
 Kestrel hybrid-search rows carry no lineage, and its filters cannot separate kingdoms, so a 16S label such
-as "Proteus" can commit the salamander (NCBITaxon:210425) instead of the bacterium (583). The taxon
+as "Proteus" can commit the salamander (NCBITaxon:210425) instead of the bacterium (NCBITaxon:583). The taxon
 annotator therefore checks every candidate against this offline snapshot: is the hit a prokaryote, is it
 the non-prokaryote side of a homonym pair, and does one of its NCBI names equal the label's name at the
 label's rank.
@@ -15,10 +15,10 @@ Files (all written by ``scripts/build_ncbi_taxon_snapshot.py`` from one NCBI tax
     merged_<date>.tsv                    old_taxid new_taxid
     homonyms_<date>.tsv                  name prokaryote_taxids nonprokaryote_taxids (ids "|"-joined)
 
-The node set is Bacteria (2) and Archaea (2157) from domain to genus plus every ancestor on each path, so
-every parent pointer resolves inside the snapshot (the domain nodes have an empty parent). The parent
-pointers are kept for PR2's lineage/LCA ladder; PR1 uses membership, homonymy, rank-scoped name lookup and
-merged ids only.
+The node set is Bacteria (NCBITaxon:2) and Archaea (NCBITaxon:2157) from domain to genus plus every
+ancestor on each path, so every parent pointer resolves inside the snapshot (the domain nodes have an
+empty parent). The parent pointers are kept for PR2's lineage/LCA ladder; PR1 uses membership,
+homonymy, rank-scoped name lookup and merged ids only.
 
 The snapshot ships inside the package (``biomapper2/data/ncbi_taxonomy/``) and is read through
 ``importlib.resources``. ``config.NCBI_TAXONOMY_SNAPSHOT_PATH`` overrides it (path to the
@@ -286,5 +286,8 @@ def homonym_nonprokaryote_taxids(name: str) -> frozenset[int]:
 
 
 def is_homonym_nonprokaryote_side(taxid: int) -> bool:
-    """True when ``taxid`` is the non-prokaryote side of any prokaryote homonym pair (e.g. 55087, 210425)."""
+    """True when ``taxid`` is the non-prokaryote side of a prokaryote homonym pair.
+
+    Examples: NCBITaxon:55087 (Bacillus, stick insects), NCBITaxon:210425 (Proteus, salamanders).
+    """
     return taxid in load_or_raise().homonym_nonprokaryote

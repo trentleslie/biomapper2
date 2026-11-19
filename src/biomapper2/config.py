@@ -524,6 +524,18 @@ ICD10CM_WALKUP_ENABLED = os.getenv("BIOMAPPER2_ICD10CM_WALKUP_ENABLED", "1").str
 # missing or malformed snapshot fails Mapper init while the walk-up is enabled.
 ICD10CM_HIERARCHY_PATH: str | None = os.getenv("BIOMAPPER2_ICD10CM_HIERARCHY_PATH") or None
 
+# Kill switch for the 16S taxon-label annotator (see core/annotators/taxon_label.py). Default ON: an
+# OrganismTaxon job runs the taxon annotator INSTEAD of the generic hybrid annotator. Set
+# BIOMAPPER2_TAXON_LABEL_ANNOTATOR=0/false/no/off to restore the generic hybrid annotator for OrganismTaxon.
+# The taxon entity-type aliases and the NCBITaxon preference stay either way (reverting the aliases needs a
+# release). Read at call time, so tests monkeypatch it.
+TAXON_LABEL_ANNOTATOR_ENABLED = os.getenv("BIOMAPPER2_TAXON_LABEL_ANNOTATOR", "1").strip().lower() not in {
+    "0",
+    "false",
+    "no",
+    "off",
+}
+
 # Override for the packaged NCBI prokaryote taxonomy snapshot used by the 16S taxon annotator
 # (biomapper2/data/ncbi_taxonomy/prokaryote_taxa_<date>.tsv, read via importlib.resources). Point it at a
 # ``prokaryote_taxa_<date>.tsv``; its merged_/homonyms_ companions and ``.version`` sidecar sit next to it.
@@ -541,7 +553,7 @@ NCBI_TAXONOMY_SNAPSHOT_PATH: str | None = os.getenv("BIOMAPPER2_NCBI_TAXONOMY_SN
 # (e.g. RefMet is "RM", not "REFMET"). A wrong string is a silent no-op (the filter matches nothing).
 #
 # OrganismTaxon -> NCBITaxon: verified live 2026-11-19 against public Kestrel (KG 2.3.0) hybrid-search rows
-# (recorded in tests/fixtures/kestrel_hybrid_search_organism_taxon.json): "Prevotellaceae" ranks
+# (recorded in tests/fixtures/organism_taxon_hybrid_search_recorded.json): "Prevotellaceae" ranks
 # UMLS:C1080666 above NCBITaxon:171552, so without this the UMLS duplicate is committed (16S plan R4).
 CATEGORY_PREFERRED_NAMESPACES: dict[str, set[str]] = {
     "biolink:SmallMolecule": {"CHEBI", "HMDB", "RM"},

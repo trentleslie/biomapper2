@@ -168,11 +168,22 @@ class BaseAnnotator(ABC):  # Inherit from ABC
 
         A PARALLEL provenance channel to ``get_availability`` (same shape, never folded into it):
         availability records whether a source answered, source records which one. Default
-        ``not_queried`` — only the RefMet annotator, which can serve a row from a pinned local freeze
-        instead of the live endpoint, reports anything else. Kept as its own method so the engine can
-        accumulate a total per-row source map exactly the way it accumulates availability.
+        ``not_queried``. The RefMet annotator reports which source served the row (pinned local freeze or
+        live endpoint); the taxon-label annotator uses the same channel to carry the row's ROUTE or
+        abstain reason (``exact``, ``synonym``, ``abstain:host_or_organelle``, ...). Kept as its own method
+        so the engine can accumulate a total per-row source map exactly the way it accumulates availability.
         """
         return {self.slug: REFMET_SOURCE_NOT_QUERIED}
+
+    def kestrel_searched(self, entity: dict | pd.Series, name_field: str, cache: dict | None = None) -> bool | None:
+        """Whether this annotator actually issued its Kestrel search for this row.
+
+        ``None`` (the default) means "use the engine's rule": a Kestrel annotator searched every row with a
+        non-empty name. An annotator that abstains on some named rows before searching (the taxon-label
+        annotator) overrides this, so ``kestrel_endpoints_used`` never records a call the pipeline did not
+        make (R6).
+        """
+        return None
 
     @abstractmethod
     def get_annotations(
