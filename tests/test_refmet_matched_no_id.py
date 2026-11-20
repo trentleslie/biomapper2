@@ -247,6 +247,23 @@ def test_the_same_batch_twice_in_a_row_gives_the_same_result() -> None:
     assert "unavailable" not in {status for status, _, _ in first.values()}
 
 
+def test_a_new_annotator_does_not_inherit_a_deadline_left_armed_under_its_id() -> None:
+    # The deadline is keyed by id(self) in a context variable and CPython reuses ids. Seed the entry
+    # a collected instance would leave behind, directly under this instance's id, before __init__.
+    ann = MetabolomicsWorkbenchAnnotator.__new__(MetabolomicsWorkbenchAnnotator)
+    ann._batch_deadline = 0.0  # long past on the monotonic clock
+    assert ann._batch_deadline == 0.0
+
+    ann.__init__(freeze_mode="off", max_retries=0, sleep=lambda _s: None)  # type: ignore[misc]
+    session = _RefMet()
+    ann._session = session  # type: ignore[assignment]
+
+    assert ann._batch_deadline is None
+    result = ann._fetch_refmet_data("Riboflavin")
+    assert result.status == "voted"
+    assert len(session.calls) == 2  # the lookup reached the session: /match and /name
+
+
 # --------------------------------------------------------------------------------------------
 # The value reaches the certificate, the API response and the run summaries
 # --------------------------------------------------------------------------------------------
