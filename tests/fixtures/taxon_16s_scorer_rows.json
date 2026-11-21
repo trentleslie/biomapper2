@@ -1,0 +1,559 @@
+{
+ "note": "Recorded vault rows (16s_probe run_20261118T182527Z scored.tsv + kraken_raw.json + truth.json) with the vault scorer's stored top-1 category, and the NCBI E-utilities lineages the scorer needs. Used to port the scorer test-first.",
+ "rows": [
+  {
+   "id": "mock_gg138:000",
+   "form": "hybrid_clean",
+   "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+   "hit": {
+    "id": "NCBITaxon:54258",
+    "name": "Ignicoccus",
+    "equivalent_ids": [
+     "NCBITaxon:54258",
+     "UMLS:C1017923"
+    ]
+   },
+   "truth": {
+    "id": "mock_gg138:000",
+    "source": "mock_gg138",
+    "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Ignicoccus",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "54258"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "CORRECT"
+  },
+  {
+   "id": "mock_gg138:000",
+   "form": "hybrid_raw",
+   "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+   "hit": {
+    "id": "NCBITaxon:2738928",
+    "name": "Desulfuromonadaceae bacterium JGI_SA12_G09_067 JGI_SA12_G09_067",
+    "equivalent_ids": [
+     "NCBITaxon:2738928"
+    ]
+   },
+   "truth": {
+    "id": "mock_gg138:000",
+    "source": "mock_gg138",
+    "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Ignicoccus",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "54258"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "WRONG-TAXON"
+  },
+  {
+   "id": "mock_gg138:000",
+   "form": "text_clean",
+   "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+   "hit": {
+    "id": "NCBITaxon:54258",
+    "name": "Ignicoccus",
+    "equivalent_ids": [
+     "NCBITaxon:54258",
+     "UMLS:C1017923"
+    ]
+   },
+   "truth": {
+    "id": "mock_gg138:000",
+    "source": "mock_gg138",
+    "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Ignicoccus",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "54258"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "CORRECT"
+  },
+  {
+   "id": "mock_gg138:000",
+   "form": "text_raw",
+   "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+   "hit": null,
+   "truth": {
+    "id": "mock_gg138:000",
+    "source": "mock_gg138",
+    "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Desulfurococcales;f__Desulfurococcaceae;g__Ignicoccus",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Ignicoccus",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "54258"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "NO-HIT"
+  },
+  {
+   "id": "mock_gg138:001",
+   "form": "hybrid_raw",
+   "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Sulfolobales;f__Sulfolobaceae;g__Sulfolobus",
+   "hit": {
+    "id": "NCBITaxon:1974079",
+    "name": "Piscirickettsiaceae bacterium CG07_land_8_20_14_0_80_44_28",
+    "equivalent_ids": [
+     "NCBITaxon:1974079"
+    ]
+   },
+   "truth": {
+    "id": "mock_gg138:001",
+    "source": "mock_gg138",
+    "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Sulfolobales;f__Sulfolobaceae;g__Sulfolobus",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Sulfolobus",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "2284"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "WRONG-TAXON"
+  },
+  {
+   "id": "mock_gg138:001",
+   "form": "text_raw",
+   "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Sulfolobales;f__Sulfolobaceae;g__Sulfolobus",
+   "hit": null,
+   "truth": {
+    "id": "mock_gg138:001",
+    "source": "mock_gg138",
+    "label": "k__Archaea;p__Crenarchaeota;c__Thermoprotei;o__Sulfolobales;f__Sulfolobaceae;g__Sulfolobus",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Sulfolobus",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "2284"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "NO-HIT"
+  },
+  {
+   "id": "mock_gg138:007",
+   "form": "hybrid_raw",
+   "label": "k__Archaea;p__Euryarchaeota;c__Thermococci;o__Thermococcales;f__Thermococcaceae;g__Pyrococcus",
+   "hit": {
+    "id": "UMLS:C1036322",
+    "name": "Palaeococcus <Thermococcaceae>",
+    "equivalent_ids": [
+     "UMLS:C1036322"
+    ]
+   },
+   "truth": {
+    "id": "mock_gg138:007",
+    "source": "mock_gg138",
+    "label": "k__Archaea;p__Euryarchaeota;c__Thermococci;o__Thermococcales;f__Thermococcaceae;g__Pyrococcus",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Pyrococcus",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "2260"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "DUP/NON-NCBI"
+  },
+  {
+   "id": "mock_gg138:009",
+   "form": "hybrid_raw",
+   "label": "k__Bacteria;p__Acidobacteria;c__Acidobacteriia;o__Acidobacteriales;f__Acidobacteriaceae;g__Acidobacterium",
+   "hit": {
+    "id": "NCBITaxon:204434",
+    "name": "Acidobacteriaceae",
+    "equivalent_ids": [
+     "NCBITaxon:204434",
+     "UMLS:C1222994"
+    ]
+   },
+   "truth": {
+    "id": "mock_gg138:009",
+    "source": "mock_gg138",
+    "label": "k__Bacteria;p__Acidobacteria;c__Acidobacteriia;o__Acidobacteriales;f__Acidobacteriaceae;g__Acidobacterium",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Acidobacterium",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "33973"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "WRONG-RANK"
+  },
+  {
+   "id": "mock_gg138:010",
+   "form": "hybrid_raw",
+   "label": "k__Bacteria;p__Actinobacteria;c__Actinobacteria;o__Actinomycetales;f__Actinomycetaceae;g__Actinomyces",
+   "hit": {
+    "id": "NCBITaxon:201174",
+    "name": "Actinomycetota (actinobacteria)",
+    "equivalent_ids": [
+     "NCBITaxon:201174",
+     "UMLS:C1456432"
+    ]
+   },
+   "truth": {
+    "id": "mock_gg138:010",
+    "source": "mock_gg138",
+    "label": "k__Bacteria;p__Actinobacteria;c__Actinobacteria;o__Actinomycetales;f__Actinomycetaceae;g__Actinomyces",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Actinomyces",
+    "cat": "a",
+    "rule": "A",
+    "targets": [
+     "1654"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "WRONG-RANK"
+  },
+  {
+   "id": "mock_silva123:029",
+   "form": "hybrid_clean",
+   "label": "D_0__Bacteria;D_1__Bacteroidetes;D_2__Bacteroidia;D_3__Bacteroidales;D_4__Prevotellaceae;D_5__Prevotella 9",
+   "hit": {
+    "id": "NCBITaxon:838",
+    "name": "Prevotella",
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL4296592",
+     "CHV:0000025045",
+     "MESH:D018720",
+     "NCBITaxon:838",
+     "NCIT:C86660",
+     "UMLS:C0242946"
+    ]
+   },
+   "truth": {
+    "id": "mock_silva123:029",
+    "source": "mock_silva123",
+    "label": "D_0__Bacteria;D_1__Bacteroidetes;D_2__Bacteroidia;D_3__Bacteroidales;D_4__Prevotellaceae;D_5__Prevotella 9",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Prevotella 9",
+    "cat": "b",
+    "rule": "B2",
+    "targets": [
+     "838"
+    ],
+    "target_rank": "genus",
+    "superset_genus": "Prevotella"
+   },
+   "expected": "CORRECT-PARENT"
+  },
+  {
+   "id": "mock_silva123:082",
+   "form": "hybrid_clean",
+   "label": "D_0__Bacteria;D_1__Firmicutes;D_2__Erysipelotrichia;D_3__Erysipelotrichales;D_4__Erysipelotrichaceae;D_5__Erysipelatoclostridium;Ambiguous_taxa",
+   "hit": {
+    "id": "NCBITaxon:1505663",
+    "name": "Erysipelatoclostridium",
+    "equivalent_ids": [
+     "NCBITaxon:1505663",
+     "UMLS:C3946033"
+    ]
+   },
+   "truth": {
+    "id": "mock_silva123:082",
+    "source": "mock_silva123",
+    "label": "D_0__Bacteria;D_1__Firmicutes;D_2__Erysipelotrichia;D_3__Erysipelotrichales;D_4__Erysipelotrichaceae;D_5__Erysipelatoclostridium;Ambiguous_taxa",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Erysipelatoclostridium",
+    "cat": "a",
+    "rule": "A'",
+    "targets": [
+     "3025755"
+    ],
+    "target_rank": "genus"
+   },
+   "expected": "CORRECT-STALE-ID"
+  },
+  {
+   "id": "mock_silva123:111",
+   "form": "hybrid_clean_top5_member",
+   "label": "D_0__Bacteria;D_1__Proteobacteria;D_2__Gammaproteobacteria;D_3__Enterobacteriales;D_4__Enterobacteriaceae;D_5__Escherichia-Shigella",
+   "hit": {
+    "id": "NCBITaxon:620",
+    "name": "Shigella",
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL614594",
+     "CHV:0000011294",
+     "MESH:D012760",
+     "NCBITaxon:620",
+     "NCIT:C76381",
+     "UMLS:C0036953"
+    ]
+   },
+   "truth": {
+    "id": "mock_silva123:111",
+    "source": "mock_silva123",
+    "label": "D_0__Bacteria;D_1__Proteobacteria;D_2__Gammaproteobacteria;D_3__Enterobacteriales;D_4__Enterobacteriaceae;D_5__Escherichia-Shigella",
+    "euk": false,
+    "organelle": false,
+    "deepest": "genus",
+    "taxon_name": "Escherichia-Shigella",
+    "cat": "b",
+    "rule": "B1",
+    "targets": [
+     "543"
+    ],
+    "components": [
+     "561",
+     "620"
+    ],
+    "target_rank": "family"
+   },
+   "expected": "PARTIAL-COMPONENT"
+  }
+ ],
+ "lineage": {
+  "3025755": {
+   "taxid": "3025755",
+   "name": "Thomasclavelia",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2",
+    "1783272",
+    "1239",
+    "526524",
+    "526525",
+    "2810280"
+   ]
+  },
+  "1505663": {
+   "taxid": "3025755",
+   "name": "Thomasclavelia",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2",
+    "1783272",
+    "1239",
+    "526524",
+    "526525",
+    "2810280"
+   ]
+  },
+  "1654": {
+   "taxid": "1654",
+   "name": "Actinomyces",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2",
+    "1783272",
+    "201174",
+    "1760",
+    "2037",
+    "2049"
+   ]
+  },
+  "1974079": {
+   "taxid": "1974079",
+   "name": "Piscirickettsiaceae bacterium CG07_land_8_20_14_0_80_44_28",
+   "rank": "species",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "1224",
+    "1236",
+    "72273",
+    "135616",
+    "284244"
+   ]
+  },
+  "201174": {
+   "taxid": "201174",
+   "name": "Actinomycetota",
+   "rank": "phylum",
+   "lineage": [
+    "131567",
+    "2",
+    "1783272"
+   ]
+  },
+  "204434": {
+   "taxid": "204434",
+   "name": "Acidobacteriaceae",
+   "rank": "family",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "57723",
+    "204432",
+    "204433"
+   ]
+  },
+  "2260": {
+   "taxid": "2260",
+   "name": "Pyrococcus",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2157",
+    "3366610",
+    "28890",
+    "183968",
+    "2258",
+    "2259"
+   ]
+  },
+  "2284": {
+   "taxid": "2284",
+   "name": "Sulfolobus",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2157",
+    "1783275",
+    "28889",
+    "183924",
+    "2281",
+    "118883"
+   ]
+  },
+  "2738928": {
+   "taxid": "2738928",
+   "name": "Desulfuromonadaceae bacterium JGI_SA12_G09_067 JGI_SA12_G09_067",
+   "rank": "species",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "200940",
+    "3031651",
+    "69541",
+    "213421",
+    "1801894"
+   ]
+  },
+  "33973": {
+   "taxid": "33973",
+   "name": "Acidobacterium",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "57723",
+    "204432",
+    "204433",
+    "204434"
+   ]
+  },
+  "54258": {
+   "taxid": "54258",
+   "name": "Ignicoccus",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2157",
+    "1783275",
+    "28889",
+    "183924",
+    "114380",
+    "2272"
+   ]
+  },
+  "838": {
+   "taxid": "838",
+   "name": "Prevotella",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "1783270",
+    "68336",
+    "976",
+    "200643",
+    "171549",
+    "171552"
+   ]
+  },
+  "543": {
+   "taxid": "543",
+   "name": "Enterobacteriaceae",
+   "rank": "family",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "1224",
+    "1236",
+    "91347"
+   ]
+  },
+  "561": {
+   "taxid": "561",
+   "name": "Escherichia",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "1224",
+    "1236",
+    "91347",
+    "543"
+   ]
+  },
+  "620": {
+   "taxid": "620",
+   "name": "Shigella",
+   "rank": "genus",
+   "lineage": [
+    "131567",
+    "2",
+    "3379134",
+    "1224",
+    "1236",
+    "91347",
+    "543"
+   ]
+  }
+ }
+}

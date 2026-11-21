@@ -1,0 +1,2505 @@
+{
+ "endpoint": "hybrid-search",
+ "request": {
+  "search_text": [
+   "Prevotellaceae",
+   "Bacillus",
+   "Proteus",
+   "Dorea",
+   "Homo sapiens",
+   "Bacilus",
+   "Firmicutes"
+  ],
+  "limit": 20,
+  "category": "biolink:OrganismTaxon"
+ },
+ "recorded": "2026-11-19T16:43:46Z",
+ "kestrel": "https://kestrel.krakenkg.com/api",
+ "kg_version": "2.3.0",
+ "note": "Recorded live (U2, 16S taxon plan). Rows trimmed to the fields the annotators consume; order and scores unchanged. No host headers or keys captured.",
+ "response": {
+  "Bacillus": [
+   {
+    "id": "NCBITaxon:1386",
+    "name": "Bacillus (Bacillus rRNA group 1)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 3.494362125745231,
+    "prefixes": [
+     "CHEMBL.TARGET",
+     "NDDF",
+     "NCBITaxon",
+     "UMLS",
+     "CHV",
+     "MESH",
+     "NCIT"
+    ],
+    "synonyms": [
+     "Bacillus",
+     "Bacillus <firmicutes>",
+     "Bacillus <walking sticks>",
+     "Genus Bacillus",
+     "bacillus"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL612428",
+     "CHV:0000001652",
+     "CHV:0000007186",
+     "MESH:D001407",
+     "NCBITaxon:1386",
+     "NCBITaxon:55087",
+     "NCIT:C76202",
+     "NDDF:007010",
+     "UMLS:C0004587"
+    ]
+   },
+   {
+    "id": "CHV:0000057567",
+    "name": "Bacillus species",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.9635385991823573,
+    "prefixes": [
+     "CHV",
+     "UMLS"
+    ],
+    "synonyms": [
+     "bacillus species"
+    ],
+    "equivalent_ids": [
+     "CHV:0000057567",
+     "UMLS:C1299078"
+    ]
+   },
+   {
+    "id": "CHEMBL.TARGET:CHEMBL614956",
+    "name": "bacillus sp",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.922629113461961,
+    "prefixes": [
+     "CHV",
+     "CHEMBL.TARGET"
+    ],
+    "synonyms": [
+     "Bacillus sp."
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL614956",
+     "CHV:0000053892"
+    ]
+   },
+   {
+    "id": "UMLS:C5234927",
+    "name": "Bacillus bacterium",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.453488308795613,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "UMLS:C5234927"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1384480",
+    "name": "Bacillus sp. PG_07",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4349743363249234,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1384480"
+    ]
+   },
+   {
+    "id": "NCBITaxon:911610",
+    "name": "Bacillus sp. 737(2010)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4335220327763305,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:911610"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1355272",
+    "name": "Bacillus sp. 17849",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4326169253050933,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1355272"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1041313",
+    "name": "Bacillus sp. ABE(2011)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4303098981207443,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1041313"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1196781",
+    "name": "Bacillus sp. BA",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.429945020666177,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1196781"
+    ]
+   },
+   {
+    "id": "NCBITaxon:934616",
+    "name": "Bacillus sp. 08B(2010)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4295847672346516,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:934616"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1264154",
+    "name": "Bacillus sp. 2004",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4284038397915864,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1264154"
+    ]
+   },
+   {
+    "id": "NCBITaxon:767625",
+    "name": "Bacillus sp. CE(2010)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4280071946982,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:767625"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1284225",
+    "name": "Bacillus sp. 45(2013)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4273965834477,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1284225"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1478034",
+    "name": "Bacillus sp. SCI",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.427314071659916,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1478034"
+    ]
+   },
+   {
+    "id": "NCBITaxon:767671",
+    "name": "Bacillus sp. RE(2010)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4265365151619345,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:767671"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1355261",
+    "name": "Bacillus sp. 17826",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.425529739236026,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1355261"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1355260",
+    "name": "Bacillus sp. 17823",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4253736634453054,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1355260"
+    ]
+   },
+   {
+    "id": "NCBITaxon:934620",
+    "name": "Bacillus sp. 10B(2010)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4249564804833437,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:934620"
+    ]
+   },
+   {
+    "id": "NCBITaxon:767614",
+    "name": "Bacillus sp. ZE(2010)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.4248844778388365,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:767614"
+    ]
+   },
+   {
+    "id": "NCBITaxon:932685",
+    "name": "Bacillus sp. M(2010)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.42483577546628,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:932685"
+    ]
+   }
+  ],
+  "Bacilus": [
+   {
+    "id": "NCBITaxon:93111",
+    "name": "Bacidia",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8724979932575421,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:93111",
+     "UMLS:C1087250"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1239",
+    "name": "Bacillota (firmicutes)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8664497585794932,
+    "prefixes": [
+     "NCIT",
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Bacillota",
+     "Firmicutes"
+    ],
+    "equivalent_ids": [
+     "MESH:D000068536",
+     "NCBITaxon:1239",
+     "NCIT:C76197",
+     "UMLS:C1254144"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1783272",
+    "name": "Bacillati (Terrabacteria group)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8092003662163365,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": [
+     "Bacillati",
+     "Terrabacteria group"
+    ],
+    "equivalent_ids": [
+     "NCBITaxon:1783272"
+    ]
+   },
+   {
+    "id": "NCBITaxon:91061",
+    "name": "Bacilli",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8039315956133494,
+    "prefixes": [
+     "CHV",
+     "NCBITaxon"
+    ],
+    "synonyms": [
+     "bacilli"
+    ],
+    "equivalent_ids": [
+     "CHV:0000054268",
+     "NCBITaxon:91061"
+    ]
+   },
+   {
+    "id": "NCBITaxon:154193",
+    "name": "Bacanius",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7976829496280479,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:154193",
+     "UMLS:C1192917"
+    ]
+   },
+   {
+    "id": "UMLS:C0004585",
+    "name": "Bacilan",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7972793794221338,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "UMLS:C0004585"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1386",
+    "name": "Bacillus (Bacillus rRNA group 1)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7928320455229528,
+    "prefixes": [
+     "CHEMBL.TARGET",
+     "NDDF",
+     "NCBITaxon",
+     "UMLS",
+     "CHV",
+     "MESH",
+     "NCIT"
+    ],
+    "synonyms": [
+     "Bacillus",
+     "Bacillus <firmicutes>",
+     "Bacillus <walking sticks>",
+     "Genus Bacillus",
+     "bacillus"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL612428",
+     "CHV:0000001652",
+     "CHV:0000007186",
+     "MESH:D001407",
+     "NCBITaxon:1386",
+     "NCBITaxon:55087",
+     "NCIT:C76202",
+     "NDDF:007010",
+     "UMLS:C0004587"
+    ]
+   },
+   {
+    "id": "NCBITaxon:55086",
+    "name": "Bacillidae",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7827953081643867,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:55086",
+     "UMLS:C1018475"
+    ]
+   },
+   {
+    "id": "NCBITaxon:161813",
+    "name": "Bacidina",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7824340696270212,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:161813",
+     "UMLS:C1194688"
+    ]
+   },
+   {
+    "id": "NCBITaxon:111553",
+    "name": "Bactrurus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7804182032459238,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:111553",
+     "UMLS:C1052664"
+    ]
+   },
+   {
+    "id": "NCBITaxon:225255",
+    "name": "Bodilus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7690944852096601,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:225255",
+     "UMLS:C1487024"
+    ]
+   },
+   {
+    "id": "NCBITaxon:3002",
+    "name": "Bacillaria",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7659056429404499,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:3002",
+     "UMLS:C0996387"
+    ]
+   },
+   {
+    "id": "NCBITaxon:523864",
+    "name": "Bacilloidea",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7588708674319319,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:523864",
+     "UMLS:C2313452"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1844915",
+    "name": "Bactria",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.757963850025051,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1844915",
+     "UMLS:C4387333"
+    ]
+   },
+   {
+    "id": "NCBITaxon:581390",
+    "name": "Bactra",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7483823729190647,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:581390",
+     "UMLS:C2769541"
+    ]
+   },
+   {
+    "id": "NCBITaxon:154192",
+    "name": "Bacaniini",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7410008150409106,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:154192",
+     "UMLS:C1192916"
+    ]
+   },
+   {
+    "id": "NCBITaxon:283112",
+    "name": "Baccaurea",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.736440644832076,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:283112",
+     "UMLS:C1667532"
+    ]
+   },
+   {
+    "id": "NCBITaxon:706711",
+    "name": "Bilusius",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7363042672766004,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:706711"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1487342",
+    "name": "Mucilopilus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7321555544230801,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1487342",
+     "UMLS:C3934143"
+    ]
+   },
+   {
+    "id": "NCBITaxon:154466",
+    "name": "Bactris",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7299347533429257,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:154466",
+     "UMLS:C1073735"
+    ]
+   }
+  ],
+  "Dorea": [
+   {
+    "id": "NCBITaxon:189330",
+    "name": "Dorea",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 3.465240610811498,
+    "prefixes": [
+     "NCIT",
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:189330",
+     "NCIT:C122287",
+     "UMLS:C1212549"
+    ]
+   },
+   {
+    "id": "NCBITaxon:88431",
+    "name": "Dorea longicatena",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.4320261096938736,
+    "prefixes": [
+     "UNII",
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": [
+     "DOREA LONGICATENA"
+    ],
+    "equivalent_ids": [
+     "MESH:C000650770",
+     "NCBITaxon:88431",
+     "UMLS:C1187729",
+     "UNII:32NLP37DQF"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2627917",
+    "name": "unclassified Dorea",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.121392522688276,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2627917"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2981788",
+    "name": "Dorea ammoniilytica",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.11710149533714,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2981788",
+     "UMLS:C5746247"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2763040",
+    "name": "Dorea hominis",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.0736076894820041,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2763040",
+     "UMLS:C5858656"
+    ]
+   },
+   {
+    "id": "NCBITaxon:658665",
+    "name": "Dorea sp. D27",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.0646246421896137,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:658665"
+    ]
+   },
+   {
+    "id": "NCBITaxon:163242",
+    "name": "Doru",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.772605877626499,
+    "prefixes": [
+     "NCBITaxon",
+     "CHEMBL.TARGET",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL2366761",
+     "NCBITaxon:163242",
+     "UMLS:C1077873"
+    ]
+   },
+   {
+    "id": "NCBITaxon:522811",
+    "name": "Dolbina",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7643476583835678,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:522811",
+     "UMLS:C2634347"
+    ]
+   },
+   {
+    "id": "NCBITaxon:119250",
+    "name": "Dolba",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7524456938345735,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:119250",
+     "UMLS:C1089514"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1556106",
+    "name": "Dordura",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7122851590988815,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1556106",
+     "UMLS:C3977092"
+    ]
+   },
+   {
+    "id": "NCBITaxon:523146",
+    "name": "Dolbogene",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7059706035296631,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:523146",
+     "UMLS:C2762579"
+    ]
+   },
+   {
+    "id": "UMLS:C1641256",
+    "name": "Dobellina",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6909418205578213,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "UMLS:C1641256"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1469810",
+    "name": "Dopasia",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6872475306763778,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1469810",
+     "UMLS:C3800105"
+    ]
+   },
+   {
+    "id": "UMLS:C1462047",
+    "name": "Genus Doryfera",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6834558226687312,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": [
+     "Doryfera"
+    ],
+    "equivalent_ids": [
+     "UMLS:C1462047"
+    ]
+   },
+   {
+    "id": "NCBITaxon:686392",
+    "name": "Doryssa",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6793027687501652,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:686392",
+     "UMLS:C2803135"
+    ]
+   },
+   {
+    "id": "NCBITaxon:414805",
+    "name": "Didea",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6781049371916585,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:414805",
+     "UMLS:C2615549"
+    ]
+   },
+   {
+    "id": "NCBITaxon:372049",
+    "name": "Didymocrea",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6758733587834785,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:372049",
+     "UMLS:C1925684"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2706829",
+    "name": "Doxander",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6736987036269331,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2706829",
+     "UMLS:C5366717",
+     "UMLS:C5988025"
+    ]
+   },
+   {
+    "id": "NCBITaxon:214664",
+    "name": "Doryfera",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6735895882853984,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:214664"
+    ]
+   },
+   {
+    "id": "NCBITaxon:216331",
+    "name": "Doridina",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6732758162051485,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:216331",
+     "UMLS:C1228814"
+    ]
+   }
+  ],
+  "Firmicutes": [
+   {
+    "id": "NCBITaxon:1239",
+    "name": "Bacillota (firmicutes)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 3.491096772137763,
+    "prefixes": [
+     "NCIT",
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Bacillota",
+     "Firmicutes"
+    ],
+    "equivalent_ids": [
+     "MESH:D000068536",
+     "NCBITaxon:1239",
+     "NCIT:C76197",
+     "UMLS:C1254144"
+    ]
+   },
+   {
+    "id": "UMLS:C0315061",
+    "name": "Centipeda <firmicutes>",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.1604483811956388,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": [
+     "Centipeda <firmicute>"
+    ],
+    "equivalent_ids": [
+     "UMLS:C0315061"
+    ]
+   },
+   {
+    "id": "UMLS:C4611966",
+    "name": "Paludicola <firmicutes>",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.074862298286558,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "UMLS:C4611966"
+    ]
+   },
+   {
+    "id": "UMLS:C1018786",
+    "name": "Schwartzia <firmicutes>",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.0020032575115547,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": [
+     "Schwartzia <Bacteria>"
+    ],
+    "equivalent_ids": [
+     "UMLS:C1018786"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1966108",
+    "name": "Firmothrips",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7861893688436944,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1966108"
+    ]
+   },
+   {
+    "id": "NCBITaxon:190242",
+    "name": "Firmiana",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7313704198991604,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:190242",
+     "UMLS:C1213264"
+    ]
+   },
+   {
+    "id": "NCBITaxon:635253",
+    "name": "Firmicus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7254397948526494,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:635253"
+    ]
+   },
+   {
+    "id": "NCBITaxon:180826",
+    "name": "Firmicutes str. C33",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7160574719441974,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:180826"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2516308",
+    "name": "Thelypteris firma",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7157309660841612,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Amauropelta firma"
+    ],
+    "equivalent_ids": [
+     "NCBITaxon:2516308",
+     "UMLS:C5250192"
+    ]
+   },
+   {
+    "id": "NCBITaxon:180823",
+    "name": "Firmicutes str. C34",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7056005741226407,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:180823"
+    ]
+   },
+   {
+    "id": "NCBITaxon:377678",
+    "name": "Firmitermes",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.7014542667081264,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:377678"
+    ]
+   },
+   {
+    "id": "NCBITaxon:187279",
+    "name": "Firmicutes str. ikaite c10",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6894978042193549,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:187279"
+    ]
+   },
+   {
+    "id": "NCBITaxon:180827",
+    "name": "Firmicutes str. C30",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6807245312029734,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:180827"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2008579",
+    "name": "Fissidens firmus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6560453799397147,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2008579",
+     "UMLS:C4594232"
+    ]
+   },
+   {
+    "id": "NCBITaxon:3293862",
+    "name": "Lissodendoryx firma",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6550736341364529,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:3293862"
+    ]
+   },
+   {
+    "id": "NCBITaxon:180825",
+    "name": "Firmicutes str. C38",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6529923433496871,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:180825"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1199025",
+    "name": "Pleioluma firma",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6238874622017444,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1199025",
+     "UMLS:C3574837"
+    ]
+   },
+   {
+    "id": "NCBITaxon:82202",
+    "name": "Centipeda",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6211280347988833,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": [
+     "Centipeda <eudicots>",
+     "Centipeda <firmicutes>"
+    ],
+    "equivalent_ids": [
+     "NCBITaxon:82202",
+     "NCBITaxon:82283"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2047426",
+    "name": "Schwartzia sp. (in: firmicutes)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6195964478972251,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2047426"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2916605",
+    "name": "Laelius firmipennis",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6146431570334807,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2916605",
+     "UMLS:C5892608"
+    ]
+   }
+  ],
+  "Homo sapiens": [
+   {
+    "id": "NCBITaxon:9606",
+    "name": "Homo sapiens (human)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 5.091955253812515,
+    "prefixes": [
+     "NCBITaxon",
+     "MESH",
+     "CHEMBL.TARGET"
+    ],
+    "synonyms": [
+     "Homo sapiens",
+     "Humans"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL372",
+     "MESH:D006801",
+     "NCBITaxon:9606"
+    ]
+   },
+   {
+    "id": "CHV:0000043634",
+    "name": "homo sapiens sapiens",
+    "categories": [
+     "biolink:Human",
+     "biolink:OrganismTaxon"
+    ],
+    "score": 3.1495457518735352,
+    "prefixes": [
+     "CHV",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Homo sapiens sapiens"
+    ],
+    "equivalent_ids": [
+     "CHV:0000043634",
+     "UMLS:C0682515"
+    ]
+   },
+   {
+    "id": "NCBITaxon:63221",
+    "name": "Homo sapiens neanderthalensis (Neandertal)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.4653302480399977,
+    "prefixes": [
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Homo sapiens neanderthalensis",
+     "Neanderthals"
+    ],
+    "equivalent_ids": [
+     "MESH:D059125",
+     "NCBITaxon:63221",
+     "UMLS:C3178755"
+    ]
+   },
+   {
+    "id": "NCBITaxon:9605",
+    "name": "Homo (humans)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.3171696660915753,
+    "prefixes": [
+     "CHV",
+     "NCBITaxon"
+    ],
+    "synonyms": [
+     "Homo",
+     "homo"
+    ],
+    "equivalent_ids": [
+     "CHV:0000053984",
+     "NCBITaxon:9605"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1573476",
+    "name": "Homo sapiens/Rattus norvegicus xenograft",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.9873637480885107,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1573476"
+    ]
+   },
+   {
+    "id": "NCBITaxon:399796",
+    "name": "Macrobiotus sapiens",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.9156938882104173,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:399796",
+     "UMLS:C2271139"
+    ]
+   },
+   {
+    "id": "NCBITaxon:270523",
+    "name": "Tetragonula sapiens",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.9027817974038712,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:270523",
+     "UMLS:C1477136"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2813599",
+    "name": "Homo sp.",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8874780845553136,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2813599"
+    ]
+   },
+   {
+    "id": "CHV:0000006299",
+    "name": "human",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8284973467303498,
+    "prefixes": [
+     "CHV",
+     "NCIT"
+    ],
+    "synonyms": [
+     "Human"
+    ],
+    "equivalent_ids": [
+     "CHV:0000006299",
+     "CHV:0000015916",
+     "NCIT:C14225"
+    ]
+   },
+   {
+    "id": "NCBITaxon:9604",
+    "name": "Hominidae (great apes)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8260985760058481,
+    "prefixes": [
+     "NCIT",
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Hominidae"
+    ],
+    "equivalent_ids": [
+     "MESH:D015186",
+     "NCBITaxon:9604",
+     "NCIT:C79740",
+     "UMLS:C0019874"
+    ]
+   },
+   {
+    "id": "UMLS:C3323814",
+    "name": "Alticus saliens",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6474768008014462,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "UMLS:C3323814"
+    ]
+   },
+   {
+    "id": "NCBITaxon:879682",
+    "name": "Alticus saliens (leaping blenny)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6433071981781378,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": [
+     "Alticus saliens"
+    ],
+    "equivalent_ids": [
+     "NCBITaxon:879682"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2610230",
+    "name": "Homoeolabus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6094375631942917,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2610230",
+     "UMLS:C5304892"
+    ]
+   },
+   {
+    "id": "NCBITaxon:299296",
+    "name": "Homoeocerus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6083071747775022,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:299296",
+     "UMLS:C1648347"
+    ]
+   },
+   {
+    "id": "NCBITaxon:9443",
+    "name": "Primates (primates)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6008248811169364,
+    "prefixes": [
+     "NCBITaxon",
+     "MESH",
+     "CHEMBL.TARGET",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Primates"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL4888463",
+     "MESH:D011323",
+     "NCBITaxon:9443",
+     "UMLS:C0033147"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1954493",
+    "name": "Homoeogenus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.6000830106087943,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1954493"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2923065",
+    "name": "Homoeocerus sp.",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.5861112547530348,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2923065"
+    ]
+   },
+   {
+    "id": "NCBITaxon:207598",
+    "name": "Homininae",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.5772397404491667,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:207598",
+     "UMLS:C1224354"
+    ]
+   },
+   {
+    "id": "NCBITaxon:706059",
+    "name": "Homodes",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.5759565514496644,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:706059",
+     "UMLS:C3314434"
+    ]
+   },
+   {
+    "id": "PSY:03390",
+    "name": "Apes",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.5711978488048944,
+    "prefixes": [
+     "PSY"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "PSY:03390"
+    ]
+   }
+  ],
+  "Prevotellaceae": [
+   {
+    "id": "UMLS:C1080666",
+    "name": "Family Prevotellaceae",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 4.96251853750025,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": [
+     "Prevotellaceae"
+    ],
+    "equivalent_ids": [
+     "UMLS:C1080666"
+    ]
+   },
+   {
+    "id": "NCBITaxon:171552",
+    "name": "Prevotellaceae",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 3.4074297586022517,
+    "prefixes": [
+     "NCIT",
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:171552",
+     "NCIT:C85956"
+    ]
+   },
+   {
+    "id": "NCBITaxon:224765",
+    "name": "unclassified Prevotellaceae",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.8483521511771883,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:224765"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2049047",
+    "name": "Prevotellaceae bacterium",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.3166552539052092,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2049047"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2840486",
+    "name": "Prevotellaceae incertae sedis",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.28063770061118,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2840486",
+     "UMLS:C5611637"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1285936",
+    "name": "Prevotellaceae bacterium DNF00733",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.252877089483873,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1285936"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952520",
+    "name": "Prevotellaceae bacterium UBA6867",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.241623178236211,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952520"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952483",
+    "name": "Prevotellaceae bacterium UBA3646",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2330060410627979,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952483"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952451",
+    "name": "Prevotellaceae bacterium UBA1079",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2328335710085652,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952451"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952521",
+    "name": "Prevotellaceae bacterium UBA6974",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2325425578181715,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952521"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952505",
+    "name": "Prevotellaceae bacterium UBA4688",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.231391236133023,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952505"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952516",
+    "name": "Prevotellaceae bacterium UBA6848",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2282520649579007,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952516"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952485",
+    "name": "Prevotellaceae bacterium UBA3779",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.225228674515564,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952485"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952460",
+    "name": "Prevotellaceae bacterium UBA1746",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.219590128808005,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952460"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952462",
+    "name": "Prevotellaceae bacterium UBA1787",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2178614648173582,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952462"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952519",
+    "name": "Prevotellaceae bacterium UBA6858",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.217725266320492,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952519"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952450",
+    "name": "Prevotellaceae bacterium UBA1075",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2127678332017582,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952450"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1520830",
+    "name": "Prevotellaceae bacterium HUN156",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2111221614168737,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1520830"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952535",
+    "name": "Prevotellaceae bacterium UBA766",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2101632471320598,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952535"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1952501",
+    "name": "Prevotellaceae bacterium UBA4374",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2012834414289761,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1952501"
+    ]
+   }
+  ],
+  "Proteus": [
+   {
+    "id": "NCBITaxon:210425",
+    "name": "Proteus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 5.020565906896684,
+    "prefixes": [
+     "CHEMBL.TARGET",
+     "NCBITaxon",
+     "UMLS",
+     "CHV",
+     "MESH",
+     "NCIT"
+    ],
+    "synonyms": [
+     "Proteus <Proteidae>",
+     "Proteus <enterobacteria>",
+     "Proteus <salamanders>",
+     "Proteus mudpuppy",
+     "Proteus, salamanders",
+     "proteus"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL612536",
+     "CHV:0000010253",
+     "MESH:C000709414",
+     "MESH:D011511",
+     "NCBITaxon:210425",
+     "NCBITaxon:583",
+     "NCIT:C76374",
+     "UMLS:C0033697",
+     "UMLS:C1504661"
+    ]
+   },
+   {
+    "id": "NCBITaxon:229037",
+    "name": "Proteus sp. (in: enterobacteria)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 3.093475927491033,
+    "prefixes": [
+     "UMLS",
+     "LOINC",
+     "CHEMBL.TARGET",
+     "NCBITaxon"
+    ],
+    "synonyms": [
+     "Proteus sp",
+     "Proteus sp."
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL613019",
+     "LOINC:LP105048-5",
+     "NCBITaxon:229037",
+     "UMLS:C1663131"
+    ]
+   },
+   {
+    "id": "NCBITaxon:763938",
+    "name": "Protesilaus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.441866574927812,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:763938",
+     "UMLS:C3007538"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2610691",
+    "name": "Prosayleus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 2.411191124201539,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2610691"
+    ]
+   },
+   {
+    "id": "NCBITaxon:84631",
+    "name": "Proteus inconstans",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.5616094426357918,
+    "prefixes": [
+     "CHEMBL.TARGET",
+     "NCBITaxon",
+     "UMLS",
+     "MESH",
+     "NCIT",
+     "UNII",
+     "RXNORM"
+    ],
+    "synonyms": [
+     "PROTEUS INCONSTANS"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL612338",
+     "MESH:C000642590",
+     "NCBITaxon:84631",
+     "NCIT:C84582",
+     "RXNORM:1310846",
+     "UMLS:C0445746",
+     "UNII:UTX536WN6N"
+    ]
+   },
+   {
+    "id": "NCBITaxon:585",
+    "name": "Proteus vulgaris",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.4918094520089664,
+    "prefixes": [
+     "CHEMBL.TARGET",
+     "NCBITaxon",
+     "UMLS",
+     "CHV",
+     "MESH",
+     "NCIT",
+     "UNII",
+     "LOINC",
+     "RXNORM"
+    ],
+    "synonyms": [
+     "PROTEUS VULGARIS",
+     "proteus vulgaris"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL614450",
+     "CHV:0000010256",
+     "LOINC:LP434647-6",
+     "MESH:D011514",
+     "NCBITaxon:585",
+     "NCIT:C85250",
+     "RXNORM:1316073",
+     "UMLS:C0033702",
+     "UNII:11T9HCO30O"
+    ]
+   },
+   {
+    "id": "NCBITaxon:584",
+    "name": "Proteus mirabilis",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.4782119303990566,
+    "prefixes": [
+     "CHEMBL.TARGET",
+     "NDDF",
+     "NCBITaxon",
+     "UMLS",
+     "CHV",
+     "MESH",
+     "NCIT",
+     "UNII",
+     "LOINC",
+     "RXNORM"
+    ],
+    "synonyms": [
+     "PROTEUS MIRABILIS",
+     "proteus mirabilis"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL614444",
+     "CHV:0000010255",
+     "LOINC:LP102545-3",
+     "MESH:D011513",
+     "NCBITaxon:584",
+     "NCIT:C86019",
+     "NDDF:007564",
+     "RXNORM:1310903",
+     "UMLS:C0033701",
+     "UNII:C177VR41DV"
+    ]
+   },
+   {
+    "id": "CHV:0000057535",
+    "name": "Proteus species",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.4181090709718722,
+    "prefixes": [
+     "CHV",
+     "UMLS"
+    ],
+    "synonyms": [
+     "proteus species"
+    ],
+    "equivalent_ids": [
+     "CHV:0000057535",
+     "UMLS:C1295804"
+    ]
+   },
+   {
+    "id": "NCBITaxon:626774",
+    "name": "Proteus terrae subsp. cibarius",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.4085685528183025,
+    "prefixes": [
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": [
+     "Proteus cibarius"
+    ],
+    "equivalent_ids": [
+     "MESH:C000642593",
+     "NCBITaxon:626774",
+     "UMLS:C2671786"
+    ]
+   },
+   {
+    "id": "NCBITaxon:221568",
+    "name": "Proteus anguinus (olm)",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.3832822439639538,
+    "prefixes": [
+     "NCBITaxon"
+    ],
+    "synonyms": [
+     "Proteus anguinus"
+    ],
+    "equivalent_ids": [
+     "NCBITaxon:221568"
+    ]
+   },
+   {
+    "id": "NCBITaxon:102862",
+    "name": "Proteus penneri",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2749127823310964,
+    "prefixes": [
+     "NCIT",
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "MESH:D044095",
+     "NCBITaxon:102862",
+     "NCIT:C86688",
+     "UMLS:C0315283"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1574161",
+    "name": "Proteus terrae",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2694047113183486,
+    "prefixes": [
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "MESH:C000642589",
+     "NCBITaxon:1574161",
+     "UMLS:C3986782"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1987580",
+    "name": "Proteus columbae",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2638397674253425,
+    "prefixes": [
+     "NCBITaxon",
+     "MESH",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "MESH:C000642592",
+     "NCBITaxon:1987580",
+     "UMLS:C4680289"
+    ]
+   },
+   {
+    "id": "UMLS:C1485822",
+    "name": "Proteus anguinus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2478175484712535,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "UMLS:C1485822"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2050967",
+    "name": "Proteus faecis",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2454111617351287,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2050967",
+     "UMLS:C5456750"
+    ]
+   },
+   {
+    "id": "NCBITaxon:2050966",
+    "name": "Proteus cibi",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2442078287149276,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:2050966",
+     "UMLS:C5456749"
+    ]
+   },
+   {
+    "id": "NCBITaxon:587",
+    "name": "Providencia rettgeri",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 1.2369229449525367,
+    "prefixes": [
+     "CHEMBL.TARGET",
+     "NCBITaxon",
+     "UMLS",
+     "CHV",
+     "MESH",
+     "NCIT",
+     "UNII",
+     "LOINC",
+     "RXNORM"
+    ],
+    "synonyms": [
+     "PROTEUS RETTGERI",
+     "Proteus rettgeri",
+     "providencia rettgeri"
+    ],
+    "equivalent_ids": [
+     "CHEMBL.TARGET:CHEMBL612537",
+     "CHV:0000028523",
+     "LOINC:LP429540-0",
+     "MESH:C000642584",
+     "NCBITaxon:587",
+     "NCIT:C86693",
+     "RXNORM:2002418",
+     "UMLS:C0315284",
+     "UMLS:C5552570",
+     "UNII:DK2QLY70VA"
+    ]
+   },
+   {
+    "id": "NCBITaxon:1092592",
+    "name": "Proleptus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8949001722249043,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:1092592",
+     "UMLS:C3395886"
+    ]
+   },
+   {
+    "id": "UMLS:C1002186",
+    "name": "Prodoxus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8778396168470569,
+    "prefixes": [
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "UMLS:C1002186"
+    ]
+   },
+   {
+    "id": "NCBITaxon:53703",
+    "name": "Proteocephalus",
+    "categories": [
+     "biolink:OrganismTaxon"
+    ],
+    "score": 0.8650035588272965,
+    "prefixes": [
+     "NCBITaxon",
+     "UMLS"
+    ],
+    "synonyms": null,
+    "equivalent_ids": [
+     "NCBITaxon:53703",
+     "UMLS:C0322345"
+    ]
+   }
+  ]
+ }
+}

@@ -61,7 +61,7 @@ def collect(
     search_text: str,
     category: str,
     prefixes: list[str] | None,
-    endpoints: list[str],
+    endpoints: list[str | dict[str, str]],
     n: int,
 ) -> list[KestrelSearchResult]:
     """Fetch the top-N raw rows for each RECORDED Kestrel endpoint (``separate_call``).
@@ -71,23 +71,30 @@ def collect(
         category: Biolink category the selection call sent (row + cache-key parity).
         prefixes: Allowed CURIE prefixes the selection call sent (or None/empty for none).
         endpoints: Kestrel endpoints the pipeline RECORDED as used (e.g. ``["hybrid-search"]``);
-            empty → ``[]`` (R6).
+            empty → ``[]`` (R6). An entry may instead be ``{"endpoint", "search_text", "category"}``
+            when the annotator searched a rewritten query (the taxon-label annotator's cleaned name);
+            its values override ``search_text`` / ``category`` for that endpoint.
         n: Number of raw rows to return per endpoint (the request's ``kestrel_top_n``).
 
     Returns:
         One ``KestrelSearchResult`` per endpoint, in the recorded order. Never raises (R7).
     """
     results: list[KestrelSearchResult] = []
-    for endpoint in endpoints:
+    for entry in endpoints:
+        # A recorded entry is an endpoint name, or a dict whose search_text / category override the defaults.
+        spec = entry if isinstance(entry, dict) else {"endpoint": entry}
+        endpoint = spec["endpoint"]
+        text = spec.get("search_text") or search_text
+        cat = spec.get("category") or category
         request_params = KestrelRequestParams(
-            search_text=search_text,
+            search_text=text,
             limit=n,
-            category=category,
+            category=cat,
             prefix=list(prefixes) if prefixes else None,
         )
         # Byte-for-byte the selection payload shape (see kestrel_{text,vector,hybrid}._kestrel_*_search)
         # with limit=n, so the row set and the requests_cache key line up with what selection saw.
-        payload: dict = {"limit": n, "category": category}
+        payload: dict = {"limit": n, "category": cat}
         if prefixes:
             payload["prefix"] = list(prefixes)
         try:
@@ -95,7 +102,7 @@ def collect(
                 method="POST",
                 endpoint=endpoint,
                 batch_field="search_text",
-                batch_items=[search_text],
+                batch_items=[text],
                 batch_size=KESTREL_BATCH_SIZE_SEARCH,
                 json=payload,
                 # Provenance isolation: a response-only option must not move the shared request/cache/
@@ -106,7 +113,7 @@ def collect(
             )
             # Verbatim passthrough: the raw dicts Kestrel returned, untouched (no model round-trip →
             # no coercion, no null-fill, no dropped/added field). Truncated to N, Kestrel's order (R3).
-            rows = list(raw.get(search_text) or [])[:n]
+            rows = list(raw.get(text) or [])[:n]
             results.append(
                 KestrelSearchResult(
                     endpoint=endpoint,  # type: ignore[arg-type]
@@ -121,7 +128,7 @@ def collect(
             logger.warning(
                 "kestrel passthrough failed on %s for %r (classified=%s)",
                 endpoint,
-                search_text,
+                text,
                 error,
                 exc_info=True,
             )

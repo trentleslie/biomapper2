@@ -13,7 +13,7 @@ import requests
 import yaml
 from bmt import Toolkit
 
-from .config import BIOLINK_VERSION_DEFAULT, get_cache_dir
+from .config import BIOLINK_VERSION_DEFAULT, TAXON_ENTITY_TYPE_ALIASES, get_cache_dir
 from .utils import setup_logging, to_set
 
 setup_logging()
@@ -196,6 +196,12 @@ class BiolinkClient:
             return contents
 
     def standardize_entity_type(self, entity_type: str) -> str:
+        # Taxon aliases are matched on the raw normalized string BEFORE singularize (see
+        # config.TAXON_ENTITY_TYPE_ALIASES for why: "16s" -> "16", bacteria -> biolink:Bacterium).
+        entity_type_raw = "".join(entity_type.removeprefix("biolink:").lower().split())
+        if entity_type_raw in TAXON_ENTITY_TYPE_ALIASES:
+            logging.info(f"Biolink category for entity type '{entity_type}' is: biolink:OrganismTaxon (taxon alias)")
+            return "biolink:OrganismTaxon"
         # Map any aliases to their corresponding biolink category
         entity_type_singular = self.singularize(entity_type.removeprefix("biolink:"))
         entity_type_cleaned = "".join(entity_type_singular.lower().split())

@@ -11,6 +11,7 @@ from typing import Any
 
 import pandas as pd
 
+from .. import config
 from ..biolink_client import BiolinkClient
 from ..config import (
     CATEGORY_ACCEPTED_ROOTS,
@@ -25,6 +26,7 @@ from .annotators.kestrel_hybrid import KestrelHybridSearchAnnotator
 from .annotators.kestrel_text import KestrelTextSearchAnnotator
 from .annotators.kestrel_vector import KestrelVectorSearchAnnotator
 from .annotators.metabolomics_workbench import MetabolomicsWorkbenchAnnotator
+from .annotators.taxon_label import TaxonLabelAnnotator
 
 # Kestrel annotator slug -> Kestrel search endpoint. Used to RECORD which Kestrel endpoints the
 # pipeline actually invoked for an entity, so the raw-passthrough side channel reads a recorded plan
@@ -35,21 +37,32 @@ _KESTREL_SLUG_TO_ENDPOINT: dict[str, str] = {
     KestrelTextSearchAnnotator.slug: "text-search",
     KestrelVectorSearchAnnotator.slug: "vector-search",
     KestrelHybridSearchAnnotator.slug: "hybrid-search",
+    # Recorded PER ROW: the taxon annotator abstains on host/organelle/clone-code labels before searching,
+    # so only rows whose cleaned name was in the bulk search list it (see BaseAnnotator.kestrel_searched).
+    TaxonLabelAnnotator.slug: "hybrid-search",
 }
 
 
-def _kestrel_endpoints_used(annotators: list) -> list[str]:
-    """The Kestrel search endpoints among the annotators ACTUALLY run, in run order.
+def _row_kestrel_endpoints(annotators: list, caches: list, entity: Any, name_field: str) -> list[str | dict[str, str]]:
+    """The Kestrel endpoints actually invoked for ONE row, in run order.
 
-    Reads the annotators the engine committed to for this entity (empty when annotation was skipped),
-    so an entity that made no Kestrel call records ``[]`` and the passthrough collector never fires a
-    call the baseline skipped (R6).
+    An annotator that reports ``kestrel_searched`` decides for itself; otherwise the row searched iff its
+    name is non-empty (every Kestrel annotator returns before issuing a request on an empty name).
+
+    An entry is the endpoint name when the annotator searched the row's raw name under the job category,
+    or ``{"endpoint", "search_text", "category"}`` when it reports (``kestrel_search_request``) that it
+    sent a rewritten query, so the passthrough replays the search selection actually used.
     """
-    endpoints: list[str] = []
-    for annotator in annotators:
+    endpoints: list[str | dict[str, str]] = []
+    named = text_is_not_empty(entity.get(name_field))
+    for annotator, cache in zip(annotators, caches):
         endpoint = _KESTREL_SLUG_TO_ENDPOINT.get(getattr(annotator, "slug", ""))
-        if endpoint is not None:
-            endpoints.append(endpoint)
+        if endpoint is None:
+            continue
+        searched = annotator.kestrel_searched(entity, name_field, cache=cache)
+        if searched if searched is not None else named:
+            request = annotator.kestrel_search_request(entity, name_field, cache=cache)
+            endpoints.append({"endpoint": endpoint, **request} if request else endpoint)
     return endpoints
 
 
@@ -84,6 +97,7 @@ class AnnotationEngine:
                     # not share state; both keep the same adaptive candidate window.
                     kestrel=KestrelHybridSearchAnnotator(),
                 ),
+                TaxonLabelAnnotator(),
             ]
         }
         self.biolink_client = biolink_client if biolink_client else BiolinkClient()
@@ -287,6 +301,17 @@ class AnnotationEngine:
             annotators.append(MetabolomicsWorkbenchAnnotator.slug)
             annotators.append(GoslinLipidAnnotator.slug)
 
+        # 16S taxon labels: the taxon annotator REPLACES the generic hybrid annotator (whose canonical
+        # selector falls back to a non-NCBITaxon top-1, breaking R4). The kill switch restores today's list.
+        # Gate on the job category BEING OrganismTaxon (or a subcategory), not on OrganismTaxon appearing
+        # among its descendants: an ancestor such as biolink:NamedThing (the fallback for every
+        # unrecognized entity type) also has OrganismTaxon below it and must keep the generic annotator.
+        if config.TAXON_LABEL_ANNOTATOR_ENABLED and category in self.biolink_client.get_descendants(
+            "biolink:OrganismTaxon"
+        ):
+            annotators.append(TaxonLabelAnnotator.slug)
+            return annotators
+
         # Always include fallback annotator (temp: orchestration will become more advanced later)
         annotators.append(KestrelHybridSearchAnnotator.slug)
 
@@ -341,18 +366,20 @@ class AnnotationEngine:
                 [self._empty_source() for _ in range(len(items_to_annotate))], index=items_to_annotate.index
             )
 
+            caches: list = []
             for annotator in annotators:
                 prepared_df = annotator.prepare(items_to_annotate, provided_id_fields)
                 # One fetch per annotator: the RefMet cache feeds BOTH the vote and the availability
                 # signal, so a degraded row is never fetched (or breaker-counted) twice.
                 availability_cache = annotator.build_availability_cache(prepared_df, name_field)
+                caches.append(availability_cache)
                 bulk_kwargs: dict[str, Any] = dict(
                     prefer_human=prefer_human,
                     preferred_prefixes=preferred_prefixes,
                     accepted_categories=accepted_categories,
                     candidate_limit=candidate_limit,
                 )
-                # Only the RefMet annotator returns a cache and accepts the kwarg; others build none.
+                # Only the RefMet and taxon-label annotators return a cache and accept the kwarg.
                 if availability_cache is not None:
                     bulk_kwargs["cache"] = availability_cache
                 annotations_col = annotator.get_annotations_bulk(
@@ -389,9 +416,11 @@ class AnnotationEngine:
             # whitespace name makes every Kestrel annotator return before issuing a request (the
             # text_is_not_empty guard), so recording its endpoints would make the passthrough collector
             # fire a call the pipeline never made (R6). Fresh list per row (no shared mutable list).
-            endpoints_used = _kestrel_endpoints_used(annotators)
             endpoints_col[needs_annotation_mask] = pd.Series(
-                [list(endpoints_used) if text_is_not_empty(name) else [] for name in items_to_annotate[name_field]],
+                [
+                    _row_kestrel_endpoints(annotators, caches, row, name_field)
+                    for _, row in items_to_annotate.iterrows()
+                ],
                 index=items_to_annotate.index,
             )
 
@@ -430,10 +459,12 @@ class AnnotationEngine:
         assigned_ids = dict()  # All annotations will be merged into this
         availability = self._empty_availability()  # TOTAL map; annotators overwrite their own slug
         source = self._empty_source()  # TOTAL parallel provenance map; same overwrite discipline
+        caches: list = []
         for annotator in annotators:
             prepared_entity = annotator.prepare(item, provided_id_fields)
             # One fetch: the RefMet cache feeds both the vote and the availability signal below.
             availability_cache = annotator.build_availability_cache(prepared_entity, name_field)
+            caches.append(availability_cache)
             entity_annotations = annotator.get_annotations(
                 prepared_entity,
                 name_field,
@@ -454,7 +485,7 @@ class AnnotationEngine:
         # on a non-empty name: an empty/whitespace name makes every Kestrel annotator return before
         # issuing a request (the text_is_not_empty guard), so recording the endpoint would make the
         # passthrough collector fire a call the pipeline never made (R6).
-        endpoints_used = _kestrel_endpoints_used(annotators) if text_is_not_empty(item.get(name_field)) else []
+        endpoints_used = _row_kestrel_endpoints(annotators, caches, item, name_field)
         return pd.Series(
             {
                 "assigned_ids": assigned_ids,
@@ -503,8 +534,9 @@ class AnnotationEngine:
         missing key, whether or not the row was annotated.
 
         Availability tracks whether a source answered for the row (live / snapshot / unavailable /
-        no_match). Only the RefMet annotator (Metabolomics Workbench) is INSTRUMENTED for it: it alone
-        overrides the base ``not_queried`` (F8). Every other annotator inherits ``not_queried`` here BY
+        no_match). The RefMet annotator (Metabolomics Workbench) is INSTRUMENTED for it (F8), and the
+        taxon-label annotator reports voted / no_match / unavailable for its own rows. Every other
+        annotator inherits ``not_queried`` here BY
         DESIGN even when it voted, regardless of whether it hits an external service. That covers both a
         purely local parser like ``goslin-lipid`` (no external call to instrument) and
         ``kestrel-hybrid-search``, which DOES call an external Kestrel API and can fail when that service
