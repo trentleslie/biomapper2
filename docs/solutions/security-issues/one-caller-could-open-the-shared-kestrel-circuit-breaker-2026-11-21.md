@@ -40,7 +40,8 @@ answers, but it was an availability hole on a public API.
 
 - One request could open the breaker on its own, because `record_failure()` ran once per failed
   Kestrel call and the threshold is 6 consecutive failures. A `/map/batch` makes one Kestrel call per
-  item inside a single worker; a `/map/dataset` sends one call per 1,000-item chunk; and the 5xx
+  item inside a single worker; a `/map/dataset` sends one call per chunk (1,000 items for search,
+  2,000 for `canonicalize`); and the 5xx
   bisect (off by default, `KESTREL_BISECT_ON_5XX_ENABLED = False`) re-sends halves of a failing chunk.
 - A payload Kestrel rejects with a 500 counted the same as Kestrel being down.
 - Once open, `bulk_kestrel_request` raised `CircuitBreakerOpenError` for every caller until the
@@ -163,8 +164,9 @@ gate (Lines 1a to 6) still passes, so real outages still open the breaker.
 
 - trentleslie/biomapper2 #112 (breaker introduced) and #113 (this fix); Phenome-Health/biomapper2
   #165 and #166 (promotion), released in v1.5.1.
-- Phenome-Health/biomapper2#168 (open): the same class of flaw on the RefMet breaker, where an
-  id-lookup miss counts toward a process-wide breaker and drops RefMet for unrelated names.
+- Phenome-Health/biomapper2#168: the same class of flaw on the RefMet breaker, where an id-lookup
+  miss counted toward a process-wide breaker and dropped RefMet for unrelated names. Fixed in
+  trentleslie/biomapper2#115 (promoted as Phenome-Health/biomapper2 #169 and #170, released in v1.5.2).
 - `docs/solutions/integration-issues/slash-encoding-breaks-refmet-lipidmaps-name-lookups-2026-10-27.md`:
   the RefMet breaker, and the rule that downgrading errors to protect a breaker needs a per-class canary.
 - `docs/solutions/best-practices/nginx-edge-rate-limit-for-sync-blocking-fastapi-2026-11-05.md`:
