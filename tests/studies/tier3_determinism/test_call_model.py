@@ -101,3 +101,49 @@ def test_unknown_provider_rejected() -> None:
     spec = ModelSpec.model_construct(provider="grok", model_id="x", label="x")
     with pytest.raises(ValueError):
         cm.call_model(spec, _MESSAGES, _DECODE, client=_FakeOpenAIClient())
+
+
+def test_openrouter_sends_default_provider_policy() -> None:
+    client = _FakeOpenAIClient()
+    spec = ModelSpec(provider="openrouter", model_id="qwen/qwen3-32b", label="q")
+
+    cm.call_model(spec, _MESSAGES, _DECODE, client=client)
+
+    assert client.kwargs["extra_body"] == {"provider": {"quantizations": ["fp8"], "require_parameters": True}}
+
+
+def test_openrouter_order_pins_and_disables_fallbacks() -> None:
+    client = _FakeOpenAIClient()
+    spec = ModelSpec(provider="openrouter", model_id="qwen/qwen3-32b", label="q", provider_order=("deepinfra/fp8",))
+
+    cm.call_model(spec, _MESSAGES, _DECODE, client=client)
+
+    pol = client.kwargs["extra_body"]["provider"]
+    assert pol["order"] == ["deepinfra/fp8"] and pol["allow_fallbacks"] is False
+    assert "order" not in cm.OPENROUTER_BASE_POLICY
+
+
+def test_openai_route_sends_no_provider_policy() -> None:
+    client = _FakeOpenAIClient()
+    spec = ModelSpec(provider="openai", model_id="gpt-x", label="gpt")
+
+    cm.call_model(spec, _MESSAGES, _DECODE, client=client)
+
+    assert "extra_body" not in client.kwargs
+
+
+def test_openrouter_records_served_provider() -> None:
+    client = _FakeOpenAIClient()
+    orig = client._create
+
+    def _create(**kwargs):
+        resp = orig(**kwargs)
+        resp.provider = "DeepInfra"
+        return resp
+
+    client.chat.completions.create = _create
+    spec = ModelSpec(provider="openrouter", model_id="qwen/qwen3-32b", label="q")
+
+    resp = cm.call_model(spec, _MESSAGES, _DECODE, client=client)
+
+    assert resp.served_provider == "DeepInfra"
