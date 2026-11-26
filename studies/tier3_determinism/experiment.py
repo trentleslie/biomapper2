@@ -134,6 +134,14 @@ def _verify_config_matches_manifest(out_dir: Path, config: ExperimentConfig, n_q
     preserved = json.loads(manifest_path.read_text())
     current = _repro_fingerprint(config, n_queries)
     preserved_subset = {k: preserved.get(k) for k in current}
+    # Manifests written before ModelSpec.provider_order existed lack the key; fill only
+    # that default so an unchanged older run still resumes, while a real routing change
+    # (a non-empty provider_order) still differs and is refused.
+    if isinstance(preserved_subset.get("models"), list):
+        preserved_subset["models"] = [
+            {**m, "provider_order": m.get("provider_order", [])} if isinstance(m, dict) else m
+            for m in preserved_subset["models"]
+        ]
     if current != preserved_subset:
         diffs = sorted(k for k in current if current[k] != preserved_subset[k])
         raise FileExistsError(

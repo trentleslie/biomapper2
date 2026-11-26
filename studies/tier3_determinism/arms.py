@@ -56,6 +56,7 @@ def _one_arm_a_call(call: CallFn, spec: ModelSpec, query: Query, decode: Decodin
         completion_tokens=resp.completion_tokens,
         latency_s=resp.latency_s,
         error=resp.error,
+        served_provider=resp.served_provider,
     )
 
 

@@ -22,6 +22,21 @@ from studies.tier3_determinism.models import DecodingParams, ModelSpec
 
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
+# Unpinned OpenRouter routing can serve one model from several backends and
+# quantizations (fp8 and int4 on some Qwen3 sizes; some providers drop `seed`),
+# which is itself a source of nondeterminism. Pin it so the study measures the
+# model, not the router.
+OPENROUTER_BASE_POLICY: dict[str, Any] = {"quantizations": ["fp8"], "require_parameters": True}
+
+
+def openrouter_provider_policy(spec: ModelSpec) -> dict[str, Any]:
+    """The OpenRouter ``provider`` object sent with every call for *spec*."""
+    policy = dict(OPENROUTER_BASE_POLICY)
+    if spec.provider_order:
+        policy["order"] = list(spec.provider_order)
+        policy["allow_fallbacks"] = False
+    return policy
+
 
 @dataclass
 class ModelResponse:
@@ -30,6 +45,7 @@ class ModelResponse:
     completion_tokens: int | None
     latency_s: float
     error: str | None = None
+    served_provider: str | None = None
 
 
 def _make_client(spec: ModelSpec) -> Any:
@@ -59,6 +75,8 @@ def _call_openai_style(
     }
     if d.seed is not None:
         kwargs["seed"] = d.seed
+    if spec.provider == "openrouter":
+        kwargs["extra_body"] = {"provider": openrouter_provider_policy(spec)}
     start = time.perf_counter()
     resp = client.chat.completions.create(**kwargs)
     latency = time.perf_counter() - start
@@ -68,6 +86,7 @@ def _call_openai_style(
         prompt_tokens=getattr(usage, "prompt_tokens", None),
         completion_tokens=getattr(usage, "completion_tokens", None),
         latency_s=latency,
+        served_provider=getattr(resp, "provider", None) if spec.provider == "openrouter" else None,
     )
 
 

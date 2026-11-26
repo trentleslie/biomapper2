@@ -51,6 +51,10 @@ class ModelSpec(BaseModel):
     model_id: str
     label: str  # short display label, e.g. "gpt-5.5" / "opus-4.8" / "qwen3-8b"
     supports_temperature: bool = True
+    # OpenRouter only: provider slugs to pin, in order (e.g. ("deepinfra/fp8",)).
+    # Set => no fallback to another backend. Empty => any fp8 endpoint that
+    # honours every sent parameter. See call_model.openrouter_provider_policy.
+    provider_order: tuple[str, ...] = ()
 
     model_config = {"frozen": True}
 
@@ -90,6 +94,7 @@ class ArmACall(BaseModel):
     completion_tokens: int | None = None
     latency_s: float | None = None
     error: str | None = None  # transport/parse failure marker; call still persisted
+    served_provider: str | None = None  # OpenRouter backend that actually served the call
 
 
 class ArmBCall(BaseModel):
