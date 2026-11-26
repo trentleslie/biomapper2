@@ -18,7 +18,7 @@ def test_full_preset_uses_matrix_and_big_n() -> None:
     cfg = run.build_config(preset="full")
     assert cfg.n_repeats >= 20  # N = 20-30 per protocol
     assert cfg.limit is None  # whole set
-    assert {m.label for m in cfg.models} >= {"opus-4.8", "gpt-4o", "qwen3-8b"}
+    assert {m.label for m in cfg.models} >= {"opus-4.8", "gpt-4o", "qwen3-32b"}
     assert 0.0 in cfg.temperatures and any(t > 0 for t in cfg.temperatures)
 
 

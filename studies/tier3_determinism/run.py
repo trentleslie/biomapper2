@@ -48,7 +48,11 @@ MODEL_REGISTRY: dict[str, ModelSpec] = {
     "gpt": ModelSpec(provider="openai", model_id="gpt-4o-2024-08-06", label="gpt-4o"),
     "opus": ModelSpec(provider="anthropic", model_id="claude-opus-4-8", label="opus-4.8", supports_temperature=False),
     "sonnet": ModelSpec(provider="anthropic", model_id="claude-sonnet-4-6", label="sonnet-4.6"),
-    "qwen": ModelSpec(provider="openrouter", model_id="qwen/qwen3-8b", label="qwen3-8b"),
+    # qwen3-8b has no OpenRouter endpoints (checked 2026-11-26). qwen3-32b is pinned to
+    # DeepInfra fp8: another of its providers ignores `seed`, which would confound Arm A.
+    "qwen": ModelSpec(
+        provider="openrouter", model_id="qwen/qwen3-32b", label="qwen3-32b", provider_order=("deepinfra/fp8",)
+    ),
 }
 
 
