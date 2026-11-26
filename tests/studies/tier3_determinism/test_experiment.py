@@ -377,3 +377,49 @@ def test_second_relabel_preserves_original_backup(tmp_path: Path) -> None:
         "opus-4.8": None,
         "qwen3-8b": None,
     }
+
+
+def _strip_provider_order_from_manifest(out: Path) -> None:
+    """Rewrite manifest.json as a pre-provider_order run would have written it."""
+    mpath = out / "manifest.json"
+    m = json.loads(mpath.read_text())
+    for spec in m["models"]:
+        spec.pop("provider_order", None)
+    mpath.write_text(json.dumps(m))
+
+
+def test_resume_accepts_manifest_written_before_provider_order(tmp_path: Path) -> None:
+    """An unchanged run whose manifest predates ModelSpec.provider_order must still resume."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    (out / "fig4_data.json").unlink()
+    _strip_provider_order_from_manifest(out)
+    experiment.run_experiment(
+        _config(ds), out_dir=out, call_fn=_boom_call, resolve_fn=_fake_resolve, now=_NOW, git_commit="abc"
+    )
+    assert (out / "fig4_data.json").exists()
+
+
+def test_resume_refuses_new_provider_pin_on_old_manifest(tmp_path: Path) -> None:
+    """Adding a provider pin to a run whose old manifest had none is a routing change: refuse."""
+    ds = _dataset(tmp_path)
+    out = tmp_path / "run"
+    cfg_a = ExperimentConfig(
+        dataset_path=ds,
+        models=[ModelSpec(provider="openrouter", model_id="q/q", label="q")],
+        temperatures=[0.0, 0.7],
+        n_repeats=2,
+    )
+    experiment.run_experiment(cfg_a, out_dir=out, call_fn=_fake_call, resolve_fn=_fake_resolve, now=_NOW)
+    (out / "fig4_data.json").unlink()
+    _strip_provider_order_from_manifest(out)
+    cfg_b = cfg_a.model_copy(
+        update={
+            "models": [ModelSpec(provider="openrouter", model_id="q/q", label="q", provider_order=("deepinfra/fp8",))]
+        }
+    )
+    with pytest.raises(FileExistsError, match="config differs"):
+        experiment.run_experiment(cfg_b, out_dir=out, call_fn=_boom_call, resolve_fn=_fake_resolve, now=_NOW)
